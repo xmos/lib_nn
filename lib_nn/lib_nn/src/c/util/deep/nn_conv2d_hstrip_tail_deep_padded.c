@@ -1,11 +1,11 @@
 
 
 #include "nn_operator.h"
-#include "../../nn_op_helper.h"
+#include "../../../nn_op_helper.h"
 #include "nn_op_structs.h"
 
 #include "xs3_vpu.h"
-#include "../vpu_sim.h"
+#include "../../vpu_sim.h"
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -40,8 +40,8 @@
         }                                                                   \
     } while(0)
 
-
-void nn_compute_hstrip_tail_deep_padded_c(
+WEAK_FUNC
+void nn_conv2d_hstrip_tail_deep_padded(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
