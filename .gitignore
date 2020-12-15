@@ -1,0 +1,31 @@
+# Editor cruft
+**/.vscode/
+
+# Python cruft
+**/*.pyc
+**/__pycache__/*
+
+# Build cruft
+**/.lock*
+**/build*/
+**/.build/
+_build
+**/dist/
+**/bin/
+*.o
+
+# macOS cruft
+.DS_Store
+
+# Misc cruft
+**/*.local.*
+
+# VI tmp files
+*.swp
+*.swo
+*.swn
+
+# tmp files
+*~
+*.*~
+*log*

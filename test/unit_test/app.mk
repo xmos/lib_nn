@@ -24,7 +24,7 @@ DEPENDENCIES := lib_nn Unity
 ### for them at the moment.
 ###
 lib_nn_PATH := ../../lib_nn
-Unity_PATH := ../../Unity
+Unity_PATH := ../../third_party/Unity
 
 ###### 
 ### [optional] Directories, relative to the application project, to look for source files.
