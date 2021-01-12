@@ -1,13 +1,15 @@
 
 
+# ifeq ($(OS),Windows_NT)
+# getdir_cmd 
+# else
+
+# endif
+
 ifeq ($(OS),Windows_NT)
-  ifeq ($(findstring windows32,$(shell uname -s)),windows32)
-    mkdir_cmd = @test -d $(subst /,\,$(dir $(1))) || mkdir $(subst /,\,$(dir $(1)))
-  else
-    mkdir_cmd = @mkdir -p $(dir $(1))
-  endif
+mkdir_cmd = @test -d $(subst /,\,$(dir $(1))) || mkdir $(subst /,\,$(dir $(1)))
 else
-  mkdir_cmd = @mkdir -p $(dir $(1))
+mkdir_cmd = @mkdir -p $(dir $(1))
 endif
 
 check_defined = $(strip $(foreach 1,$1, $(call __check_defined,$1,$(strip $(value 2)))))
@@ -36,15 +38,32 @@ rename_variables=$(eval $(foreach var,$(2),$(1)_$(var):=$($(var))$(newline)$(var
 # loaded. If $(3) is not provided, ./etc/$(1).mk will be
 # loaded instead.
 define load_dependency_
-  MK_FILE := ./etc/$(1).mk
+
   ifneq ($$(strip $(3)),)
     MK_FILE := $(3)
+    MK_FILE := $$(wildcard $$(MK_FILE))
+    ifeq ($$(strip $$(MK_FILE)),)
+      $$(error Unable to find .mk file for dependency $(1). Looked for '$$($(1)_MK_FILE)` (via $(1)_MK_FILE))
+    endif
+  else
+    MK_FILE := ./etc/$(1).mk
+    MK_FILE := $$(wildcard $$(MK_FILE))
+    ifeq ($$(strip $$(MK_FILE)),)
+      MK_FILE := $($(1)_PATH)/lib.mk
+    endif
   endif
+
+  MK_FILE := $$(wildcard $$(MK_FILE))
+  ifeq ($$(strip $$(MK_FILE)),)
+    $$(error Unable to find .mk file for dependency $(1). The paths checked are ./etc/$(1).mk, followed by $$$$($(1)_PATH)/lib.mk. Alternatively, the exact location can be specified by defining $(1)_MK_FILE)
+  endif
+
   MK_FILE := $$(abspath $$(MK_FILE))
   include $$(MK_FILE)
   $$(call rename_variables,$(1),$(2))
 endef
 load_dependency=$(eval $(call load_dependency_,$(1),$(2),$(3)))
+# load_dependency=$(info $(call load_dependency_,$(1),$(2),$(3)))
 
 
 

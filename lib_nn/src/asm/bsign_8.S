@@ -10,7 +10,11 @@ void bsign_8_(
     const nn_bsign_8_job_t* job);
 */
 
-#define FUNCTION_NAME bsign_8_
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME bsign_8_
+#else
+  #define FUNCTION_NAME bsign_8_asm
+#endif // NN_USE_REF
 
 #define NSTACKWORDS     (2)
     

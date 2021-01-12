@@ -11,7 +11,11 @@ void requantize_16_to_8(
     const unsigned elm_count);
 */
 
-#define FUNCTION_NAME requantize_16_to_8
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME requantize_16_to_8
+#else
+  #define FUNCTION_NAME requantize_16_to_8_asm
+#endif //NN_USE_REF
 
 #define NSTACKWORDS  (4+8)
     

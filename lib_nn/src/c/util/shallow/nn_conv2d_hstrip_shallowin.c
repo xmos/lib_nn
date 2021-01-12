@@ -24,8 +24,7 @@
 
 
 
-WEAK_FUNC
-void nn_conv2d_hstrip_shallowin(
+void nn_conv2d_hstrip_shallowin_ref(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
@@ -137,8 +136,7 @@ void nn_conv2d_hstrip_shallowin(
 
 
 
-WEAK_FUNC
-void nn_conv2d_hstrip_shallowin_padded(
+void nn_conv2d_hstrip_shallowin_padded_ref(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
@@ -362,8 +360,8 @@ void nn_conv2d_hstrip_shallowin_padded(
         }                                                                       \
     } while(0)
 
-WEAK_FUNC
-void nn_conv2d_hstrip_tail_shallowin(
+
+void nn_conv2d_hstrip_tail_shallowin_ref(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
@@ -508,8 +506,8 @@ void nn_conv2d_hstrip_tail_shallowin(
         }                                                                       \
     } while(0)
 
-WEAK_FUNC
-void nn_conv2d_hstrip_tail_shallowin_padded(
+
+void nn_conv2d_hstrip_tail_shallowin_padded_ref(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
@@ -708,3 +706,83 @@ void nn_conv2d_hstrip_tail_shallowin_padded(
 }
 
 
+
+
+
+#ifdef NN_USE_REF
+void nn_conv2d_hstrip_shallowin(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,
+        const nn_bso_block_t* BSO,
+        const unsigned K_h,
+        const unsigned K_h_stride,
+        const channel_count_t C_in,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols)
+{
+    nn_conv2d_hstrip_shallowin_ref(Y, X, K, BSO, K_h, K_h_stride, C_in, x_v_stride, y_h_stride, out_cols);
+}
+
+void nn_conv2d_hstrip_shallowin_padded(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,
+        const nn_bso_block_t* BSO,
+        const unsigned K_h,
+        const unsigned K_h_stride,
+        const channel_count_t C_in,
+        const unsigned pad_t,
+        const unsigned pad_b,
+        const int pad_l_initial,
+        const int pad_r_initial,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols,
+        const int8_t* zero_point_vec)
+{
+    nn_conv2d_hstrip_shallowin_padded_ref(Y, X, K, BSO, K_h, K_h_stride, C_in, 
+        pad_t, pad_b, pad_l_initial, pad_r_initial, x_v_stride, y_h_stride, out_cols, 
+        zero_point_vec);
+}
+
+void nn_conv2d_hstrip_tail_shallowin(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,
+        const nn_bso_block_t* BSO,
+        const unsigned K_h,
+        const unsigned K_h_stride,
+        const channel_count_t C_in,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols,
+        const channel_count_t C_out_tail)
+{
+    nn_conv2d_hstrip_tail_shallowin_ref(Y, X, K, BSO, K_h, K_h_stride, C_in, x_v_stride, out_cols, C_out_tail);
+}
+
+void nn_conv2d_hstrip_tail_shallowin_padded(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,
+        const nn_bso_block_t* BSO,
+        const unsigned K_h,
+        const unsigned K_h_stride,
+        const channel_count_t C_in,
+        const unsigned pad_t,
+        const unsigned pad_b,
+        const int pad_l_initial,
+        const int pad_r_initial,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols,
+        const int8_t* zero_point_vec,
+        const channel_count_t C_out_tail)
+{
+    nn_conv2d_hstrip_tail_shallowin_padded(Y, X, K, BSO, K_h, K_h_stride, C_in, 
+        pad_t, pad_b, pad_l_initial, pad_r_initial, x_v_stride, y_h_stride, out_cols, 
+        zero_point_vec, C_out_tail);
+}
+#endif // NN_USE_REF

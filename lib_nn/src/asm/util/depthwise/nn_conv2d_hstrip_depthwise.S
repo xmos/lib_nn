@@ -23,7 +23,11 @@ void nn_conv2d_hstrip_depthwise(
     const unsigned chans_to_write);
 */
 
-#define FUNCTION_NAME nn_conv2d_hstrip_depthwise
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME nn_conv2d_hstrip_depthwise
+#else
+  #define FUNCTION_NAME nn_conv2d_hstrip_depthwise_asm
+#endif // NN_USE_REF
 
 #define NSTACKVECS   1
 #define NSTACKWORDS  (8*NSTACKVECS+12)
