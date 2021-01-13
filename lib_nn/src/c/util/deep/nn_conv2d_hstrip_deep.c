@@ -1051,7 +1051,7 @@ void nn_conv2d_hstrip_deep(
         const mem_stride_t y_h_stride,
         const unsigned out_cols)
 {
-    nn_conv2d_hstrip_deep_ref(Y, X, K, BSO, K_h, K_w, K_h_stride, C_in
+    nn_conv2d_hstrip_deep_ref(Y, X, K, BSO, K_h, K_w, K_h_stride, C_in,
         x_v_stride, k_cout_stride, y_h_stride, out_cols);
 }
 
@@ -1096,7 +1096,7 @@ void nn_conv2d_hstrip_tail_deep(
         const unsigned out_cols,
         const channel_count_t C_out_tail)
 {
-    nn_conv2d_hstrip_tail_deep_ref(Y, X, K, BSO, K_h, K_w, K_h_stride, C_in
+    nn_conv2d_hstrip_tail_deep_ref(Y, X, K, BSO, K_h, K_w, K_h_stride, C_in,
         x_v_stride, k_cout_stride, y_h_stride, out_cols, C_out_tail);
 }
 
@@ -1121,7 +1121,7 @@ void nn_conv2d_hstrip_tail_deep_padded(
         const int8_t* zero_point_vec,
         const channel_count_t C_out_tail)
 {
-    nn_conv2d_hstrip_tail_deep_padded_ref(Y, X, K, BSO, K_h, K_w, K_h_stride, C_in
+    nn_conv2d_hstrip_tail_deep_padded_ref(Y, X, K, BSO, K_h, K_w, K_h_stride, C_in,
         pad_t, pad_b, pad_l_initial, pad_r_initial, x_v_stride, k_cout_stride, 
         y_h_stride, out_cols, zero_point_vec, C_out_tail);
 }

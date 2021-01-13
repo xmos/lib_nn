@@ -710,6 +710,7 @@ void nn_conv2d_hstrip_tail_shallowin_padded_ref(
 
 
 #ifdef NN_USE_REF
+
 void nn_conv2d_hstrip_shallowin(
         nn_image_t* Y,
         const nn_image_t* X,
@@ -760,7 +761,8 @@ void nn_conv2d_hstrip_tail_shallowin(
         const unsigned out_cols,
         const channel_count_t C_out_tail)
 {
-    nn_conv2d_hstrip_tail_shallowin_ref(Y, X, K, BSO, K_h, K_h_stride, C_in, x_v_stride, out_cols, C_out_tail);
+    nn_conv2d_hstrip_tail_shallowin_ref(Y, X, K, BSO, K_h, K_h_stride, C_in, 
+        x_v_stride, y_h_stride, out_cols, C_out_tail);
 }
 
 void nn_conv2d_hstrip_tail_shallowin_padded(
@@ -781,8 +783,9 @@ void nn_conv2d_hstrip_tail_shallowin_padded(
         const int8_t* zero_point_vec,
         const channel_count_t C_out_tail)
 {
-    nn_conv2d_hstrip_tail_shallowin_padded(Y, X, K, BSO, K_h, K_h_stride, C_in, 
+    nn_conv2d_hstrip_tail_shallowin_padded_ref(Y, X, K, BSO, K_h, K_h_stride, C_in, 
         pad_t, pad_b, pad_l_initial, pad_r_initial, x_v_stride, y_h_stride, out_cols, 
         zero_point_vec, C_out_tail);
 }
+
 #endif // NN_USE_REF

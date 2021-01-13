@@ -28,6 +28,14 @@ extern "C" {
  */
 #define OUT_CHANNEL_GROUPS(CHANNELS)    ( ((CHANNELS) + (VPU_INT8_ACC_PERIOD-1)) >> VPU_INT8_ACC_PERIOD_LOG2 )
 
+
+#ifdef NN_USE_REF
+  #define USING_C_REFERENCE (1)
+#else
+  #define USING_C_REFERENCE (0)
+#endif // NN_USE_REF
+
+
 /**
  * Lays out the biases, scales and offsets into the format required for the standard bias-
  * scale-offset tensor used by many of the API functions.

@@ -34,7 +34,7 @@
 
 
 
-void add_elementwise(
+void add_elementwise_ref(
     int8_t Y[],
     const int8_t X0[],
     const int8_t X1[],
