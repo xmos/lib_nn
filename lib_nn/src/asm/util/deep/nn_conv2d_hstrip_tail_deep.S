@@ -217,9 +217,9 @@ FUNCTION_NAME:
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add K, K, c_in_tail                     ;   vlmaccr tmp[0]                          }
+                    {   shl c_out_tail, c_out_tail, 1           ;                                           }
 
                 .L_center_tail_end:
-                {   shl c_out_tail, c_out_tail, 1           ;                                           }
                 {   ldaw tmp, sp[STACK_VEC_TMP2]            ;   bt cols_left, .L_center_start           }
             .L_center_end:
             //                                          // Added to X back up at the start of the row
