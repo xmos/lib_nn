@@ -164,7 +164,8 @@ void bconv2d_int8_DIDO_valid(int8_t* Y_p,
     const nn_window_params_t* k, 
 
     const unsigned y_h_loc, const unsigned y_v_loc,
-    const unsigned y_sub_width, const unsigned y_sub_height
+    const unsigned y_sub_width, const unsigned y_sub_height,
+    const unsigned start_channel, const unsigned channel_count
 );
 
 
@@ -184,7 +185,8 @@ void bconv2d_int8_valid(int8_t* Y_p,
     const nn_window_params_t* k, 
 
     const unsigned y_loc_x, const unsigned y_loc_y,
-    const unsigned y_sub_width, const unsigned y_sub_height
+    const unsigned y_sub_width, const unsigned y_sub_height,
+    const unsigned start_channel, const unsigned channel_count
 );
 
 /**  
@@ -219,7 +221,8 @@ void bconv2d_bin_DI_valid(bnn_b32_t* Y_p,
     const nn_window_params_t* k, 
 
     const unsigned y_h_loc, const unsigned y_v_loc,
-    const unsigned y_sub_width, const unsigned y_sub_height
+    const unsigned y_sub_width, const unsigned y_sub_height,
+    const unsigned start_channel, const unsigned channel_count
 );
 
 /**  
@@ -254,7 +257,8 @@ void bconv2d_bin_valid(bnn_b32_t* Y_p,
     const nn_window_params_t* k, 
 
     const unsigned y_loc_x, const unsigned y_loc_y,
-    const unsigned y_sub_width, const unsigned y_sub_height
+    const unsigned y_sub_width, const unsigned y_sub_height,
+    const unsigned start_channel, const unsigned channel_count
 );
 
 /**  
@@ -298,7 +302,8 @@ void bconv2d_bin_DI(bnn_b32_t* Y_p,
     const unsigned y_h_loc, const unsigned y_v_loc,
     const unsigned y_sub_width, const unsigned y_sub_height,
 
-    const unsigned x_h_loc, const unsigned x_v_loc
+    const unsigned x_h_loc, const unsigned x_v_loc,
+    const unsigned start_channel, const unsigned channel_count
 );
 
 /**  
@@ -348,7 +353,8 @@ void bconv2d_bin(bnn_b32_t* Y_p,
     const unsigned y_loc_x, const unsigned y_loc_y,
     const unsigned y_sub_width, const unsigned y_sub_height,
 
-    const unsigned x_loc_x, const unsigned x_loc_y
+    const unsigned x_loc_x, const unsigned x_loc_y,
+    const unsigned start_channel, const unsigned channel_count
 );
 
 /**  
@@ -405,7 +411,8 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
     const unsigned y_h_loc, const unsigned y_v_loc,
     const unsigned y_sub_width, const unsigned y_sub_height,
 
-    const unsigned x_h_loc, const unsigned x_v_loc
+    const unsigned x_h_loc, const unsigned x_v_loc,
+    const unsigned start_channel, const unsigned channel_count
 ) ;
 
 void bconv2d_int8(int8_t* Y_p,
@@ -426,5 +433,6 @@ void bconv2d_int8(int8_t* Y_p,
     const unsigned y_loc_x, const unsigned y_loc_y,
     const unsigned y_sub_width, const unsigned y_sub_height,
 
-    const unsigned x_loc_x, const unsigned x_loc_y
+    const unsigned x_loc_x, const unsigned x_loc_y,
+    const unsigned start_channel, const unsigned channel_count
 ) ;

@@ -538,7 +538,8 @@ static void SISO_valid(
                       K_p, post_activation_multiplier_q,
                       post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
                       data_scratch, x, y, k,
-                      y_loc_x, y_loc_y, y_sub_width, y_sub_height);
+                      y_loc_x, y_loc_y, y_sub_width, y_sub_height,
+                      0, x->channels);
   free(data_scratch);
 }
 
@@ -563,7 +564,8 @@ static void DI_valid(
         (const bnn_b256_t*)K_p, post_activation_multiplier_q,
         post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
         x, y, k,
-        y_loc_x, y_loc_y, y_sub_width, y_sub_height);
+        y_loc_x, y_loc_y, y_sub_width, y_sub_height,
+        0, x->channels);
 }
 
 
@@ -589,7 +591,8 @@ static void SISO_full(
                       K_p, post_activation_multiplier_q,
                       post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
                       data_scratch, x, y, k,
-                      0, 0, y->width, y->height, 0, 0);
+                      0, 0, y->width, y->height, 0, 0,
+                      0, x->channels);
   free(data_scratch);
 }
 
@@ -612,7 +615,8 @@ static void DI_full(
                       (const bnn_b256_t*)K_p, post_activation_multiplier_q,
                       post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
                       x, y, k,
-                      0, 0, y->width, y->height, 0, 0);
+                      0, 0, y->width, y->height, 0, 0,
+                      0, x->channels);
 }
 
 void test_bconv2d_int8_sub_image(){

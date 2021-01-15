@@ -467,7 +467,8 @@ static void SISO_valid(
   bconv2d_bin_valid(Y_p, X_p,
                       K_p, thresholds,
                       data_scratch, x, y, k,
-                      y_loc_x, y_loc_y, y_sub_width, y_sub_height);
+                      y_loc_x, y_loc_y, y_sub_width, y_sub_height,
+                      0, x->channels);
 
   free(data_scratch);
 }
@@ -488,7 +489,8 @@ static void DI_valid(
   bconv2d_bin_DI_valid(Y_p, (const bnn_b256_t*)X_p,
                       (const bnn_b256_t*)K_p, thresholds,
                       x, y, k,
-                      y_loc_x, y_loc_y, y_sub_width, y_sub_height);
+                      y_loc_x, y_loc_y, y_sub_width, y_sub_height,
+                      0, x->channels);
 }
 
 
@@ -510,7 +512,8 @@ static void SISO_full(
                       K_p, thresholds, 
                       data_scratch,
                       x, y, k,
-                      0, 0, y->width, y->height, 0, 0);
+                      0, 0, y->width, y->height, 0, 0,
+                      0, x->channels);
   free(data_scratch);
 }
 
@@ -528,7 +531,8 @@ static void DI_full(
   bconv2d_bin_DI(Y_p, (const bnn_b256_t*)X_p,
                       (const bnn_b256_t*)K_p, thresholds, 
                       x, y, k,
-                      0, 0, y->width, y->height, 0, 0);
+                      0, 0, y->width, y->height, 0, 0, 
+                      0, x->channels);
 }
 
 void test_bconv2d_bin_pseudo_random(){

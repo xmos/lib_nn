@@ -356,7 +356,8 @@ void bconv2d_bin_DI(bnn_b32_t* Y_p,
     const unsigned y_loc_x, const unsigned y_loc_y,
     const unsigned y_sub_width, const unsigned y_sub_height,
 
-    const unsigned x_loc_x, const unsigned x_loc_y
+    const unsigned x_loc_x, const unsigned x_loc_y,
+    const unsigned start_channel, const unsigned channel_count
 ) {
 
     nn_bconv2d_bin_DI_impl_plan_t plan;
@@ -380,7 +381,8 @@ void bconv2d_bin(bnn_b32_t* Y_p,
     const unsigned y_loc_x, const unsigned y_loc_y,
     const unsigned y_sub_width, const unsigned y_sub_height,
 
-    const unsigned x_loc_x, const unsigned x_loc_y
+    const unsigned x_loc_x, const unsigned x_loc_y,
+    const unsigned start_channel, const unsigned channel_count
 ) {
 
     nn_bconv2d_bin_impl_plan_t plan;
