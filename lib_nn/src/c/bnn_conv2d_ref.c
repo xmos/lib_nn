@@ -154,7 +154,7 @@ void bnn_quantise_activation(
                int * chan_overlaps
 ){
 
-  // The max vlue that the actual VPU can output
+  // The max value that the actual VPU can output
   int max_accu = receptive_volume/2;
   int min_accu = -receptive_volume/2;
 
