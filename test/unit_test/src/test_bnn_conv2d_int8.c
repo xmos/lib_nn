@@ -70,7 +70,7 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
   k.dilation.vertical = 1;
 
   larq_ref_bconv2d_int8_out(&x, &y, &k, (int32_t*)X_ref, (int32_t*)K_ref_p,
-                   (int8_t*)Y_ref_p, post_activation_multiplier, post_activation_bias);
+                   (int8_t*)Y_ref_p, post_activation_multiplier, post_activation_bias, 0, INT_MAX);
 
   bnn_reorder_kernel_tensor(K_p, K_ref_p, k_height, k_width, chans_in,
                             chans_out, chan_overlaps);
@@ -447,7 +447,7 @@ void impl_bconv2d_int8_DIDO_sub_image(
 
             //Calculate the entire reference image
             larq_ref_bconv2d_int8_out(&x, &y, &k, (const int32_t*)X_ref, (const int32_t*)K_ref,
-                        (int8_t*)Y_ref, post_activation_multiplier, post_activation_bias);
+                        (int8_t*)Y_ref, post_activation_multiplier, post_activation_bias, 0, INT_MAX);
 
             int32_t clamp_low = 0;     
             int32_t clamp_high = receptive_volume*2;
