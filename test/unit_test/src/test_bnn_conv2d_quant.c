@@ -72,6 +72,8 @@ void run_quantisation(void (*fun_ptr)()){
         
         int16_t *post_activation_multiplier_q = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
         int16_t *post_activation_bias_q = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
+        int16_t *low_clamp_offset = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
+        int16_t *high_clamp_offset = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
 
         float * post_activation_multiplier = (float *)malloc(sizeof(float)*chans_out);
         float * post_activation_bias = (float *)malloc(sizeof(float)*chans_out);
@@ -89,10 +91,14 @@ void run_quantisation(void (*fun_ptr)()){
 
             post_activation_multiplier,
             post_activation_bias, 
+            
+            clamp_low, clamp_high,
+            
+            low_clamp_offset,
+            high_clamp_offset,  
 
             chans_out,
 
-            clamp_low, clamp_high,
             &accu_shr, &bias_multipler, &final_shr, receptive_volume, chan_overlaps
         );
 
@@ -112,6 +118,8 @@ void run_quantisation(void (*fun_ptr)()){
 
         free(post_activation_multiplier_q);
         free(post_activation_bias_q);
+        free(low_clamp_offset);
+        free(high_clamp_offset);
 
         free(post_activation_multiplier);
         free(post_activation_bias);

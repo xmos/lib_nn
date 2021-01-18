@@ -135,59 +135,81 @@ static void solve_constraint(
 }
 
 void bnn_quantise_activation(
-               int16_t * post_activation_multiplier_q,
-               int16_t* post_activation_bias_q,
+               int16_t * output_transform_multiplier_q,
+               int16_t * output_transform_bias_q,
 
-               float* post_activation_multiplier,
-               float* post_activation_bias, 
+               float * output_transform_multiplier,
+               float * output_transform_bias, 
 
                unsigned chans_out,
 
-               int32_t clamp_low,
-               int32_t clamp_high,
+               int32_t larq_clamp_min, 
+               int32_t larq_clamp_max,
 
-               int *accu_shr,
-               int16_t *bias_multipler,
-               int *final_shr,
+               int16_t * low_clamp_offset,
+               int16_t * high_clamp_offset,
+
+               int * accu_shr,
+               int16_t * bias_multipler,
+               int * final_shr,
 
                int32_t receptive_volume, 
                int * chan_overlaps
 ){
 
-  // The max value that the actual VPU can output
-  int max_accu = receptive_volume/2;
-  int min_accu = -receptive_volume/2;
+  // This is the offset between the larq accumulator (xor_popcount) and the xcore
+  // accumulator (macc//2). Note they have exactly the same units but a constant offset.
+  int vpu_offset = receptive_volume/2;
+  int vpu_multipler = -1;
+
+  //XOR_POPCOUNT = VLMACCR1*vpu_multipler + vpu_offset
+  //XOR_POPCOUNT = VLMACCR1*(-1) + receptive_volume / 2
+
+  // output = clamp(clamp(V, (low_clamp - (bv + ch_ov) * 2) / (mv * 2), (high_clamp - (bv + ch_ov) * 2) / (mv * 2)) * (m * mv * 2 ) + ((bv + ch_ov) * 2 * m + b), INT8_MIN, INT8_MAX)
+  
+  // Low clamping value:  (low_clamp - (bv + ch_ov) * 2) / (mv * 2)
+  // High clamping value: (high_clamp - (bv + ch_ov) * 2) / (mv * 2)
+  // Multiplier: m * mv * 2
+  // Bias: (bv + ch_ov) * 2 * m + b
+
+  float * vpu_output_transform_multiplier = (float *)malloc(sizeof(float) * chans_out);
+  float * vpu_output_transform_bias = (float *)malloc(sizeof(float) * chans_out);
+
+  // This is the absolute value of the min and max clamp values in the VLMACCR1 space
+  // These values will need to be made 16 bit and converted to the output space.
+  float * vpu_clamp_min = (float *)malloc(sizeof(float) * chans_out);
+  float * vpu_clamp_max = (float *)malloc(sizeof(float) * chans_out);
+
+  //Move to VPU scale
+  for (unsigned ch=0;ch<chans_out;ch++)
+    vpu_output_transform_multiplier[ch] = output_transform_multiplier[ch] * vpu_multipler * 2;
+
+  for (unsigned ch = 0; ch < chans_out; ch++){
+    vpu_output_transform_bias[ch] = output_transform_bias[ch] + 2 * output_transform_multiplier[ch]  * (vpu_offset + chan_overlaps[ch]);
+    vpu_clamp_max[ch] = (larq_clamp_max - (vpu_offset + chan_overlaps[ch]) * 2) / (vpu_multipler * 2);
+    vpu_clamp_min[ch] = (larq_clamp_min - (vpu_offset + chan_overlaps[ch]) * 2) / (vpu_multipler * 2);
+  }
 
   int B, A, M;
-
-  float * pam = (float *)malloc(sizeof(float) * chans_out);
-  float * pab = (float *)malloc(sizeof(float) * chans_out);
-
-  for (unsigned ch=0;ch<chans_out;ch++)
-    pam[ch] = post_activation_multiplier[ch] * -2.;
-
-  for (unsigned ch=0;ch<chans_out;ch++){
-    pab[ch] = post_activation_bias[ch] + post_activation_multiplier[ch]*(float)receptive_volume;
-    if(chan_overlaps)
-      pab[ch] +=  (float)chan_overlaps[ch]*2.*post_activation_multiplier[ch];
-  }
+  int vpu_max_accu = receptive_volume * vpu_multipler + vpu_offset;
+  int vpu_min_accu = receptive_volume * vpu_multipler + vpu_offset;
 
   solve_constraint(
     &B, &A, &M,
-    pam,
-    pab, 
+    vpu_output_transform_multiplier,
+    vpu_output_transform_bias, 
     chans_out,
-    max_accu, min_accu);
+    vpu_max_accu, vpu_min_accu);
 
   //TODO make this into a function
-  int max_pab_exp = INT_MIN;
+  int max_output_transform_multiplier_exp = INT_MIN;
   unsigned min_rsb = UINT_MAX;
   for (unsigned ch=0;ch<chans_out; ch++){
     int exp;
-    frexp(pab[ch], &exp);
-    if(exp > max_pab_exp)
-      max_pab_exp = exp;
-    unsigned rsb = clrsb((int)pab[ch]) - 16;
+    frexp(vpu_output_transform_bias[ch], &exp);
+    if(exp > max_output_transform_multiplier_exp)
+      max_output_transform_multiplier_exp = exp;
+    unsigned rsb = clrsb((int)vpu_output_transform_bias[ch]) - 16;
     if(rsb < min_rsb)
       min_rsb = rsb;
   }
@@ -199,7 +221,7 @@ void bnn_quantise_activation(
 
   int bias_exp_adjust ;
   if (B > 0){
-    bias_exp_adjust = 15 - max_pab_exp;
+    bias_exp_adjust = 15 - max_output_transform_multiplier_exp;
 
     //todo deal with the case that the bias_multipler wont fit in a 16 bit value
     *bias_multipler = (1<<(B - bias_exp_adjust)); //this is not so simple
@@ -212,18 +234,18 @@ void bnn_quantise_activation(
   // Now quantise the tensors
   for (unsigned ch = 0; ch < chans_out; ch++){
 
-    int32_t pa_mul = (int32_t)round(ldexp(pam[ch], M));
+    int32_t pa_mul = (int32_t)round(ldexp(vpu_output_transform_multiplier[ch], M));
     
     assert(clrsb(pa_mul) - 16 >= 0); // make sure there is no overflow
-    post_activation_multiplier_q[ch] = (int16_t)pa_mul;
+    output_transform_multiplier_q[ch] = (int16_t)pa_mul;
 
-    int32_t pa_bias = (int32_t)round(ldexp(pab[ch], bias_exp_adjust));
+    int32_t pa_bias = (int32_t)round(ldexp(vpu_output_transform_bias[ch], bias_exp_adjust));
 
     if (pa_bias == (1<<15)) //TODO think about this
       pa_bias  = INT16_MAX;
 
     // assert(clrsb(pa_bias) - 16 >= 0); // make sure there is no overflow
-    post_activation_bias_q[ch] = (int16_t)pa_bias;
+    output_transform_bias_q[ch] = (int16_t)pa_bias;
 
   }
 
@@ -234,8 +256,8 @@ void bnn_quantise_activation(
   // can deal with the asymertic rounding.
   *final_shr = B - 8; 
 
-  free(pam);
-  free(pab);
+  free(vpu_output_transform_multiplier);
+  free(vpu_output_transform_bias);
 }
 
 void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,

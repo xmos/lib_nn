@@ -38,20 +38,23 @@ int8_t bnn_post_activation_reference(
  * Reference implementation of activation quantisation. 
  */
 void bnn_quantise_activation(
-               int16_t * post_activation_multiplier_q,
-               int16_t* post_activation_bias_q,
+               int16_t * output_transform_multiplier_q,
+               int16_t * output_transform_bias_q,
 
-               float* post_activation_multiplier,
-               float* post_activation_bias, 
+               float * output_transform_multiplier,
+               float * output_transform_bias, 
 
                unsigned chans_out,
 
-               int32_t clamp_low,
-               int32_t clamp_high,
+               int32_t larq_clamp_min, 
+               int32_t larq_clamp_max,
 
-               int *accu_shr,
-               int16_t *bias_multipler,
-               int *final_shr,
+               int16_t * clamp_min,
+               int16_t * clamp_max,
+
+               int * accu_shr,
+               int16_t * bias_multipler,
+               int * final_shr,
 
                int32_t receptive_volume, 
                int * chan_overlaps
