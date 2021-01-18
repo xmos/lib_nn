@@ -3,13 +3,6 @@
 #define NN_OP_HELPER_H_
 
 
-#if defined(__XS3A__)
-  #define WEAK_FUNC __attribute__((weak))
-#else
-  //For some reason the above isn't working on x86 in cygwin. Linker refuses to find any weak symbols.
-  #define WEAK_FUNC
-#endif
-
 /** Get address of array element.
  * 
  * For compatibility with (non-xcore) builds with 64-bit addresses, when getting the address of an array

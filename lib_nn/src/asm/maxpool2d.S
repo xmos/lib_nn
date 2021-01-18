@@ -1,6 +1,7 @@
 
 #if defined(__XS3A__)
 
+#include "asm_constants.h"
 
 /*  
 void maxpool2d_ext(
@@ -13,9 +14,11 @@ void maxpool2d_ext(
     const nn_maxpool2d_flags_e flags);
 */
 
-#include "asm_constants.h"
-
-#define FUNCTION_NAME maxpool2d_ext
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME maxpool2d_ext
+#else
+  #define FUNCTION_NAME maxpool2d_ext_asm
+#endif //NN_USE_REF
 
 #define NSTACKWORDS     (40)
     

@@ -26,7 +26,11 @@ void nn_conv2d_hstrip_tail_deep_padded(
         const channel_count_t C_out_tail)
 */
 
-#define FUNCTION_NAME nn_conv2d_hstrip_tail_deep_padded
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME nn_conv2d_hstrip_tail_deep_padded
+#else
+  #define FUNCTION_NAME nn_conv2d_hstrip_tail_deep_padded_asm
+#endif // NN_USE_REF
 
 
 #define NSTACKVECS  (4)

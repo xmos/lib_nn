@@ -15,7 +15,12 @@ void fully_connected_8(
     const channel_count_t out_chan_count);
 */
 
-#define FUNCTION_NAME fully_connected_8
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME fully_connected_8
+#else
+  #define FUNCTION_NAME fully_connected_8_asm
+#endif //NN_USE_REF
+
 
 #ifndef FULLY_CONNECTED_8_SAFETY_CHECKS_ENABLED
   #define FULLY_CONNECTED_8_SAFETY_CHECKS_ENABLED (1)

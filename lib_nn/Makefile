@@ -3,9 +3,13 @@
 
 PLATFORM ?= xcore
 VERBOSE ?= 
+TARGET_DEVICE ?= XCORE-AI-EXPLORER
+BUILD_DIR ?= .build
+LIB_DIR ?= lib
 
-PLATFORM_MF = ../../lib_nn/etc/platform/$(strip $(PLATFORM)).mk
-COMMON_MF = ../../lib_nn/etc/common.mk
+
+PLATFORM_MF = ./etc/platform/$(strip $(PLATFORM)).mk
+COMMON_MF = ./etc/common.mk
 include $(PLATFORM_MF)
 include $(COMMON_MF)
 
@@ -18,50 +22,34 @@ help:
 	$(info *             make targets                                                          *)
 	$(info *                                                                                   *)
 	$(info *   help:      Display this message                                                 *)
+	$(info *   docs:      Build the documentation (requires Doxygen)                           *)
 	$(info *   clean:     Clean the build directory                                            *)
-	$(info *   build:     Build the unit tests                                                 *)
+	$(info *   build:     Build the library                                                    *)
 	$(info *                                                                                   *)
 	$(info *************************************************************************************)
 
+LIB_NAME := lib_nn
 
-APP_NAME := unit_test
-
-TARGET_DEVICE = XCORE-AI-EXPLORER
-
-XSCOPE_CONFIG ?= config.xscope
-NN_PATH := ../../lib_nn
-
-THIRD_PARTY_PATH := ./../../third_party
-
-UNITY_PATH := $(THIRD_PARTY_PATH)/Unity
-COMPUTE_ENGINE_PATH := $(THIRD_PARTY_PATH)/compute-engine
-FLAT_BUFFERS_PATH := $(THIRD_PARTY_PATH)/flatbuffers
-RUY_PATH := $(THIRD_PARTY_PATH)/ruy
-TENSORFLOW_PATH := $(THIRD_PARTY_PATH)/tensorflow
-GEMMLOWP_PATH := $(THIRD_PARTY_PATH)/gemmlowp
-
-BUILD_DIR := .build
-BIN_DIR := bin
-EXE_DIR   := $(BIN_DIR)/$(PLATFORM)
 OBJ_DIR   := $(BUILD_DIR)/$(PLATFORM)
-LIB_DIR   := $(OBJ_DIR)/lib
+SOURCE_FILE_EXTENSIONS := c
 EMPTY_STR :=
-LIB_NN_FILE := $(LIB_DIR)/lib_nn.a
 
-ifneq ($(VERBOSE),$(EMPTY_STR))
-  $(info XSCOPE_CONFIG: $(XSCOPE_CONFIG) )
-  $(info NN_PATH: $(NN_PATH) )
-  $(info LIB_NN_FILE: $(LIB_NN_FILE) )
-  $(info BUILD_DIR: $(BUILD_DIR) )
-  $(info OBJ_DIR: $(OBJ_DIR) )
+ifeq ($(PLATFORM),xcore)
+	SOURCE_FILE_EXTENSIONS += S
 endif
 
-INCLUDES := $(NN_PATH)/api $(NN_PATH)/src $(UNITY_PATH)/src $(COMPUTE_ENGINE_PATH) $(FLAT_BUFFERS_PATH)/include
-INCLUDES += $(RUY_PATH) $(TENSORFLOW_PATH) $(GEMMLOWP_PATH)
-SOURCE_DIRS := src 
-SOURCE_FILE_EXTENSIONS := c xc cpp
+ifneq ($(VERBOSE),$(EMPTY_STR))
+  $(info BUILD_DIR: $(BUILD_DIR) )
+  $(info OBJ_DIR: $(OBJ_DIR) )
+  $(info LIB_BUILD_DIR: $(LIB_BUILD_DIR) )
+  $(info LIB_DIR: $(LIB_DIR) )
+endif
+
+INCLUDES := api
+SOURCE_DIRS := src
 
 SOURCE_FILES := 
+
 
 ifneq ($(VERBOSE),$(EMPTY_STR))
   $(info SOURCE_FILE_EXTENTIONS: $(SOURCE_FILE_EXTENSIONS) )
@@ -69,11 +57,23 @@ ifneq ($(VERBOSE),$(EMPTY_STR))
   $(info SOURCE_DIRS: $(SOURCE_DIRS) )
 endif
 
+
 ifeq ($(strip $(PLATFORM)),$(strip xcore))
   PLATFORM_FLAGS += -target=$(TARGET_DEVICE)
 endif
 
-USE_REF = 0
+USE_REF := 0
+
+ifneq ($(PLATFORM),xcore)
+  # If the platform isn't xcore, C implementations of kernels should be used
+  USE_REF := 1
+endif
+
+ifeq ($(USE_REF),1)
+  # If USE_REF == 1, -DNN_USE_REF=1 should be added as a compilation flag
+  $(info Using C implementations...)
+  GLOBAL_FLAGS += -DNN_USE_REF=1
+endif
 
 #######################################################
 # SOURCE FILE SEARCH
@@ -97,15 +97,14 @@ endif
 
 OBJECT_FILES := $(patsubst %, $(OBJ_DIR)/%.o, $(SOURCE_FILES:./%=%))
 
-# Set object file prerequisites
-$(OBJECT_FILES) : $(OBJ_DIR)/%.o: %
-
-
 ifneq ($(VERBOSE),$(EMPTY_STR))
-  $(info $(APP_NAME) object files:)
+  $(info Library object files:)
   $(foreach f,$(OBJECT_FILES), $(info $f) )
   $(info )
 endif
+
+# Source file is first prerequisite for object files
+$(OBJECT_FILES): $(OBJ_DIR)/%.o: %
 
 #########
 ## Recipe-scoped variables for building objects.
@@ -116,6 +115,7 @@ endif
 $(eval $(foreach ext,$(SOURCE_FILE_EXTENSIONS),   \
            $(filter %.$(ext).o,$(OBJECT_FILES)): OBJ_FILE_TYPE = $(ext)$(newline)))
 
+
 # OBJ_TOOL
 # Maps from file extension to the tool type (not necessarily 1-to-1 mapping with
 # file extension). This simplifies some of the code below.
@@ -123,6 +123,7 @@ $(OBJECT_FILES): OBJ_TOOL = $(MAP_COMP_$(OBJ_FILE_TYPE))
 
 # OBJ_COMPILER: Compilation program for this object
 $(OBJECT_FILES): OBJ_COMPILER = $($(OBJ_TOOL))
+
 
 # $(1) - Tool
 # $(2) - File extension
@@ -134,10 +135,10 @@ $(OBJECT_FILES): OBJ_FLAGS = $(strip $(foreach grp,$(call flags_combo_str,$(OBJ_
 $(OBJECT_FILES): OBJ_INCLUDES = $(strip $(foreach grp,$(call includes_combo_str,$(OBJ_TOOL),$(OBJ_FILE_TYPE)),$($(grp))))
 
 ###
-# make target for each object file.
+# make target for each component object file.
 #
 $(OBJECT_FILES):
-	$(info [$(APP_NAME)] Compiling $<)
+	$(info [$(LIB_NAME)] Compiling $<)
 	@$(OBJ_COMPILER) $(OBJ_FLAGS) $(addprefix -I,$(OBJ_INCLUDES)) -o $@ -c $<
 
 ###
@@ -145,32 +146,6 @@ $(OBJECT_FILES):
 # file prerequisites for each object file. Otherwise it won't know to recompile if only
 # header files have changed, for example.
 -include $(OBJECT_FILES:%.o=%.d)
-
-
-#######################################################
-# LIBRARY TARGETS
-#######################################################
-
-# Libraries are built using a recursive make call.
-UNITY_STATIC_LIB := $(LIB_DIR)/unity.a
-DEPENDENCY_LIBS = $(UNITY_STATIC_LIB)
-
-LIB_MAKE_OPTS := VERBOSE=$(VERBOSE) BUILD_DIR=$(abspath $(BUILD_DIR)/lib_nn) LIB_DIR=$(abspath $(LIB_DIR)) \
-                 PLATFORM=$(PLATFORM) TARGET_DEVICE=$(TARGET_DEVICE)
-
-DEP_MAKE_OPTS := VERBOSE=$(VERBOSE) OBJ_DIR=$(abspath $(OBJ_DIR)) PLATFORM=$(PLATFORM) \
-                 TARGET_DEVICE=$(TARGET_DEVICE)
-
-force_look:
-	@true
-
-$(LIB_NN_FILE): force_look
-	@$(MAKE) -C $(NN_PATH) $(abspath $@ ) $(LIB_MAKE_OPTS)
-
-$(UNITY_STATIC_LIB): force_look
-	@$(MAKE) -C ../etc/Unity $(abspath $@ ) $(DEP_MAKE_OPTS)
-
-ALL_STATIC_LIBS += $(LIB_NN_FILE) $(DEPENDENCY_LIBS)
 
 #######################################################
 # HOUSEKEEPING
@@ -181,9 +156,6 @@ ALL_STATIC_LIBS += $(LIB_NN_FILE) $(DEPENDENCY_LIBS)
 # is just the creation of that directory and file.
 $(eval  $(foreach bfile,$(OBJECT_FILES),       \
             $(bfile): | $(dir $(bfile)).marker $(newline)))
-			
-$(eval  $(foreach bfile,$(ALL_STATIC_LIBS),       \
-            $(bfile): | $(dir $(bfile)).marker $(newline)))
 
 $(BUILD_DIR)/%.marker:
 	$(info Creating dir: $(dir $@))
@@ -193,42 +165,56 @@ $(BUILD_DIR)/%.marker:
 
 
 #######################################################
-# APPLICATION TARGETS
+# STATIC LIBRARY TARGETS
 #######################################################
 
+###
+# xcore optimized
+LIB_FILE := $(LIB_DIR)/$(LIB_NAME).a
+OBJECT_FILES := $(filter-out $(OBJ_DIR)/src/arch/ref/%, $(OBJECT_FILES))
+
+ifneq ($(VERBOSE),$(EMPTY_STR))
+  $(info Object files:)
+  $(foreach f,$(OBJECT_FILES), $(info $f) )
+  $(info )
+endif
+
+$(LIB_FILE): $(OBJECT_FILES)
+
+
+
 #
-# Application executable files
-APP_EXE_FILE = $(EXE_DIR)/$(APP_NAME)$(PLATFORM_EXE_SUFFIX)
+# Recipe for building the archive files.
+#   They get placed in $(LIB_DIR)
+#
 
-$(APP_EXE_FILE): $(OBJECT_FILES) $(ALL_STATIC_LIBS) $(XSCOPE_CONFIG)
-
-$(APP_EXE_FILE): REQUIRED_LIBRARIES = $(ALL_STATIC_LIBS)
-
-
-$(APP_EXE_FILE):
+$(LIB_FILE):	
 	$(call mkdir_cmd,$@)
-	$(info Linking binary $@)
-	@$(XCC) $(LDFLAGS)                      \
-		$(APP_FLAGS)                        \
-		$(PLATFORM_FLAGS)                   \
-		$(OBJECT_FILES)                     \
-		$(XSCOPE_CONFIG)					\
-		-o $@                               \
-		$(REQUIRED_LIBRARIES)
-		
+	$(info Generating archive $@)
+	@$(AR) $(AR_FLAGS) $@ $^
+
+
+
 
 # #######################################################
 # # OTHER TARGETS
 # #######################################################
 
-.PHONY: help all build clean xcore ref
+.PHONY: help all build clean xcore ref libs docs
+
 
 all: build
 
 compile: $(OBJECT_FILES)
 
-build: $(APP_EXE_FILE)
+build: $(LIB_FILE)
 
 clean:
 	$(info Cleaning project...)
+	rm -rf $(LIB_DIR)
 	rm -rf $(BUILD_DIR)
+
+docs:
+	cd doc && doxygen && cd ..
+
+

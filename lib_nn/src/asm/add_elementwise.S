@@ -27,7 +27,11 @@ void add_elementwise(
     const unsigned output_count);
 */
 
-#define FUNCTION_NAME add_elementwise
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME add_elementwise
+#else
+  #define FUNCTION_NAME add_elementwise_asm
+#endif // NN_USE_REF
 
 #define NSTACKVECS      8
 #define NSTACKWORDS     ((NSTACKVECS)*8 + 10)

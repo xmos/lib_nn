@@ -8,6 +8,15 @@
 #include "xs3_vpu.h"
 #include "vpu_sim.h"
 
+
+
+void bconv2d_int8_DIDO_impl(
+    nn_bconv2d_int8_DIDO_impl_plan_t * plan);
+
+void bconv2d_int8_impl(
+    nn_bconv2d_int8_impl_plan_t *plan);
+
+
 static int64_t saturate_non_sym(
     const int64_t input,
     const unsigned bits)
@@ -33,8 +42,10 @@ static void VDEPTH8_FIXED(xs3_vpu* vpu){
     }
 }
 
-WEAK_FUNC
-void bconv2d_int8_DIDO_impl(nn_bconv2d_int8_DIDO_impl_plan_t * plan){
+
+void bconv2d_int8_DIDO_impl_ref(
+    nn_bconv2d_int8_DIDO_impl_plan_t * plan)
+{
 
   xs3_vpu vpu_data;
   xs3_vpu * vpu = &vpu_data;
@@ -207,8 +218,10 @@ void compute_patch(nn_bconv2d_int8_impl_plan_t *plan,
   VDEPTH8_FIXED(vpu);
 }
 
-WEAK_FUNC
-void bconv2d_int8_impl(nn_bconv2d_int8_impl_plan_t *plan){
+
+void bconv2d_int8_impl_ref(
+    nn_bconv2d_int8_impl_plan_t *plan)
+{
 
   xs3_vpu vpu_data;
   memset(&vpu_data, 0, sizeof(vpu_data));
@@ -567,3 +580,20 @@ void bconv2d_int8(int8_t* Y_p,
 
     bconv2d_int8_impl(&plan);
 }
+
+
+#ifdef NN_USE_REF
+
+void bconv2d_int8_DIDO_impl(
+    nn_bconv2d_int8_DIDO_impl_plan_t * plan)
+{
+    bconv2d_int8_DIDO_impl_ref(plan);
+}
+
+void bconv2d_int8_impl(
+    nn_bconv2d_int8_impl_plan_t *plan)
+{
+    bconv2d_int8_impl_ref(plan);
+}
+
+#endif // NN_USE_REF

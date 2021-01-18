@@ -104,8 +104,7 @@ void nn_standard_BSO_layout(
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-WEAK_FUNC
-void vpu_memcpy(
+void vpu_memcpy_ref(
     void* dst,
     const void* src,
     unsigned size)
@@ -114,3 +113,16 @@ void vpu_memcpy(
         ((int8_t*)dst)[i] = ((int8_t*)src)[i];
     }
 }
+
+
+#ifdef NN_USE_REF
+
+void vpu_memcpy(
+    void* dst,
+    const void* src,
+    unsigned size)
+{
+    vpu_memcpy_ref(dst, src, size);
+}
+
+#endif //NN_USE_REF
