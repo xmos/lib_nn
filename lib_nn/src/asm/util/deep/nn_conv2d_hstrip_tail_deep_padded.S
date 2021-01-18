@@ -90,28 +90,40 @@ FUNCTION_NAME:
     ldaw r11, cp[vpu_vects]
     {   ldaw r11, cp[0]                         ;   set cp, r11                             }
     {                                           ;   stw r11, sp[STACK_CP]                   }
-
+    // Push the start addresses of Y, X and K onto the stack
     {                                           ;   stw r0, sp[STACK_Y]                     }
     {                                           ;   stw r1, sp[STACK_X]                     }
     {   ldc r0, 32                              ;   stw r2, sp[STACK_K]                     }
     {   shl r11, r0, 4                          ;                                           }
+    // Set the VPU mode to 8-bit
     {   mov r11, r1                             ;   vsetc r11                               }
+    // Clear vD:vR
     {   ldaw r1, sp[STACK_VEC_TMP1]             ;   vclrdr                                  }
+    // Store zeros to vec_tmp1
     {                                           ;   vstr r1[0]                              }
+    // Load biases into vD:vR
     {   add r11, r3, r0                         ;   vldd r3[0]                              }
     {   add r11, r11, r0                        ;   vldr r11[0]                             }
+    // Push BSO pointer onto stack
     {                                           ;   stw r11, sp[STACK_BSO]                  }
     
+    // r0 <-- K_h - pad_t - pad_b
+    // r0 here is the number of non-padding rows within the convolution window
     {                                           ;   ldw r0, sp[STACK_K_H]                   }
     {                                           ;   ldw r1, sp[STACK_PAD_T]                 }
     {   sub r0, r0, r1                          ;   ldw r1, sp[STACK_PAD_B]                 }
     {   sub r0, r0, r1                          ;                                           }
     {                                           ;   stw r0, sp[STACK_PATCH_ROWS]            }
+
+    // r0 <-- [Hori stride] * [X channels]
+    // This is the number of bytes that the convolution window pointer gets incremented for each *output column*.
     {                                           ;   ldw r0, sp[STACK_K_h_stride]            }
     {                                           ;   ldw r1, sp[STACK_C_IN]                  }
     mul r0, r0, r1
     {   shr r0, r1, 5                           ;   stw r0, sp[STACK_WIN_H_STRIDE]          }
+    // [input channel groups] <-- [X channels] / 32
     {   zext r1, 5                              ;   stw r0, sp[STACK_C_IN_GROUPS]           }
+    // [input channel tail] <-- [X channels] % 32
     {                                           ;   stw r1, sp[STACK_C_IN_TAIL]             }
 
     //  To move N accumulators from the beginning of vD:vR to the end of vD:vR (which is where
@@ -219,9 +231,10 @@ FUNCTION_NAME:
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add K, K, c_in_tail                     ;   vlmaccr tmp[0]                          }
+                    {   shl c_out_tail, c_out_tail, 1           ;                                           }
 
                 .L_pad_t_tail_end:
-                {   shl c_out_tail, c_out_tail, 1           ;   bt cols_left, .L_pad_t_col_start        }    
+                {                                           ;   bt cols_left, .L_pad_t_col_start        }  
             .L_pad_t_col_end:
             {                                           ;   ldw tmp, sp[STACK_X_V_STRIDE]           }
             {   add X, X, tmp                           ;   bt rows_left, .L_pad_t_row_start        }
@@ -311,9 +324,10 @@ FUNCTION_NAME:
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add K, K, c_in_tail                     ;   vlmaccr tmp[0]                          }
+                    {   shl c_out_tail, c_out_tail, 1           ;                                           }
 
                 .L_pad_b_tail_end:
-                {   shl c_out_tail, c_out_tail, 1           ;   bt cols_left, .L_pad_b_col_start        }    
+                {                                           ;   bt cols_left, .L_pad_b_col_start        }
             .L_pad_b_col_end:
             {   ldaw Q(X), sp[STACK_VEC_ADJ_B_HI]       ;   bt rows_left, .L_pad_b_row_start        }
         .L_pad_b_row_end:
@@ -455,9 +469,10 @@ FUNCTION_NAME:
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add K, K, c_in_tail                     ;   vlmaccr tmp[0]                          }
+                    {   shl c_out_tail, c_out_tail, 1           ;                                           }
 
                 .L_pad_l_tail_end:
-                {   shl c_out_tail, c_out_tail, 1           ;   bt cols_left, .L_pad_l_start            }
+                {                                           ;   bt cols_left, .L_pad_l_start            }
             .L_pad_l_end:
             {                                           ;   ldw cols_left, sp[STACK_CENTER_COLS]    }
             {   ldaw tmp, sp[STACK_VEC_TMP2]            ;   bf cols_left, .L_center_end             }
@@ -528,9 +543,9 @@ FUNCTION_NAME:
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add K, K, c_in_tail                     ;   vlmaccr tmp[0]                          }
+                    {   shl c_out_tail, c_out_tail, 1           ;                                           }
 
                 .L_center_tail_end:
-                {   shl c_out_tail, c_out_tail, 1           ;                                           }
                 {   ldaw tmp, sp[STACK_VEC_TMP2]            ;   bt cols_left, .L_center_start           }
             .L_center_end:
             {                                           ;   ldw cols_left, sp[STACK_PAD_R]          }
@@ -601,9 +616,10 @@ FUNCTION_NAME:
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add tmp, tmp, k_cout_stride             ;   vlmaccr tmp[0]                          }
                     {   add K, K, c_in_tail                     ;   vlmaccr tmp[0]                          }
+                    {   shl c_out_tail, c_out_tail, 1           ;                                           }
 
                 .L_pad_r_tail_end:
-                {   shl c_out_tail, c_out_tail, 1           ;   bt cols_left, .L_pad_r_start            }
+                {                                           ;   bt cols_left, .L_pad_r_start            }
             .L_pad_r_end:
             //                                          // Added to X back up at the start of the row
             {   sub rows_left, rows_left, 1             ;   ldw tmp, sp[STACK_X_V_STRIDE]           }
