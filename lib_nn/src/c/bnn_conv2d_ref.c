@@ -146,6 +146,7 @@ void bnn_quantise_activation(
                int32_t larq_clamp_min, 
                int32_t larq_clamp_max,
 
+               int16_t * quantised_accu_modifier,
                int16_t * low_clamp_offset,
                int16_t * high_clamp_offset,
 

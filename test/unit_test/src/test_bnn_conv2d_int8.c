@@ -26,8 +26,7 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
                int16_t * post_activation_multiplier_q,
                int16_t * post_activation_bias_q, 
 
-               int16_t * low_clamp_offset, 
-               int16_t * high_clamp_offset, 
+               int16_t * quantised_accu_modifier,
 
                int * chan_overlaps,
                
@@ -81,6 +80,9 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
   int16_t bias_multipler;
   int accu_shr, final_shr;
 
+  int16_t low_clamp_offset;
+  int16_t high_clamp_offset;
+
   bnn_quantise_activation(
       post_activation_multiplier_q,
       post_activation_bias_q,
@@ -96,12 +98,16 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
       low_clamp_offset,
       high_clamp_offset,
 
+      quantised_accu_modifier,
+
       &accu_shr, &bias_multipler, &final_shr, receptive_volume, chan_overlaps
   );
 
   test_fn((int8_t*)Y_p, (const bnn_b32_t*)X_ref,
     (const bnn_b32_t*)K_p, post_activation_multiplier_q, 
-    post_activation_bias_q, accu_shr, bias_multipler, final_shr,
+    post_activation_bias_q, 
+    quantised_accu_modifier, low_clamp_offset, high_clamp_offset,
+    accu_shr, bias_multipler, final_shr,
     &x, &y, &k);
     
   for (unsigned e=0;e<y_height * y_width * chans_out;++e)
@@ -160,8 +166,7 @@ void impl_bconv2d_int8_DIDO_pseudo_random(
                   int16_t *post_activation_multiplier_q = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
                   int16_t *post_activation_bias_q = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
                   
-                  int16_t *low_clamp_offset = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
-                  int16_t *high_clamp_offset = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
+                  int16_t *quantised_accu_modifier = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
           
                   float * post_activation_multiplier = (float *)malloc(sizeof(float)*chans_out);
                   float * post_activation_bias = (float *)malloc(sizeof(float)*chans_out);
@@ -175,8 +180,7 @@ void impl_bconv2d_int8_DIDO_pseudo_random(
                   assert(Y_ref);
                   assert(post_activation_multiplier_q);
                   assert(post_activation_bias_q);
-                  assert(low_clamp_offset);
-                  assert(high_clamp_offset);
+                  assert(quantised_accu_modifier);
                   assert(K);
                   assert(K_ref);
 
@@ -200,6 +204,8 @@ void impl_bconv2d_int8_DIDO_pseudo_random(
                       unsigned receptive_volume = k_width * k_height * chans_in;
                       pick_post_activation_params(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, &seed);
 
+                      int32_t larq_clamp_min = 0;
+                      int32_t larq_clamp_max = receptive_volume*2;
 
                       run_int8_config(
                           (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
@@ -208,12 +214,11 @@ void impl_bconv2d_int8_DIDO_pseudo_random(
                           (float*)post_activation_bias, 
                           (int16_t*)post_activation_multiplier_q,
                           (int16_t*)post_activation_bias_q,  
-                          (int16_t*)low_clamp_offset,
-                          (int16_t*)high_clamp_offset,  
+                          (int16_t*)quantised_accu_modifier,
                           (int*) chan_overlaps,
                           x_height,
                           x_width, k_height, k_width, chans_in, chans_out, h_stride,
-                          v_stride, seed, 0, receptive_volume*2, valid_impl);
+                          v_stride, seed, larq_clamp_min, larq_clamp_max, valid_impl);
                     }
 
                     free(X_ref);
@@ -221,8 +226,7 @@ void impl_bconv2d_int8_DIDO_pseudo_random(
                     free(Y_ref);
                     free(post_activation_multiplier_q);
                     free(post_activation_bias_q);
-                    free(low_clamp_offset);
-                    free(high_clamp_offset);
+                    free(quantised_accu_modifier);
                     free(K);
                     free(K_ref);
 
@@ -278,8 +282,7 @@ void impl_bconv2d_int8_DIDO_pseudo_random2(
           int16_t *post_activation_bias_q = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
           bnn_b32_t *data_scratch = (bnn_b32_t *)malloc(sizeof(bnn_b32_t)*(k_height * k_width * chan_words_in + DATA_SCRATCH_OVERREADWRITE_WORDS)); 
           
-          int16_t *low_clamp_offset = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
-          int16_t *high_clamp_offset = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
+          int16_t *quantised_accu_modifier = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
           
           float * post_activation_multiplier = (float *)malloc(sizeof(float)*chans_out);
           float * post_activation_bias = (float *)malloc(sizeof(float)*chans_out);
@@ -293,8 +296,7 @@ void impl_bconv2d_int8_DIDO_pseudo_random2(
           assert(Y_ref);
           assert(post_activation_multiplier_q);
           assert(post_activation_bias_q);
-          assert(low_clamp_offset);
-          assert(high_clamp_offset);
+          assert(quantised_accu_modifier);
           assert(K);
           assert(K_ref);
 
@@ -317,6 +319,8 @@ void impl_bconv2d_int8_DIDO_pseudo_random2(
           unsigned receptive_volume = k_width * k_height * chans_in;
           pick_post_activation_params(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, &seed);
 
+          int32_t larq_clamp_min = 0;
+          int32_t larq_clamp_max = receptive_volume*2;
           run_int8_config(
               (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
               (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
@@ -324,20 +328,18 @@ void impl_bconv2d_int8_DIDO_pseudo_random2(
               (float*)post_activation_bias, 
               (int16_t*)post_activation_multiplier_q,
               (int16_t*)post_activation_bias_q,  
-              (int16_t*)low_clamp_offset,
-              (int16_t*)high_clamp_offset,  
+              (int16_t*)quantised_accu_modifier,
               (int*) chan_overlaps,
               x_height,
               x_width, k_height, k_width, chans_in, chans_out, 1,
-              1, seed, 0, receptive_volume*2, valid_impl);
+              1, seed, larq_clamp_min, larq_clamp_max, valid_impl);
 
         free(X_ref);
         free(Y);
         free(Y_ref);
         free(post_activation_multiplier_q);
         free(post_activation_bias_q);
-        free(low_clamp_offset);
-        free(high_clamp_offset);
+        free(quantised_accu_modifier);
         free(K);
         free(K_ref);
 
@@ -357,6 +359,11 @@ static void run_int8_sub_image(
 
               int16_t * post_activation_multiplier_q,
               int16_t * post_activation_bias_q,
+
+              int16_t * quantised_accu_modifier,
+              int16_t low_clamp_offset,
+              int16_t high_clamp_offset,
+              
               const int accu_shr,
               const int16_t bias_multiplier,
               const int final_shr,
@@ -371,6 +378,8 @@ static void run_int8_sub_image(
   valid_impl(Y_p, X_p,
       K_p, post_activation_multiplier_q,
       post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
+      quantised_accu_modifier, low_clamp_offset, high_clamp_offset,
+
       x, y, k,
       y_loc_x, y_loc_y, y_sub_width, y_sub_height);
 
@@ -434,8 +443,7 @@ void impl_bconv2d_int8_DIDO_sub_image(
       int16_t * post_activation_multiplier_q = (int16_t *) malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
       int16_t * post_activation_bias_q = (int16_t *) malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
 
-      int16_t *low_clamp_offset = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
-      int16_t *high_clamp_offset = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
+      int16_t *quantised_accu_modifier = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
           
       int32_t over_bytes = compute_int8_over_RW_bytes(chans_in, full_k_height, full_k_width, chans_out);
 
@@ -496,6 +504,9 @@ void impl_bconv2d_int8_DIDO_sub_image(
             int accu_shr, final_shr;
             int16_t bias_multiplier;
 
+            int16_t low_clamp_offset;
+            int16_t high_clamp_offset;
+
             bnn_quantise_activation(
                 post_activation_multiplier_q,
                 post_activation_bias_q,
@@ -508,8 +519,9 @@ void impl_bconv2d_int8_DIDO_sub_image(
                 larq_clamp_min, 
                 larq_clamp_max,
 
-                low_clamp_offset,
-                high_clamp_offset,
+               quantised_accu_modifier,
+               &low_clamp_offset,
+               &high_clamp_offset,
 
                 &accu_shr, &bias_multiplier, &final_shr, receptive_volume, chan_overlaps
             );
@@ -522,20 +534,24 @@ void impl_bconv2d_int8_DIDO_sub_image(
                       size_t addressable_Y_bytes = y.height * y.width * y.channels;
                       memset(Y, undef_sentinal, addressable_Y_bytes);
 
-                      run_int8_sub_image(
-                        (int8_t*)Y, 
-                        (const int8_t*)Y_ref,
-                        (const bnn_b32_t*) X_ref,
-                        (const bnn_b32_t*) K, 
+                      // run_int8_sub_image(
+                      //   (int8_t*)Y, 
+                      //   (const int8_t*)Y_ref,
+                      //   (const bnn_b32_t*) X_ref,
+                      //   (const bnn_b32_t*) K, 
 
-                        (int16_t * )post_activation_multiplier_q,
-                        (int16_t *) post_activation_bias_q,
-                        (const int )accu_shr,
-                        (const int16_t) bias_multiplier,
-                        (const int )final_shr,
+                      //   (int16_t * )post_activation_multiplier_q,
+                      //   (int16_t *) post_activation_bias_q,
+                      //   (int16_t *) quantised_accu_modifier,
+                      //   low_clamp_offset,
+                      //   high_clamp_offset,
 
-                        &x, &y, &k,
-                        y_loc_x, y_loc_y, y_sub_width, y_sub_height, valid_impl);
+                      //   (const int )accu_shr,
+                      //   (const int16_t) bias_multiplier,
+                      //   (const int )final_shr,
+
+                      //   &x, &y, &k,
+                      //   y_loc_x, y_loc_y, y_sub_width, y_sub_height, valid_impl);
                     }
                   }
                 } 
@@ -553,8 +569,7 @@ void impl_bconv2d_int8_DIDO_sub_image(
       free(chan_overlaps);
       free(post_activation_multiplier_q);
       free(post_activation_bias_q);
-      free(low_clamp_offset);
-      free(high_clamp_offset);
+      free(quantised_accu_modifier);
 
     }
   }
@@ -793,11 +808,8 @@ void impl_bconv2d_int8_DIDO_directed(void (*valid_impl)()) {
   int16_t *post_activation_bias_q =
       (int16_t *)malloc(sizeof(int16_t) * (chans_out + (16 - chans_out % 16)));
 
-  int16_t *low_clamp_offset =
-      (int16_t *)malloc(sizeof(int16_t) * (chans_out + (16 - chans_out % 16)));
-  int16_t *high_clamp_offset =
-      (int16_t *)malloc(sizeof(int16_t) * (chans_out + (16 - chans_out % 16)));
-
+  int16_t *quantised_accu_modifier = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
+          
   int8_t *Y = (int8_t *)malloc(sizeof(int8_t) * y_height * y_width * chans_out);
   int8_t *Y_ref =
       (int8_t *)malloc(sizeof(int8_t) * y_height * y_width * chans_out);
@@ -807,8 +819,7 @@ void impl_bconv2d_int8_DIDO_directed(void (*valid_impl)()) {
   assert(Y_ref);
   assert(post_activation_multiplier_q);
   assert(post_activation_bias_q);
-  assert(low_clamp_offset);
-  assert(high_clamp_offset);
+  assert(quantised_accu_modifier);
   assert(K);
   assert(K_ref);
 
@@ -824,10 +835,14 @@ void impl_bconv2d_int8_DIDO_directed(void (*valid_impl)()) {
 
     run_int8_config(
         (int8_t *)Y, (int8_t *)Y_ref, (bnn_b32_t *)X_ref, (bnn_b32_t *)K,
-        (bnn_b32_t *)K_ref, (float *)post_activation_multiplier,
-        (float *)post_activation_bias, (int16_t *)post_activation_multiplier_q,
+        (bnn_b32_t *)K_ref, 
+        (float *)post_activation_multiplier,
+        (float *)post_activation_bias, 
+        (int16_t *)post_activation_multiplier_q,
         (int16_t *)post_activation_bias_q, 
-        low_clamp_offset, high_clamp_offset,
+
+        (int16_t *)quantised_accu_modifier,
+
         (int *)chan_overlaps, x_height,
         x_width, k_height, k_width, chans_in, chans_out, h_stride, v_stride,
         seed, larq_clamp_min, larq_clamp_max, valid_impl);
@@ -837,6 +852,7 @@ void impl_bconv2d_int8_DIDO_directed(void (*valid_impl)()) {
   free(Y_ref);
   free(post_activation_multiplier_q);
   free(post_activation_bias_q);
+  free(quantised_accu_modifier);
   free(K);
   free(chan_overlaps);
 }
@@ -848,6 +864,11 @@ static void SISO_valid(
 
       int16_t * post_activation_multiplier_q,
       int16_t * post_activation_bias_q,
+
+      const int16_t * quantised_accu_modifier,
+      const int16_t low_clamp_offset,
+      const int16_t high_clamp_offset,
+
       const int accu_shr,
       const int16_t bias_multiplier,
       const int final_shr,
@@ -863,7 +884,9 @@ static void SISO_valid(
       
   bconv2d_int8_valid(Y_p, X_p,
                       K_p, post_activation_multiplier_q,
-                      post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
+                      post_activation_bias_q, 
+                      quantised_accu_modifier, low_clamp_offset, high_clamp_offset,
+                      accu_shr, bias_multiplier, final_shr, 
                       data_scratch, x, y, k,
                       y_loc_x, y_loc_y, y_sub_width, y_sub_height);
   free(data_scratch);
@@ -876,6 +899,11 @@ static void DI_valid(
 
       int16_t * post_activation_multiplier_q,
       int16_t * post_activation_bias_q,
+
+      const int16_t * quantised_accu_modifier,
+      const int16_t low_clamp_offset,
+      const int16_t high_clamp_offset,
+
       const int accu_shr,
       const int16_t bias_multiplier,
       const int final_shr,
@@ -888,7 +916,9 @@ static void DI_valid(
 
   bconv2d_int8_DIDO_valid(Y_p, (const bnn_b256_t*)X_p,
         (const bnn_b256_t*)K_p, post_activation_multiplier_q,
-        post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
+        post_activation_bias_q, 
+        quantised_accu_modifier, low_clamp_offset, high_clamp_offset,
+        accu_shr, bias_multiplier, final_shr, 
         x, y, k,
         y_loc_x, y_loc_y, y_sub_width, y_sub_height);
 }
@@ -901,6 +931,11 @@ static void SISO_full(
 
       int16_t * post_activation_multiplier_q,
       int16_t * post_activation_bias_q,
+
+      const int16_t * quantised_accu_modifier,
+      const int16_t low_clamp_offset,
+      const int16_t high_clamp_offset,
+      
       const int accu_shr,
       const int16_t bias_multiplier,
       const int final_shr,
@@ -914,7 +949,9 @@ static void SISO_full(
       
   bconv2d_int8(Y_p, X_p,
                       K_p, post_activation_multiplier_q,
-                      post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
+                      post_activation_bias_q, 
+                      quantised_accu_modifier, low_clamp_offset, high_clamp_offset,
+                      accu_shr, bias_multiplier, final_shr, 
                       data_scratch, x, y, k,
                       0, 0, y->width, y->height, 0, 0);
   free(data_scratch);
@@ -927,6 +964,11 @@ static void DI_full(
 
       int16_t * post_activation_multiplier_q,
       int16_t * post_activation_bias_q,
+
+      const int16_t * quantised_accu_modifier,
+      const int16_t low_clamp_offset,
+      const int16_t high_clamp_offset,
+
       const int accu_shr,
       const int16_t bias_multiplier,
       const int final_shr,
@@ -937,7 +979,9 @@ static void DI_full(
 
   bconv2d_int8_DIDO(Y_p, (const bnn_b256_t*)X_p,
                       (const bnn_b256_t*)K_p, post_activation_multiplier_q,
-                      post_activation_bias_q, accu_shr, bias_multiplier, final_shr, 
+                      post_activation_bias_q, 
+                      quantised_accu_modifier, low_clamp_offset, high_clamp_offset,
+                      accu_shr, bias_multiplier, final_shr, 
                       x, y, k,
                       0, 0, y->width, y->height, 0, 0);
 }

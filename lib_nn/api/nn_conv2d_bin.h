@@ -49,8 +49,9 @@ void bnn_quantise_activation(
                int32_t larq_clamp_min, 
                int32_t larq_clamp_max,
 
-               int16_t * clamp_min,
-               int16_t * clamp_max,
+               int16_t * quantised_accu_modifier,
+               int16_t * low_clamp_offset,
+               int16_t * high_clamp_offset,
 
                int * accu_shr,
                int16_t * bias_multipler,
@@ -158,6 +159,11 @@ void bconv2d_int8_DIDO_valid(int8_t* Y_p,
     
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
+
+    const int16_t * quantised_accu_modifier,
+    const int16_t low_clamp_offset,
+    const int16_t high_clamp_offset,
+
     const int accu_shr,
     const int16_t bias_multiplier,
     const int final_shr,
@@ -176,6 +182,11 @@ void bconv2d_int8_valid(int8_t* Y_p,
     
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
+
+    const int16_t * quantised_accu_modifier,
+    const int16_t low_clamp_offset,
+    const int16_t high_clamp_offset,
+
     const int accu_shr,
     const int16_t bias_multiplier,
     const int final_shr,
@@ -397,6 +408,11 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
     
     const int16_t* post_activation_multiplier, 
     const int16_t* post_activation_bias,
+
+    const int16_t * quantised_accu_modifier,
+    const int16_t low_clamp_offset,
+    const int16_t high_clamp_offset,
+
     const int accu_shr,
     const int16_t bias_multipler,
     const int final_shr,
@@ -416,6 +432,11 @@ void bconv2d_int8(int8_t* Y_p,
     
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
+
+    const int16_t * quantised_accu_modifier,
+    const int16_t low_clamp_offset,
+    const int16_t high_clamp_offset,
+
     const int accu_shr,
     const int16_t bias_multipler,
     const int final_shr,

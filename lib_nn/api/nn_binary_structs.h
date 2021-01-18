@@ -109,6 +109,10 @@ typedef struct {
   int32_t input_channel_loop_counter;
   int8_t* Y;
 
+  int32_t low_clamp_offset;
+  int32_t high_clamp_offset;
+  int16_t * quantised_accu_modifier;
+
 } nn_bconv2d_int8_DIDO_impl_plan_t;
 
 
@@ -157,5 +161,8 @@ typedef struct {
   int32_t x_width_loop_counter;
   int32_t x_height_loop_counter;
   int32_t bias_multiplier;
+  int32_t low_clamp_offset;
+  int32_t high_clamp_offset;
+  int16_t * quantised_accu_modifier;
 
 } nn_bconv2d_int8_impl_plan_t;

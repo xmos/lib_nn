@@ -306,6 +306,11 @@ static void bconv2d_int8_prepare(
     
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
+
+    const int16_t * quantised_accu_modifier,
+    const int16_t low_clamp_offset,
+    const int16_t high_clamp_offset,
+
     const int accu_shr,
     const int16_t bias_multipler,
     const int final_shr,
@@ -336,6 +341,9 @@ static void bconv2d_int8_prepare(
   
   plan->post_activation_mul = (int16_t *)post_activation_multiplier_q;
   plan->post_activation_bias = (int16_t *)post_activation_bias_q;
+  plan->quantised_accu_modifier = (int16_t *)quantised_accu_modifier;
+  plan->low_clamp_offset = low_clamp_offset;
+  plan->high_clamp_offset = high_clamp_offset;
   plan->final_shr = final_shr;
   plan->bias_multiplier = bias_multipler;
 
@@ -415,6 +423,11 @@ static void bconv2d_int8_DIDO_prepare(
     
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
+
+    const int16_t * quantised_accu_modifier,
+    int32_t larq_clamp_min, 
+    int32_t larq_clamp_max, 
+
     const int accu_shr,
     const int16_t bias_multiplier,
     const int final_shr,
@@ -445,6 +458,9 @@ static void bconv2d_int8_DIDO_prepare(
   plan->bias_multiplier = bias_multiplier;  
   plan->post_activation_mul = (int16_t *)post_activation_multiplier_q;
   plan->post_activation_bias = (int16_t *)post_activation_bias_q;
+  plan->quantised_accu_modifier = (int16_t *)quantised_accu_modifier;
+  // plan->low_clamp_offset = low_clamp_offset;
+  // plan->high_clamp_offset = high_clamp_offset;
   plan->final_shr = final_shr;
 
   if(accu_shr >= 0){
@@ -503,6 +519,11 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
     
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
+
+    const int16_t * quantised_accu_modifier,
+    const int16_t low_clamp_offset,
+    const int16_t high_clamp_offset,
+
     const int accu_shr,
     const int16_t bias_multipler,
     const int final_shr,
@@ -522,6 +543,9 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
       X_p,  K_p,
       post_activation_multiplier_q, 
       post_activation_bias_q,
+      quantised_accu_modifier, 
+      low_clamp_offset,
+      high_clamp_offset,
       accu_shr,
       bias_multipler,
       final_shr,
@@ -537,6 +561,11 @@ void bconv2d_int8(int8_t* Y_p,
     
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
+
+    const int16_t * quantised_accu_modifier,
+    const int16_t low_clamp_offset,
+    const int16_t high_clamp_offset,
+
     const int accu_shr,
     const int16_t bias_multipler,
     const int final_shr,
@@ -558,6 +587,9 @@ void bconv2d_int8(int8_t* Y_p,
         X_p,  K_p, data_scratch,
         post_activation_multiplier_q, 
         post_activation_bias_q,
+        quantised_accu_modifier, 
+        low_clamp_offset,
+        high_clamp_offset,
         accu_shr,
         bias_multipler,
         final_shr,
