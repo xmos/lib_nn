@@ -48,6 +48,10 @@ void bconv2d_int8_DIDO_impl(nn_bconv2d_int8_DIDO_impl_plan_t * plan){
   // Used for shifting the accumulator after the vlmaccr1's to get it to a 16 bit form.
   vpu_vector_t sat_mem; 
 
+  // Clamps
+  vpu_vector_t low_clamp_offset_mem;
+  vpu_vector_t high_clamp_offset_mem;
+
   // Scratch mem
   vpu_vector_t temp_mem;
 
@@ -57,6 +61,8 @@ void bconv2d_int8_DIDO_impl(nn_bconv2d_int8_DIDO_impl_plan_t * plan){
     sat_mem.s16[i] = plan->vlsat;
     bias_shift.s16[i] = plan->bias_multiplier;
     final_shr.s16[i] = plan->final_shr;
+    low_clamp_offset_mem.s16[i] = plan->low_clamp_offset;
+    high_clamp_offset_mem.s16[i] = plan->high_clamp_offset;
   }
 
   void * X_p = (void *)plan->X;
@@ -95,6 +101,16 @@ void bconv2d_int8_DIDO_impl(nn_bconv2d_int8_DIDO_impl_plan_t * plan){
         VLSAT(vpu, &sat_mem);
         VSTR(vpu, &temp_mem);
         VLASHR(vpu, &temp_mem, plan->ashr);
+
+        //Saturate to larq high and low
+        // vpu_sim_mem_print(&high_clamp_offset_mem, vpu->mode);
+        // vpu_sim_mem_print(&low_clamp_offset_mem, vpu->mode);
+        // vpu_sim_print(vpu);
+        VLADD(vpu, &high_clamp_offset_mem);
+        VLSUB(vpu, &high_clamp_offset_mem);
+        VLADD(vpu, &low_clamp_offset_mem);
+        VLSUB(vpu, &low_clamp_offset_mem);
+        // vpu_sim_print(vpu);
 
         //Save the 16 bit accumulator, A, to scratch
         VSTR(vpu, &temp_mem);
@@ -155,8 +171,12 @@ void compute_patch(nn_bconv2d_int8_impl_plan_t *plan,
   vpu_vector_t *sat_mem, 
   vpu_vector_t * bias_shift, 
   vpu_vector_t * final_shr, 
+  vpu_vector_t * low_clamp_offset_mem, 
+  vpu_vector_t * high_clamp_offset_mem, 
   void * cur_post_activation_mul, 
-  void * cur_post_activation_bias){
+  void * cur_post_activation_bias, 
+  void * cur_quantised_accu_modifier
+  ){
 
   VCLRDR(vpu);
   void * D_p = plan->data_scratch;
@@ -186,6 +206,20 @@ void compute_patch(nn_bconv2d_int8_impl_plan_t *plan,
   VLSAT(vpu, sat_mem);
   VSTR(vpu, &temp_mem);
   VLASHR(vpu, &temp_mem, plan->ashr);
+
+  // vpu_sim_print(vpu);
+
+  //Subtract the channel overlap
+  // vpu_sim_mem_print(cur_quantised_accu_modifier, vpu->mode);
+  VLADD(vpu, cur_quantised_accu_modifier);
+
+  //Saturate to larq high and low
+  // vpu_sim_print(vpu);
+  VLADD(vpu, &high_clamp_offset_mem);
+  VLSUB(vpu, &high_clamp_offset_mem);
+  VLADD(vpu, &low_clamp_offset_mem);
+  VLSUB(vpu, &low_clamp_offset_mem);
+  // vpu_sim_print(vpu);
 
   //Save the 16 bit accumulator, A, to scratch
   VSTR(vpu, &temp_mem);
@@ -223,12 +257,18 @@ void bconv2d_int8_impl(nn_bconv2d_int8_impl_plan_t *plan){
   // Used for shifting the accumulator after the vlmaccr1's to get it to a 16 bit form.
   vpu_vector_t sat_mem; 
 
+  // Clamps
+  vpu_vector_t low_clamp_offset_mem;
+  vpu_vector_t high_clamp_offset_mem;
+
   VSETC(vpu, MODE_S16);
 
   for(unsigned i=0;i<VPU_INT16_EPV;i++){
     sat_mem.s16[i] = plan->vlsat;
     bias_shift.s16[i] = plan->bias_multiplier;
     final_shr.s16[i] = plan->final_shr;
+    low_clamp_offset_mem.s16[i] = plan->low_clamp_offset;
+    high_clamp_offset_mem.s16[i] = plan->high_clamp_offset;
   }
 
   void * X_p = (void *)plan->X;
@@ -241,21 +281,25 @@ void bconv2d_int8_impl(nn_bconv2d_int8_impl_plan_t *plan){
 
       void * cur_post_activation_mul = (void *)plan->post_activation_mul;
       void * cur_post_activation_bias = (void *)plan->post_activation_bias;
+      void * cur_quantised_accu_modifier = (void *) plan->quantised_accu_modifier;
       void * K_p = (void *)plan->K;
       for (int oc = plan->output_channel_loop_counter; oc > 0 ; oc-- ) {
 
         compute_patch(plan, &K_p, XS3_VPU_VREG_WIDTH_BYTES, vpu, &sat_mem, &bias_shift, &final_shr,
-          cur_post_activation_mul, cur_post_activation_bias);
+          &low_clamp_offset_mem, &high_clamp_offset_mem,
+          cur_post_activation_mul, cur_post_activation_bias, cur_quantised_accu_modifier);
 
         VSTRPV(vpu, Y_p, VPU_INT16_ACC_VR_MASK);
         Y_p += VPU_INT16_EPV;
 
         cur_post_activation_mul += XS3_VPU_VREG_WIDTH_BYTES;
         cur_post_activation_bias += XS3_VPU_VREG_WIDTH_BYTES;
+        cur_quantised_accu_modifier += XS3_VPU_VREG_WIDTH_BYTES;
       }
       
       compute_patch(plan, &K_p, plan->k_p_rewind, vpu, &sat_mem, &bias_shift, &final_shr,
-        cur_post_activation_mul, cur_post_activation_bias);
+        &low_clamp_offset_mem, &high_clamp_offset_mem,
+        cur_post_activation_mul, cur_post_activation_bias, cur_quantised_accu_modifier);
 
       VSTRPV(vpu, Y_p, plan->final_channels_mask);
 
@@ -424,9 +468,8 @@ static void bconv2d_int8_DIDO_prepare(
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
 
-    const int16_t * quantised_accu_modifier,
-    int32_t larq_clamp_min, 
-    int32_t larq_clamp_max, 
+    int16_t low_clamp_offset, 
+    int16_t high_clamp_offset, 
 
     const int accu_shr,
     const int16_t bias_multiplier,
@@ -458,9 +501,8 @@ static void bconv2d_int8_DIDO_prepare(
   plan->bias_multiplier = bias_multiplier;  
   plan->post_activation_mul = (int16_t *)post_activation_multiplier_q;
   plan->post_activation_bias = (int16_t *)post_activation_bias_q;
-  plan->quantised_accu_modifier = (int16_t *)quantised_accu_modifier;
-  // plan->low_clamp_offset = low_clamp_offset;
-  // plan->high_clamp_offset = high_clamp_offset;
+  plan->low_clamp_offset = low_clamp_offset;
+  plan->high_clamp_offset = high_clamp_offset;
   plan->final_shr = final_shr;
 
   if(accu_shr >= 0){
@@ -520,7 +562,6 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
 
-    const int16_t * quantised_accu_modifier,
     const int16_t low_clamp_offset,
     const int16_t high_clamp_offset,
 
@@ -543,7 +584,6 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
       X_p,  K_p,
       post_activation_multiplier_q, 
       post_activation_bias_q,
-      quantised_accu_modifier, 
       low_clamp_offset,
       high_clamp_offset,
       accu_shr,

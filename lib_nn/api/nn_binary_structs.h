@@ -111,7 +111,6 @@ typedef struct {
 
   int32_t low_clamp_offset;
   int32_t high_clamp_offset;
-  int16_t * quantised_accu_modifier;
 
 } nn_bconv2d_int8_DIDO_impl_plan_t;
 

@@ -47,7 +47,6 @@ void bconv2d_int8_DIDO_valid(int8_t* Y_p,
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
 
-    const int16_t * quantised_accu_modifier,
     const int16_t low_clamp_offset,
     const int16_t high_clamp_offset,
 
@@ -70,7 +69,6 @@ void bconv2d_int8_DIDO_valid(int8_t* Y_p,
         post_activation_multiplier_q,
         post_activation_bias_q, 
         
-        quantised_accu_modifier, 
         low_clamp_offset,
         high_clamp_offset,
         

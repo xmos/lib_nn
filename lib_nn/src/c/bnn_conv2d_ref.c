@@ -176,24 +176,24 @@ void bnn_quantise_activation(
   float * vpu_output_transform_multiplier = (float *)malloc(sizeof(float) * chans_out);
   float * vpu_output_transform_bias = (float *)malloc(sizeof(float) * chans_out);
 
-  // This is the absolute value of the min and max clamp values in the VLMACCR1 space
-  // These values will need to be made 16 bit and converted to the output space.
-  float * vpu_clamp_min = (float *)malloc(sizeof(float) * chans_out);
-  float * vpu_clamp_max = (float *)malloc(sizeof(float) * chans_out);
-
   //Move to VPU scale
   for (unsigned ch=0;ch<chans_out;ch++)
     vpu_output_transform_multiplier[ch] = output_transform_multiplier[ch] * vpu_multipler * 2;
 
   for (unsigned ch = 0; ch < chans_out; ch++){
-    vpu_output_transform_bias[ch] = output_transform_bias[ch] + 2 * output_transform_multiplier[ch]  * (vpu_offset + chan_overlaps[ch]);
-    vpu_clamp_max[ch] = (larq_clamp_max - (vpu_offset + chan_overlaps[ch]) * 2) / (vpu_multipler * 2);
-    vpu_clamp_min[ch] = (larq_clamp_min - (vpu_offset + chan_overlaps[ch]) * 2) / (vpu_multipler * 2);
+    vpu_output_transform_bias[ch] = output_transform_bias[ch] + 2 * output_transform_multiplier[ch] * vpu_offset;
   }
 
+  // This is the absolute value of the min and max clamp values in the VLMACCR1 space
+  // These values will need to be made 16 bit and converted to the output space.
+  float vpu_clamp_max = (larq_clamp_max - (vpu_offset) * 2) / (vpu_multipler * 2);
+  float vpu_clamp_min = (larq_clamp_min - (vpu_offset) * 2) / (vpu_multipler * 2);
+
+  // TODO reorder min and max into min and max order
+
   int B, A, M;
+  int vpu_min_accu = 0 * vpu_multipler + vpu_offset;
   int vpu_max_accu = receptive_volume * vpu_multipler + vpu_offset;
-  int vpu_min_accu = receptive_volume * vpu_multipler + vpu_offset;
 
   solve_constraint(
     &B, &A, &M,
@@ -252,6 +252,36 @@ void bnn_quantise_activation(
 
   //todo check that post_activation_bias_q * bias_exp_adjust is ldexp(post_activation_bias, B)
   *accu_shr = -A;
+
+  for (unsigned ch = 0; ch < chans_out; ch++){
+    if (chan_overlaps){
+      quantised_accu_modifier[ch] = ashr(chan_overlaps[ch], *accu_shr);
+    } else {
+      quantised_accu_modifier[ch] = 0;
+    }
+  }
+  // printf("accu_shr: %d\n", *accu_shr);
+  // printf("vpu_min_accu: %d\n", vpu_min_accu);
+  // printf("vpu_max_accu: %d\n", vpu_max_accu);
+  // printf("accu_shr: %d\n", *accu_shr);
+  // printf("accu_shr: %d\n", *accu_shr);
+
+  int32_t min_shifted_accu = ashr(vpu_clamp_min, *accu_shr);
+  int32_t max_shifted_accu = ashr(vpu_clamp_max, *accu_shr);
+
+  int32_t high_clamp_limit = INT16_MAX * vpu_multipler;
+  int32_t low_clamp_limit = -INT16_MAX * vpu_multipler;
+
+  // printf("min_shifted_accu: %d max_shifted_accu: %d\n", min_shifted_accu, max_shifted_accu);
+  int16_t t_low_clamp_offset  = low_clamp_limit - min_shifted_accu;
+  int16_t t_high_clamp_offset = high_clamp_limit - max_shifted_accu;
+  
+  *low_clamp_offset = t_low_clamp_offset;
+  *high_clamp_offset = t_high_clamp_offset;
+  // printf("low_clamp_offset: %d\n", t_low_clamp_offset);
+  // printf("high_clamp_offset: %d\n", t_high_clamp_offset);
+
+
 
   // The -8 is here to leave the result in a 16 bit form so that the quantisation to 8 bit 
   // can deal with the asymertic rounding.
@@ -409,11 +439,11 @@ void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
         unsigned reversed_channel_order  = VPU_INT16_ACC_PERIOD - 1 - sub_grp_idx;
 
         bnn_b32_t zeros = 0x00000000;
-        int total_xor_popcount = 0;
+        int vlmaccr1_accu_overrun = 0;
         for(unsigned o = remaining_input_words; o < 8; o++){ //8 is 32 bit words per vpu load
-          total_xor_popcount += (int)xor_pop_32(p[o], zeros) - 16;
+          vlmaccr1_accu_overrun += (32/2) - (int)xor_pop_32(p[o], zeros) ;
         }
-        chan_overlaps[ output_chan_group * VPU_INT16_ACC_PERIOD + reversed_channel_order] =  total_xor_popcount;
+        chan_overlaps[ output_chan_group * VPU_INT16_ACC_PERIOD + reversed_channel_order] =  vlmaccr1_accu_overrun;
         p += remaining_input_words;
       }   
 
@@ -436,11 +466,14 @@ void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
         unsigned reversed_channel_order  = output_chans_reamining - 1 - sub_grp_idx;
 
         bnn_b32_t zeros = 0x00000000;
-        int total_xor_popcount = 0;
+        int vlmaccr1_accu_overrun = 0;
+        // printf("ch %u\n",output_chan_groups_of_accu_period * VPU_INT16_ACC_PERIOD + reversed_channel_order );
         for(unsigned o = remaining_input_words; o < 8; o++){ //8 is 32 bit words per vpu load
-          total_xor_popcount += (int)xor_pop_32(p[o], zeros) - 16;
+          // printf("%08x\n", p[o]);
+          vlmaccr1_accu_overrun += (32/2) - (int)xor_pop_32(p[o], zeros) ;
         }
-        chan_overlaps[ output_chan_groups_of_accu_period * VPU_INT16_ACC_PERIOD + reversed_channel_order] =  total_xor_popcount;
+        // printf("\n");
+        chan_overlaps[ output_chan_groups_of_accu_period * VPU_INT16_ACC_PERIOD + reversed_channel_order] =  vlmaccr1_accu_overrun;
         p += remaining_input_words;
       }   
     }

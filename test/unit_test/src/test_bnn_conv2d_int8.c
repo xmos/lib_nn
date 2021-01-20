@@ -95,13 +95,16 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
       larq_clamp_min, 
       larq_clamp_max,
 
-      low_clamp_offset,
-      high_clamp_offset,
-
       quantised_accu_modifier,
+      &low_clamp_offset,
+      &high_clamp_offset,
 
       &accu_shr, &bias_multipler, &final_shr, receptive_volume, chan_overlaps
   );
+
+  // for (unsigned e=0;e<chans_out;++e){
+  //   printf("%d %d\n", e, chan_overlaps[e]);
+  // }
 
   test_fn((int8_t*)Y_p, (const bnn_b32_t*)X_ref,
     (const bnn_b32_t*)K_p, post_activation_multiplier_q, 
@@ -110,6 +113,9 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
     accu_shr, bias_multipler, final_shr,
     &x, &y, &k);
     
+  for (unsigned e=0;e<y_height * y_width * chans_out;++e){
+    printf("%d %d\n", Y_ref_p[e], Y_p[e]);
+  }
   for (unsigned e=0;e<y_height * y_width * chans_out;++e)
     TEST_ASSERT_INT8_WITHIN(1, Y_ref_p[e], Y_p[e]);
 
@@ -205,7 +211,8 @@ void impl_bconv2d_int8_DIDO_pseudo_random(
                       pick_post_activation_params(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, &seed);
 
                       int32_t larq_clamp_min = 0;
-                      int32_t larq_clamp_max = receptive_volume*2;
+                      // int32_t larq_clamp_max = 100 + pseudo_rand(&seed) % (3*receptive_volume);
+                      int32_t larq_clamp_max = receptive_volume;
 
                       run_int8_config(
                           (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
@@ -321,6 +328,7 @@ void impl_bconv2d_int8_DIDO_pseudo_random2(
 
           int32_t larq_clamp_min = 0;
           int32_t larq_clamp_max = receptive_volume*2;
+
           run_int8_config(
               (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
               (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
@@ -917,7 +925,7 @@ static void DI_valid(
   bconv2d_int8_DIDO_valid(Y_p, (const bnn_b256_t*)X_p,
         (const bnn_b256_t*)K_p, post_activation_multiplier_q,
         post_activation_bias_q, 
-        quantised_accu_modifier, low_clamp_offset, high_clamp_offset,
+        low_clamp_offset, high_clamp_offset,
         accu_shr, bias_multiplier, final_shr, 
         x, y, k,
         y_loc_x, y_loc_y, y_sub_width, y_sub_height);
@@ -980,7 +988,7 @@ static void DI_full(
   bconv2d_int8_DIDO(Y_p, (const bnn_b256_t*)X_p,
                       (const bnn_b256_t*)K_p, post_activation_multiplier_q,
                       post_activation_bias_q, 
-                      quantised_accu_modifier, low_clamp_offset, high_clamp_offset,
+                      low_clamp_offset, high_clamp_offset,
                       accu_shr, bias_multiplier, final_shr, 
                       x, y, k,
                       0, 0, y->width, y->height, 0, 0);
@@ -1018,7 +1026,7 @@ void test_bnn_conv2d_int8() {
   UNITY_SET_FILE();
 
   // RUN_TEST(test_bconv2d_int8_pseudo_random);
-  // RUN_TEST(test_bconv2d_int8_DIDO_pseudo_random);
+  RUN_TEST(test_bconv2d_int8_DIDO_pseudo_random);
 
   // RUN_TEST(test_bconv2d_int8_pseudo_random2);
   // RUN_TEST(test_bconv2d_int8_DIDO_pseudo_random2);
@@ -1026,6 +1034,6 @@ void test_bnn_conv2d_int8() {
   // RUN_TEST(test_bconv2d_int8_sub_image);
   // RUN_TEST(test_bconv2d_int8_DIDO_sub_image);
 
-  RUN_TEST(test_bconv2d_int8_directed);
+  // RUN_TEST(test_bconv2d_int8_directed);
   
 }
