@@ -113,12 +113,12 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
     accu_shr, bias_multipler, final_shr,
     &x, &y, &k);
     
-  for (unsigned e=0;e<y_height * y_width * chans_out;++e){
-    printf("%d %d\n", Y_ref_p[e], Y_p[e]);
-  }
+  // for (unsigned e=0;e<y_height * y_width * chans_out;++e){
+  //   printf("%d %d\n", Y_ref_p[e], Y_p[e]);
+  // }
   for (unsigned e=0;e<y_height * y_width * chans_out;++e)
     TEST_ASSERT_INT8_WITHIN(1, Y_ref_p[e], Y_p[e]);
-
+  // exit(10);
   //FIXME - why wont this link? The above is a workaround
   // TEST_ASSERT_INT8_ARRAY_WITHIN(1, Y_ref_p, Y_p, y_height * y_width * chans_out);
 }
@@ -210,22 +210,23 @@ void impl_bconv2d_int8_DIDO_pseudo_random(
                       unsigned receptive_volume = k_width * k_height * chans_in;
                       pick_post_activation_params(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, &seed);
 
-                      int32_t larq_clamp_min = 0;
-                      // int32_t larq_clamp_max = 100 + pseudo_rand(&seed) % (3*receptive_volume);
-                      int32_t larq_clamp_max = receptive_volume;
+                      for (unsigned c=0;c<1024;c++){
+                        int32_t larq_clamp_min = pseudo_rand(&seed) % (2*receptive_volume);
+                        int32_t larq_clamp_max = larq_clamp_min + pseudo_rand(&seed) % (2*receptive_volume);
 
-                      run_int8_config(
-                          (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
-                          (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
-                          (float*)post_activation_multiplier,
-                          (float*)post_activation_bias, 
-                          (int16_t*)post_activation_multiplier_q,
-                          (int16_t*)post_activation_bias_q,  
-                          (int16_t*)quantised_accu_modifier,
-                          (int*) chan_overlaps,
-                          x_height,
-                          x_width, k_height, k_width, chans_in, chans_out, h_stride,
-                          v_stride, seed, larq_clamp_min, larq_clamp_max, valid_impl);
+                        run_int8_config(
+                            (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
+                            (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
+                            (float*)post_activation_multiplier,
+                            (float*)post_activation_bias, 
+                            (int16_t*)post_activation_multiplier_q,
+                            (int16_t*)post_activation_bias_q,  
+                            (int16_t*)quantised_accu_modifier,
+                            (int*) chan_overlaps,
+                            x_height,
+                            x_width, k_height, k_width, chans_in, chans_out, h_stride,
+                            v_stride, seed, larq_clamp_min, larq_clamp_max, valid_impl);
+                      }
                     }
 
                     free(X_ref);
@@ -326,22 +327,24 @@ void impl_bconv2d_int8_DIDO_pseudo_random2(
           unsigned receptive_volume = k_width * k_height * chans_in;
           pick_post_activation_params(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, &seed);
 
-          int32_t larq_clamp_min = 0;
-          int32_t larq_clamp_max = receptive_volume*2;
+          for (unsigned c=0;c<1024;c++){
+            int32_t larq_clamp_min = pseudo_rand(&seed) % (2*receptive_volume);
+            int32_t larq_clamp_max = larq_clamp_min + pseudo_rand(&seed) % (2*receptive_volume);
 
-          run_int8_config(
-              (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
-              (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
-              (float*)post_activation_multiplier,
-              (float*)post_activation_bias, 
-              (int16_t*)post_activation_multiplier_q,
-              (int16_t*)post_activation_bias_q,  
-              (int16_t*)quantised_accu_modifier,
-              (int*) chan_overlaps,
-              x_height,
-              x_width, k_height, k_width, chans_in, chans_out, 1,
-              1, seed, larq_clamp_min, larq_clamp_max, valid_impl);
 
+            run_int8_config(
+                (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
+                (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
+                (float*)post_activation_multiplier,
+                (float*)post_activation_bias, 
+                (int16_t*)post_activation_multiplier_q,
+                (int16_t*)post_activation_bias_q,  
+                (int16_t*)quantised_accu_modifier,
+                (int*) chan_overlaps,
+                x_height,
+                x_width, k_height, k_width, chans_in, chans_out, 1,
+                1, seed, larq_clamp_min, larq_clamp_max, valid_impl);
+          }
         free(X_ref);
         free(Y);
         free(Y_ref);
@@ -542,24 +545,29 @@ void impl_bconv2d_int8_DIDO_sub_image(
                       size_t addressable_Y_bytes = y.height * y.width * y.channels;
                       memset(Y, undef_sentinal, addressable_Y_bytes);
 
-                      // run_int8_sub_image(
-                      //   (int8_t*)Y, 
-                      //   (const int8_t*)Y_ref,
-                      //   (const bnn_b32_t*) X_ref,
-                      //   (const bnn_b32_t*) K, 
+                      for (unsigned c=0;c<1024;c++){
+                        int32_t larq_clamp_min = pseudo_rand(&seed) % (2*receptive_volume);
+                        int32_t larq_clamp_max = larq_clamp_min + pseudo_rand(&seed) % (2*receptive_volume);
 
-                      //   (int16_t * )post_activation_multiplier_q,
-                      //   (int16_t *) post_activation_bias_q,
-                      //   (int16_t *) quantised_accu_modifier,
-                      //   low_clamp_offset,
-                      //   high_clamp_offset,
+                        run_int8_sub_image(
+                          (int8_t*)Y, 
+                          (const int8_t*)Y_ref,
+                          (const bnn_b32_t*) X_ref,
+                          (const bnn_b32_t*) K, 
 
-                      //   (const int )accu_shr,
-                      //   (const int16_t) bias_multiplier,
-                      //   (const int )final_shr,
+                          (int16_t * )post_activation_multiplier_q,
+                          (int16_t *) post_activation_bias_q,
+                          (int16_t *) quantised_accu_modifier,
+                          low_clamp_offset,
+                          high_clamp_offset,
 
-                      //   &x, &y, &k,
-                      //   y_loc_x, y_loc_y, y_sub_width, y_sub_height, valid_impl);
+                          (const int )accu_shr,
+                          (const int16_t) bias_multiplier,
+                          (const int )final_shr,
+
+                          &x, &y, &k,
+                          y_loc_x, y_loc_y, y_sub_width, y_sub_height, valid_impl);
+                      }
                     }
                   }
                 } 
@@ -1025,15 +1033,15 @@ void test_bconv2d_int8_directed(){
 void test_bnn_conv2d_int8() {
   UNITY_SET_FILE();
 
-  // RUN_TEST(test_bconv2d_int8_pseudo_random);
+  RUN_TEST(test_bconv2d_int8_pseudo_random);
   RUN_TEST(test_bconv2d_int8_DIDO_pseudo_random);
 
-  // RUN_TEST(test_bconv2d_int8_pseudo_random2);
-  // RUN_TEST(test_bconv2d_int8_DIDO_pseudo_random2);
+  RUN_TEST(test_bconv2d_int8_pseudo_random2);
+  RUN_TEST(test_bconv2d_int8_DIDO_pseudo_random2);
 
-  // RUN_TEST(test_bconv2d_int8_sub_image);
-  // RUN_TEST(test_bconv2d_int8_DIDO_sub_image);
+  RUN_TEST(test_bconv2d_int8_sub_image);
+  RUN_TEST(test_bconv2d_int8_DIDO_sub_image);
 
-  // RUN_TEST(test_bconv2d_int8_directed);
+  RUN_TEST(test_bconv2d_int8_directed);
   
 }

@@ -186,8 +186,8 @@ void bnn_quantise_activation(
 
   // This is the absolute value of the min and max clamp values in the VLMACCR1 space
   // These values will need to be made 16 bit and converted to the output space.
-  float vpu_clamp_max = (larq_clamp_max - (vpu_offset) * 2) / (vpu_multipler * 2);
-  float vpu_clamp_min = (larq_clamp_min - (vpu_offset) * 2) / (vpu_multipler * 2);
+  float vpu_clamp_min = (float)(larq_clamp_min - (vpu_offset) * 2) / (vpu_multipler * 2);
+  float vpu_clamp_max = (float)(larq_clamp_max - (vpu_offset) * 2) / (vpu_multipler * 2);
 
   // TODO reorder min and max into min and max order
 
@@ -260,27 +260,22 @@ void bnn_quantise_activation(
       quantised_accu_modifier[ch] = 0;
     }
   }
-  // printf("accu_shr: %d\n", *accu_shr);
-  // printf("vpu_min_accu: %d\n", vpu_min_accu);
-  // printf("vpu_max_accu: %d\n", vpu_max_accu);
-  // printf("accu_shr: %d\n", *accu_shr);
-  // printf("accu_shr: %d\n", *accu_shr);
 
-  int32_t min_shifted_accu = ashr(vpu_clamp_min, *accu_shr);
-  int32_t max_shifted_accu = ashr(vpu_clamp_max, *accu_shr);
+  float min_shifted_accu = ldexp(vpu_clamp_min, - (*accu_shr));
+  float max_shifted_accu = ldexp(vpu_clamp_max, - (*accu_shr));
 
-  int32_t high_clamp_limit = INT16_MAX * vpu_multipler;
   int32_t low_clamp_limit = -INT16_MAX * vpu_multipler;
+  int32_t high_clamp_limit = INT16_MAX * vpu_multipler;
 
   // printf("min_shifted_accu: %d max_shifted_accu: %d\n", min_shifted_accu, max_shifted_accu);
-  int16_t t_low_clamp_offset  = low_clamp_limit - min_shifted_accu;
-  int16_t t_high_clamp_offset = high_clamp_limit - max_shifted_accu;
+  int32_t t_low_clamp_offset  = (int32_t)((float)low_clamp_limit - min_shifted_accu);
+  int32_t t_high_clamp_offset = (int32_t)((float)high_clamp_limit - max_shifted_accu);
   
+  t_low_clamp_offset /= 2;
+  t_high_clamp_offset /= 2;
+
   *low_clamp_offset = t_low_clamp_offset;
   *high_clamp_offset = t_high_clamp_offset;
-  // printf("low_clamp_offset: %d\n", t_low_clamp_offset);
-  // printf("high_clamp_offset: %d\n", t_high_clamp_offset);
-
 
 
   // The -8 is here to leave the result in a 16 bit form so that the quantisation to 8 bit 

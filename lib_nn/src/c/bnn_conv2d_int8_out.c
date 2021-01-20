@@ -103,14 +103,14 @@ void bconv2d_int8_DIDO_impl(nn_bconv2d_int8_DIDO_impl_plan_t * plan){
         VLASHR(vpu, &temp_mem, plan->ashr);
 
         //Saturate to larq high and low
-        // vpu_sim_mem_print(&high_clamp_offset_mem, vpu->mode);
-        // vpu_sim_mem_print(&low_clamp_offset_mem, vpu->mode);
-        // vpu_sim_print(vpu);
+        VLADD(vpu, &high_clamp_offset_mem);
         VLADD(vpu, &high_clamp_offset_mem);
         VLSUB(vpu, &high_clamp_offset_mem);
+        VLSUB(vpu, &high_clamp_offset_mem);
+        VLADD(vpu, &low_clamp_offset_mem);
         VLADD(vpu, &low_clamp_offset_mem);
         VLSUB(vpu, &low_clamp_offset_mem);
-        // vpu_sim_print(vpu);
+        VLSUB(vpu, &low_clamp_offset_mem);
 
         //Save the 16 bit accumulator, A, to scratch
         VSTR(vpu, &temp_mem);
@@ -214,12 +214,14 @@ void compute_patch(nn_bconv2d_int8_impl_plan_t *plan,
   VLADD(vpu, cur_quantised_accu_modifier);
 
   //Saturate to larq high and low
-  // vpu_sim_print(vpu);
-  VLADD(vpu, &high_clamp_offset_mem);
-  VLSUB(vpu, &high_clamp_offset_mem);
-  VLADD(vpu, &low_clamp_offset_mem);
-  VLSUB(vpu, &low_clamp_offset_mem);
-  // vpu_sim_print(vpu);
+  VLADD(vpu, high_clamp_offset_mem);
+  VLADD(vpu, high_clamp_offset_mem);
+  VLSUB(vpu, high_clamp_offset_mem);
+  VLSUB(vpu, high_clamp_offset_mem);
+  VLADD(vpu, low_clamp_offset_mem);
+  VLADD(vpu, low_clamp_offset_mem);
+  VLSUB(vpu, low_clamp_offset_mem);
+  VLSUB(vpu, low_clamp_offset_mem);
 
   //Save the 16 bit accumulator, A, to scratch
   VSTR(vpu, &temp_mem);
