@@ -112,7 +112,7 @@ typedef struct {
   int32_t low_clamp_offset;
   int32_t high_clamp_offset;
 
-} nn_bconv2d_int8_DIDO_impl_plan_t;
+} nn_bconv2d_int8_DI_impl_plan_t;
 
 
 /**

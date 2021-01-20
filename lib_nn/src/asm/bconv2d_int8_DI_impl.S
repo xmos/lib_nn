@@ -59,6 +59,9 @@ VECT_INT8_MIN:
 #define PLAN_IC_LOOP_COUNTER       22
 #define PLAN_Y_P                   23
 
+#define PLAN_LOW_CLAMP_OFFSET      24
+#define PLAN_HIGH_CLAMP_OFFSET     25
+
 //Stack Usage
 
 #define S_0                     0
@@ -157,7 +160,27 @@ VECT_INT8_MIN:
 #define S_FINAL_SHR_6 64
 #define S_FINAL_SHR_7 65
 
-#define NSTACKWORDS  70 //50!
+//doesn't have to be double word aligned
+#define S_LOW_CLAMP_OFFSET_0 66
+#define S_LOW_CLAMP_OFFSET_1 67 
+#define S_LOW_CLAMP_OFFSET_2 68
+#define S_LOW_CLAMP_OFFSET_3 69
+#define S_LOW_CLAMP_OFFSET_4 70
+#define S_LOW_CLAMP_OFFSET_5 71
+#define S_LOW_CLAMP_OFFSET_6 72
+#define S_LOW_CLAMP_OFFSET_7 73
+
+//doesn't have to be double word aligned
+#define S_HIGH_CLAMP_OFFSET_0 74
+#define S_HIGH_CLAMP_OFFSET_1 75 
+#define S_HIGH_CLAMP_OFFSET_2 76
+#define S_HIGH_CLAMP_OFFSET_3 77
+#define S_HIGH_CLAMP_OFFSET_4 78
+#define S_HIGH_CLAMP_OFFSET_5 79
+#define S_HIGH_CLAMP_OFFSET_6 80
+#define S_HIGH_CLAMP_OFFSET_7 81
+
+#define NSTACKWORDS  84 
 
 //Helpers that reference the above
 #define S_X_p_S_OUTER_X_H_STEP (S_X_p/2)                        //1
@@ -242,10 +265,10 @@ bnn_make_16_channel_output:
     retsp 0
 
 /*
-void bconv2d_int8_DIDO_impl(const nn_bconv2d_int8_DIDO_impl_plan_t* plan);
+void bconv2d_int8_DIDO_impl(const nn_bconv2d_int8_DI_impl_plan_t* plan);
 */
 
-#define FUNCTION_NAME bconv2d_int8_DIDO_impl
+#define FUNCTION_NAME bconv2d_int8_DI_impl
 
     
 .text
@@ -322,6 +345,19 @@ FUNCTION_NAME:
     stw t, sp[S_FINAL_SHR_6]
     stw t, sp[S_FINAL_SHR_7]
 
+    ldaw t, sp[S_LOW_CLAMP_OFFSET]
+    {ldw t, sp[S_FINAL_SHR]; mov s, t}
+    { stw s, sp[S_FINAL_SHR]; shl s, t, 16}
+    { add t, t, s; nop}
+    stw t, sp[S_LOW_CLAMP_OFFSET_0]
+    stw t, sp[S_LOW_CLAMP_OFFSET_1]
+    stw t, sp[S_LOW_CLAMP_OFFSET_2]
+    stw t, sp[S_LOW_CLAMP_OFFSET_3]
+    stw t, sp[S_LOW_CLAMP_OFFSET_4]
+    stw t, sp[S_LOW_CLAMP_OFFSET_5]
+    stw t, sp[S_LOW_CLAMP_OFFSET_6]
+    stw t, sp[S_LOW_CLAMP_OFFSET_7]
+
     bnn_h_loop:
 
         {ldw x_width_loop, sp[S_X_WIDTH_LOOP_COUNTER]; nop}
@@ -345,6 +381,18 @@ FUNCTION_NAME:
 
                 {vstr t[0]; nop}
                 vlashr t[0], s
+
+                //apply the initial clamps
+                ldw s, sp[S_HIGH_CLAMP_OFFSET]
+                vladd s[0]
+                vladd s[0]
+                vlsub s[0]
+                vlsub s[0]
+                ldw s, sp[S_LOW_CLAMP_OFFSET]
+                vladd s[0]
+                vladd s[0]
+                vlsub s[0]
+                vlsub s[0]
 
                 {vstr t[0]; nop}
                 {vclrdr; nop}

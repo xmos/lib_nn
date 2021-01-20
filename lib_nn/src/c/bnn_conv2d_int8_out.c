@@ -34,7 +34,7 @@ static void VDEPTH8_FIXED(xs3_vpu* vpu){
 }
 
 WEAK_FUNC
-void bconv2d_int8_DIDO_impl(nn_bconv2d_int8_DIDO_impl_plan_t * plan){
+void bconv2d_int8_DIDO_impl(nn_bconv2d_int8_DI_impl_plan_t * plan){
 
   xs3_vpu vpu_data;
   xs3_vpu * vpu = &vpu_data;
@@ -464,7 +464,7 @@ static void bconv2d_int8_prepare(
 }
 
 static void bconv2d_int8_DIDO_prepare(
-    nn_bconv2d_int8_DIDO_impl_plan_t* plan, int8_t* Y_p,
+    nn_bconv2d_int8_DI_impl_plan_t* plan, int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
     const int16_t* post_activation_multiplier_q, 
@@ -580,7 +580,7 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
 
     const unsigned x_loc_x, const unsigned x_loc_y
 ){
-  nn_bconv2d_int8_DIDO_impl_plan_t plan;
+  nn_bconv2d_int8_DI_impl_plan_t plan;
 
   bconv2d_int8_DIDO_prepare(&plan, Y_p,
       X_p,  K_p,

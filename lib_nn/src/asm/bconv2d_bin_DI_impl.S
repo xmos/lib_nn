@@ -11,6 +11,7 @@
 #define PLAN_INNER_X_H_STEP        5
 #define PLAN_K_H_STEP              6
 #define PLAN_OUTER_X_V_STEP        7
+
 #define PLAN_Y_V_STEP              8
 #define PLAN_K_HEIGHT_LOOP_COUNTER 9
 #define PLAN_K_WIDTH_LOOP_COUNTER  10

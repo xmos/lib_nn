@@ -317,7 +317,7 @@ bnn_compute_patch:
     {retsp 0; nop}
 
 /*
-void bconv2d_int8_impl(const nn_bconv2d_int8_DIDO_impl_plan_t* plan);
+void bconv2d_int8_impl(const nn_bconv2d_int8_DI_impl_plan_t* plan);
 */
 
 #define FUNCTION_NAME bconv2d_int8_impl
