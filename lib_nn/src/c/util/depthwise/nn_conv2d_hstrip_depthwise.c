@@ -34,13 +34,7 @@ static void vlmacc8(
 }
 
 
-
-
-
-
-
-WEAK_FUNC
-void nn_conv2d_hstrip_depthwise(
+void nn_conv2d_hstrip_depthwise_ref(
     int8_t* Y,
     const int8_t* X_in, 
     const int8_t* K_in,
@@ -101,14 +95,7 @@ void nn_conv2d_hstrip_depthwise(
 }
 
 
-
-
-
-
-
-
-WEAK_FUNC
-void nn_conv2d_hstrip_depthwise_padded(
+void nn_conv2d_hstrip_depthwise_padded_ref(
     int8_t* Y,
     const int8_t* X_in, 
     const int8_t* K_in,
@@ -241,3 +228,54 @@ void nn_conv2d_hstrip_depthwise_padded(
 }
 
 
+
+
+
+#ifdef NN_USE_REF
+
+void nn_conv2d_hstrip_depthwise(
+    int8_t* Y,
+    const int8_t* X_in, 
+    const int8_t* K_in,
+    const nn_bso_block_t* BSO,
+    const unsigned K_h,
+    const unsigned K_w,
+    const int32_t x_col_stride,
+    const int32_t k_col_stride,
+    const int32_t x_row_stride,
+    const int32_t window_hstride,
+    const int32_t y_col_stride,
+    const unsigned out_cols,
+    const unsigned chans_to_write)
+{
+    nn_conv2d_hstrip_depthwise_ref(Y, X_in, K_in, BSO, K_h, K_w, x_col_stride, k_col_stride,
+        x_row_stride, window_hstride, y_col_stride, out_cols, chans_to_write);
+}
+
+void nn_conv2d_hstrip_depthwise_padded(
+    int8_t* Y,
+    const int8_t* X_in, 
+    const int8_t* K_in,
+    const nn_bso_block_t* BSO,
+    const unsigned K_h,
+    const unsigned K_w,
+    const int32_t pad_t,
+    const int32_t pad_l_initial,
+    const int32_t pad_b,
+    const int32_t pad_r_initial,
+    const int32_t x_col_stride,
+    const int32_t k_col_stride,
+    const int32_t x_row_stride,
+    const int32_t window_hstride,
+    const int32_t y_col_stride,
+    const unsigned out_cols,
+    const unsigned chans_to_write,
+    const int8_t* zero_point_vec)
+{
+    nn_conv2d_hstrip_depthwise_padded_ref(Y, X_in, K_in, BSO, K_h, K_w, 
+        pad_t, pad_l_initial, pad_b, pad_r_initial, x_col_stride, k_col_stride, 
+        x_row_stride, window_hstride, y_col_stride, out_cols, chans_to_write, 
+        zero_point_vec);
+}
+
+#endif // NN_USE_REF

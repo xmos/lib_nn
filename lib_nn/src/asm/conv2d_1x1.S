@@ -24,7 +24,11 @@ Optimizing assumptions:
 
 */
 
-#define FUNCTION_NAME conv2d_1x1_ext
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME conv2d_1x1_ext
+#else
+  #define FUNCTION_NAME conv2d_1x1_ext_asm
+#endif //NN_USE_REF
 
 #define NSTACKWORDS  36
     

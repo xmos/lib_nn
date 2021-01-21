@@ -320,7 +320,11 @@ bnn_compute_patch:
 void bconv2d_int8_impl(const nn_bconv2d_int8_DI_impl_plan_t* plan);
 */
 
-#define FUNCTION_NAME bconv2d_int8_impl
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME bconv2d_int8_impl
+#else
+  #define FUNCTION_NAME bconv2d_int8_impl_asm
+#endif // NN_USE_REF
     
 .text
 .issue_mode  dual

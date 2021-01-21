@@ -103,82 +103,65 @@ VECT_INT8_MIN:
 #define S_IC_LOOP_COUNTER       24
 #define S_Y_p                   25
 
+#define S_LOW_CLAMP_OFFSET_P    26
+#define S_HIGH_CLAMP_OFFSET_P   27
+
 ////
-#define S_SAVE_R4               26
-#define S_SAVE_R5               27
+#define S_SAVE_R4               28
+#define S_SAVE_R5               29
 
-#define S_SAVE_R6               28
-#define S_SAVE_R7               29
+#define S_SAVE_R6               30
+#define S_SAVE_R7               31
 
-#define S_SAVE_R8               30
-#define S_SAVE_R9               31
+#define S_SAVE_R8               32
+#define S_SAVE_R9               33
 
-#define S_SAVE_R10              32
-#define S_UNUSED_0              33
+#define S_SAVE_R10              34
+#define S_UNUSED_0              35
 
 
 //Note: The elements 30 -> 37 will be clobbered when copying the plan to the stack
 //      this might mean leaving some spare stack space
 
 //doesn't have to be double word aligned
-#define S_TEMP_0 34
-#define S_TEMP_1 35 
-#define S_TEMP_2 36
-#define S_TEMP_3 37
-#define S_TEMP_4 38
-#define S_TEMP_5 39
-#define S_TEMP_6 40
-#define S_TEMP_7 41
+#define S_TEMP_0 36
+#define S_TEMP_1 37 
+#define S_TEMP_2 38
+#define S_TEMP_3 39
+#define S_TEMP_4 40
+#define S_TEMP_5 41
+#define S_TEMP_6 42
+#define S_TEMP_7 43
 
 //doesn't have to be double word aligned
-#define S_VLSAT_0 42
-#define S_VLSAT_1 43 
-#define S_VLSAT_2 44
-#define S_VLSAT_3 45
-#define S_VLSAT_4 46
-#define S_VLSAT_5 47
-#define S_VLSAT_6 48
-#define S_VLSAT_7 49
+#define S_VLSAT_0 44
+#define S_VLSAT_1 45 
+#define S_VLSAT_2 46
+#define S_VLSAT_3 47
+#define S_VLSAT_4 48
+#define S_VLSAT_5 49
+#define S_VLSAT_6 50
+#define S_VLSAT_7 51
 
 //doesn't have to be double word aligned
-#define S_BIAS_SHIFT_0 50
-#define S_BIAS_SHIFT_1 51 
-#define S_BIAS_SHIFT_2 52
-#define S_BIAS_SHIFT_3 53
-#define S_BIAS_SHIFT_4 54
-#define S_BIAS_SHIFT_5 55
-#define S_BIAS_SHIFT_6 56
-#define S_BIAS_SHIFT_7 57
+#define S_BIAS_SHIFT_0 52
+#define S_BIAS_SHIFT_1 53 
+#define S_BIAS_SHIFT_2 54
+#define S_BIAS_SHIFT_3 55
+#define S_BIAS_SHIFT_4 56
+#define S_BIAS_SHIFT_5 57
+#define S_BIAS_SHIFT_6 58
+#define S_BIAS_SHIFT_7 59
 
 //doesn't have to be double word aligned
-#define S_FINAL_SHR_0 58
-#define S_FINAL_SHR_1 59 
-#define S_FINAL_SHR_2 60
-#define S_FINAL_SHR_3 61
-#define S_FINAL_SHR_4 62
-#define S_FINAL_SHR_5 63
-#define S_FINAL_SHR_6 64
-#define S_FINAL_SHR_7 65
-
-//doesn't have to be double word aligned
-#define S_LOW_CLAMP_OFFSET_0 66
-#define S_LOW_CLAMP_OFFSET_1 67 
-#define S_LOW_CLAMP_OFFSET_2 68
-#define S_LOW_CLAMP_OFFSET_3 69
-#define S_LOW_CLAMP_OFFSET_4 70
-#define S_LOW_CLAMP_OFFSET_5 71
-#define S_LOW_CLAMP_OFFSET_6 72
-#define S_LOW_CLAMP_OFFSET_7 73
-
-//doesn't have to be double word aligned
-#define S_HIGH_CLAMP_OFFSET_0 74
-#define S_HIGH_CLAMP_OFFSET_1 75 
-#define S_HIGH_CLAMP_OFFSET_2 76
-#define S_HIGH_CLAMP_OFFSET_3 77
-#define S_HIGH_CLAMP_OFFSET_4 78
-#define S_HIGH_CLAMP_OFFSET_5 79
-#define S_HIGH_CLAMP_OFFSET_6 80
-#define S_HIGH_CLAMP_OFFSET_7 81
+#define S_FINAL_SHR_0 60
+#define S_FINAL_SHR_1 61 
+#define S_FINAL_SHR_2 62
+#define S_FINAL_SHR_3 63
+#define S_FINAL_SHR_4 64
+#define S_FINAL_SHR_5 65
+#define S_FINAL_SHR_6 66
+#define S_FINAL_SHR_7 67
 
 #define NSTACKWORDS  84 
 
@@ -345,18 +328,7 @@ FUNCTION_NAME:
     stw t, sp[S_FINAL_SHR_6]
     stw t, sp[S_FINAL_SHR_7]
 
-    ldaw t, sp[S_LOW_CLAMP_OFFSET]
-    {ldw t, sp[S_FINAL_SHR]; mov s, t}
-    { stw s, sp[S_FINAL_SHR]; shl s, t, 16}
-    { add t, t, s; nop}
-    stw t, sp[S_LOW_CLAMP_OFFSET_0]
-    stw t, sp[S_LOW_CLAMP_OFFSET_1]
-    stw t, sp[S_LOW_CLAMP_OFFSET_2]
-    stw t, sp[S_LOW_CLAMP_OFFSET_3]
-    stw t, sp[S_LOW_CLAMP_OFFSET_4]
-    stw t, sp[S_LOW_CLAMP_OFFSET_5]
-    stw t, sp[S_LOW_CLAMP_OFFSET_6]
-    stw t, sp[S_LOW_CLAMP_OFFSET_7]
+    //TODO copy the pointer 
 
     bnn_h_loop:
 

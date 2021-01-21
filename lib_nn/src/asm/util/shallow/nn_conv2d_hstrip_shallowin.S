@@ -18,7 +18,11 @@ void nn_conv2d_hstrip_shallowin(
         const unsigned out_cols)
 */
 
-#define FUNCTION_NAME nn_conv2d_hstrip_shallowin
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME nn_conv2d_hstrip_shallowin
+#else
+  #define FUNCTION_NAME nn_conv2d_hstrip_shallowin_asm
+#endif // NN_USE_REF
 
 
 #define NSTACKVECS  (1)

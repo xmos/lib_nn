@@ -14,7 +14,11 @@ void fc_deepin_shallowout_16(
     const int16_t* scales);
 */
 
-#define FUNCTION_NAME fc_deepin_shallowout_16
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME fc_deepin_shallowout_16
+#else
+  #define FUNCTION_NAME fc_deepin_shallowout_16_asm
+#endif //NN_USE_REF
 
 #define NSTACKWORDS  16
     
