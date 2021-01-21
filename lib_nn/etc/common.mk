@@ -6,10 +6,10 @@
 
 # endif
 ifeq ($(OS),Windows_NT)
-  ifeq ($(PLATFORM),x86)
-    mkdir_cmd = @mkdir -p $(dir $(1))
-  else
+  ifeq ($(findstring windows32,$(shell uname -s)),windows32)
     mkdir_cmd = @test -d $(subst /,\,$(dir $(1))) || mkdir $(subst /,\,$(dir $(1)))
+  else
+    mkdir_cmd = @mkdir -p $(dir $(1))
   endif
 else
   mkdir_cmd = @mkdir -p $(dir $(1))
