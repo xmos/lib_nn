@@ -11,15 +11,17 @@ else
   PLATFORM_EXE_SUFFIX = 
 endif
 
-
-PLATFORM_FLAGS := $(PLATFORM_FLAGS_DEFAULT)
+PLATFORM_FLAGS := $(PLATFORM_FLAGS_DEFAULT) -DTF_LITE_DISABLE_X86_NEON
 
 CC := gcc
 XCC := gcc
 CXX := g++
 
+AR_FLAGS := -r
 CC_FLAGS  := -g -O3
 XCC_FLAGS := -g -O3
 CXX_FLAGS := -g -O3 -std=c++11
 
 LD_FLAGS  := -L/usr/local/lib -lstdc++ -lm
+
+XSCOPE_CONFIG := 
