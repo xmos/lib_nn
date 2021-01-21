@@ -10,8 +10,8 @@
 
 
 
-void bconv2d_int8_DIDO_impl(
-    nn_bconv2d_int8_DIDO_impl_plan_t * plan);
+void bconv2d_int8_DI_impl(
+    nn_bconv2d_int8_DI_impl_plan_t * plan);
 
 void bconv2d_int8_impl(
     nn_bconv2d_int8_impl_plan_t *plan);
@@ -42,8 +42,7 @@ static void VDEPTH8_FIXED(xs3_vpu* vpu){
     }
 }
 
-WEAK_FUNC
-void bconv2d_int8_DIDO_impl(nn_bconv2d_int8_DI_impl_plan_t * plan){
+void bconv2d_int8_DI_impl_ref(nn_bconv2d_int8_DI_impl_plan_t * plan){
 
   xs3_vpu vpu_data;
   xs3_vpu * vpu = &vpu_data;
@@ -474,7 +473,7 @@ static void bconv2d_int8_prepare(
   plan->y_v_step = chans_out * sizeof(int8_t) * (y->width - y_sub_width);
 }
 
-static void bconv2d_int8_DIDO_prepare(
+static void bconv2d_int8_DI_prepare(
     nn_bconv2d_int8_DI_impl_plan_t* plan, int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
@@ -593,7 +592,7 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
 ){
   nn_bconv2d_int8_DI_impl_plan_t plan;
 
-  bconv2d_int8_DIDO_prepare(&plan, Y_p,
+  bconv2d_int8_DI_prepare(&plan, Y_p,
       X_p,  K_p,
       post_activation_multiplier_q, 
       post_activation_bias_q,
@@ -606,7 +605,7 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
       y_loc_x, y_loc_y, y_sub_width, y_sub_height,
       x_loc_x, x_loc_y);
 
-  bconv2d_int8_DIDO_impl(&plan);
+  bconv2d_int8_DI_impl(&plan);
 }
 
 void bconv2d_int8(int8_t* Y_p,
@@ -656,10 +655,10 @@ void bconv2d_int8(int8_t* Y_p,
 
 #ifdef NN_USE_REF
 
-void bconv2d_int8_DIDO_impl(
-    nn_bconv2d_int8_DIDO_impl_plan_t * plan)
+void bconv2d_int8_DI_impl(
+    nn_bconv2d_int8_DI_impl_plan_t * plan)
 {
-    bconv2d_int8_DIDO_impl_ref(plan);
+    bconv2d_int8_DI_impl_ref(plan);
 }
 
 void bconv2d_int8_impl(
