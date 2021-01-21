@@ -74,9 +74,9 @@ typedef struct {
 
 /**
  * Struct represents the parameters needed by each
- * `bconv2d_int8_DIDO_impl()` job.
+ * `bconv2d_int8_DI_impl()` job.
  *
- * Values are set by `bconv2d_int8_DIDO_prepare()`.
+ * Values are set by `bconv2d_int8_DI_prepare()`.
  *
  * @note This struct is intended to be opaque.
  */
@@ -117,9 +117,9 @@ typedef struct {
 
 /**
  * Struct represents the parameters needed by each
- * `bconv2d_int8_DIDO_impl()` job.
+ * `bconv2d_int8_DI_impl()` job.
  *
- * Values are set by `bconv2d_int8_DIDO_impl_prepare()`.
+ * Values are set by `bconv2d_int8_DI_impl_prepare()`.
  *
  * @note This struct is intended to be opaque.
  */

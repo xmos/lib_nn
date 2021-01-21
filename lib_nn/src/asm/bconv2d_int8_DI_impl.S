@@ -248,7 +248,7 @@ bnn_make_16_channel_output:
     retsp 0
 
 /*
-void bconv2d_int8_DIDO_impl(const nn_bconv2d_int8_DI_impl_plan_t* plan);
+void bconv2d_int8_DI_impl(const nn_bconv2d_int8_DI_impl_plan_t* plan);
 */
 
 #define FUNCTION_NAME bconv2d_int8_DI_impl

@@ -41,7 +41,7 @@ void bconv2d_bin_valid(bnn_b32_t* Y_p,
         x_loc_x,  x_loc_y);
 }
 
-void bconv2d_int8_DIDO_valid(int8_t* Y_p,
+void bconv2d_int8_DI_valid(int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
     const int16_t* post_activation_multiplier_q, 
@@ -64,7 +64,7 @@ void bconv2d_int8_DIDO_valid(int8_t* Y_p,
     unsigned x_loc_x = y_loc_x*k->stride.horizontal;
     unsigned x_loc_y = y_loc_y*k->stride.vertical;
 
-    bconv2d_int8_DIDO(Y_p, X_p, K_p, 
+    bconv2d_int8_DI(Y_p, X_p, K_p, 
 
         post_activation_multiplier_q,
         post_activation_bias_q, 

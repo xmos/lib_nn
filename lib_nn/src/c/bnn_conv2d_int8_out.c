@@ -568,7 +568,7 @@ static void bconv2d_int8_DI_prepare(
   plan->k_h_step = 0;
 }
 
-void bconv2d_int8_DIDO(int8_t* Y_p,
+void bconv2d_int8_DI(int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
     const int16_t* post_activation_multiplier_q, 

@@ -930,7 +930,7 @@ static void DI_valid(
       unsigned y_loc_x, unsigned y_loc_y, 
       unsigned y_sub_width, unsigned y_sub_height){
 
-  bconv2d_int8_DIDO_valid(Y_p, (const bnn_b256_t*)X_p,
+  bconv2d_int8_DI_valid(Y_p, (const bnn_b256_t*)X_p,
         (const bnn_b256_t*)K_p, post_activation_multiplier_q,
         post_activation_bias_q, 
         low_clamp_offset, high_clamp_offset,
@@ -993,7 +993,7 @@ static void DI_full(
       const nn_image_params_t* y,
       const nn_window_params_t* k){
 
-  bconv2d_int8_DIDO(Y_p, (const bnn_b256_t*)X_p,
+  bconv2d_int8_DI(Y_p, (const bnn_b256_t*)X_p,
                       (const bnn_b256_t*)K_p, post_activation_multiplier_q,
                       post_activation_bias_q, 
                       low_clamp_offset, high_clamp_offset,

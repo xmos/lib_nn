@@ -8,8 +8,8 @@
 #define BCONV2D_BIN_INPUT_CH_INCREMENT     (8*sizeof(int32_t))
 #define BCONV2D_BIN_OUTPUT_CH_INCREMENT    (8*sizeof(int32_t))
 
-#define BCONV2D_INT8_DIDO_INPUT_CH_INCREMENT  (XS3_VPU_VREG_WIDTH_BITS)
-#define BCONV2D_INT8_DIDO_OUTPUT_CH_INCREMENT (VPU_INT16_ACC_SIZE)
+#define BCONV2D_INT8_DI_INPUT_CH_INCREMENT  (XS3_VPU_VREG_WIDTH_BITS)
+#define BCONV2D_INT8_DI_OUTPUT_CH_INCREMENT (VPU_INT16_ACC_SIZE)
 #define BCONV2D_INT8_INPUT_CH_INCREMENT       (8*sizeof(int32_t))
 #define BCONV2D_INT8_OUTPUT_CH_INCREMENT      (sizeof(int32_t))
 
@@ -121,7 +121,7 @@ void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
                                int * chan_overlaps) ;
 
 /**  
- * @brief Execute @oper{bconv2d_int8_DIDO_valid}.
+ * @brief Execute @oper{bconv2d_int8_DI_valid}.
  * 
  * This performs a binary conv2d on a rectangular sub-section of an input tensor X with 
  * kernel K.  
@@ -154,7 +154,7 @@ void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
  * @param y_sub_width   [in]     The width of the output sub-image that will be computed
  * @param y_sub_height  [in]     The height of the output sub-image that will be computed
  */
-void bconv2d_int8_DIDO_valid(int8_t* Y_p,
+void bconv2d_int8_DI_valid(int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
     const int16_t* post_activation_multiplier_q, 
@@ -365,7 +365,7 @@ void bconv2d_bin(bnn_b32_t* Y_p,
 );
 
 /**  
- * @brief Execute @oper{bconv2d_int8_DIDO}.
+ * @brief Execute @oper{bconv2d_int8_DI}.
  * 
  * This performs a binary conv2d on a rectangular sub-section of an input tensor X with 
  * a sub-section of kernel K and writes it to s sub-section of tensor Y.
@@ -402,7 +402,7 @@ void bconv2d_bin(bnn_b32_t* Y_p,
  * @param x_h_loc       [in]     The x coordinate(horizontal) of where the input will start reading from
  * @param x_v_loc       [in]     The y coordinate(vertical) of where the input will start reading from
  */
-void bconv2d_int8_DIDO(int8_t* Y_p,
+void bconv2d_int8_DI(int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
     const int16_t* post_activation_multiplier, 
