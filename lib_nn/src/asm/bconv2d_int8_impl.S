@@ -113,57 +113,60 @@ VECT_INT8_MIN:
 #define S_X_HEIGHT_LOOP_COUNTER 30 
 #define S_BIAS_MULTIPLIER       31  
 
+#define S_QUANT_ACCU_MOD_P      32
+#define S_LOW_CLAMP_OFFSET_P    33 
+#define S_HIGH_CLAMP_OFFSET_P   34  
 
 //doesn't have to be double work aligned
-#define S_TEMP_0                32
-#define S_TEMP_1                33 
-#define S_TEMP_2                34
-#define S_TEMP_3                35
-#define S_TEMP_4                36
-#define S_TEMP_5                37
-#define S_TEMP_6                38
-#define S_TEMP_7                39
+#define S_TEMP_0                35
+#define S_TEMP_1                36 
+#define S_TEMP_2                37
+#define S_TEMP_3                38
+#define S_TEMP_4                39
+#define S_TEMP_5                40
+#define S_TEMP_6                41
+#define S_TEMP_7                42
 
 //doesn't have to be double work aligned
-#define S_VLSAT_0               40
-#define S_VLSAT_1               41 
-#define S_VLSAT_2               42
-#define S_VLSAT_3               43
-#define S_VLSAT_4               44
-#define S_VLSAT_5               45
-#define S_VLSAT_6               46
-#define S_VLSAT_7               47
+#define S_VLSAT_0               43
+#define S_VLSAT_1               44
+#define S_VLSAT_2               45
+#define S_VLSAT_3               46
+#define S_VLSAT_4               47
+#define S_VLSAT_5               48
+#define S_VLSAT_6               49
+#define S_VLSAT_7               50
 
 //doesn't have to be double word aligned
-#define S_BIAS_SHIFT_0          48
-#define S_BIAS_SHIFT_1          49 
-#define S_BIAS_SHIFT_2          50
-#define S_BIAS_SHIFT_3          51
-#define S_BIAS_SHIFT_4          52
-#define S_BIAS_SHIFT_5          53
-#define S_BIAS_SHIFT_6          54
-#define S_BIAS_SHIFT_7          55
+#define S_BIAS_SHIFT_0          51
+#define S_BIAS_SHIFT_1          52 
+#define S_BIAS_SHIFT_2          53
+#define S_BIAS_SHIFT_3          54
+#define S_BIAS_SHIFT_4          55
+#define S_BIAS_SHIFT_5          56
+#define S_BIAS_SHIFT_6          57
+#define S_BIAS_SHIFT_7          58
 
 //doesn't have to be double word aligned
-#define S_FINAL_SHR_0           56
-#define S_FINAL_SHR_1           57 
-#define S_FINAL_SHR_2           58
-#define S_FINAL_SHR_3           59
-#define S_FINAL_SHR_4           60
-#define S_FINAL_SHR_5           61
-#define S_FINAL_SHR_6           62
-#define S_FINAL_SHR_7           63
+#define S_FINAL_SHR_0           59
+#define S_FINAL_SHR_1           60 
+#define S_FINAL_SHR_2           61
+#define S_FINAL_SHR_3           62
+#define S_FINAL_SHR_4           63
+#define S_FINAL_SHR_5           64
+#define S_FINAL_SHR_6           65
+#define S_FINAL_SHR_7           66
 
-#define S_SAVE_R10              64
-#define S_SAVE_R4               65
-#define S_SAVE_R5               66
-#define S_SAVE_R6               67
-#define S_SAVE_R7               68
-#define S_SAVE_R8               69
-#define S_SAVE_R9               70
+#define S_SAVE_R10              67
+#define S_SAVE_R4               68
+#define S_SAVE_R5               69
+#define S_SAVE_R6               70
+#define S_SAVE_R7               71
+#define S_SAVE_R8               72
+#define S_SAVE_R9               73
 
 
-#define NSTACKWORDS  72 //TODO
+#define NSTACKWORDS  80 //TODO
 
 
 //Helpers that reference the above
@@ -317,7 +320,7 @@ bnn_compute_patch:
     {retsp 0; nop}
 
 /*
-void bconv2d_int8_impl(const nn_bconv2d_int8_DI_impl_plan_t* plan);
+void bconv2d_int8_impl(const nn_bconv2d_int8_DIDO_impl_plan_t* plan);
 */
 
 #ifndef NN_USE_REF

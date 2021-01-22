@@ -350,7 +350,7 @@ void bconv2d_bin_prepare(
   // Outer Loop
   plan->outer_x_h_step = bytes_per_input_channel * k->stride.horizontal;
 
-  plan->outer_x_v_step = (bytes_per_input_channel * x->width *k->stride.vertical) 
+  plan->outer_x_v_step = (bytes_per_input_channel * (int)x->width *k->stride.vertical) 
      - (plan->outer_x_h_step * x_width_loops);
 
   plan->y_v_step = chan_b32_out * sizeof(bnn_b32_t) * (y->width - y_sub_width);
@@ -400,6 +400,8 @@ void bconv2d_bin(bnn_b32_t* Y_p,
         x,  y, k, 
         y_loc_x, y_loc_y, y_sub_width, y_sub_height,
         x_loc_x, x_loc_y);
+
+    
 
     bconv2d_bin_impl(&plan);
 }

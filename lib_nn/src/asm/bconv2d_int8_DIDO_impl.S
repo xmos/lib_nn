@@ -248,10 +248,10 @@ bnn_make_16_channel_output:
     retsp 0
 
 /*
-void bconv2d_int8_DI_impl(const nn_bconv2d_int8_DI_impl_plan_t* plan);
+void bconv2d_int8_DIDO_impl(const nn_bconv2d_int8_DIDO_impl_plan_t* plan);
 */
 
-#define FUNCTION_NAME bconv2d_int8_DI_impl
+#define FUNCTION_NAME bconv2d_int8_DIDO_impl
 
     
 .text
@@ -288,6 +288,10 @@ FUNCTION_NAME:
 
     {vldr t[0]; add t, t, r_256_bits}
     {vstr s[0]; add s, s, r_256_bits} //This could use a bit mask to only store the relavent fields
+
+    ldd s, t, t[0]
+    stw t, sp[S_LOW_CLAMP_OFFSET_P]
+    stw s, sp[S_HIGH_CLAMP_OFFSET_P]
 
     ldaw t, sp[S_VLSAT_0]
     {ldw t, sp[S_VLSAT]; mov s, t}
@@ -328,8 +332,6 @@ FUNCTION_NAME:
     stw t, sp[S_FINAL_SHR_6]
     stw t, sp[S_FINAL_SHR_7]
 
-    //TODO copy the pointer 
-
     bnn_h_loop:
 
         {ldw x_width_loop, sp[S_X_WIDTH_LOOP_COUNTER]; nop}
@@ -355,12 +357,12 @@ FUNCTION_NAME:
                 vlashr t[0], s
 
                 //apply the initial clamps
-                ldw s, sp[S_HIGH_CLAMP_OFFSET]
+                ldw s, sp[S_HIGH_CLAMP_OFFSET_P]
                 vladd s[0]
                 vladd s[0]
                 vlsub s[0]
                 vlsub s[0]
-                ldw s, sp[S_LOW_CLAMP_OFFSET]
+                ldw s, sp[S_LOW_CLAMP_OFFSET_P]
                 vladd s[0]
                 vladd s[0]
                 vlsub s[0]
