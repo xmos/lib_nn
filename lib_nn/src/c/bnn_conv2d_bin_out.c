@@ -401,6 +401,8 @@ void bconv2d_bin(bnn_b32_t* Y_p,
         y_loc_x, y_loc_y, y_sub_width, y_sub_height,
         x_loc_x, x_loc_y);
 
+    
+
     bconv2d_bin_impl(&plan);
 }
 
