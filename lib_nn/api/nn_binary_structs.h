@@ -74,9 +74,9 @@ typedef struct {
 
 /**
  * Struct represents the parameters needed by each
- * `bconv2d_int8_DIDO_impl()` job.
+ * `bconv2d_int8_DI_impl()` job.
  *
- * Values are set by `bconv2d_int8_DIDO_prepare()`.
+ * Values are set by `bconv2d_int8_DI_prepare()`.
  *
  * @note This struct is intended to be opaque.
  */
@@ -109,14 +109,17 @@ typedef struct {
   int32_t input_channel_loop_counter;
   int8_t* Y;
 
-} nn_bconv2d_int8_DIDO_impl_plan_t;
+  int32_t low_clamp_offset;
+  int32_t high_clamp_offset;
+
+} nn_bconv2d_int8_DI_impl_plan_t;
 
 
 /**
  * Struct represents the parameters needed by each
- * `bconv2d_int8_DIDO_impl()` job.
+ * `bconv2d_int8_DI_impl()` job.
  *
- * Values are set by `bconv2d_int8_DIDO_impl_prepare()`.
+ * Values are set by `bconv2d_int8_DI_impl_prepare()`.
  *
  * @note This struct is intended to be opaque.
  */
@@ -157,5 +160,8 @@ typedef struct {
   int32_t x_width_loop_counter;
   int32_t x_height_loop_counter;
   int32_t bias_multiplier;
+  int32_t low_clamp_offset;
+  int32_t high_clamp_offset;
+  int16_t * quantised_accu_modifier;
 
 } nn_bconv2d_int8_impl_plan_t;

@@ -12,6 +12,7 @@
 _build
 **/dist/
 **/bin/
+**/venv/*
 *.o
 lib_nn/lib
 

@@ -28,7 +28,6 @@ APP_NAME := unit_test
 
 TARGET_DEVICE = XCORE-AI-EXPLORER
 
-XSCOPE_CONFIG ?= config.xscope
 NN_PATH := ../../lib_nn
 
 THIRD_PARTY_PATH := ./../../third_party
@@ -59,7 +58,7 @@ endif
 INCLUDES := $(NN_PATH)/api $(NN_PATH)/src $(UNITY_PATH)/src $(COMPUTE_ENGINE_PATH) $(FLAT_BUFFERS_PATH)/include
 INCLUDES += $(RUY_PATH) $(TENSORFLOW_PATH) $(GEMMLOWP_PATH)
 SOURCE_DIRS := src 
-SOURCE_FILE_EXTENSIONS := c xc cpp
+SOURCE_FILE_EXTENSIONS := c cpp
 
 SOURCE_FILES := 
 

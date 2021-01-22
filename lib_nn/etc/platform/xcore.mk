@@ -30,3 +30,5 @@ CXX_FLAGS := -std=c++11 -g
 LD_FLAGS :=
 
 AR_FLAGS := rc
+
+XSCOPE_CONFIG := config.xscope

@@ -8,8 +8,8 @@
 #define BCONV2D_BIN_INPUT_CH_INCREMENT     (8*sizeof(int32_t))
 #define BCONV2D_BIN_OUTPUT_CH_INCREMENT    (8*sizeof(int32_t))
 
-#define BCONV2D_INT8_DIDO_INPUT_CH_INCREMENT  (XS3_VPU_VREG_WIDTH_BITS)
-#define BCONV2D_INT8_DIDO_OUTPUT_CH_INCREMENT (VPU_INT16_ACC_SIZE)
+#define BCONV2D_INT8_DI_INPUT_CH_INCREMENT  (XS3_VPU_VREG_WIDTH_BITS)
+#define BCONV2D_INT8_DI_OUTPUT_CH_INCREMENT (VPU_INT16_ACC_SIZE)
 #define BCONV2D_INT8_INPUT_CH_INCREMENT       (8*sizeof(int32_t))
 #define BCONV2D_INT8_OUTPUT_CH_INCREMENT      (sizeof(int32_t))
 
@@ -38,20 +38,24 @@ int8_t bnn_post_activation_reference(
  * Reference implementation of activation quantisation. 
  */
 void bnn_quantise_activation(
-               int16_t * post_activation_multiplier_q,
-               int16_t* post_activation_bias_q,
+               int16_t * output_transform_multiplier_q,
+               int16_t * output_transform_bias_q,
 
-               float* post_activation_multiplier,
-               float* post_activation_bias, 
+               float * output_transform_multiplier,
+               float * output_transform_bias, 
 
                unsigned chans_out,
 
-               int32_t clamp_low,
-               int32_t clamp_high,
+               int32_t larq_clamp_min, 
+               int32_t larq_clamp_max,
 
-               int *accu_shr,
-               int16_t *bias_multipler,
-               int *final_shr,
+               int16_t * quantised_accu_modifier,
+               int16_t * low_clamp_offset,
+               int16_t * high_clamp_offset,
+
+               int * accu_shr,
+               int16_t * bias_multipler,
+               int * final_shr,
 
                int32_t receptive_volume, 
                int * chan_overlaps
@@ -117,7 +121,7 @@ void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
                                int * chan_overlaps) ;
 
 /**  
- * @brief Execute @oper{bconv2d_int8_DIDO_valid}.
+ * @brief Execute @oper{bconv2d_int8_DI_valid}.
  * 
  * This performs a binary conv2d on a rectangular sub-section of an input tensor X with 
  * kernel K.  
@@ -150,11 +154,15 @@ void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
  * @param y_sub_width   [in]     The width of the output sub-image that will be computed
  * @param y_sub_height  [in]     The height of the output sub-image that will be computed
  */
-void bconv2d_int8_DIDO_valid(int8_t* Y_p,
+void bconv2d_int8_DI_valid(int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
+
+    const int16_t low_clamp_offset,
+    const int16_t high_clamp_offset,
+
     const int accu_shr,
     const int16_t bias_multiplier,
     const int final_shr,
@@ -173,6 +181,11 @@ void bconv2d_int8_valid(int8_t* Y_p,
     
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
+
+    const int16_t * quantised_accu_modifier,
+    const int16_t low_clamp_offset,
+    const int16_t high_clamp_offset,
+
     const int accu_shr,
     const int16_t bias_multiplier,
     const int final_shr,
@@ -352,7 +365,7 @@ void bconv2d_bin(bnn_b32_t* Y_p,
 );
 
 /**  
- * @brief Execute @oper{bconv2d_int8_DIDO}.
+ * @brief Execute @oper{bconv2d_int8_DI}.
  * 
  * This performs a binary conv2d on a rectangular sub-section of an input tensor X with 
  * a sub-section of kernel K and writes it to s sub-section of tensor Y.
@@ -389,11 +402,15 @@ void bconv2d_bin(bnn_b32_t* Y_p,
  * @param x_h_loc       [in]     The x coordinate(horizontal) of where the input will start reading from
  * @param x_v_loc       [in]     The y coordinate(vertical) of where the input will start reading from
  */
-void bconv2d_int8_DIDO(int8_t* Y_p,
+void bconv2d_int8_DI(int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
     const int16_t* post_activation_multiplier, 
     const int16_t* post_activation_bias,
+
+    const int16_t low_clamp_offset,
+    const int16_t high_clamp_offset,
+
     const int accu_shr,
     const int16_t bias_multipler,
     const int final_shr,
@@ -413,6 +430,11 @@ void bconv2d_int8(int8_t* Y_p,
     
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
+
+    const int16_t * quantised_accu_modifier,
+    const int16_t low_clamp_offset,
+    const int16_t high_clamp_offset,
+
     const int accu_shr,
     const int16_t bias_multipler,
     const int final_shr,
