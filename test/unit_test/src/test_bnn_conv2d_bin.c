@@ -88,13 +88,13 @@ static void run_bin_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b32_t* X_ref,
   bnn_b32_t(*Y_ref)[y_width][chan_b32_out] =
       (bnn_b32_t(*)[y_width][chan_b32_out])Y_ref_p;
 
-  for(unsigned h=0;h<y_height;h++){
-    for(unsigned w=0;w<y_width;w++){
-      for(unsigned c=0;c<chan_b32_out;c++){
-        printf("%08x %08x %d\n", Y_ref[h][w][c], Y[h][w][c], Y_ref[h][w][c] == Y[h][w][c]);
-      }
-    }
-  }
+  // for(unsigned h=0;h<y_height;h++){
+  //   for(unsigned w=0;w<y_width;w++){
+  //     for(unsigned c=0;c<chan_b32_out;c++){
+  //       printf("%08x %08x %d\n", Y_ref[h][w][c], Y[h][w][c], Y_ref[h][w][c] == Y[h][w][c]);
+  //     }
+  //   }
+  // }
 
   TEST_ASSERT_EQUAL_INT_ARRAY(Y_p, Y_ref_p, y_height*y_width*chan_b32_out); 
 
@@ -322,14 +322,14 @@ static void run_bin_sub_image(
     for (unsigned w = 0; w < y->width; w++) {
       if((h >= y_loc_y) && (h < (y_loc_y + y_sub_height)) && (w >= y_loc_x) && (w < (y_loc_x + y_sub_width))){
         //If the result should have been computed then check it against the reference
-        for (unsigned c = 0; c < y->channels; c++) {
-          printf("a  %02x %02x %d\n", Y_ref[h][w][c], Y[h][w][c], Y_ref[h][w][c] == Y[h][w][c]);
+        for (unsigned c = 0; c < y->channels/32; c++) {
+          // printf("a  %02x %02x %d\n", Y_ref[h][w][c], Y[h][w][c], Y_ref[h][w][c] == Y[h][w][c]);
           TEST_ASSERT_INT8_WITHIN(1, Y_ref[h][w][c], Y[h][w][c]);
         }
       } else {
         //Otherwise check thet is hasn't been written to
-        for (unsigned c = 0; c < y->channels; c++) {
-          printf("au %02x %02x %d\n", undef_sentinal, Y[h][w][c], undef_sentinal == Y[h][w][c]);
+        for (unsigned c = 0; c < y->channels/32; c++) {
+          // printf("au %02x %02x %d\n", undef_sentinal, Y[h][w][c], undef_sentinal == Y[h][w][c]);
           TEST_ASSERT_EQUAL_INT8(undef_sentinal, Y[h][w][c]);
         }
       }
@@ -394,8 +394,9 @@ void impl_bconv2d_bin_sub_image(
           k.dilation.horizontal = X_H_DILATION;
           k.dilation.vertical = X_V_DILATION;
 
-          bnn_b32_t * Y_ref = (bnn_b32_t *) malloc(sizeof(bnn_b32_t) * y.height * y.width * y.channels/32);
-          bnn_b32_t * Y     = (bnn_b32_t *) malloc(sizeof(bnn_b32_t) * y.height * y.width * y.channels/32);    
+          size_t addressable_Y_bytes = sizeof(bnn_b32_t) * y.height * y.width * y.channels/32;
+          bnn_b32_t * Y_ref = (bnn_b32_t *) malloc(addressable_Y_bytes);
+          bnn_b32_t * Y     = (bnn_b32_t *) malloc(addressable_Y_bytes);    
 
           if(y.height == 0 || y.width == 0)
             continue;
@@ -432,7 +433,6 @@ void impl_bconv2d_bin_sub_image(
                 for (unsigned y_sub_width = 1; y_sub_width<y.width-y_loc_x; ++y_sub_width){
                   for (unsigned y_sub_height = 1; y_sub_height<y.height-y_loc_y; ++y_sub_height){
 
-                      size_t addressable_Y_bytes = y.height * y.width * y.channels;
                       memset(Y, undef_sentinal, addressable_Y_bytes);
                       run_bin_sub_image(
                         (bnn_b32_t*)Y, 
@@ -574,10 +574,11 @@ void test_bconv2d_bin_DI_sub_image(){
 void test_bnn_conv2d_bin() {
   UNITY_SET_FILE();
 
-  RUN_TEST(test_bconv2d_bin_pseudo_random);
-  RUN_TEST(test_bconv2d_bin_pseudo_random2);
-  RUN_TEST(test_bconv2d_bin_sub_image);
   RUN_TEST(test_bconv2d_bin_DI_pseudo_random);
   RUN_TEST(test_bconv2d_bin_DI_pseudo_random2);
   RUN_TEST(test_bconv2d_bin_DI_sub_image);
+
+  RUN_TEST(test_bconv2d_bin_pseudo_random);
+  RUN_TEST(test_bconv2d_bin_pseudo_random2);
+  RUN_TEST(test_bconv2d_bin_sub_image);
 }

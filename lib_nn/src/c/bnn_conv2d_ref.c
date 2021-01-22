@@ -300,7 +300,7 @@ void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
     int32_t t = thresholds_ref[i] - (int32_t)(receptive_volume) / 2;
 
     if(chan_overlaps)
-       t -= chan_overlaps[i];
+       t -= -chan_overlaps[i];
 
     unsigned idx = bank * 2 * VPU_INT16_ACC_PERIOD + i % VPU_INT16_ACC_PERIOD;
     thresholds[idx] = t;

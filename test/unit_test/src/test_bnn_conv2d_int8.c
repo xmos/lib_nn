@@ -12,6 +12,7 @@
 
 static const char undef_sentinal = 0x55;
 
+static const unsigned clamps_count = 16;
 
 /*
 X_ref and K_ref must be initialised before running this.
@@ -210,7 +211,7 @@ void impl_bconv2d_int8_pseudo_random(
                       unsigned receptive_volume = k_width * k_height * chans_in;
                       pick_post_activation_params(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, &seed);
 
-                      for (unsigned c=0;c<1024;c++){
+                      for (unsigned clamps_loop=0;clamps_loop<clamps_count;clamps_loop++){
                         int32_t larq_clamp_min = pseudo_rand(&seed) % (2*receptive_volume);
                         int32_t larq_clamp_max = larq_clamp_min + pseudo_rand(&seed) % (2*receptive_volume);
 
@@ -327,7 +328,7 @@ void impl_bconv2d_int8_pseudo_random2(
           unsigned receptive_volume = k_width * k_height * chans_in;
           pick_post_activation_params(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, &seed);
 
-          for (unsigned c=0;c<1024;c++){
+          for (unsigned clamps_loop=0;clamps_loop<clamps_count;clamps_loop++){
             int32_t larq_clamp_min = pseudo_rand(&seed) % (2*receptive_volume);
             int32_t larq_clamp_max = larq_clamp_min + pseudo_rand(&seed) % (2*receptive_volume);
 
@@ -545,7 +546,7 @@ void impl_bconv2d_int8_sub_image(
                       size_t addressable_Y_bytes = y.height * y.width * y.channels;
                       memset(Y, undef_sentinal, addressable_Y_bytes);
 
-                      for (unsigned c=0;c<1024;c++){
+                      for (unsigned clamps_loop=0;clamps_loop<clamps_count;clamps_loop++){
                         int32_t larq_clamp_min = pseudo_rand(&seed) % (2*receptive_volume);
                         int32_t larq_clamp_max = larq_clamp_min + pseudo_rand(&seed) % (2*receptive_volume);
 
