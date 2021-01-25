@@ -19,6 +19,7 @@ This function test whole images, i.e. it wont work on a sub image.
 */
 static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
                bnn_b32_t* K_p, bnn_b32_t* K_ref_p, 
+
                float* post_activation_multiplier,
                float* post_activation_bias, 
 
@@ -30,7 +31,8 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
                unsigned x_height, unsigned x_width,
                unsigned k_height, unsigned k_width, unsigned chans_in,
                unsigned chans_out, unsigned h_stride, unsigned v_stride, int seed,
-               void (*foo)()) {
+               int32_t clamp_low , int32_t clamp_high, 
+               void (*test_fn)()) {
                   
   // printf("h_stride:%u v_stride:%u k_height:%u k_width:%u x_height:%u x_width:%u chans_in:%u chans_out:%u seed:%d\n", 
   //   h_stride, v_stride, k_height, k_width, x_height, x_width, chans_in, chans_out, seed);
@@ -43,15 +45,10 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
 
   unsigned receptive_volume = k_width * k_height * chans_in;
 
-  pick_post_activation_params(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, &seed);
-
   for (unsigned e=0;e<y_height * y_width * chans_out;++e)
     Y_ref_p[e]=0;
   for (unsigned e=0;e<y_height * y_width * chans_out;++e)
     Y_p[e]=0;
-
-  int32_t clamp_low = 0;
-  int32_t clamp_high = receptive_volume*2;
 
   nn_image_params_t x;
   x.height = x_height;
@@ -70,7 +67,7 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
   k.dilation.vertical = 1;
 
   larq_ref_bconv2d_int8_out(&x, &y, &k, (int32_t*)X_ref, (int32_t*)K_ref_p,
-                   (int8_t*)Y_ref_p, post_activation_multiplier, post_activation_bias);
+                   (int8_t*)Y_ref_p, post_activation_multiplier, post_activation_bias, clamp_low, clamp_high);
 
   bnn_reorder_kernel_tensor(K_p, K_ref_p, k_height, k_width, chans_in,
                             chans_out, chan_overlaps);
@@ -91,11 +88,11 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
       &accu_shr, &bias_multipler, &final_shr, receptive_volume, chan_overlaps
   );
 
-  foo((int8_t*)Y_p, (const bnn_b32_t*)X_ref,
+  test_fn((int8_t*)Y_p, (const bnn_b32_t*)X_ref,
     (const bnn_b32_t*)K_p, post_activation_multiplier_q, 
     post_activation_bias_q, accu_shr, bias_multipler, final_shr,
     &x, &y, &k);
-
+    
   for (unsigned e=0;e<y_height * y_width * chans_out;++e)
     TEST_ASSERT_INT8_WITHIN(1, Y_ref_p[e], Y_p[e]);
 
@@ -183,6 +180,10 @@ void impl_bconv2d_int8_DIDO_pseudo_random(
                       
                       for(unsigned b=0;b<K_ref_bytes/sizeof(int);b++)
                         ((int*)K_ref)[b] = pseudo_rand(&seed);
+                      
+                      unsigned receptive_volume = k_width * k_height * chans_in;
+                      pick_post_activation_params(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, &seed);
+
 
                       run_int8_config(
                           (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
@@ -194,7 +195,7 @@ void impl_bconv2d_int8_DIDO_pseudo_random(
                           (int*) chan_overlaps,
                           x_height,
                           x_width, k_height, k_width, chans_in, chans_out, h_stride,
-                          v_stride, seed, valid_impl);
+                          v_stride, seed, 0, receptive_volume*2, valid_impl);
                     }
 
                     free(X_ref);
@@ -288,6 +289,9 @@ void impl_bconv2d_int8_DIDO_pseudo_random2(
           for(unsigned b=0;b<K_ref_bytes/sizeof(int);b++)
             ((int*)K_ref)[b] = pseudo_rand(&seed);
 
+          unsigned receptive_volume = k_width * k_height * chans_in;
+          pick_post_activation_params(post_activation_multiplier, post_activation_bias, chans_out, receptive_volume, &seed);
+
           run_int8_config(
               (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
               (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
@@ -298,7 +302,7 @@ void impl_bconv2d_int8_DIDO_pseudo_random2(
               (int*) chan_overlaps,
               x_height,
               x_width, k_height, k_width, chans_in, chans_out, 1,
-              1, seed, valid_impl);
+              1, seed, 0, receptive_volume*2, valid_impl);
 
         free(X_ref);
         free(Y);
@@ -447,7 +451,7 @@ void impl_bconv2d_int8_DIDO_sub_image(
 
             //Calculate the entire reference image
             larq_ref_bconv2d_int8_out(&x, &y, &k, (const int32_t*)X_ref, (const int32_t*)K_ref,
-                        (int8_t*)Y_ref, post_activation_multiplier, post_activation_bias);
+                        (int8_t*)Y_ref, post_activation_multiplier, post_activation_bias, 0, INT_MAX);
 
             int32_t clamp_low = 0;     
             int32_t clamp_high = receptive_volume*2;
@@ -638,6 +642,8 @@ void test_bconv2d_int8_pseudo_random2(){
 void test_bconv2d_int8_DIDO_pseudo_random2(){
   impl_bconv2d_int8_DIDO_pseudo_random2(1, 32, 256, 32, 32, 256, 32, (void*)&DI_full);
 }
+
+
 
 void test_bnn_conv2d_int8() {
   UNITY_SET_FILE();

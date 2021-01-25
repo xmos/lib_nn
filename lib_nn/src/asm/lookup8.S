@@ -11,7 +11,11 @@ void lookup8(
     const unsigned elm_count);
 */
 
-#define FUNCTION_NAME lookup8
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME lookup8
+#else
+  #define FUNCTION_NAME lookup8_asm
+#endif //NN_USE_REF
 
 #define NSTACKWORDS  4
     

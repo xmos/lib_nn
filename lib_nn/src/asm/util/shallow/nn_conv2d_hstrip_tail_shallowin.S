@@ -19,7 +19,11 @@ void nn_conv2d_hstrip_tail_shallowin(
         const channel_count_t C_out_tail)
 */
 
-#define FUNCTION_NAME nn_conv2d_hstrip_tail_shallowin
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME nn_conv2d_hstrip_tail_shallowin
+#else
+  #define FUNCTION_NAME nn_conv2d_hstrip_tail_shallowin_asm
+#endif // NN_USE_REF
 
 
 #define NSTACKVECS  (1)

@@ -17,7 +17,9 @@ void larq_ref_bconv2d_int8_out(const nn_image_params_t* x, const nn_image_params
                       const int32_t* packed_filter_data,
                       int8_t* output_data,
                       const float* post_activation_multiplier, 
-                      const float* post_activation_bias );
+                      const float* post_activation_bias,
+                      const int clamp_min,
+                      const int clamp_max );
                       
 int pseudo_rand(int *seed);
 

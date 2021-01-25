@@ -245,7 +245,11 @@ bnn_make_16_channel_output:
 void bconv2d_int8_DIDO_impl(const nn_bconv2d_int8_DIDO_impl_plan_t* plan);
 */
 
-#define FUNCTION_NAME bconv2d_int8_DIDO_impl
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME bconv2d_int8_DIDO_impl
+#else
+  #define FUNCTION_NAME bconv2d_int8_DIDO_impl_asm
+#endif // NN_USE_REF
 
     
 .text

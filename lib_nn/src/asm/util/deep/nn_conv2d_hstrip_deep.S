@@ -22,7 +22,11 @@ void nn_conv2d_hstrip_deep(
         const unsigned out_cols)
 */
 
-#define FUNCTION_NAME nn_conv2d_hstrip_deep
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME nn_conv2d_hstrip_deep
+#else
+  #define FUNCTION_NAME nn_conv2d_hstrip_deep_asm
+#endif // NN_USE_REF
 
 
 #define NSTACKVECS  (2)

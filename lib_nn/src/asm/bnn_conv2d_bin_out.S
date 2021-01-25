@@ -160,7 +160,11 @@ bnn_make_16_bit_output:
 void bconv2d_bin_DI_impl(const nn_bconv2d_bin_DI_impl_plan_t* plan);
 */
 
-#define FUNCTION_NAME bconv2d_bin_DI_impl
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME bconv2d_bin_DI_impl
+#else
+  #define FUNCTION_NAME bconv2d_bin_DI_impl_asm
+#endif // NN_USE_REF
 
 #define NSTACKWORDS  36
     

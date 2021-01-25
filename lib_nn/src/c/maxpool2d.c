@@ -101,8 +101,7 @@ void maxpool2d(
 }
 
 
-WEAK_FUNC
-void maxpool2d_ext(
+void maxpool2d_ext_ref(
     nn_image_t* Y,
     const nn_image_t* X, 
     const nn_image_params_t* x_params,
@@ -194,4 +193,18 @@ void maxpool2d_ext(
 
 
 
+#ifdef NN_USE_REF
 
+void maxpool2d_ext(
+    nn_image_t* Y,
+    const nn_image_t* X, 
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_window_params_t* pooling_window,
+    const nn_window_op_job_params_t* job_params,
+    const nn_maxpool2d_flags_e flags)
+{
+    maxpool2d_ext_ref(Y, X, x_params, y_params, pooling_window, job_params, flags);
+}
+
+#endif // NN_USE_REF

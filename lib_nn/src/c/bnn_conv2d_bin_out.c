@@ -9,6 +9,13 @@
 #include "xs3_vpu.h"
 #include "vpu_sim.h"
 
+void bconv2d_bin_DI_impl(
+    nn_bconv2d_bin_DI_impl_plan_t * plan);
+    
+void bconv2d_bin_impl(
+    nn_bconv2d_bin_impl_plan_t * plan);
+
+
 static void compute_bin_kernel(xs3_vpu * vpu, nn_bconv2d_bin_DI_impl_plan_t * plan, 
     void ** threshold_current, void* X_p, void ** K_p,  void * partial_res){
 
@@ -46,8 +53,10 @@ static void compute_bin_kernel(xs3_vpu * vpu, nn_bconv2d_bin_DI_impl_plan_t * pl
         
 }
 
-WEAK_FUNC
-void bconv2d_bin_DI_impl(nn_bconv2d_bin_DI_impl_plan_t * plan){
+
+void bconv2d_bin_DI_impl_ref(
+    nn_bconv2d_bin_DI_impl_plan_t * plan)
+{
 
   xs3_vpu vpu_data;
   memset(&vpu_data, 0, sizeof(vpu_data));
@@ -141,8 +150,9 @@ static void compute_patch(xs3_vpu * vpu, nn_bconv2d_bin_impl_plan_t * plan,
 }
 
 //Patch to Col version
-WEAK_FUNC
-void bconv2d_bin_impl(nn_bconv2d_bin_impl_plan_t * plan){
+void bconv2d_bin_impl_ref(
+    nn_bconv2d_bin_impl_plan_t * plan)
+{
 
   xs3_vpu vpu_data;
   memset(&vpu_data, 0, sizeof(vpu_data));
@@ -393,3 +403,20 @@ void bconv2d_bin(bnn_b32_t* Y_p,
 
     bconv2d_bin_impl(&plan);
 }
+
+
+#ifdef NN_USE_REF
+
+void bconv2d_bin_DI_impl(
+    nn_bconv2d_bin_DI_impl_plan_t * plan)
+{
+    bconv2d_bin_DI_impl_ref(plan);
+}
+
+void bconv2d_bin_impl(
+    nn_bconv2d_bin_impl_plan_t * plan)
+{
+    bconv2d_bin_impl_ref(plan);
+}
+
+#endif // NN_USE_REF

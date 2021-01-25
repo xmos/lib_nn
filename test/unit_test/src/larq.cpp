@@ -115,10 +115,12 @@ extern "C" void larq_ref_bconv2d_int8_out(const nn_image_params_t* x,
                                  const int32_t* packed_filter_data,
                                  int8_t* packed_output_data,
                                  const float* post_activation_multiplier, 
-                                 const float* post_activation_bias 
+                                 const float* post_activation_bias,
+                                 const int clamp_min,
+                                 const int clamp_max
 ) {
   ce::core::OutputTransform<std::int8_t> output_transform;
-  ce::core::GetOutputTransform(output_transform, 0, INT32_MAX, 
+  ce::core::GetOutputTransform(output_transform, clamp_min, clamp_max, 
     post_activation_multiplier, post_activation_bias);
 
   const unsigned channels_per_output_word = 1;

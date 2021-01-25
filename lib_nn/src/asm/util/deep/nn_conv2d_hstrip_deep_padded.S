@@ -28,7 +28,11 @@ void nn_conv2d_hstrip_deep_padded(
         const int8_t* zero_point_vec)
 */
 
-#define FUNCTION_NAME nn_conv2d_hstrip_deep_padded
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME nn_conv2d_hstrip_deep_padded
+#else
+  #define FUNCTION_NAME nn_conv2d_hstrip_deep_padded_asm
+#endif // NN_USE_REF
 
 
 #define NSTACKVECS  (4)
