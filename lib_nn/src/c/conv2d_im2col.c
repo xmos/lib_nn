@@ -6,12 +6,91 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include "nn_config.h"
 #include "nn_operator.h"
 #include "../nn_op_helper.h"
 // #include "nn_op_structs.h"
 
 #include "xs3_vpu.h"
 #include "vpu_sim.h"
+
+
+static void output_sym_sat(
+    xs3_vpu* vpu,
+    nn_image_t* Y_cog,
+    vpu_vector_t* vec_tmp,
+    const nn_bso_block_t* bso,
+    const uint16_t y_mask)
+{
+    //Set mode to 16-bit
+    VSETC(vpu, MODE_S16);
+    //Saturate to 16-bit values
+    VLSAT(vpu, bso->shift1);
+
+    //Load scales into vC
+    VLDC(vpu, bso->scale);
+    VSTR(vpu, vec_tmp->s16);
+    VCLRDR(vpu);
+
+    VLMACC(vpu, vec_tmp->s16);
+    VLDC(vpu, bso->offset_scale);
+    VLMACC(vpu, bso->offset);
+
+
+    //Set mode back to 8-bit
+    VSETC(vpu, MODE_S8);
+
+    //Saturate to 8-bit values
+    VLSAT(vpu, bso->shift2);
+
+    //Store result in Y
+    const unsigned mask16 = y_mask;
+    VSTRPV(vpu, Y_cog, mask16);
+}
+
+static void output_asym_sat(
+    xs3_vpu* vpu,
+    nn_image_t* Y_cog,
+    vpu_vector_t* vec_tmp,
+    const nn_bso_block_t* bso,
+    const uint16_t y_mask)
+{
+    // TODO couldn't get the asm constants versions recognized
+    const int16_t vec_0x007F[16] = {0x007f};
+
+    //Set mode to 16-bit
+    VSETC(vpu, MODE_S16);
+    //Saturate to 16-bit values
+    VLSAT(vpu, bso->shift1);
+
+    //Load scales into vC
+    VLDC(vpu, bso->scale);
+    VSTR(vpu, vec_tmp->s16);
+    VCLRDR(vpu);
+
+    VLMACC(vpu, vec_tmp->s16);
+    VLDC(vpu, bso->offset_scale);
+    VLMACC(vpu, bso->offset);
+
+
+    //Saturate to 8-bit values
+    VLSAT(vpu, bso->shift2);
+    VSTR(vpu, vec_tmp->s16);
+    VLADD(vpu, vec_0x007F);
+    VDEPTH1(vpu);
+
+    // uint32_t mask = ~vpu.vR.s32[0];
+
+    VLASHR(vpu, vec_tmp->s16, -8);
+    VDEPTH8(vpu);
+
+    //Store result in Y
+    VSTRPV(vpu, Y_cog, y_mask);
+    
+    //Set mode back to 8-bit
+    VSETC(vpu, MODE_S8);
+
+}
 
 void conv2d_im2col_init(
     nn_conv2d_im2col_plan_t* plan,
@@ -115,6 +194,37 @@ void conv2d_im2col_init(
     }
 }
 
+// void conv2d_im2col(
+//     int8_t* Y,
+//     const int8_t* X,
+//     const int8_t* K,
+//     const nn_bso_block_t* BSO,
+//     const int8_t zero_point,
+//     const nn_image_params_t* x_params,
+//     const nn_image_params_t* y_params,
+//     const nn_window_params_t* conv_window)
+// {
+//     const nn_conv2d_job_params_t full_job = { {0,0,0}, {y_params->height, y_params->width, y_params->channels} };
+
+//     conv2d_im2col_ext(Y, X, K, BSO, zero_point, x_params, y_params, conv_window, &full_job, 0);
+// }
+
+
+// void conv2d_im2col_ext(
+//     nn_image_t* Y,
+//     const nn_image_t* X,
+//     const nn_tensor_t* K,
+//     const nn_bso_block_t* BSO,
+//     const int8_t zero_point,
+//     const nn_image_params_t* x_params,
+//     const nn_image_params_t* y_params,
+//     const nn_window_params_t* conv_window,
+//     const nn_window_op_job_params_t* job_params,
+//     const nn_conv2d_im2col_flags_e flags)
+// {
+
+// }
+
 
 #if CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
   #define NEG_SAT_VAL   (-127)
@@ -137,7 +247,6 @@ void conv2d_im2col(
     vpu_vector_t vec_tmp;
 
     // TODO couldn't get the asm constants versions recognized
-    const int16_t vec_0x007F[16] = {0x007f};
     const int8_t vec_0x80[30] = {0x80};
 
     VSETC(&vpu, MODE_S8);
@@ -252,53 +361,10 @@ void conv2d_im2col(
 
                 // Done with A*x + b need to groom and extract results now
 
-                //Set mode to 16-bit
-                VSETC(&vpu, MODE_S16);
-                //Saturate to 16-bit values
-                VLSAT(&vpu, bso->shift1);
-
-                //Load scales into vC
-                VLDC(&vpu, bso->scale);
-                VSTR(&vpu, vec_tmp.s16);
-                VCLRDR(&vpu);
-            
-                VLMACC(&vpu, vec_tmp.s16);
-                VLDC(&vpu, bso->offset_scale);
-                VLMACC(&vpu, bso->offset);
-                
-
-                #if CONFIG_SYMMETRIC_SATURATION_conv2d_im2col
-
-                    //Set mode back to 8-bit
-                    VSETC(&vpu, MODE_S8);
-
-                    //Saturate to 8-bit values
-                    VLSAT(&vpu, bso->shift2);
-
-                    //Store result in Y
-                    const unsigned mask16 = y_mask;
-                    VSTRPV(&vpu, Y_cog, mask16);
-                
-                #else
-
-                    //Saturate to 8-bit values
-                    VLSAT(&vpu, bso->shift2);
-                    VSTR(&vpu, vec_tmp.s16);
-                    VLADD(&vpu, vec_0x007F);
-                    VDEPTH1(&vpu);
-
-                    // uint32_t mask = ~vpu.vR.s32[0];
-
-                    VLASHR(&vpu, vec_tmp.s16, -8);
-                    VDEPTH8(&vpu);
-
-                    //Store result in Y
-                    VSTRPV(&vpu, Y_cog, y_mask);
-                    
-                    //Set mode back to 8-bit
-                    VSETC(&vpu, MODE_S8);
-
-                #endif
+                if(CONFIG_SYMMETRIC_SATURATION_conv2d_im2col)
+                    output_sym_sat(&vpu, Y_cog, &vec_tmp, bso, y_mask);
+                else
+                    output_asym_sat(&vpu, Y_cog, &vec_tmp, bso, y_mask);
 
                 Y_cog = ADDR(Y_cog, job->stride.chan_group.Y);
                     

@@ -49,6 +49,7 @@ void VLMACCR1(xs3_vpu* vpu, const void* addr);
 void VLSAT(xs3_vpu* vpu, const void* addr);
 void VLASHR(xs3_vpu* vpu, const void* addr, const int32_t shr);
 void VLADD(xs3_vpu* vpu, const void* addr);
+void VLSUB(xs3_vpu* vpu, const void* addr);
 void VLMUL(xs3_vpu* vpu, const void* addr);
 void VDEPTH1(xs3_vpu* vpu);
 void VDEPTH8(xs3_vpu* vpu);

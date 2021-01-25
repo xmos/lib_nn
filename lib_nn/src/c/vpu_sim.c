@@ -351,6 +351,35 @@ void VLADD(
     }
 }
 
+void VLSUB(
+    xs3_vpu* vpu, 
+    const void* addr)
+{
+    if(vpu->mode == MODE_S8){
+        const int8_t* addr8 = (const int8_t*) addr;
+        for(int i = 0; i < VPU_INT8_EPV; i++){
+            int32_t val = addr8[i];
+            vpu->vR.s8[i] = vpu_saturate(val - vpu->vR.s8[i], 8);
+        }
+    } else if(vpu->mode == MODE_S16){
+        const int16_t* addr16 = (const int16_t*) addr;
+
+        for(int i = 0; i < VPU_INT16_EPV; i++){
+            int32_t val = addr16[i];
+            vpu->vR.s16[i] = vpu_saturate(val - vpu->vR.s16[i], 16);
+        }
+    } else if(vpu->mode == MODE_S32){
+        const int32_t* addr32 = (const int32_t*) addr;
+
+        for(int i = 0; i < VPU_INT32_EPV; i++){
+            int64_t val = addr32[i];
+            vpu->vR.s32[i] = vpu_saturate(val - vpu->vR.s32[i], 32);
+        }
+    } else { 
+        assert(0); //How'd this happen?
+    }
+}
+
 void VLMUL(
     xs3_vpu* vpu, 
     const void* addr)
