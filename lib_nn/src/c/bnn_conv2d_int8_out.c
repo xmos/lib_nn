@@ -595,6 +595,8 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
   }
   plan.low_clamp_offset = low_clamp_offset_mem;
   plan.high_clamp_offset = high_clamp_offset_mem; 
+    printf("low_clamp_offset %04x\n", low_clamp_offset);
+    printf("high_clamp_offset %04x\n", high_clamp_offset);
 
   bconv2d_int8_DIDO_impl(&plan);
 }
@@ -648,6 +650,7 @@ void bconv2d_int8(int8_t* Y_p,
     }
     plan.low_clamp_offset = low_clamp_offset_mem;
     plan.high_clamp_offset = high_clamp_offset_mem; 
+    printf("siso low: %p high:%p\n", plan.low_clamp_offset, plan.high_clamp_offset );
 
     bconv2d_int8_impl(&plan);
 }

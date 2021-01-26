@@ -114,9 +114,9 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
     accu_shr, bias_multipler, final_shr,
     &x, &y, &k);
     
-  // for (unsigned e=0;e<y_height * y_width * chans_out;++e){
-  //   printf("%d %d\n", Y_ref_p[e], Y_p[e]);
-  // }
+  for (unsigned e=0;e<y_height * y_width * chans_out;++e){
+    printf("ref: %d act: %d\n", Y_ref_p[e], Y_p[e]);
+  }
   for (unsigned e=0;e<y_height * y_width * chans_out;++e)
     TEST_ASSERT_INT8_WITHIN(1, Y_ref_p[e], Y_p[e]);
   // exit(10);
@@ -874,6 +874,155 @@ void impl_bconv2d_int8_directed(void (*valid_impl)()) {
   free(chan_overlaps);
 }
 
+
+
+
+
+void impl_bconv2d_int8_directed2(void (*valid_impl)()) {
+  const unsigned h_stride = 1, v_stride = 1;
+  const unsigned k_height = 1, k_width = 1;
+  const unsigned x_height = 1, x_width = 1;
+  const unsigned y_height = 1, y_width = 1;
+  const unsigned chans_in = 256, chans_out = 16;
+
+  const unsigned receptive_volume = k_height * k_width * chans_in;
+  const unsigned chan_words_in = chans_in / 32;
+
+  const unsigned K_ref_size = chans_out * k_height * k_width * chan_words_in;
+  const bnn_b32_t K_ref[K_ref_size] = {
+      -1667941237, 1448713456,  -1552317250, -2046627932, 683863560,
+      -238015391,  1889621163,  -1146744408, 1120641604,  -1250437226,
+      -277467601,  -978365725,  -1522250878, 308013372,   -331097853,
+      -2125863291, -1919775941, 1029375758,  -1542469837, -1545955333,
+      508442521,   1603061910,  -928550448,  -1650005601, 97032138,
+      -928052188,  -1795119754, -754385992,  74226363,    1797003283,
+      -598162959,  -1267387633, 368581440,   -1849924868, -1127313993,
+      -243522407,  1359073845,  625109473,   2100806078,  965854538,
+      -842927740,  -508734750,  1580722819,  -774109499,  1786423356,
+      1664346098,  596410574,   1534559771,  208231309,   -737287323,
+      -395619248,  1037513094,  -75270160,   821412392,   1960025060,
+      404645925,   855517445,   -524824100,  -330281898,  292123595,
+      2053550679,  -1039968514, 248779310,   -1945423403, 475366814,
+      -191782438,  97737775,    1295415508,  -1428159434, -1978514180,
+      1725228072,  487294617,   1423278517,  -2029817860, -596437754,
+      1754644150,  1532534010,  2098954194,  -1090639935, -828374736,
+      1251759581,  898017649,   -400654573,  1979261503,  -666527720,
+      726909885,   1838809637,  -121340345,  1220601163,  -1159949700,
+      1905274114,  2001411187,  -690776493,  907651649,   150515155,
+      -918102542,  -208075213,  -1322382570, -1503061702, 793077911,
+      -782702963,  1747957102,  -873231871,  -152213171,  863055996,
+      1298732047,  -1753739469, -1062086736, -321165637,  -860659334,
+      -887888935,  1692263905,  -1768497726, -605856536,  514206894,
+      1022412182,  -962773383,  -365333555,  -1182180909, 1485982561,
+      -860245087,  1058781324,  407607861,   -266828163,  -833312433,
+      344992463,   -751096207,  -1287424582};
+
+  int32_t over_bytes =
+      compute_int8_over_RW_bytes(chans_in, k_height, k_width, chans_out);
+  bnn_b32_t *K =
+      (bnn_b32_t *)malloc(K_ref_size * sizeof(bnn_b32_t) + over_bytes);
+
+  const unsigned X_ref_size = x_height * x_width * chan_words_in;
+  const bnn_b32_t X_ref[X_ref_size + X_REF_OVERREAD_WORDS] = {
+      334618952,   990892152,   -1092432719, 1188540535,
+      -1814923493, -1584797214, 408949552,   -699399485};
+
+  const float post_activation_multiplier_original[chans_out] = {
+      0.9995002150535583, 0.9995002150535583, 0.9995002150535583,
+      0.9995002150535583, 0.9995002150535583, 0.9995002150535583,
+      0.9995002150535583, 0.9995002150535583, 0.9995002150535583,
+      0.9995002150535583, 0.9995002150535583, 0.9995002150535583,
+      0.9995002150535583, 0.9995002150535583, 0.9995002150535583,
+      0.9995002150535583};
+  const float post_activation_bias_original[chans_out] = {
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+  float output_scale = 0.019607843831181526;
+  float output_zero_point = -26;
+  float backtransform_add = receptive_volume;
+
+  float post_activation_multiplier[chans_out];
+  float post_activation_bias[chans_out];
+  for (int j = 0; j < chans_out; j++) {
+    const float post_mul = post_activation_multiplier_original[j];
+    const float post_bias = post_activation_bias_original[j];
+    post_activation_multiplier[j] = -1 * post_mul / output_scale;
+    post_activation_bias[j] =
+        (post_bias + backtransform_add * post_mul) / output_scale +
+        output_zero_point;
+  }
+
+  // printf("post_activation_bias: [");
+  // for (int j = 0; j < chans_out; j++) {
+  //   printf("%f, ", post_activation_bias[j]);  
+  // }
+  // printf("]\n");
+  // printf("post_activation_multiplier: [");
+  // for (int j = 0; j < chans_out; j++) {
+  //   printf("%f, ", post_activation_multiplier[j]);  
+  // }
+  // printf("]\n");
+
+  int *chan_overlaps = (int *)malloc(sizeof(int) * (chans_out));
+  int16_t *post_activation_multiplier_q =
+      (int16_t *)malloc(sizeof(int16_t) * (chans_out + (16 - chans_out % 16)));
+  int16_t *post_activation_bias_q =
+      (int16_t *)malloc(sizeof(int16_t) * (chans_out + (16 - chans_out % 16)));
+
+  int16_t *quantised_accu_modifier = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
+          
+  int8_t *Y = (int8_t *)malloc(sizeof(int8_t) * y_height * y_width * chans_out);
+  int8_t *Y_ref =
+      (int8_t *)malloc(sizeof(int8_t) * y_height * y_width * chans_out);
+
+  assert(X_ref);
+  assert(Y);
+  assert(Y_ref);
+  assert(post_activation_multiplier_q);
+  assert(post_activation_bias_q);
+  assert(quantised_accu_modifier);
+  assert(K);
+  assert(K_ref);
+
+  assert(post_activation_multiplier);
+  assert(post_activation_bias);
+  assert(chan_overlaps);
+
+  for (unsigned c = 0; c < 1 << 1; c++) {
+    int seed = c;
+
+    int32_t larq_clamp_min = 0;
+    int32_t larq_clamp_max = receptive_volume;
+
+    run_int8_config(
+        (int8_t *)Y, (int8_t *)Y_ref, (bnn_b32_t *)X_ref, (bnn_b32_t *)K,
+        (bnn_b32_t *)K_ref, 
+        (float *)post_activation_multiplier,
+        (float *)post_activation_bias, 
+        (int16_t *)post_activation_multiplier_q,
+        (int16_t *)post_activation_bias_q, 
+
+        (int16_t *)quantised_accu_modifier,
+
+        (int *)chan_overlaps, x_height,
+        x_width, k_height, k_width, chans_in, chans_out, h_stride, v_stride,
+        seed, larq_clamp_min, larq_clamp_max, valid_impl);
+  }
+
+  free(Y);
+  free(Y_ref);
+  free(post_activation_multiplier_q);
+  free(post_activation_bias_q);
+  free(quantised_accu_modifier);
+  free(K);
+  free(chan_overlaps);
+}
+
+
+
+
+
 static void SISO_valid(   
       int8_t* Y_p, 
       const bnn_b32_t* X_p,
@@ -1004,11 +1153,11 @@ static void DI_full(
 }
 
 void test_bconv2d_int8_sub_image(){
-  impl_bconv2d_int8_sub_image(5, 5, 3, 3, 32*1, 32*9, 4*1, 4*3, 32, 4, 1, 1, 3, 3, (void*)&SISO_valid);
+  impl_bconv2d_int8_sub_image(5, 5, 3, 3, 32*1, 32*9, 4*1, 4*3, 32, 4, 1, 3, 1, 3, (void*)&SISO_valid);
 }
 
 void test_bconv2d_int8_DI_sub_image(){
-  impl_bconv2d_int8_sub_image(5, 5, 3, 3, 256*1, 256*2, 16*1, 16*3, 256, 32, 1, 1, 3, 3, (void*)&DI_valid);
+  impl_bconv2d_int8_sub_image(5, 5, 3, 3, 256*1, 256*2, 16*1, 16*3, 256, 32, 1, 3, 1, 3, (void*)&DI_valid);
 }
 
 void test_bconv2d_int8_pseudo_random(){
@@ -1030,18 +1179,22 @@ void test_bconv2d_int8_DI_pseudo_random2(){
 void test_bconv2d_int8_directed(){
   impl_bconv2d_int8_directed((void*)&SISO_full);
 }
+void test_bconv2d_int8_directed2(){
+  impl_bconv2d_int8_directed2((void*)&SISO_full);
+}
 
 void test_bnn_conv2d_int8() {
   UNITY_SET_FILE();
 
-  RUN_TEST(test_bconv2d_int8_pseudo_random);
-  RUN_TEST(test_bconv2d_int8_pseudo_random2);
-  RUN_TEST(test_bconv2d_int8_sub_image);
+  // RUN_TEST(test_bconv2d_int8_pseudo_random);
+  // RUN_TEST(test_bconv2d_int8_pseudo_random2);
+  // RUN_TEST(test_bconv2d_int8_sub_image);
 
-  RUN_TEST(test_bconv2d_int8_DI_pseudo_random);
-  RUN_TEST(test_bconv2d_int8_DI_pseudo_random2);
-  RUN_TEST(test_bconv2d_int8_DI_sub_image);
+  // RUN_TEST(test_bconv2d_int8_DI_pseudo_random);
+  // RUN_TEST(test_bconv2d_int8_DI_pseudo_random2);
+  // RUN_TEST(test_bconv2d_int8_DI_sub_image);
 
-  RUN_TEST(test_bconv2d_int8_directed);
+  // RUN_TEST(test_bconv2d_int8_directed);
+  RUN_TEST(test_bconv2d_int8_directed2);
   
 }
