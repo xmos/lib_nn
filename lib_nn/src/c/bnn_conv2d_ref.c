@@ -94,7 +94,7 @@ static void solve_constraint(
     max_accu_exp = exponent;
 
   //pab_hat = (pab*2**B)
-  const int pab_hat_bits = 31;
+  const int pab_hat_bits = 30;
   const int accu_hat_bits = 15;
   const int pam_hat_bits = 15;
 
@@ -208,16 +208,14 @@ void bnn_quantise_activation(
     vpu_max_accu, vpu_min_accu);
     
   //TODO make this into a function
-  int max_output_transform_multiplier_exp = INT_MIN;
-  unsigned min_rsb = UINT_MAX;
+  int max_output_transform_bias_exp = INT_MIN;
   for (unsigned ch=0;ch<chans_out; ch++){
     int exp;
     frexp(vpu_output_transform_bias[ch], &exp);
-    if(exp > max_output_transform_multiplier_exp)
-      max_output_transform_multiplier_exp = exp;
-    unsigned rsb = clrsb((int)vpu_output_transform_bias[ch]) - 16;
-    if(rsb < min_rsb)
-      min_rsb = rsb;
+
+    if(exp > max_output_transform_bias_exp)
+      max_output_transform_bias_exp = exp;
+
   }
 
   // We want to multiply pab by 2**B then quantise it, however, we can only store 16 bits
@@ -225,12 +223,31 @@ void bnn_quantise_activation(
   //if B > 0 make a 16 bit quantised bias and a 16 bit bias_multipler
   //if B < 0 bias_multipler = 1, bias = pam * 2 **B
 
+
+  // int min_rsb = INT32_MAX;
+  // for (unsigned ch = 0; ch < chans_out; ch++){
+
+  //   int64_t t = round(ldexp(vpu_output_transform_bias[ch], B));
+  //   int rsb = __builtin_clrsbll(t);
+  //   if (rsb < min_rsb) min_rsb = rsb;
+  //   printf("%lld %f %d %d\n", t, vpu_output_transform_bias[ch], B, rsb);
+
+
+
+  // }
+  // printf("min_rsb: %d\n", min_rsb);
+  
+
+  // exit(1);
+
   int bias_exp_adjust ;
   if (B > 0){
-    bias_exp_adjust = 15 - max_output_transform_multiplier_exp;
+    bias_exp_adjust = 15 - max_output_transform_bias_exp;
 
     //todo deal with the case that the bias_multipler wont fit in a 16 bit value
-    *bias_multipler = (1<<(B - bias_exp_adjust)); //this is not so simple
+    int32_t b = (1<<(B - bias_exp_adjust)); //this is not so simple
+    // printf("%d %d\n", b, b > INT16_MAX);
+    *bias_multipler = b;
 
   } else {
     *bias_multipler = 1;
