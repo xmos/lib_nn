@@ -8,14 +8,11 @@
 #include "xs3_vpu.h"
 #include "vpu_sim.h"
 
-
-
 void bconv2d_int8_DIDO_impl(
     nn_bconv2d_int8_DIDO_impl_plan_t * plan);
 
 void bconv2d_int8_impl(
     nn_bconv2d_int8_impl_plan_t *plan);
-
 
 static int64_t saturate_non_sym(
     const int64_t input,
@@ -105,14 +102,13 @@ void bconv2d_int8_DIDO_impl_ref(nn_bconv2d_int8_DIDO_impl_plan_t * plan){
         VLASHR(vpu, &temp_mem, plan->ashr);
 
         //Saturate to larq high and low
-        VLADD(vpu, plan->high_clamp_offset);
-        VLADD(vpu, plan->high_clamp_offset);
-        VLSUB(vpu, plan->high_clamp_offset);
-        VLSUB(vpu, plan->high_clamp_offset);
-        VLADD(vpu, plan->low_clamp_offset);
-        VLADD(vpu, plan->low_clamp_offset);
-        VLSUB(vpu, plan->low_clamp_offset);
-        VLSUB(vpu, plan->low_clamp_offset);
+        VLADD(vpu, plan->clamp_a);
+        VLSUB(vpu, plan->clamp_a);
+        
+        VLADD(vpu, plan->clamp_b);
+        VLADD(vpu, plan->clamp_c);
+        VLSUB(vpu, plan->clamp_b);
+        VLSUB(vpu, plan->clamp_c);
 
         //Save the 16 bit accumulator, A, to scratch
         VSTR(vpu, &temp_mem);
@@ -173,8 +169,9 @@ void compute_patch(nn_bconv2d_int8_impl_plan_t *plan,
   vpu_vector_t *sat_mem, 
   vpu_vector_t * bias_shift, 
   vpu_vector_t * final_shr, 
-  vpu_vector_t * low_clamp_offset_mem, 
-  vpu_vector_t * high_clamp_offset_mem, 
+  vpu_vector_t * clamp_a_mem, 
+  vpu_vector_t * clamp_b_mem, 
+  vpu_vector_t * clamp_c_mem, 
   void * cur_post_activation_mul, 
   void * cur_post_activation_bias, 
   void * cur_quantised_accu_modifier
@@ -209,22 +206,21 @@ void compute_patch(nn_bconv2d_int8_impl_plan_t *plan,
   VSTR(vpu, &temp_mem);
   VLASHR(vpu, &temp_mem, plan->ashr);
 
-  // vpu_sim_print(vpu);
-
   //Subtract the channel overlap
   // vpu_sim_mem_print(cur_quantised_accu_modifier, vpu->mode);
   VLADD(vpu, cur_quantised_accu_modifier);
 
+  // vpu_sim_print(vpu);
   //Saturate to larq high and low
-  VLADD(vpu, high_clamp_offset_mem);
-  VLADD(vpu, high_clamp_offset_mem);
-  VLSUB(vpu, high_clamp_offset_mem);
-  VLSUB(vpu, high_clamp_offset_mem);
-  VLADD(vpu, low_clamp_offset_mem);
-  VLADD(vpu, low_clamp_offset_mem);
-  VLSUB(vpu, low_clamp_offset_mem);
-  VLSUB(vpu, low_clamp_offset_mem);
 
+  VLADD(vpu, clamp_a_mem);
+  VLSUB(vpu, clamp_a_mem);
+  VLADD(vpu, clamp_b_mem);
+  VLADD(vpu, clamp_c_mem);
+  VLSUB(vpu, clamp_b_mem);
+  VLSUB(vpu, clamp_c_mem);
+
+  // vpu_sim_print(vpu);
   //Save the 16 bit accumulator, A, to scratch
   VSTR(vpu, &temp_mem);
 
@@ -263,10 +259,6 @@ void bconv2d_int8_impl_ref(
   // Used for shifting the accumulator after the vlmaccr1's to get it to a 16 bit form.
   vpu_vector_t sat_mem; 
 
-  // Clamps
-  vpu_vector_t low_clamp_offset_mem;
-  vpu_vector_t high_clamp_offset_mem;
-
   VSETC(vpu, MODE_S16);
 
   for(unsigned i=0;i<VPU_INT16_EPV;i++){
@@ -277,7 +269,7 @@ void bconv2d_int8_impl_ref(
 
   void * X_p = (void *)plan->X;
   void * Y_p = (void *)plan->Y;
-
+  
   for (int xh = plan->x_height_loop_counter; xh > 0 ; xh-- ) {
     for (int xv = plan->x_width_loop_counter; xv >= 0 ; xv-- ) {
 
@@ -290,7 +282,7 @@ void bconv2d_int8_impl_ref(
       for (int oc = plan->output_channel_loop_counter; oc > 0 ; oc-- ) {
 
         compute_patch(plan, &K_p, XS3_VPU_VREG_WIDTH_BYTES, vpu, &sat_mem, &bias_shift, &final_shr,
-          plan->low_clamp_offset, plan->high_clamp_offset,
+          (vpu_vector_t * )plan->clamp_a, (vpu_vector_t * )plan->clamp_b, (vpu_vector_t * )plan->clamp_c,
           cur_post_activation_mul, cur_post_activation_bias, cur_quantised_accu_modifier);
 
         VSTRPV(vpu, Y_p, VPU_INT16_ACC_VR_MASK);
@@ -302,7 +294,7 @@ void bconv2d_int8_impl_ref(
       }
       
       compute_patch(plan, &K_p, plan->k_p_rewind, vpu, &sat_mem, &bias_shift, &final_shr,
-        plan->low_clamp_offset, plan->high_clamp_offset,
+        (vpu_vector_t * )plan->clamp_a, (vpu_vector_t * )plan->clamp_b, (vpu_vector_t * )plan->clamp_c,
         cur_post_activation_mul, cur_post_activation_bias, cur_quantised_accu_modifier);
 
       VSTRPV(vpu, Y_p, plan->final_channels_mask);
@@ -426,8 +418,6 @@ static void bconv2d_int8_prepare(
 
   plan->x_height_loop_counter = x_height_loops;
   plan->x_width_loop_counter = x_width_loops - 1;
-
-  int32_t total_bytes_copied_to_scratch = bytes_per_input_channel * k->shape.height *  k->shape.width;
 
   int32_t channels_to_process_on_tail_output_loop = (y->channels - 1) % VPU_INT16_EPV + 1;
 
@@ -557,8 +547,9 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
 
-    const int16_t low_clamp_offset,
-    const int16_t high_clamp_offset,
+    const int16_t clamp_a,
+    const int16_t clamp_b,
+    const int16_t clamp_c,
 
     const int accu_shr,
     const int16_t bias_multipler,
@@ -586,15 +577,18 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
       y_loc_x, y_loc_y, y_sub_width, y_sub_height,
       x_loc_x, x_loc_y);
 
-  int16_t low_clamp_offset_mem[VPU_INT16_EPV];
-  int16_t high_clamp_offset_mem[VPU_INT16_EPV];
+  int16_t clamp_a_mem[VPU_INT16_EPV];
+  int16_t clamp_b_mem[VPU_INT16_EPV];
+  int16_t clamp_c_mem[VPU_INT16_EPV];
 
   for(unsigned i=0;i<VPU_INT16_EPV;i++){
-    low_clamp_offset_mem[i] = low_clamp_offset;
-    high_clamp_offset_mem[i] = high_clamp_offset;
+    clamp_a_mem[i] = clamp_a;
+    clamp_b_mem[i] = clamp_b;
+    clamp_c_mem[i] = clamp_c;
   }
-  plan.low_clamp_offset = low_clamp_offset_mem;
-  plan.high_clamp_offset = high_clamp_offset_mem; 
+  plan.clamp_a = clamp_a_mem;
+  plan.clamp_b = clamp_b_mem; 
+  plan.clamp_c = clamp_c_mem; 
 
   bconv2d_int8_DIDO_impl(&plan);
 }
@@ -606,8 +600,9 @@ void bconv2d_int8(int8_t* Y_p,
     const int16_t* post_activation_bias_q,
 
     const int16_t * quantised_accu_modifier,
-    const int16_t low_clamp_offset,
-    const int16_t high_clamp_offset,
+    const int16_t clamp_a,
+    const int16_t clamp_b,
+    const int16_t clamp_c,
 
     const int accu_shr,
     const int16_t bias_multipler,
@@ -639,15 +634,18 @@ void bconv2d_int8(int8_t* Y_p,
         x_loc_x, x_loc_y);
 
     // Clamps
-    int16_t low_clamp_offset_mem[VPU_INT16_EPV];
-    int16_t high_clamp_offset_mem[VPU_INT16_EPV];
+    int16_t clamp_a_mem[VPU_INT16_EPV];
+    int16_t clamp_b_mem[VPU_INT16_EPV];
+    int16_t clamp_c_mem[VPU_INT16_EPV];
 
     for(unsigned i=0;i<VPU_INT16_EPV;i++){
-      low_clamp_offset_mem[i] = low_clamp_offset;
-      high_clamp_offset_mem[i] = high_clamp_offset;
+      clamp_a_mem[i] = clamp_a;
+      clamp_b_mem[i] = clamp_b;
+      clamp_c_mem[i] = clamp_c;
     }
-    plan.low_clamp_offset = low_clamp_offset_mem;
-    plan.high_clamp_offset = high_clamp_offset_mem; 
+    plan.clamp_a = clamp_a_mem;
+    plan.clamp_b = clamp_b_mem; 
+    plan.clamp_c = clamp_c_mem; 
 
     bconv2d_int8_impl(&plan);
 }

@@ -10,6 +10,8 @@
 #include <limits.h>
 #include <math.h>
 
+#include <stdio.h>
+
 static int64_t vpu_saturate(
     const int64_t input,
     const unsigned bits)
@@ -37,6 +39,9 @@ int8_t bnn_post_activation_reference(
               const int16_t bias_multipler,
               const int final_shr){
   int64_t scaled_accu = vpu_saturate(ashr(vpu_acc, accu_shr), 16);
+
+  //TODO add clamps
+
   int64_t bias = vpu_saturate((int64_t)post_activation_bias_q[ch] * (int64_t)bias_multipler, 32);
   int64_t product = vpu_saturate((int64_t)post_activation_multiplier_q[ch] * (int64_t)scaled_accu + bias, 32);
   int64_t product_shr = vpu_saturate(ashr(product, final_shr), 16);
@@ -89,7 +94,7 @@ static void solve_constraint(
     max_accu_exp = exponent;
 
   //pab_hat = (pab*2**B)
-  const int pab_hat_bits = 31;
+  const int pab_hat_bits = 30;
   const int accu_hat_bits = 15;
   const int pam_hat_bits = 15;
 
@@ -131,8 +136,10 @@ static void solve_constraint(
 
       }
   }
+  
   assert(0);
 }
+
 
 void bnn_quantise_activation(
                int16_t * output_transform_multiplier_q,
@@ -147,8 +154,9 @@ void bnn_quantise_activation(
                int32_t larq_clamp_max,
 
                int16_t * quantised_accu_modifier,
-               int16_t * low_clamp_offset,
-               int16_t * high_clamp_offset,
+               int16_t * clamp_a,
+               int16_t * clamp_b,
+               int16_t * clamp_c,
 
                int * accu_shr,
                int16_t * bias_multipler,
@@ -166,10 +174,10 @@ void bnn_quantise_activation(
   //XOR_POPCOUNT = VLMACCR1*vpu_multipler + vpu_offset
   //XOR_POPCOUNT = VLMACCR1*(-1) + receptive_volume / 2
 
-  // output = clamp(clamp(V, (low_clamp - (bv + ch_ov) * 2) / (mv * 2), (high_clamp - (bv + ch_ov) * 2) / (mv * 2)) * (m * mv * 2 ) + ((bv + ch_ov) * 2 * m + b), INT8_MIN, INT8_MAX)
+  // output = clamp(clamp(V, (larq_clamp_min - (bv + ch_ov) * 2) / (mv * 2), (larq_clamp_max - (bv + ch_ov) * 2) / (mv * 2)) * (m * mv * 2 ) + ((bv + ch_ov) * 2 * m + b), INT8_MIN, INT8_MAX)
   
-  // Low clamping value:  (low_clamp - (bv + ch_ov) * 2) / (mv * 2)
-  // High clamping value: (high_clamp - (bv + ch_ov) * 2) / (mv * 2)
+  // Low clamping value:  (larq_clamp_min - (bv + ch_ov) * 2) / (mv * 2)
+  // High clamping value: (larq_clamp_max - (bv + ch_ov) * 2) / (mv * 2)
   // Multiplier: m * mv * 2
   // Bias: (bv + ch_ov) * 2 * m + b
 
@@ -184,16 +192,13 @@ void bnn_quantise_activation(
     vpu_output_transform_bias[ch] = output_transform_bias[ch] + 2 * output_transform_multiplier[ch] * vpu_offset;
   }
 
-  // This is the absolute value of the min and max clamp values in the VLMACCR1 space
-  // These values will need to be made 16 bit and converted to the output space.
-  float vpu_clamp_min = (float)(larq_clamp_min - (vpu_offset) * 2) / (vpu_multipler * 2);
-  float vpu_clamp_max = (float)(larq_clamp_max - (vpu_offset) * 2) / (vpu_multipler * 2);
-
   // TODO reorder min and max into min and max order
 
   int B, A, M;
   int vpu_min_accu = 0 * vpu_multipler + vpu_offset;
   int vpu_max_accu = receptive_volume * vpu_multipler + vpu_offset;
+
+  // printf("vpu_min_accu:%d vpu_max_accu:%d\n", vpu_min_accu, vpu_max_accu);
 
   solve_constraint(
     &B, &A, &M,
@@ -201,18 +206,16 @@ void bnn_quantise_activation(
     vpu_output_transform_bias, 
     chans_out,
     vpu_max_accu, vpu_min_accu);
-
+    
   //TODO make this into a function
-  int max_output_transform_multiplier_exp = INT_MIN;
-  unsigned min_rsb = UINT_MAX;
+  int max_output_transform_bias_exp = INT_MIN;
   for (unsigned ch=0;ch<chans_out; ch++){
     int exp;
     frexp(vpu_output_transform_bias[ch], &exp);
-    if(exp > max_output_transform_multiplier_exp)
-      max_output_transform_multiplier_exp = exp;
-    unsigned rsb = clrsb((int)vpu_output_transform_bias[ch]) - 16;
-    if(rsb < min_rsb)
-      min_rsb = rsb;
+
+    if(exp > max_output_transform_bias_exp)
+      max_output_transform_bias_exp = exp;
+
   }
 
   // We want to multiply pab by 2**B then quantise it, however, we can only store 16 bits
@@ -220,12 +223,31 @@ void bnn_quantise_activation(
   //if B > 0 make a 16 bit quantised bias and a 16 bit bias_multipler
   //if B < 0 bias_multipler = 1, bias = pam * 2 **B
 
+
+  // int min_rsb = INT32_MAX;
+  // for (unsigned ch = 0; ch < chans_out; ch++){
+
+  //   int64_t t = round(ldexp(vpu_output_transform_bias[ch], B));
+  //   int rsb = __builtin_clrsbll(t);
+  //   if (rsb < min_rsb) min_rsb = rsb;
+  //   printf("%lld %f %d %d\n", t, vpu_output_transform_bias[ch], B, rsb);
+
+
+
+  // }
+  // printf("min_rsb: %d\n", min_rsb);
+  
+
+  // exit(1);
+
   int bias_exp_adjust ;
   if (B > 0){
-    bias_exp_adjust = 15 - max_output_transform_multiplier_exp;
+    bias_exp_adjust = 15 - max_output_transform_bias_exp;
 
     //todo deal with the case that the bias_multipler wont fit in a 16 bit value
-    *bias_multipler = (1<<(B - bias_exp_adjust)); //this is not so simple
+    int32_t b = (1<<(B - bias_exp_adjust)); //this is not so simple
+    // printf("%d %d\n", b, b > INT16_MAX);
+    *bias_multipler = b;
 
   } else {
     *bias_multipler = 1;
@@ -261,21 +283,80 @@ void bnn_quantise_activation(
     }
   }
 
+  // This is the absolute value of the min and max clamp values in the VLMACCR1 space
+  // These values will need to be made 16 bit and converted to the output space.
+  // clamp(V, (larq_clamp_min - bv * 2) / (mv * 2), (larq_clamp_max - bv * 2) / (mv * 2))
+  float vpu_clamp_min = (float)(larq_clamp_min - (vpu_offset) * 2) / (vpu_multipler * 2);
+  float vpu_clamp_max = (float)(larq_clamp_max - (vpu_offset) * 2) / (vpu_multipler * 2);
+
+  // printf("accu_shr: %d\n", *accu_shr);
+  // printf("larq_clamp_min:%d larq_clamp_max:%d -> vpu_clamp_min:%f vpu_clamp_max:%f\n", larq_clamp_min, larq_clamp_max, vpu_clamp_min, vpu_clamp_max);
+
   float min_shifted_accu = ldexp(vpu_clamp_min, - (*accu_shr));
   float max_shifted_accu = ldexp(vpu_clamp_max, - (*accu_shr));
+
+  // printf("min_shifted_accu:%f max_shifted_accu:%f\n", min_shifted_accu, max_shifted_accu);
 
   int32_t low_clamp_limit = -INT16_MAX * vpu_multipler;
   int32_t high_clamp_limit = INT16_MAX * vpu_multipler;
 
-  // printf("min_shifted_accu: %d max_shifted_accu: %d\n", min_shifted_accu, max_shifted_accu);
-  int32_t t_low_clamp_offset  = (int32_t)((float)low_clamp_limit - min_shifted_accu);
+  // printf("min_shifted_accu: %f max_shifted_accu: %f\n", min_shifted_accu, max_shifted_accu);
+  int32_t t_low_clamp_offset  = (int32_t)((float)low_clamp_limit - min_shifted_accu); //round?
   int32_t t_high_clamp_offset = (int32_t)((float)high_clamp_limit - max_shifted_accu);
-  
+
+  // printf("want t_low_clamp_offset: %d t_high_clamp_offset:%d %d\n", t_low_clamp_offset, t_high_clamp_offset, -INT16_MAX);
+ 
+  int32_t t_clamp_a, t_clamp_b, t_clamp_c;
+
+  if (abs(t_low_clamp_offset) < abs(t_high_clamp_offset)) {
+    // printf("t_low_clamp_offset is the shorter one\n");
+    t_clamp_a = t_low_clamp_offset;
+    
+    // printf("%d %d\n",  (t_high_clamp_offset < -INT16_MAX), (t_high_clamp_offset > INT16_MAX));
+    t_clamp_b = t_high_clamp_offset;
+    t_clamp_c = 0;
+    if (t_high_clamp_offset < -INT16_MAX){
+      // printf("a\n");
+      t_clamp_c = -INT16_MAX;
+      t_clamp_b -= t_clamp_c;
+    }
+    if (t_high_clamp_offset > INT16_MAX){
+      // printf("b\n");
+      t_clamp_c = -INT16_MAX;
+      t_clamp_b -= t_clamp_c;
+    }
+    
+  } else{
+    // printf("t_high_clamp_offset is the shorter one\n");
+
+    t_clamp_a = t_high_clamp_offset;
+    t_clamp_b = t_low_clamp_offset;
+    
+    t_clamp_c = 0;
+    if (t_low_clamp_offset < -INT16_MAX){
+      // printf("c\n");
+      t_clamp_c = -INT16_MAX;
+      t_clamp_b -= t_clamp_c;
+    }
+    if (t_low_clamp_offset > INT16_MAX){
+      // printf("d\n");
+      t_clamp_c = INT16_MAX;
+      t_clamp_b -= t_clamp_c;
+    }
+  }
+
+    // printf("clamp a: %d\n", t_clamp_a);
+    // printf("clamp b: %d\n", t_clamp_b);
+    // printf("clamp c: %d\n", t_clamp_c);
+  // t_high_clamp_offset -= 1;
   t_low_clamp_offset /= 2;
   t_high_clamp_offset /= 2;
 
-  *low_clamp_offset = t_low_clamp_offset;
-  *high_clamp_offset = t_high_clamp_offset;
+  // printf("got: %d t_high_clamp_offset:%d\n", clamp_a, t_clamp_b + t_clamp_c);
+  *clamp_a = t_clamp_a;
+  *clamp_b = t_clamp_b;
+  *clamp_c = t_clamp_c;
+ 
 
 
   // The -8 is here to leave the result in a 16 bit form so that the quantisation to 8 bit 
