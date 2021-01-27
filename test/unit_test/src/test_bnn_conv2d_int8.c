@@ -230,6 +230,47 @@ void impl_bconv2d_int8_pseudo_random(
                             x_width, k_height, k_width, chans_in, chans_out, h_stride,
                             v_stride, seed, larq_clamp_min, larq_clamp_max, valid_impl);
                       }
+                      for (int32_t delta_min=0; delta_min <=5 ;delta_min++){
+                        for (int32_t delta_max=-5; delta_max <=5 ;delta_max++){
+                          int32_t larq_clamp_min = 0 + delta_min;
+                          int32_t larq_clamp_max = (int32_t)receptive_volume + delta_max;
+
+                          run_int8_config(
+                              (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
+                              (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
+                              (float*)post_activation_multiplier,
+                              (float*)post_activation_bias, 
+                              (int16_t*)post_activation_multiplier_q,
+                              (int16_t*)post_activation_bias_q,  
+                              (int16_t*)quantised_accu_modifier,
+                              (int*) chan_overlaps,
+                              x_height,
+                              x_width, k_height, k_width, chans_in, chans_out, h_stride,
+                              v_stride, seed, larq_clamp_min, larq_clamp_max, valid_impl);
+                        }
+                      }
+
+                      for (int32_t delta_min=0; delta_min <=5 ;delta_min++){
+                        for (int32_t delta_max=-5; delta_max <=5 ;delta_max++){
+                          int32_t larq_clamp_min = 0 + delta_min;
+                          int32_t larq_clamp_max = 2*(int32_t)receptive_volume + delta_max;
+
+                          run_int8_config(
+                              (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
+                              (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
+                              (float*)post_activation_multiplier,
+                              (float*)post_activation_bias, 
+                              (int16_t*)post_activation_multiplier_q,
+                              (int16_t*)post_activation_bias_q,  
+                              (int16_t*)quantised_accu_modifier,
+                              (int*) chan_overlaps,
+                              x_height,
+                              x_width, k_height, k_width, chans_in, chans_out, h_stride,
+                              v_stride, seed, larq_clamp_min, larq_clamp_max, valid_impl);
+                        }
+                      }
+
+
                     }
 
                     free(X_ref);
