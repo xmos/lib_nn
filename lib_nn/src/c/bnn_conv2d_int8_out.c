@@ -101,15 +101,25 @@ void bconv2d_int8_DIDO_impl_ref(nn_bconv2d_int8_DIDO_impl_plan_t * plan){
         VSTR(vpu, &temp_mem);
         VLASHR(vpu, &temp_mem, plan->ashr);
 
+        // vpu_sim_mem_print(plan->clamp_a, vpu->mode);
+        // vpu_sim_mem_print(plan->clamp_b, vpu->mode);
+        // vpu_sim_mem_print(plan->clamp_c, vpu->mode);
+        // vpu_sim_print(vpu);
+
         //Saturate to larq high and low
         VLADD(vpu, plan->clamp_a);
         VLSUB(vpu, plan->clamp_a);
         
+        // vpu_sim_print(vpu);
+
         VLADD(vpu, plan->clamp_b);
         VLADD(vpu, plan->clamp_c);
         VLSUB(vpu, plan->clamp_b);
         VLSUB(vpu, plan->clamp_c);
 
+        // vpu_sim_print(vpu);
+
+        // exit(1);
         //Save the 16 bit accumulator, A, to scratch
         VSTR(vpu, &temp_mem);
 
@@ -577,6 +587,7 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
       y_loc_x, y_loc_y, y_sub_width, y_sub_height,
       x_loc_x, x_loc_y);
 
+  // printf("bconv2d_int8_DIDO_impl %x %x %x\n",clamp_a, clamp_b, clamp_c );
   int16_t clamp_a_mem[VPU_INT16_EPV];
   int16_t clamp_b_mem[VPU_INT16_EPV];
   int16_t clamp_c_mem[VPU_INT16_EPV];
@@ -586,6 +597,8 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
     clamp_b_mem[i] = clamp_b;
     clamp_c_mem[i] = clamp_c;
   }
+
+  // printf("bconv2d_int8_DIDO_impl %p %p %p\n",clamp_a_mem, clamp_b_mem, clamp_c_mem );
   plan.clamp_a = clamp_a_mem;
   plan.clamp_b = clamp_b_mem; 
   plan.clamp_c = clamp_c_mem; 
