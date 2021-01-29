@@ -59,8 +59,9 @@ VECT_INT8_MIN:
 #define PLAN_IC_LOOP_COUNTER       22
 #define PLAN_Y_P                   23
 
-#define PLAN_LOW_CLAMP_OFFSET      24
-#define PLAN_HIGH_CLAMP_OFFSET     25
+#define PLAN_CLAMP_NEAR            24
+#define PLAN_CLAMP_FAR_0           25
+#define PLAN_CLAMP_FAR_1           26
 
 //Stack Usage
 
@@ -103,22 +104,23 @@ VECT_INT8_MIN:
 #define S_IC_LOOP_COUNTER       24
 #define S_Y_p                   25
 
-#define S_LOW_CLAMP_OFFSET_P    26
-#define S_HIGH_CLAMP_OFFSET_P   27
+///
 
-////
-#define S_SAVE_R4               28
-#define S_SAVE_R5               29
+#define S_CLAMP_NEAR            26
 
-#define S_SAVE_R6               30
-#define S_SAVE_R7               31
+#define S_CLAMP_FAR_0           27
+#define S_CLAMP_FAR_1           28
 
-#define S_SAVE_R8               32
-#define S_SAVE_R9               33
+#define S_SAVE_R4               29
 
-#define S_SAVE_R10              34
-#define S_UNUSED_0              35
+#define S_SAVE_R5               30
+#define S_SAVE_R6               31
 
+#define S_SAVE_R7               32
+#define S_SAVE_R8               33
+
+#define S_SAVE_R9               34
+#define S_SAVE_R10              35
 
 //Note: The elements 30 -> 37 will be clobbered when copying the plan to the stack
 //      this might mean leaving some spare stack space
@@ -275,6 +277,18 @@ FUNCTION_NAME:
 	ldc r11, 256 //set int16 mode - 32 bit accumulators	
     {vsetc r11; shr r_256_bits, r11, 3} 
     
+
+    there:
+    ldc t, PLAN_CLAMP_NEAR
+    ldw t, r0[t]
+    stw t, sp[S_CLAMP_NEAR]
+    ldc t, PLAN_CLAMP_FAR_0
+    ldw t, r0[t]
+    stw t, sp[S_CLAMP_FAR_0]
+    ldc t, PLAN_CLAMP_FAR_1
+    ldw t, r0[t]
+    stw t, sp[S_CLAMP_FAR_1]
+
     {mov t, r0;  ldc s, PLAN_Y_P}
     {ldw r0, t[s]; ldc s, PLAN_K_P} //put PLAN_Y_P into r0
     {ldw r2, t[s]; nop}         //put PLAN_K_P into r2
@@ -289,9 +303,6 @@ FUNCTION_NAME:
     {vldr t[0]; add t, t, r_256_bits}
     {vstr s[0]; add s, s, r_256_bits} //This could use a bit mask to only store the relavent fields
 
-    ldd s, t, t[0]
-    stw t, sp[S_LOW_CLAMP_OFFSET_P]
-    stw s, sp[S_HIGH_CLAMP_OFFSET_P]
 
     ldaw t, sp[S_VLSAT_0]
     {ldw t, sp[S_VLSAT]; mov s, t}
@@ -352,21 +363,19 @@ FUNCTION_NAME:
 
                 ldd s, t, sp[S_VLSAT_ASHR]
                 {vlsat t[0]; ldaw t, sp[S_TEMP]}
-
                 {vstr t[0]; nop}
                 vlashr t[0], s
 
                 //apply the initial clamps
-                ldw s, sp[S_HIGH_CLAMP_OFFSET_P]
-                vladd s[0]
-                vladd s[0]
-                vlsub s[0]
-                vlsub s[0]
-                ldw s, sp[S_LOW_CLAMP_OFFSET_P]
-                vladd s[0]
-                vladd s[0]
-                vlsub s[0]
-                vlsub s[0]
+                {ldw s, sp[S_CLAMP_NEAR]; nop}
+                {vlsub s[0]; nop}
+                {vlsub s[0]; nop}
+                {ldw s, sp[S_CLAMP_FAR_0]; nop}
+                {ldw r, sp[S_CLAMP_FAR_1]; nop}
+                {vlsub s[0]; nop}
+                {vlsub r[0]; nop}
+                {vlsub r[0]; nop}
+                {vlsub s[0]; nop}
 
                 {vstr t[0]; nop}
                 {vclrdr; nop}

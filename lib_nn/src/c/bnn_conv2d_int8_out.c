@@ -107,15 +107,15 @@ void bconv2d_int8_DIDO_impl_ref(nn_bconv2d_int8_DIDO_impl_plan_t * plan){
         // vpu_sim_print(vpu);
 
         //Saturate to larq high and low
-        VLADD(vpu, plan->clamp_a);
+        VLSUB(vpu, plan->clamp_a);
         VLSUB(vpu, plan->clamp_a);
         
         // vpu_sim_print(vpu);
 
-        VLADD(vpu, plan->clamp_b);
-        VLADD(vpu, plan->clamp_c);
         VLSUB(vpu, plan->clamp_b);
         VLSUB(vpu, plan->clamp_c);
+        VLSUB(vpu, plan->clamp_c);
+        VLSUB(vpu, plan->clamp_b);
 
         // vpu_sim_print(vpu);
 
@@ -223,12 +223,12 @@ void compute_patch(nn_bconv2d_int8_impl_plan_t *plan,
   // vpu_sim_print(vpu);
   //Saturate to larq high and low
 
-  VLADD(vpu, clamp_a_mem);
   VLSUB(vpu, clamp_a_mem);
-  VLADD(vpu, clamp_b_mem);
-  VLADD(vpu, clamp_c_mem);
+  VLSUB(vpu, clamp_a_mem);
   VLSUB(vpu, clamp_b_mem);
   VLSUB(vpu, clamp_c_mem);
+  VLSUB(vpu, clamp_c_mem);
+  VLSUB(vpu, clamp_b_mem);
 
   // vpu_sim_print(vpu);
   //Save the 16 bit accumulator, A, to scratch
