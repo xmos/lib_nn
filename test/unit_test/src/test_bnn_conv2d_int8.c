@@ -198,7 +198,7 @@ void impl_bconv2d_int8_pseudo_random(
                   // printf("h_stride:%u v_stride:%u k_height:%u k_width:%u x_height:%u x_width:%u chans_in:%u chans_out:%u\n", 
                   //   h_stride, v_stride, k_height, k_width, x_height, x_width, chans_in, chans_out);
 
-                    for(unsigned c=0;c<1<<1;c++){
+                    for(unsigned c=0;c<1<<0;c++){
                       int seed = c;
 
                       for(unsigned b=0;b<X_ref_bytes/sizeof(int);b++)
@@ -1473,17 +1473,17 @@ void test_bconv2d_int8_directed4(){
 void test_bnn_conv2d_int8() {
   UNITY_SET_FILE();
 
-  // RUN_TEST(test_bconv2d_int8_pseudo_random);
-  // RUN_TEST(test_bconv2d_int8_pseudo_random2);
-  // RUN_TEST(test_bconv2d_int8_sub_image);
+  RUN_TEST(test_bconv2d_int8_pseudo_random);
+  RUN_TEST(test_bconv2d_int8_pseudo_random2);
+  RUN_TEST(test_bconv2d_int8_sub_image);
 
   RUN_TEST(test_bconv2d_int8_DI_pseudo_random);
   RUN_TEST(test_bconv2d_int8_DI_pseudo_random2);
   RUN_TEST(test_bconv2d_int8_DI_sub_image);
 
-  // RUN_TEST(test_bconv2d_int8_directed);
-  // RUN_TEST(test_bconv2d_int8_directed2);
-  // RUN_TEST(test_bconv2d_int8_directed3);
-  // RUN_TEST(test_bconv2d_int8_directed4);
+  RUN_TEST(test_bconv2d_int8_directed);
+  RUN_TEST(test_bconv2d_int8_directed2);
+  RUN_TEST(test_bconv2d_int8_directed3);
+  RUN_TEST(test_bconv2d_int8_directed4);
   
 }

@@ -366,9 +366,6 @@ FUNCTION_NAME:
                 {vstr t[0]; nop}
                 vlashr t[0], s
 
-                here:
-                {nop;nop}
-                
                 //apply the initial clamps
                 {ldw s, sp[S_CLAMP_NEAR]; nop}
                 {vlsub s[0]; nop}

@@ -123,10 +123,7 @@ static void get_bounds_on_Exp(
   int max_exponent = INT_MIN;
   for(unsigned i=0;i<values_length;i++){
     int e;
-    float v = frexp(values[i], &e);
-    if (v == -0.5) //TODO find a nicer/safer way of doing this
-      e -= 1;
-    
+    frexp(values[i], &e);
     if (e > max_exponent) max_exponent = e;
   }
 
@@ -134,22 +131,8 @@ static void get_bounds_on_Exp(
 
   *max_Exp = m;
   *min_Exp = m - bits;
-
-  // Checks
-  int max_required_bits = 0;
-  for(unsigned i=0;i<values_length;i++){
-    int64_t v = round(ldexp(values[i], m));
-    int rsb = clrsbll(v) ;
-    int required_bits = 64L - rsb;
-    int64_t t = (int64_t)((uint64_t)v << rsb)>>rsb;
-    assert(t == v);
-    if (required_bits > max_required_bits) max_required_bits = required_bits;
-    assert(required_bits <= bits);
-  }
-  assert(max_required_bits == bits);
-
+  
 }
-
 
 static void solve_constraint(
 
@@ -358,8 +341,8 @@ void bnn_quantise_activation(
   int32_t t_clamp_c = t_clamp_b / 2;
   t_clamp_b -= t_clamp_c;
 
-  *clamp_a = t_clamp_a;
-  *clamp_b = t_clamp_b;
+  *clamp_a = -t_clamp_a;
+  *clamp_b = -t_clamp_b;
   *clamp_c = t_clamp_c;
 
 
