@@ -79,63 +79,44 @@ static int clrsbll(long long x){
   #endif
 }
 
+static inline int min(int a, int b) { return (a < b) ? a : b; }
+static inline int max(int a, int b) { return (a > b) ? a : b; }
+
 // This puts upper and lower limits on the range of A
 // A must reduce the vpu accumulator to 16 bit
-// A must not remove all the imformation from the vpu accumulator 
-static void get_bounds_on_A(
-  int *min_A, int * max_A,
-  int32_t vpu_min_accu,
-  int32_t vpu_max_accu, 
-  int32_t vpu_clamp_min, 
-  int32_t vpu_clamp_max){
-
-// accu_post_clamp = clamp(vpu_accu * 2**A, vpu_clamp_min * 2**A, vpu_clamp_max*2**A)
-
-  int32_t max_out = vpu_min_accu;
-  int32_t min_out = vpu_min_accu;
-  if(vpu_max_accu > max_out) max_out = vpu_max_accu;
-  if(vpu_max_accu < min_out) min_out = vpu_max_accu;
-  if(vpu_clamp_min > max_out) max_out = vpu_clamp_min;
-  if(vpu_clamp_min < min_out) min_out = vpu_clamp_min;
-  if(vpu_clamp_max > max_out) max_out = vpu_clamp_max;
-  if(vpu_clamp_max < min_out) min_out = vpu_clamp_max;
-
-  int rsb = clrsb(max_out);
-  if (clrsb(min_out) < rsb) rsb = clrsb(min_out);
+// A must not remove all the imformation from the vpu accumulator
+static void get_bounds_on_A(int* min_A, int* max_A, int32_t vpu_min_accu,
+                            int32_t vpu_max_accu, int32_t vpu_clamp_min,
+                            int32_t vpu_clamp_max) {
+  int32_t max_out =
+      max(max(max(vpu_min_accu, vpu_max_accu), vpu_clamp_min), vpu_clamp_max);
+  int32_t min_out =
+      min(min(min(vpu_min_accu, vpu_max_accu), vpu_clamp_min), vpu_clamp_max);
+  int rsb = min(clrsb(max_out), clrsb(min_out));
 
   *max_A = rsb - 16;
   *min_A = *max_A - 16 + 1;
 }
 
-
 // This puts upper and lower limits on the range of Exp
 // Exp will be applied to each of the values
 // Exp must not saturate and of the values
 // Exp must not leave all results as zero
-static void get_bounds_on_Exp(
-  int *min_Exp, int * max_Exp,
-  float * values,
-  unsigned values_length, 
-  int bits)
-{
-
+static void get_bounds_on_Exp(int* min_Exp, int* max_Exp, float* values,
+                              unsigned values_length, int bound_width) {
   assert(values_length > 0);
   int max_exponent = INT_MIN;
-  for(unsigned i=0;i<values_length;i++){
+  for (unsigned i = 0; i < values_length; i++) {
     int e;
     frexp(values[i], &e);
-    if (e > max_exponent) max_exponent = e;
+    max_exponent = max(max_exponent, e);
   }
 
-  int m = (bits - 1) - max_exponent;
-
-  *max_Exp = m;
-  *min_Exp = m - bits;
-  
+  *min_Exp = -max_exponent - 1;
+  *max_Exp = *min_Exp + bound_width;
 }
 
 static void solve_constraint(
-
     int * B_res, 
     int * A_res, 
     int * M_res,
@@ -149,9 +130,6 @@ static void solve_constraint(
     int32_t vpu_clamp_min, 
     int32_t vpu_clamp_max
     ){
-
-// accu_post_clamp = clamp(v * 2**A, vpu_clamp_min * 2**A, vpu_clamp_max*2**A)
-
   int min_A, max_A;
   int min_B, max_B;
   int min_M, max_M;
@@ -163,27 +141,21 @@ static void solve_constraint(
   get_bounds_on_Exp(&min_B, &max_B, vpu_output_transform_bias, chans_out, 32);
 
   // we also know that A + M = B;
-  if (max_A + max_M > max_B)
-    max_B = max_A + max_M;
-
   // Subtract two to ensure the addition is fine (one from A*M and one from B)
-  max_B -= 2;
+  max_B = max(max_A + max_M, max_B) - 2;
     
   // printf("min_B:%d max_B:%d\n", min_B, max_B);
 
-  for (int A=max_A; A >= min_A; A--){
-
-    for (int M=max_M; M >= min_M; M--){
-
+  for (int A = max_A; A >= min_A; A--) {
+    for (int M = max_M; M >= min_M; M--) {
       // We can squeeze a little more out of the arith by modelling
-      // max_Product = max_A * max_M 
+      // max_Product = max_A * max_M
       // this way we wouldnt need to subtract 2 from max_B
 
-      int product_exp = A + M; //TODO does this need a plus one to account for the addition?
+      int B = A + M; //TODO does this need a plus one to account for the addition?
 
-      if((product_exp > min_B) && (product_exp < max_B)){
-
-        *B_res = product_exp;
+      if ((min_B < B) && (B < max_B)) {
+        *B_res = B;
         *A_res = A;
         *M_res = M;
         return;
@@ -273,22 +245,10 @@ void bnn_quantise_activation(
 
   int min_16_bit_B, max_16_bit_B;
 
-  int bias_exp_adjust ;
-
   get_bounds_on_Exp(&min_16_bit_B, &max_16_bit_B, vpu_output_transform_bias, chans_out, 16);
+  *bias_multipler = 1 << max(0, B - max_16_bit_B);
+  int adjusted_B = min(B, max_16_bit_B);
 
-  if (max_16_bit_B <= B){
-    bias_exp_adjust = max_16_bit_B;
-    int r = B - bias_exp_adjust;
-    assert(r >= 0);
-    *bias_multipler = 1<<r; 
-  } else {
-    //In this case the bias isn't using all the avaliable 16 bits
-    *bias_multipler = 1; 
-    bias_exp_adjust = B;
-  }
-
-  assert(B >= 8);
   // The -8 is here to leave the result in a 16 bit form so that the quantisation to 8 bit 
   // can deal with the asymertic rounding.
   *final_shr = B - 8; 
@@ -300,20 +260,18 @@ void bnn_quantise_activation(
 
     int32_t pa_mul = (int32_t)round(ldexp(vpu_output_transform_multiplier[ch], M));
     
-    assert(clrsb(pa_mul) - 16 >= 0); // make sure there is no overflow
+    assert(clrsb(pa_mul) >= 16); // make sure there is no overflow
     output_transform_multiplier_q[ch] = (int16_t)pa_mul;
 
-    int32_t pa_bias = (int32_t)round(ldexp(vpu_output_transform_bias[ch], bias_exp_adjust));
-
-    if (pa_bias == (1<<15)) //TODO think about this
-      pa_bias  = INT16_MAX;
+    int32_t pa_bias = (int32_t)round(ldexp(vpu_output_transform_bias[ch], adjusted_B));
 
     // assert(clrsb(pa_bias) - 16 >= 0); // make sure there is no overflow
-    output_transform_bias_q[ch] = (int16_t)pa_bias;
+    pa_bias = min(INT16_MAX, pa_bias); //TODO think about this
 
+    output_transform_bias_q[ch] = (int16_t)pa_bias;
   }
 
-  //todo check that post_activation_bias_q * bias_exp_adjust is ldexp(post_activation_bias, B)
+  //todo check that post_activation_bias_q * adjusted_B is ldexp(post_activation_bias, B)
   *accu_shr = -A;
 
   for (unsigned ch = 0; ch < chans_out; ch++){
