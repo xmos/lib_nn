@@ -38,20 +38,25 @@ int8_t bnn_post_activation_reference(
  * Reference implementation of activation quantisation. 
  */
 void bnn_quantise_activation(
-               int16_t * post_activation_multiplier_q,
-               int16_t* post_activation_bias_q,
+               int16_t * output_transform_multiplier_q,
+               int16_t * output_transform_bias_q,
 
-               float* post_activation_multiplier,
-               float* post_activation_bias, 
+               float * output_transform_multiplier,
+               float * output_transform_bias, 
 
                unsigned chans_out,
 
-               int32_t clamp_low,
-               int32_t clamp_high,
+               int32_t larq_clamp_min, 
+               int32_t larq_clamp_max,
 
-               int *accu_shr,
-               int16_t *bias_multipler,
-               int *final_shr,
+               int16_t * quantised_accu_modifier,
+               int16_t * clamp_a,
+               int16_t * clamp_b,
+               int16_t * clamp_c,
+
+               int * accu_shr,
+               int16_t * bias_multipler,
+               int * final_shr,
 
                int32_t receptive_volume, 
                int * chan_overlaps
@@ -155,6 +160,11 @@ void bconv2d_int8_DIDO_valid(int8_t* Y_p,
     
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
+
+    const int16_t clamp_a,
+    const int16_t clamp_b,
+    const int16_t clamp_c,
+
     const int accu_shr,
     const int16_t bias_multiplier,
     const int final_shr,
@@ -173,6 +183,12 @@ void bconv2d_int8_valid(int8_t* Y_p,
     
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
+
+    const int16_t * quantised_accu_modifier,
+    const int16_t clamp_a,
+    const int16_t clamp_b,
+    const int16_t clamp_c,
+
     const int accu_shr,
     const int16_t bias_multiplier,
     const int final_shr,
@@ -394,6 +410,11 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
     
     const int16_t* post_activation_multiplier, 
     const int16_t* post_activation_bias,
+
+    const int16_t clamp_a,
+    const int16_t clamp_b,
+    const int16_t clamp_c,
+
     const int accu_shr,
     const int16_t bias_multipler,
     const int final_shr,
@@ -413,6 +434,12 @@ void bconv2d_int8(int8_t* Y_p,
     
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
+
+    const int16_t * quantised_accu_modifier,
+    const int16_t clamp_a,
+    const int16_t clamp_b,
+    const int16_t clamp_c,
+
     const int accu_shr,
     const int16_t bias_multipler,
     const int final_shr,

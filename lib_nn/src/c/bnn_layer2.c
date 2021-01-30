@@ -46,6 +46,11 @@ void bconv2d_int8_DIDO_valid(int8_t* Y_p,
     
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
+
+    const int16_t clamp_a,
+    const int16_t clamp_b,
+    const int16_t clamp_c,
+
     const int accu_shr,
     const int16_t bias_multiplier,
     const int final_shr,
@@ -64,6 +69,11 @@ void bconv2d_int8_DIDO_valid(int8_t* Y_p,
 
         post_activation_multiplier_q,
         post_activation_bias_q, 
+        
+        clamp_a,
+        clamp_b,
+        clamp_c,
+        
         accu_shr, bias_multiplier, final_shr,
         x,  y,  k, 
         y_loc_x, y_loc_y,
@@ -76,6 +86,12 @@ void bconv2d_int8_valid(int8_t* Y_p,
     
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
+
+    const int16_t * quantised_accu_modifier,
+    const int16_t clamp_a,
+    const int16_t clamp_b,
+    const int16_t clamp_c,
+
     const int accu_shr,
     const int16_t bias_multiplier,
     const int final_shr,
@@ -96,6 +112,12 @@ void bconv2d_int8_valid(int8_t* Y_p,
 
         post_activation_multiplier_q,
         post_activation_bias_q, 
+
+        quantised_accu_modifier, 
+        clamp_a,
+        clamp_b,
+        clamp_c,
+
         accu_shr, bias_multiplier, final_shr,
         data_scratch,
         x,  y,  k, 

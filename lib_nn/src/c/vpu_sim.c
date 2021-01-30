@@ -330,27 +330,55 @@ void VLADD(
         const int8_t* addr8 = (const int8_t*) addr;
         for(int i = 0; i < VPU_INT8_EPV; i++){
             int32_t val = addr8[i];
-            vpu->vR.s8[i] = vpu_saturate(vpu->vR.s8[i] + val, 8);
+            vpu->vR.s8[i] = vpu_saturate((int32_t)vpu->vR.s8[i] + val, 8);
         }
     } else if(vpu->mode == MODE_S16){
         const int16_t* addr16 = (const int16_t*) addr;
 
         for(int i = 0; i < VPU_INT16_EPV; i++){
             int32_t val = addr16[i];
-            vpu->vR.s16[i] = vpu_saturate(vpu->vR.s16[i] + val, 16);
+            vpu->vR.s16[i] = vpu_saturate((int32_t)vpu->vR.s16[i] + val, 16);
         }
     } else if(vpu->mode == MODE_S32){
         const int32_t* addr32 = (const int32_t*) addr;
 
         for(int i = 0; i < VPU_INT32_EPV; i++){
             int64_t val = addr32[i];
-            vpu->vR.s32[i] = vpu_saturate(vpu->vR.s32[i] + val, 32);
+            vpu->vR.s32[i] = vpu_saturate((int32_t)vpu->vR.s32[i] + val, 32);
         }
     } else { 
         assert(0); //How'd this happen?
     }
 }
 
+void VLSUB(
+    xs3_vpu* vpu, 
+    const void* addr)
+{
+    if(vpu->mode == MODE_S8){
+        const int8_t* addr8 = (const int8_t*) addr;
+        for(int i = 0; i < VPU_INT8_EPV; i++){
+            int32_t val = addr8[i];
+            vpu->vR.s8[i] = vpu_saturate(val - (int32_t)vpu->vR.s8[i], 8);
+        }
+    } else if(vpu->mode == MODE_S16){
+        const int16_t* addr16 = (const int16_t*) addr;
+
+        for(int i = 0; i < VPU_INT16_EPV; i++){
+            int32_t val = addr16[i];
+            vpu->vR.s16[i] = vpu_saturate(val - (int32_t)vpu->vR.s16[i], 16);
+        }
+    } else if(vpu->mode == MODE_S32){
+        const int32_t* addr32 = (const int32_t*) addr;
+
+        for(int i = 0; i < VPU_INT32_EPV; i++){
+            int64_t val = addr32[i];
+            vpu->vR.s32[i] = vpu_saturate(val - (int32_t)vpu->vR.s32[i], 32);
+        }
+    } else { 
+        assert(0); //How'd this happen?
+    }
+}
 void VLMUL(
     xs3_vpu* vpu, 
     const void* addr)
@@ -455,6 +483,43 @@ void VDEPTH16(xs3_vpu* vpu){
 
 static char signof(int x){return (x>=0? ' ' : '-');}
 
+
+void vpu_sim_mem_print(void * address, vector_mode mode){
+    int8_t * vC8 = (int8_t * )address;
+    int16_t * vC16 = (int16_t * )address;
+    int32_t * vC32 = (int32_t * )address;
+    switch (mode)
+    {
+    case MODE_S8:
+        printf("8-bit:\n");
+        for(int i = 0; i< VPU_INT8_EPV; i++){
+            printf("%d\t%c0x%0.2X(%d)\n",
+            i, signof(vC8[i]),abs(vC8[i]), (int)vC8[i]);
+        }
+        break;
+    
+    case MODE_S16:
+        printf("16-bit:\n");
+        for(int i = 0; i< VPU_INT16_EPV; i++){
+            printf("%d\t%c0x%0.4X(%d)\n",
+            i, signof(vC16[i]),abs(vC16[i]),(int) vC16[i]);
+        }
+        break;
+
+    case MODE_S32:
+        printf("32-bit:\n");
+        for(int i = 0; i< VPU_INT32_EPV; i++){
+            printf("%d\t%c0x%0.8X(%d)\n",
+            i, signof(vC32[i]),abs(vC32[i]), (int)vC32[i]);        }
+        break;
+
+    default:
+        printf("In the future this might print all possible interpretations...");
+        break;
+    } 
+
+    printf("\n");
+}
 void vpu_sim_print(xs3_vpu* vpu)
 {
     int8_t * vC8 = vpu->vC.s8;

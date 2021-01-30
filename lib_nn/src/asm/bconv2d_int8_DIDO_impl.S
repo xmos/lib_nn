@@ -59,6 +59,10 @@ VECT_INT8_MIN:
 #define PLAN_IC_LOOP_COUNTER       22
 #define PLAN_Y_P                   23
 
+#define PLAN_CLAMP_NEAR            24
+#define PLAN_CLAMP_FAR_0           25
+#define PLAN_CLAMP_FAR_1           26
+
 //Stack Usage
 
 #define S_0                     0
@@ -100,64 +104,68 @@ VECT_INT8_MIN:
 #define S_IC_LOOP_COUNTER       24
 #define S_Y_p                   25
 
-////
-#define S_SAVE_R4               26
-#define S_SAVE_R5               27
+///
 
-#define S_SAVE_R6               28
-#define S_SAVE_R7               29
+#define S_CLAMP_NEAR            26
 
-#define S_SAVE_R8               30
-#define S_SAVE_R9               31
+#define S_CLAMP_FAR_0           27
+#define S_CLAMP_FAR_1           28
 
-#define S_SAVE_R10              32
-#define S_UNUSED_0              33
+#define S_SAVE_R4               29
 
+#define S_SAVE_R5               30
+#define S_SAVE_R6               31
+
+#define S_SAVE_R7               32
+#define S_SAVE_R8               33
+
+#define S_SAVE_R9               34
+#define S_SAVE_R10              35
 
 //Note: The elements 30 -> 37 will be clobbered when copying the plan to the stack
 //      this might mean leaving some spare stack space
 
 //doesn't have to be double word aligned
-#define S_TEMP_0 34
-#define S_TEMP_1 35 
-#define S_TEMP_2 36
-#define S_TEMP_3 37
-#define S_TEMP_4 38
-#define S_TEMP_5 39
-#define S_TEMP_6 40
-#define S_TEMP_7 41
+#define S_TEMP_0 36
+#define S_TEMP_1 37 
+#define S_TEMP_2 38
+#define S_TEMP_3 39
+#define S_TEMP_4 40
+#define S_TEMP_5 41
+#define S_TEMP_6 42
+#define S_TEMP_7 43
 
 //doesn't have to be double word aligned
-#define S_VLSAT_0 42
-#define S_VLSAT_1 43 
-#define S_VLSAT_2 44
-#define S_VLSAT_3 45
-#define S_VLSAT_4 46
-#define S_VLSAT_5 47
-#define S_VLSAT_6 48
-#define S_VLSAT_7 49
+#define S_VLSAT_0 44
+#define S_VLSAT_1 45 
+#define S_VLSAT_2 46
+#define S_VLSAT_3 47
+#define S_VLSAT_4 48
+#define S_VLSAT_5 49
+#define S_VLSAT_6 50
+#define S_VLSAT_7 51
 
 //doesn't have to be double word aligned
-#define S_BIAS_SHIFT_0 50
-#define S_BIAS_SHIFT_1 51 
-#define S_BIAS_SHIFT_2 52
-#define S_BIAS_SHIFT_3 53
-#define S_BIAS_SHIFT_4 54
-#define S_BIAS_SHIFT_5 55
-#define S_BIAS_SHIFT_6 56
-#define S_BIAS_SHIFT_7 57
+#define S_BIAS_SHIFT_0 52
+#define S_BIAS_SHIFT_1 53 
+#define S_BIAS_SHIFT_2 54
+#define S_BIAS_SHIFT_3 55
+#define S_BIAS_SHIFT_4 56
+#define S_BIAS_SHIFT_5 57
+#define S_BIAS_SHIFT_6 58
+#define S_BIAS_SHIFT_7 59
 
 //doesn't have to be double word aligned
-#define S_FINAL_SHR_0 58
-#define S_FINAL_SHR_1 59 
-#define S_FINAL_SHR_2 60
-#define S_FINAL_SHR_3 61
-#define S_FINAL_SHR_4 62
-#define S_FINAL_SHR_5 63
-#define S_FINAL_SHR_6 64
-#define S_FINAL_SHR_7 65
+#define S_FINAL_SHR_0 60
+#define S_FINAL_SHR_1 61 
+#define S_FINAL_SHR_2 62
+#define S_FINAL_SHR_3 63
+#define S_FINAL_SHR_4 64
+#define S_FINAL_SHR_5 65
+#define S_FINAL_SHR_6 66
+#define S_FINAL_SHR_7 67
 
-#define NSTACKWORDS  70 //50!
+#define NSTACKWORDS  84 
 
 //Helpers that reference the above
 #define S_X_p_S_OUTER_X_H_STEP (S_X_p/2)                        //1
@@ -245,11 +253,7 @@ bnn_make_16_channel_output:
 void bconv2d_int8_DIDO_impl(const nn_bconv2d_int8_DIDO_impl_plan_t* plan);
 */
 
-#ifndef NN_USE_REF
-  #define FUNCTION_NAME bconv2d_int8_DIDO_impl
-#else
-  #define FUNCTION_NAME bconv2d_int8_DIDO_impl_asm
-#endif // NN_USE_REF
+#define FUNCTION_NAME bconv2d_int8_DIDO_impl
 
     
 .text
@@ -273,6 +277,18 @@ FUNCTION_NAME:
 	ldc r11, 256 //set int16 mode - 32 bit accumulators	
     {vsetc r11; shr r_256_bits, r11, 3} 
     
+
+    there:
+    ldc t, PLAN_CLAMP_NEAR
+    ldw t, r0[t]
+    stw t, sp[S_CLAMP_NEAR]
+    ldc t, PLAN_CLAMP_FAR_0
+    ldw t, r0[t]
+    stw t, sp[S_CLAMP_FAR_0]
+    ldc t, PLAN_CLAMP_FAR_1
+    ldw t, r0[t]
+    stw t, sp[S_CLAMP_FAR_1]
+
     {mov t, r0;  ldc s, PLAN_Y_P}
     {ldw r0, t[s]; ldc s, PLAN_K_P} //put PLAN_Y_P into r0
     {ldw r2, t[s]; nop}         //put PLAN_K_P into r2
@@ -286,6 +302,7 @@ FUNCTION_NAME:
 
     {vldr t[0]; add t, t, r_256_bits}
     {vstr s[0]; add s, s, r_256_bits} //This could use a bit mask to only store the relavent fields
+
 
     ldaw t, sp[S_VLSAT_0]
     {ldw t, sp[S_VLSAT]; mov s, t}
@@ -346,9 +363,19 @@ FUNCTION_NAME:
 
                 ldd s, t, sp[S_VLSAT_ASHR]
                 {vlsat t[0]; ldaw t, sp[S_TEMP]}
-
                 {vstr t[0]; nop}
                 vlashr t[0], s
+
+                //apply the initial clamps
+                {ldw s, sp[S_CLAMP_NEAR]; nop}
+                {vlsub s[0]; nop}
+                {vlsub s[0]; nop}
+                {ldw s, sp[S_CLAMP_FAR_0]; nop}
+                {ldw r, sp[S_CLAMP_FAR_1]; nop}
+                {vlsub s[0]; nop}
+                {vlsub r[0]; nop}
+                {vlsub r[0]; nop}
+                {vlsub s[0]; nop}
 
                 {vstr t[0]; nop}
                 {vclrdr; nop}
