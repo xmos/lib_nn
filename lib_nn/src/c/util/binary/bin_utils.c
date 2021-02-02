@@ -1,3 +1,5 @@
+// Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 #include "nn_bin_utils.h"
 
 void set_bit_b32(bnn_b32_t* x, unsigned ch, bnn_bool_t val) {
