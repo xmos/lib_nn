@@ -1,14 +1,18 @@
 #!/usr/bin/env python
-# Copyright (c) 2018-2019, XMOS Ltd, All rights reserved
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
+# XMOS Public License: Version 1
 
 import re
 
 
-FRAME_ENTRY_INSTRUCTIONS = [ 'entsp', 'dualentsp' ]
-FRAME_EXIT_INSTRUCTIONS = ['retsp']
+FRAME_ENTRY_INSTRUCTIONS = ["entsp", "dualentsp"]
+FRAME_EXIT_INSTRUCTIONS = ["retsp"]
+
 
 class InstLineTokens(object):
-    re_inst = re.compile(r"^([Aap-]+.*-.----)\.*([0-9a-f]{8}) \(([\S]+)\b\s*\+\s*([0-9a-fA-F]+)\) : (.*) @(\d+)$")
+    re_inst = re.compile(
+        r"^([Aap-]+.*-.----)\.*([0-9a-f]{8}) \(([\S]+)\b\s*\+\s*([0-9a-fA-F]+)\) : (.*) @(\d+)$"
+    )
 
     def __init__(self, line):
         super(InstLineTokens, self).__init__()
@@ -16,23 +20,22 @@ class InstLineTokens(object):
         self.tile = int(line[5])
         self.core = int(line[8])
         mode_flag = line[11:14]
-        assert(mode_flag in ['-SI','-DI'])
-        self.dual_issue = mode_flag == '-DI'
+        assert mode_flag in ["-SI", "-DI"]
+        self.dual_issue = mode_flag == "-DI"
         line = line[15:]
 
         m = InstLineTokens.re_inst.match(line.strip())
-        assert(m is not None)
+        assert m is not None
 
         self.flags = m.group(1)
-        self.pc = int(m.group(2),base=16)
+        self.pc = int(m.group(2), base=16)
         self.symbol = m.group(3)
-        self.symbol_offset = int(m.group(4),base=16)
+        self.symbol_offset = int(m.group(4), base=16)
         self.instruction = m.group(5).split()
         self.clock = int(m.group(6))
 
 
 class XCoreOperation(object):
-
     def __init__(self, tile, core):
 
         super(XCoreOperation, self).__init__()
@@ -65,7 +68,6 @@ class XCoreOperation(object):
     def __str__(self):
         return "@{}:\ttile[{}].core[{}]: FNOP".format(self.clock, self.tile, self.core)
 
-
     @staticmethod
     def read_all(file):
 
@@ -75,9 +77,9 @@ class XCoreOperation(object):
             if "ECALL" in line:
                 # An exception happened in xsim
                 raise Exception("trace file ended with an exception ({})".format(line))
-            #Would prefer regex, but that could slow parsing down considerably.
-            is_fnop = line[9] is not '-'
-            
+            # Would prefer regex, but that could slow parsing down considerably.
+            is_fnop = line[9] is not "-"
+
             if is_fnop:
                 tile = int(line[5])
                 core = int(line[8])
@@ -89,15 +91,15 @@ class XCoreOperation(object):
                 if not tokens1.dual_issue:
                     yield XCoreSingleInstruction(tokens1)
                 else:
-                    #need to determine whether it was actually bundled with the 
+                    # need to determine whether it was actually bundled with the
                     # following instruction
                     line = file.readline()
-                    is_fnop = line[9] is not '-'
+                    is_fnop = line[9] is not "-"
 
                     if is_fnop:
                         yield XCoreSingleInstruction(tokens1)
                         continue
-                    
+
                     tokens2 = InstLineTokens(line)
                     if XCoreBundledInstruction.are_bundled(tokens1, tokens2):
                         yield XCoreBundledInstruction(tokens1, tokens2)
@@ -120,6 +122,7 @@ class InstructionFetch(XCoreOperation):
 
     def is_frame_exit(self):
         return False
+
 
 class XCoreInstruction(XCoreOperation):
     def __init__(self, tokens):
@@ -150,6 +153,7 @@ class XCoreInstruction(XCoreOperation):
                 return True
         return False
 
+
 class XCoreSingleInstruction(XCoreInstruction):
     def __init__(self, tokens):
         super(XCoreSingleInstruction, self).__init__(tokens)
@@ -161,7 +165,9 @@ class XCoreSingleInstruction(XCoreInstruction):
         yield self.instruction
 
     def __str__(self):
-        return "@{}:\ttile[{}].core[{}]: {}".format(self.clock, self.tile, self.core, self.instruction)
+        return "@{}:\ttile[{}].core[{}]: {}".format(
+            self.clock, self.tile, self.core, self.instruction
+        )
 
 
 class XCoreBundledInstruction(XCoreInstruction):
@@ -178,7 +184,9 @@ class XCoreBundledInstruction(XCoreInstruction):
             yield inst
 
     def __str__(self):
-        return "@{}:\ttile[{}].core[{}]: ({}, {})".format(self.clock, self.tile, self.core, self.instruction[0], self.instruction[1])
+        return "@{}:\ttile[{}].core[{}]: ({}, {})".format(
+            self.clock, self.tile, self.core, self.instruction[0], self.instruction[1]
+        )
 
     @staticmethod
     def are_bundled(token1, token2):
@@ -190,9 +198,9 @@ class XCoreBundledInstruction(XCoreInstruction):
         #     return False
         if not ((token2.pc - token1.pc) == 2):
             return False
-        if (token2.clock - token1.clock > 5):
+        if token2.clock - token1.clock > 5:
             return False
-        if (token2.symbol != token1.symbol):
+        if token2.symbol != token1.symbol:
             return False
-        
+
         return True

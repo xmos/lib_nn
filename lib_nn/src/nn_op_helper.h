@@ -1,3 +1,5 @@
+// Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 
 #ifndef NN_OP_HELPER_H_
 #define NN_OP_HELPER_H_

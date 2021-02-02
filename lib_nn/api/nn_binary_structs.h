@@ -1,3 +1,5 @@
+// Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 #include "nn_bin_types.h"
 
 #define NN_BCONV2D_KERNEL_OVERRUN_WORDS 8

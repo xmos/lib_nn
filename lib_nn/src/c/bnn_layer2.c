@@ -1,3 +1,5 @@
+// Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 #include "nn_operator.h"
 
 void bconv2d_bin_DI_valid(bnn_b32_t* Y_p,

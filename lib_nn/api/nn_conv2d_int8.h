@@ -1,3 +1,5 @@
+// Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 
 #include "nn_conv2d_structs.h"
 #include "nn_bso.h"
