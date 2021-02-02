@@ -1,3 +1,5 @@
+# Copyright 2021 XMOS LIMITED. This Software is subject to the terms of the
+# XMOS Public License: Version 1
 
 import os
 import argparse
@@ -5,12 +7,11 @@ import subprocess
 from process_trace import process_trace
 from lib_nn_funcs import *
 
-TRACE_FILE = 'trace.local.tmp'
-XSIM_CMD = ['xsim', '--trace-to', None, '--enable-fnop-tracing', '--args']
+TRACE_FILE = "trace.local.tmp"
+XSIM_CMD = ["xsim", "--trace-to", None, "--enable-fnop-tracing", "--args"]
 
 
-
-def run_single(func_name, args, xe_argset, fnames = None):
+def run_single(func_name, args, xe_argset, fnames=None):
 
     fnames = [func_name] if fnames is None else fnames
 
@@ -35,13 +36,21 @@ def run_traces(args, func_name):
     meas = lambda rg, fnames=None: run_single(func_name, args, rg, fnames)
     proc_func(meas, args)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('xe_file', help='.xe file to be traced.')
-    parser.add_argument('funcs_to_test', nargs='*', help='Functions to be tested.')
+    parser.add_argument("xe_file", help=".xe file to be traced.")
+    parser.add_argument("funcs_to_test", nargs="*", help="Functions to be tested.")
 
-    parser.add_argument('-d', '--out-dir', dest='out_dir', default='.', help='Directory to put results.')
-    parser.add_argument('-s', '--show-plot', action='store_true', help='Display plot, rather than saving it.')
+    parser.add_argument(
+        "-d", "--out-dir", dest="out_dir", default=".", help="Directory to put results."
+    )
+    parser.add_argument(
+        "-s",
+        "--show-plot",
+        action="store_true",
+        help="Display plot, rather than saving it.",
+    )
 
     args = parser.parse_args()
 
