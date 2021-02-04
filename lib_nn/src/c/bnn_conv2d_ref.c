@@ -182,9 +182,9 @@ void bnn_quantise_activation(
                int32_t larq_clamp_max,
 
                int16_t * quantised_accu_modifier,
-               int16_t * clamp_a,
-               int16_t * clamp_b,
-               int16_t * clamp_c,
+               int16_t * clamp_near,
+               int16_t * clamp_far_0,
+               int16_t * clamp_far_1,
 
                int * accu_shr,
                int16_t * bias_multipler,
@@ -292,17 +292,17 @@ void bnn_quantise_activation(
   int32_t t_low_clamp_offset  = (int32_t)((float)low_clamp_limit - min_shifted_accu); //round?
   int32_t t_high_clamp_offset = (int32_t)((float)high_clamp_limit - max_shifted_accu);
 
-  int32_t t_clamp_a = t_low_clamp_offset, t_clamp_b = t_high_clamp_offset;
-  if (abs(t_clamp_a) >= abs(t_clamp_b)) {
-    t_clamp_a = t_high_clamp_offset;
-    t_clamp_b = t_low_clamp_offset;
+  int32_t t_clamp_near = t_low_clamp_offset, t_clamp_far_0 = t_high_clamp_offset;
+  if (abs(t_clamp_near) >= abs(t_clamp_far_0)) {
+    t_clamp_near = t_high_clamp_offset;
+    t_clamp_far_0 = t_low_clamp_offset;
   }
-  int32_t t_clamp_c = t_clamp_b / 2;
-  t_clamp_b -= t_clamp_c;
+  int32_t t_clamp_far_1 = t_clamp_far_0 / 2;
+  t_clamp_far_0 -= t_clamp_far_1;
 
-  *clamp_a = -t_clamp_a;
-  *clamp_b = -t_clamp_b;
-  *clamp_c = t_clamp_c;
+  *clamp_near = -t_clamp_near;
+  *clamp_far_0 = -t_clamp_far_0;
+  *clamp_far_1 = t_clamp_far_1;
 
 
   free(vpu_output_transform_multiplier);
