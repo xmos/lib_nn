@@ -60,7 +60,7 @@ static void measure_quantisation(
 
   float max_abs_allowed_error = 1.0;
   if(!tollerant_to_error)
-    max_abs_allowed_error = 400.0;
+    max_abs_allowed_error = 3.0;
   
   for (unsigned ch = 0; ch < chans_out; ch++){
 
