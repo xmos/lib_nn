@@ -465,7 +465,7 @@ void impl_bconv2d_bin_sub_image(
   }
 }
 
-static void SISO_valid(   
+static void generic_kernel_subregion(   
       bnn_b32_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 
@@ -489,7 +489,7 @@ static void SISO_valid(
   free(data_scratch);
 }
 
-static void DI_valid(   
+static void DI_kernel_subregion(   
       bnn_b32_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 
@@ -509,7 +509,7 @@ static void DI_valid(
 }
 
 
-static void SISO_full(   
+static void generic_kernel_full_image(   
       bnn_b32_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 
@@ -531,7 +531,7 @@ static void SISO_full(
   free(data_scratch);
 }
 
-static void DI_full(   
+static void DI_kernel_full_image(   
       bnn_b32_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 
@@ -549,27 +549,33 @@ static void DI_full(
 }
 
 void test_bconv2d_bin_pseudo_random(){
-  impl_bconv2d_bin_DI_pseudo_random(1, 5, 1, 5, 32*1, 32*9, 32*1, 32*3, 32, 32, 1, 3, 1, 3, (void*)&SISO_full);
+  impl_bconv2d_bin_DI_pseudo_random(1, 5, 1, 5, 32*1, 32*9, 32*1, 32*3, 32, 32, 1, 3, 1, 3, 
+    (void*)&generic_kernel_full_image);
 }
 
 void test_bconv2d_bin_DI_pseudo_random(){
-  impl_bconv2d_bin_DI_pseudo_random(1, 4, 1, 4, 256*1, 256*2, 32*1, 32*3, 256, 32, 1, 3, 1, 3, (void*)&DI_full);
+  impl_bconv2d_bin_DI_pseudo_random(1, 4, 1, 4, 256*1, 256*2, 32*1, 32*3, 256, 32, 1, 3, 1, 3, 
+    (void*)&DI_kernel_full_image);
 }
 
 void test_bconv2d_bin_pseudo_random2(){
-  impl_bconv2d_bin_DI_pseudo_random2(1, 32, 32, 32, 256, 32, 32, (void*)&SISO_full);
+  impl_bconv2d_bin_DI_pseudo_random2(1, 32, 32, 32, 256, 32, 32, 
+    (void*)&generic_kernel_full_image);
 }
 
 void test_bconv2d_bin_DI_pseudo_random2(){
-  impl_bconv2d_bin_DI_pseudo_random2(1, 32, 256, 32, 32, 256, 32, (void*)&DI_full);
+  impl_bconv2d_bin_DI_pseudo_random2(1, 32, 256, 32, 32, 256, 32, 
+    (void*)&DI_kernel_full_image);
 }
 
 void test_bconv2d_bin_sub_image(){
-  impl_bconv2d_bin_sub_image(5, 5, 3, 3, 32*1, 32*9, 32*1, 32*3, 32, 32, 1, 3, 1, 3, (void*)&SISO_valid);
+  impl_bconv2d_bin_sub_image(5, 5, 3, 3, 32*1, 32*9, 32*1, 32*3, 32, 32, 1, 3, 1, 3, 
+    (void*)&generic_kernel_subregion);
 }
 
 void test_bconv2d_bin_DI_sub_image(){
-  impl_bconv2d_bin_sub_image(5, 5, 3, 3, 256*1, 256*3, 32*1, 32*3, 256, 32, 1, 3, 1, 3, (void*)&DI_valid);
+  impl_bconv2d_bin_sub_image(5, 5, 3, 3, 256*1, 256*3, 32*1, 32*3, 256, 32, 1, 3, 1, 3, 
+    (void*)&DI_kernel_subregion);
 }
 //TODO define channel strides in lib_nn
 
