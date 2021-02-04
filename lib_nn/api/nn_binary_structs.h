@@ -102,10 +102,10 @@ typedef struct {
   int16_t * cur_post_activation_mul;  //These are needed to hold variables that will
   int16_t * cur_post_activation_bias; //be indexed with ldd
 
-  int32_t vlsat;
+  int16_t * vlsat;
   int32_t ashr;
-  int32_t final_shr;
-  int32_t bias_multiplier;
+  int16_t * final_shr;
+  int16_t * bias_multiplier;
   const int16_t* post_activation_mul;  
   const int16_t* post_activation_bias; 
   int32_t input_channel_loop_counter;
@@ -143,7 +143,7 @@ typedef struct {
   const bnn_b32_t* K;
   int16_t * cur_post_activation_mul;  //These are needed to hold variables that will
   int16_t * cur_post_activation_bias; //be indexed with ldd
-  int32_t vlsat;
+  int16_t * vlsat;
   int32_t ashr;
   const int16_t* post_activation_mul;  
   const int16_t* post_activation_bias; 
@@ -158,11 +158,11 @@ typedef struct {
   int32_t final_channels_bytes;
   int32_t patch_loop_counter;
 
-  int32_t final_shr;
+  int16_t * final_shr;
   int32_t k_p_rewind;
   int32_t x_width_loop_counter;
   int32_t x_height_loop_counter;
-  int32_t bias_multiplier;
+  int16_t * bias_multiplier;
   int16_t * quantised_accu_modifier;
   int16_t * clamp_near;
   int16_t * clamp_far_0;
