@@ -140,11 +140,11 @@ static void solve_constraint(
 
   get_bounds_on_Exp(&min_M, &max_M, vpu_output_transform_multiplier, chans_out, 16);
 
-  //This is 31 as we cannot make a 32 bit bias with a shr of 15
+  //This is 30 as we cannot make a 32 bit bias with a shr of 14
   get_bounds_on_Exp(&min_B, &max_B, vpu_output_transform_bias, chans_out, 16 + 14);
 
   // we also know that A + M = B;
-  // Subtract one to ensure the addition is fine (one from A*M, B is already 31 bit at most)
+  // Subtract one to ensure the addition is fine (one from A*M, B is already 30 bit at most)
   max_B = min(max_A + max_M - 1, max_B);
     
   // printf("min_B:%d max_B:%d\n", min_B, max_B);
@@ -246,19 +246,9 @@ void bnn_quantise_activation(
   int min_16_bit_B, max_16_bit_B;
 
   get_bounds_on_Exp(&min_16_bit_B, &max_16_bit_B, vpu_output_transform_bias, chans_out, 16);
-
-  int adjusted_B;
-  if (B > max_16_bit_B){
-    adjusted_B = max_16_bit_B;
-    int32_t s = 1 << (B - max_16_bit_B);
-    assert(B - max_16_bit_B <= 14);
-    *bias_multipler = s;
-  } else {
-    *bias_multipler = 1;
-    adjusted_B = B;
-  }
-
-  assert(*bias_multipler > 0);
+ 
+  *bias_multipler = 1 << max(0, B - max_16_bit_B);
+  int adjusted_B = min(B, max_16_bit_B);
 
   // The -8 is here to leave the result in a 16 bit form so that the quantisation to 8 bit 
   // can deal with the asymertic rounding.
