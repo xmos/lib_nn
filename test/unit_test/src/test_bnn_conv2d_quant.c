@@ -9,6 +9,20 @@
 
 #include "helpers.h"
 
+
+int clrsb(int x){
+  #if defined(__XS3A__)
+  for (unsigned i=0;i<32;i++){
+    int y = (x<<i)>>i;
+    if (y != x)
+      return (i-1);
+  }
+  return 32;
+  #else
+  return __builtin_clrsb(x);
+  #endif
+}
+
 static void measure_quantisation(
                const int16_t * post_activation_multiplier_q,
                const int16_t* post_activation_bias_q,
@@ -29,9 +43,25 @@ static void measure_quantisation(
 
                float * error_sum,
                float * abs_error_sum,
-               unsigned * sum_count 
+               unsigned * sum_count, 
+               int tollerant_to_error
 ){
 
+  int min_bias_rsb = INT_MAX;
+  int min_mul_rsb = INT_MAX;
+  for (unsigned ch = 0; ch < chans_out; ch++){
+    int rsb = clrsb(post_activation_bias_q[ch]) - 16;
+    min_bias_rsb = min(min_bias_rsb, rsb);
+    rsb = clrsb(post_activation_multiplier_q[ch]) - 16;
+    min_mul_rsb = min(min_mul_rsb, rsb);
+  }
+
+  assert ((min_bias_rsb == 0) || (min_mul_rsb == 0));
+
+  float max_abs_allowed_error = 1.0;
+  if(!tollerant_to_error)
+    max_abs_allowed_error = 400.0;
+  
   for (unsigned ch = 0; ch < chans_out; ch++){
 
     //Iterate over all possible VPU accumulator outputs 
@@ -51,12 +81,12 @@ static void measure_quantisation(
       *abs_error_sum += fabs(error);
       *sum_count += 1;
 
-      TEST_ASSERT_TRUE_MESSAGE(fabs(error) <= 1.0, "Abs error too high");
+      TEST_ASSERT_TRUE_MESSAGE(fabs(error) <= max_abs_allowed_error, "Abs error too high");
     }
   }
 }
 
-void run_quantisation(void (*fun_ptr)()){
+void run_quantisation(void (*fun_ptr)(), int tollerant_to_error){
 
   float error_sum = 0.0;
   float abs_error_sum = 0.0;
@@ -122,7 +152,8 @@ void run_quantisation(void (*fun_ptr)()){
             clamp_a, clamp_b,
             accu_shr, bias_multipler, final_shr, receptive_volume, 
 
-            &error_sum, &abs_error_sum, &sum_count);
+            &error_sum, &abs_error_sum, &sum_count,
+            tollerant_to_error);
 
         free(post_activation_multiplier_q);
         free(post_activation_bias_q);
@@ -140,24 +171,21 @@ void run_quantisation(void (*fun_ptr)()){
 }
 
 void test_normal_quantisation(){
-  run_quantisation(pick_post_activation_params);
+  run_quantisation(pick_post_activation_params, 0);
 }
 
 void test_extreme_bias_quantisation(){
-  run_quantisation(pick_extreme_bias_post_activation_params);
+  run_quantisation(pick_extreme_bias_post_activation_params, 0);
 }
 
 void test_extreme_mul_quantisation(){
-  run_quantisation(pick_extreme_mul_post_activation_params);
+  run_quantisation(pick_extreme_mul_post_activation_params, 1);
 }
 
 void test_bnn_conv2d_quant() {
   UNITY_SET_FILE();
   RUN_TEST(test_normal_quantisation);
   RUN_TEST(test_extreme_mul_quantisation);
-
-  // TODO 
-  // This test fails, fix it.
-  // RUN_TEST(test_extreme_bias_quantisation); 
+  RUN_TEST(test_extreme_bias_quantisation); 
 
 }

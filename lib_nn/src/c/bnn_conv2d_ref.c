@@ -140,11 +140,12 @@ static void solve_constraint(
 
   get_bounds_on_Exp(&min_M, &max_M, vpu_output_transform_multiplier, chans_out, 16);
 
-  get_bounds_on_Exp(&min_B, &max_B, vpu_output_transform_bias, chans_out, 32);
+  //This is 31 as we cannot make a 32 bit bias with a shr of 15
+  get_bounds_on_Exp(&min_B, &max_B, vpu_output_transform_bias, chans_out, 16 + 14);
 
   // we also know that A + M = B;
-  // Subtract two to ensure the addition is fine (one from A*M and one from B)
-  max_B = max(max_A + max_M, max_B) - 2;
+  // Subtract one to ensure the addition is fine (one from A*M, B is already 31 bit at most)
+  max_B = min(max_A + max_M - 1, max_B);
     
   // printf("min_B:%d max_B:%d\n", min_B, max_B);
 
@@ -154,9 +155,9 @@ static void solve_constraint(
       // max_Product = max_A * max_M
       // this way we wouldnt need to subtract 2 from max_B
 
-      int B = A + M; //TODO does this need a plus one to account for the addition?
+      int B = A + M; 
 
-      if ((min_B < B) && (B < max_B)) {
+      if ((B >= min_B) && (B <= max_B)) {
         *B_res = B;
         *A_res = A;
         *M_res = M;
@@ -242,14 +243,22 @@ void bnn_quantise_activation(
     vpu_clamp_min,
     vpu_clamp_max);
     
-  // printf("A %d M %d B %d\n", A, M, B);
-  // We want to raise each bias by B 
-
   int min_16_bit_B, max_16_bit_B;
 
   get_bounds_on_Exp(&min_16_bit_B, &max_16_bit_B, vpu_output_transform_bias, chans_out, 16);
-  *bias_multipler = 1 << max(0, B - max_16_bit_B);
-  int adjusted_B = min(B, max_16_bit_B);
+
+  int adjusted_B;
+  if (B > max_16_bit_B){
+    adjusted_B = max_16_bit_B;
+    int32_t s = 1 << (B - max_16_bit_B);
+    assert(B - max_16_bit_B <= 14);
+    *bias_multipler = s;
+  } else {
+    *bias_multipler = 1;
+    adjusted_B = B;
+  }
+
+  assert(*bias_multipler > 0);
 
   // The -8 is here to leave the result in a 16 bit form so that the quantisation to 8 bit 
   // can deal with the asymertic rounding.
