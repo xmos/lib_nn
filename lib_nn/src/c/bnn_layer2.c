@@ -49,13 +49,7 @@ void bconv2d_int8_DIDO_valid(int8_t* Y_p,
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
 
-    const int16_t clamp_near,
-    const int16_t clamp_far_0,
-    const int16_t clamp_far_1,
-
-    const int accu_shr,
-    const int16_t bias_multiplier,
-    const int final_shr,
+    const output_transform_values_t * otv,
 
     const nn_image_params_t* x,
     const nn_image_params_t* y,
@@ -72,11 +66,8 @@ void bconv2d_int8_DIDO_valid(int8_t* Y_p,
         post_activation_multiplier_q,
         post_activation_bias_q, 
         
-        clamp_near,
-        clamp_far_0,
-        clamp_far_1,
-        
-        accu_shr, bias_multiplier, final_shr,
+        otv,
+
         x,  y,  k, 
         y_loc_x, y_loc_y,
         y_sub_width, y_sub_height, 
@@ -90,13 +81,8 @@ void bconv2d_int8_valid(int8_t* Y_p,
     const int16_t* post_activation_bias_q,
 
     const int16_t * quantised_accu_modifier,
-    const int16_t clamp_near,
-    const int16_t clamp_far_0,
-    const int16_t clamp_far_1,
 
-    const int accu_shr,
-    const int16_t bias_multiplier,
-    const int final_shr,
+    const output_transform_values_t * otv,
 
     bnn_b32_t * data_scratch,
 
@@ -116,11 +102,9 @@ void bconv2d_int8_valid(int8_t* Y_p,
         post_activation_bias_q, 
 
         quantised_accu_modifier, 
-        clamp_near,
-        clamp_far_0,
-        clamp_far_1,
-
-        accu_shr, bias_multiplier, final_shr,
+        
+        otv,
+        
         data_scratch,
         x,  y,  k, 
         y_loc_x, y_loc_y,

@@ -84,6 +84,7 @@ void bconv2d_int8_DIDO_impl_ref(nn_bconv2d_int8_DIDO_impl_plan_t * plan){
         }
 
         //Reduce the accumulator to 16 bits
+
         VLSAT(vpu, plan->vlsat);
         VSTR(vpu, &temp_mem);
         VLASHR(vpu, &temp_mem, plan->ashr);
@@ -319,6 +320,7 @@ int32_t compute_int8_over_RW_bytes(int32_t x_channels, int32_t k_height, int32_t
   return over_bytes;
 }
 
+
 static void bconv2d_int8_prepare(
     nn_bconv2d_int8_impl_plan_t* plan, int8_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, bnn_b32_t * data_scratch,
@@ -328,8 +330,7 @@ static void bconv2d_int8_prepare(
 
     const int16_t * quantised_accu_modifier,
 
-    const int accu_shr,
-    int16_t * vlsat,
+    const output_transform_values_t * otv,
 
     const nn_image_params_t* x, 
     const nn_image_params_t* y,
@@ -359,13 +360,13 @@ static void bconv2d_int8_prepare(
   plan->post_activation_bias = (int16_t *)post_activation_bias_q;
   plan->quantised_accu_modifier = (int16_t *)quantised_accu_modifier;
 
-  if(accu_shr >= 0){
-    *vlsat = accu_shr;
-    plan->ashr = 0;
-  } else {
-    *vlsat = 0;
-    plan->ashr = accu_shr;
-  }
+  plan->clamp_near = (const int16_t * )otv->clamp_near;
+  plan->clamp_far_0 = (const int16_t * )otv->clamp_far_0;
+  plan->clamp_far_1 = (const int16_t * )otv->clamp_far_1;
+  plan->bias_multiplier = (const int16_t * )otv->bias_multipler;
+  plan->final_shr = (const int16_t * )otv->final_shr;
+  plan->vlsat = (const int16_t * )otv->accu_shr;
+  plan->ashr = otv->accu_shl;
 
   int32_t bytes_per_input_channel = x->channels / 8;
 
@@ -433,9 +434,8 @@ static void bconv2d_int8_DIDO_prepare(
     
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
-
-    const int accu_shr,
-    int16_t * vlsat, 
+    
+    const output_transform_values_t * otv,
 
     const nn_image_params_t* x, 
     const nn_image_params_t* y,
@@ -463,13 +463,13 @@ static void bconv2d_int8_DIDO_prepare(
   plan->post_activation_mul = (int16_t *)post_activation_multiplier_q;
   plan->post_activation_bias = (int16_t *)post_activation_bias_q;
   
-  if(accu_shr >= 0){
-    *vlsat = accu_shr;
-    plan->ashr = 0;
-  } else {
-    *vlsat = 0;
-    plan->ashr = accu_shr;
-  }
+  plan->clamp_near = otv->clamp_near;
+  plan->clamp_far_0 = otv->clamp_far_0;
+  plan->clamp_far_1 = otv->clamp_far_1;
+  plan->bias_multiplier = otv->bias_multipler;
+  plan->final_shr = otv->final_shr;
+  plan->vlsat = otv->accu_shr;
+  plan->ashr = otv->accu_shl;
 
   int32_t bytes_per_input_channel = x->channels / 8;
 
@@ -514,19 +514,15 @@ static void bconv2d_int8_DIDO_prepare(
   plan->k_h_step = 0;
 }
 
+
+
 void bconv2d_int8_DIDO(int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
 
-    const int16_t clamp_near,
-    const int16_t clamp_far_0,
-    const int16_t clamp_far_1,
-
-    const int accu_shr,
-    const int16_t bias_multipler,
-    const int final_shr,
+    const output_transform_values_t * otv,
     
     const nn_image_params_t* x, //The full image of x
     const nn_image_params_t* y, // the full image of y
@@ -539,40 +535,14 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
 ){
   nn_bconv2d_int8_DIDO_impl_plan_t plan;
 
-  int16_t bias_multiplier_mem[VPU_INT16_EPV];
-  int16_t vlsat_mem[VPU_INT16_EPV];
-  int16_t final_shr_mem[VPU_INT16_EPV];
-  int16_t clamp_near_mem[VPU_INT16_EPV];
-  int16_t clamp_far_0_mem[VPU_INT16_EPV];
-  int16_t clamp_far_1_mem[VPU_INT16_EPV];
-
-  int16_t vlsat_value = -1;
-
   bconv2d_int8_DIDO_prepare(&plan, Y_p,
       X_p,  K_p,
       post_activation_multiplier_q, 
       post_activation_bias_q,
-      accu_shr,
-      &vlsat_value,
+      otv,
       x, y, k, 
       y_loc_x, y_loc_y, y_sub_width, y_sub_height,
       x_loc_x, x_loc_y);
-
-    for(unsigned i=0;i<VPU_INT16_EPV;i++){
-      clamp_near_mem[i] = clamp_near;
-      clamp_far_0_mem[i] = clamp_far_0;
-      clamp_far_1_mem[i] = clamp_far_1;
-      bias_multiplier_mem[i] = bias_multipler;
-      vlsat_mem[i] = vlsat_value;
-      final_shr_mem[i] = final_shr;
-    }
-
-    plan.clamp_near = clamp_near_mem;
-    plan.clamp_far_0 = clamp_far_0_mem; 
-    plan.clamp_far_1 = clamp_far_1_mem; 
-    plan.bias_multiplier = bias_multiplier_mem;
-    plan.vlsat = vlsat_mem; 
-    plan.final_shr = final_shr_mem; 
 
   bconv2d_int8_DIDO_impl(&plan);
 }
@@ -582,15 +552,9 @@ void bconv2d_int8(int8_t* Y_p,
     
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
-
     const int16_t * quantised_accu_modifier,
-    const int16_t clamp_near,
-    const int16_t clamp_far_0,
-    const int16_t clamp_far_1,
 
-    const int accu_shr,
-    const int16_t bias_multipler,
-    const int final_shr,
+    const output_transform_values_t * otv,
 
     bnn_b32_t * data_scratch,
     
@@ -605,40 +569,16 @@ void bconv2d_int8(int8_t* Y_p,
 ) {
     nn_bconv2d_int8_impl_plan_t plan;
 
-    int16_t bias_multiplier_mem[VPU_INT16_EPV];
-    int16_t vlsat_mem[VPU_INT16_EPV];
-    int16_t final_shr_mem[VPU_INT16_EPV];
-    int16_t clamp_near_mem[VPU_INT16_EPV];
-    int16_t clamp_far_0_mem[VPU_INT16_EPV];
-    int16_t clamp_far_1_mem[VPU_INT16_EPV];
-
-    int16_t vlsat_value = -1;
     bconv2d_int8_prepare(&plan, Y_p,
         X_p,  K_p, data_scratch,
         post_activation_multiplier_q, 
         post_activation_bias_q,
-        quantised_accu_modifier, 
-        accu_shr,
-        &vlsat_value,
+        quantised_accu_modifier,
+        otv,
         x, y, k, 
         y_loc_x, y_loc_y, y_sub_width, y_sub_height,
         x_loc_x, x_loc_y);
 
-    for(unsigned i=0;i<VPU_INT16_EPV;i++){
-      clamp_near_mem[i] = clamp_near;
-      clamp_far_0_mem[i] = clamp_far_0;
-      clamp_far_1_mem[i] = clamp_far_1;
-      bias_multiplier_mem[i] = bias_multipler;
-      vlsat_mem[i] = vlsat_value;
-      final_shr_mem[i] = final_shr;
-    }
-
-    plan.clamp_near = clamp_near_mem;
-    plan.clamp_far_0 = clamp_far_0_mem; 
-    plan.clamp_far_1 = clamp_far_1_mem; 
-    plan.bias_multiplier = bias_multiplier_mem;
-    plan.vlsat = vlsat_mem; 
-    plan.final_shr = final_shr_mem; 
 
     bconv2d_int8_impl(&plan);
 }
