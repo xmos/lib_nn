@@ -1260,48 +1260,7 @@ void impl_bconv2d_int8_directed4(void (*valid_impl)()) {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-static void SISO_valid(   
+static void generic_kernel_subregion(   
       int8_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 
@@ -1337,7 +1296,7 @@ static void SISO_valid(
   free(data_scratch);
 }
 
-static void DI_valid(   
+static void DIDO_kernel_subregion(   
       int8_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 
@@ -1370,7 +1329,7 @@ static void DI_valid(
 }
 
 
-static void SISO_full(   
+static void generic_kernel_full_image(   
       int8_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 
@@ -1404,7 +1363,7 @@ static void SISO_full(
   free(data_scratch);
 }
 
-static void DI_full(   
+static void DIDO_kernel_full_image(   
       int8_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 
@@ -1435,53 +1394,59 @@ static void DI_full(
 }
 
 void test_bconv2d_int8_sub_image(){
-  impl_bconv2d_int8_sub_image(5, 5, 3, 3, 32*1, 32*9, 4*1, 4*3, 32, 4, 1, 3, 1, 3, (void*)&SISO_valid);
+  impl_bconv2d_int8_sub_image(5, 5, 3, 3, 32*1, 32*9, 4*1, 4*3, 32, 4, 1, 3, 1, 3, 
+    (void*)&generic_kernel_subregion);
 }
 
-void test_bconv2d_int8_DI_sub_image(){
-  impl_bconv2d_int8_sub_image(5, 5, 3, 3, 256*1, 256*2, 16*1, 16*3, 256, 32, 1, 3, 1, 3, (void*)&DI_valid);
+void test_bconv2d_int8_DIDO_sub_image(){
+  impl_bconv2d_int8_sub_image(5, 5, 3, 3, 256*1, 256*2, 16*1, 16*3, 256, 32, 1, 3, 1, 3, 
+    (void*)&DIDO_kernel_subregion);
 }
 
 void test_bconv2d_int8_pseudo_random(){
-  impl_bconv2d_int8_pseudo_random(1, 5,1, 5, 32*1, 32*9, 4*1, 4*3, 32, 4, 1, 3, 1, 3, (void*)&SISO_full);
+  impl_bconv2d_int8_pseudo_random(1, 5,1, 5, 32*1, 32*9, 4*1, 4*3, 32, 4, 1, 3, 1, 3, 
+    (void*)&generic_kernel_full_image);
 }
 
-void test_bconv2d_int8_DI_pseudo_random(){
-  impl_bconv2d_int8_pseudo_random(1, 4, 1, 4, 256*1, 256*2, 32*1, 32*3, 256, 32, 1, 3, 1, 3, (void*)&DI_full);
+void test_bconv2d_int8_DIDO_pseudo_random(){
+  impl_bconv2d_int8_pseudo_random(1, 4, 1, 4, 256*1, 256*2, 32*1, 32*3, 256, 32, 1, 3, 1, 3, 
+    (void*)&DIDO_kernel_full_image);
 }
 
 void test_bconv2d_int8_pseudo_random2(){
-  impl_bconv2d_int8_pseudo_random2(1, 32, 32, 4, 4, 32, 4, (void*)&SISO_full);
+  impl_bconv2d_int8_pseudo_random2(1, 32, 32, 4, 4, 32, 4, 
+    (void*)&generic_kernel_full_image);
 }
 
-void test_bconv2d_int8_DI_pseudo_random2(){
-  impl_bconv2d_int8_pseudo_random2(1, 32, 256, 32, 32, 256, 32, (void*)&DI_full);
+void test_bconv2d_int8_DIDO_pseudo_random2(){
+  impl_bconv2d_int8_pseudo_random2(1, 32, 256, 32, 32, 256, 32, 
+    (void*)&DIDO_kernel_full_image);
 }
 
 void test_bconv2d_int8_directed(){
-  impl_bconv2d_int8_directed((void*)&SISO_full);
+  impl_bconv2d_int8_directed((void*)&generic_kernel_full_image);
 }
 void test_bconv2d_int8_directed2(){
-  impl_bconv2d_int8_directed2((void*)&SISO_full);
+  impl_bconv2d_int8_directed2((void*)&generic_kernel_full_image);
 }
 
 void test_bconv2d_int8_directed3(){
-  impl_bconv2d_int8_directed3((void*)&SISO_full);
+  impl_bconv2d_int8_directed3((void*)&generic_kernel_full_image);
 }
 void test_bconv2d_int8_directed4(){
-  impl_bconv2d_int8_directed4((void*)&SISO_full);
+  impl_bconv2d_int8_directed4((void*)&generic_kernel_full_image);
 }
 
 void test_bnn_conv2d_int8() {
   UNITY_SET_FILE();
 
+  RUN_TEST(test_bconv2d_int8_DIDO_pseudo_random);
+  RUN_TEST(test_bconv2d_int8_DIDO_pseudo_random2);
+  RUN_TEST(test_bconv2d_int8_DIDO_sub_image);
+
   RUN_TEST(test_bconv2d_int8_pseudo_random);
   RUN_TEST(test_bconv2d_int8_pseudo_random2);
   RUN_TEST(test_bconv2d_int8_sub_image);
-
-  RUN_TEST(test_bconv2d_int8_DI_pseudo_random);
-  RUN_TEST(test_bconv2d_int8_DI_pseudo_random2);
-  RUN_TEST(test_bconv2d_int8_DI_sub_image);
 
   RUN_TEST(test_bconv2d_int8_directed);
   RUN_TEST(test_bconv2d_int8_directed2);
