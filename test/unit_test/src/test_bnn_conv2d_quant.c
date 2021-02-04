@@ -72,9 +72,9 @@ void run_quantisation(void (*fun_ptr)()){
         int32_t larq_clamp_low = 0;
         int32_t larq_clamp_high = receptive_volume*2;
 
-        int16_t clamp_a;
-        int16_t clamp_b;
-        int16_t clamp_c;
+        int16_t clamp_near;
+        int16_t clamp_far_0;
+        int16_t clamp_far_1;
         
         int16_t *post_activation_multiplier_q = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
         int16_t *post_activation_bias_q = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
@@ -103,9 +103,9 @@ void run_quantisation(void (*fun_ptr)()){
             larq_clamp_high,
 
             quantised_accu_modifier,
-            &clamp_a,
-            &clamp_b,
-            &clamp_c,
+            &clamp_near,
+            &clamp_far_0,
+            &clamp_far_1,
 
             &accu_shr, &bias_multipler, &final_shr, receptive_volume, chan_overlaps
         );
@@ -119,7 +119,7 @@ void run_quantisation(void (*fun_ptr)()){
 
             chans_out,
 
-            clamp_a, clamp_b,
+            clamp_near, clamp_far_0,
             accu_shr, bias_multipler, final_shr, receptive_volume, 
 
             &error_sum, &abs_error_sum, &sum_count);

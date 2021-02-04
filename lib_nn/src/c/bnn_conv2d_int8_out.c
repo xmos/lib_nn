@@ -103,21 +103,21 @@ void bconv2d_int8_DIDO_impl_ref(nn_bconv2d_int8_DIDO_impl_plan_t * plan){
         VSTR(vpu, &temp_mem);
         VLASHR(vpu, &temp_mem, plan->ashr);
 
-        // vpu_sim_mem_print(plan->clamp_a, vpu->mode);
-        // vpu_sim_mem_print(plan->clamp_b, vpu->mode);
-        // vpu_sim_mem_print(plan->clamp_c, vpu->mode);
+        // vpu_sim_mem_print(plan->clamp_near, vpu->mode);
+        // vpu_sim_mem_print(plan->clamp_far_0, vpu->mode);
+        // vpu_sim_mem_print(plan->clamp_far_1, vpu->mode);
         // vpu_sim_print(vpu);
 
         //Saturate to larq high and low
-        VLSUB(vpu, plan->clamp_a);
-        VLSUB(vpu, plan->clamp_a);
+        VLSUB(vpu, plan->clamp_near);
+        VLSUB(vpu, plan->clamp_near);
         
         // vpu_sim_print(vpu);
 
-        VLSUB(vpu, plan->clamp_b);
-        VLSUB(vpu, plan->clamp_c);
-        VLSUB(vpu, plan->clamp_c);
-        VLSUB(vpu, plan->clamp_b);
+        VLSUB(vpu, plan->clamp_far_0);
+        VLSUB(vpu, plan->clamp_far_1);
+        VLSUB(vpu, plan->clamp_far_1);
+        VLSUB(vpu, plan->clamp_far_0);
 
         // vpu_sim_print(vpu);
 
@@ -181,9 +181,9 @@ void compute_patch(nn_bconv2d_int8_impl_plan_t *plan,
   vpu_vector_t *sat_mem, 
   vpu_vector_t * bias_shift, 
   vpu_vector_t * final_shr, 
-  vpu_vector_t * clamp_a_mem, 
-  vpu_vector_t * clamp_b_mem, 
-  vpu_vector_t * clamp_c_mem, 
+  vpu_vector_t * clamp_near_mem, 
+  vpu_vector_t * clamp_far_0_mem, 
+  vpu_vector_t * clamp_far_1_mem, 
   void * cur_post_activation_mul, 
   void * cur_post_activation_bias, 
   void * cur_quantised_accu_modifier
@@ -225,12 +225,12 @@ void compute_patch(nn_bconv2d_int8_impl_plan_t *plan,
   // vpu_sim_print(vpu);
   //Saturate to larq high and low
 
-  VLSUB(vpu, clamp_a_mem);
-  VLSUB(vpu, clamp_a_mem);
-  VLSUB(vpu, clamp_b_mem);
-  VLSUB(vpu, clamp_c_mem);
-  VLSUB(vpu, clamp_c_mem);
-  VLSUB(vpu, clamp_b_mem);
+  VLSUB(vpu, clamp_near_mem);
+  VLSUB(vpu, clamp_near_mem);
+  VLSUB(vpu, clamp_far_0_mem);
+  VLSUB(vpu, clamp_far_1_mem);
+  VLSUB(vpu, clamp_far_1_mem);
+  VLSUB(vpu, clamp_far_0_mem);
 
   // vpu_sim_print(vpu);
   //Save the 16 bit accumulator, A, to scratch
@@ -294,7 +294,7 @@ void bconv2d_int8_impl_ref(
       for (int oc = plan->output_channel_loop_counter; oc > 0 ; oc-- ) {
 
         compute_patch(plan, &K_p, XS3_VPU_VREG_WIDTH_BYTES, vpu, &sat_mem, &bias_shift, &final_shr,
-          (vpu_vector_t * )plan->clamp_a, (vpu_vector_t * )plan->clamp_b, (vpu_vector_t * )plan->clamp_c,
+          (vpu_vector_t * )plan->clamp_near, (vpu_vector_t * )plan->clamp_far_0, (vpu_vector_t * )plan->clamp_far_1,
           cur_post_activation_mul, cur_post_activation_bias, cur_quantised_accu_modifier);
 
         VSTRPV(vpu, Y_p, VPU_INT16_ACC_VR_MASK);
@@ -306,7 +306,7 @@ void bconv2d_int8_impl_ref(
       }
       
       compute_patch(plan, &K_p, plan->k_p_rewind, vpu, &sat_mem, &bias_shift, &final_shr,
-        (vpu_vector_t * )plan->clamp_a, (vpu_vector_t * )plan->clamp_b, (vpu_vector_t * )plan->clamp_c,
+        (vpu_vector_t * )plan->clamp_near, (vpu_vector_t * )plan->clamp_far_0, (vpu_vector_t * )plan->clamp_far_1,
         cur_post_activation_mul, cur_post_activation_bias, cur_quantised_accu_modifier);
 
       VSTRPV(vpu, Y_p, plan->final_channels_mask);
@@ -559,9 +559,9 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
 
-    const int16_t clamp_a,
-    const int16_t clamp_b,
-    const int16_t clamp_c,
+    const int16_t clamp_near,
+    const int16_t clamp_far_0,
+    const int16_t clamp_far_1,
 
     const int accu_shr,
     const int16_t bias_multipler,
@@ -589,21 +589,21 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
       y_loc_x, y_loc_y, y_sub_width, y_sub_height,
       x_loc_x, x_loc_y);
 
-  // printf("bconv2d_int8_DIDO_impl %x %x %x\n",clamp_a, clamp_b, clamp_c );
-  int16_t clamp_a_mem[VPU_INT16_EPV];
-  int16_t clamp_b_mem[VPU_INT16_EPV];
-  int16_t clamp_c_mem[VPU_INT16_EPV];
+  // printf("bconv2d_int8_DIDO_impl %x %x %x\n",clamp_near, clamp_far_0, clamp_far_1 );
+  int16_t clamp_near_mem[VPU_INT16_EPV];
+  int16_t clamp_far_0_mem[VPU_INT16_EPV];
+  int16_t clamp_far_1_mem[VPU_INT16_EPV];
 
   for(unsigned i=0;i<VPU_INT16_EPV;i++){
-    clamp_a_mem[i] = clamp_a;
-    clamp_b_mem[i] = clamp_b;
-    clamp_c_mem[i] = clamp_c;
+    clamp_near_mem[i] = clamp_near;
+    clamp_far_0_mem[i] = clamp_far_0;
+    clamp_far_1_mem[i] = clamp_far_1;
   }
 
-  // printf("bconv2d_int8_DIDO_impl %p %p %p\n",clamp_a_mem, clamp_b_mem, clamp_c_mem );
-  plan.clamp_a = clamp_a_mem;
-  plan.clamp_b = clamp_b_mem; 
-  plan.clamp_c = clamp_c_mem; 
+  // printf("bconv2d_int8_DIDO_impl %p %p %p\n",clamp_near_mem, clamp_far_0_mem, clamp_far_1_mem );
+  plan.clamp_near = clamp_near_mem;
+  plan.clamp_far_0 = clamp_far_0_mem; 
+  plan.clamp_far_1 = clamp_far_1_mem; 
 
   bconv2d_int8_DIDO_impl(&plan);
 }
@@ -615,9 +615,9 @@ void bconv2d_int8(int8_t* Y_p,
     const int16_t* post_activation_bias_q,
 
     const int16_t * quantised_accu_modifier,
-    const int16_t clamp_a,
-    const int16_t clamp_b,
-    const int16_t clamp_c,
+    const int16_t clamp_near,
+    const int16_t clamp_far_0,
+    const int16_t clamp_far_1,
 
     const int accu_shr,
     const int16_t bias_multipler,
@@ -649,18 +649,18 @@ void bconv2d_int8(int8_t* Y_p,
         x_loc_x, x_loc_y);
 
     // Clamps
-    int16_t clamp_a_mem[VPU_INT16_EPV];
-    int16_t clamp_b_mem[VPU_INT16_EPV];
-    int16_t clamp_c_mem[VPU_INT16_EPV];
+    int16_t clamp_near_mem[VPU_INT16_EPV];
+    int16_t clamp_far_0_mem[VPU_INT16_EPV];
+    int16_t clamp_far_1_mem[VPU_INT16_EPV];
 
     for(unsigned i=0;i<VPU_INT16_EPV;i++){
-      clamp_a_mem[i] = clamp_a;
-      clamp_b_mem[i] = clamp_b;
-      clamp_c_mem[i] = clamp_c;
+      clamp_near_mem[i] = clamp_near;
+      clamp_far_0_mem[i] = clamp_far_0;
+      clamp_far_1_mem[i] = clamp_far_1;
     }
-    plan.clamp_a = clamp_a_mem;
-    plan.clamp_b = clamp_b_mem; 
-    plan.clamp_c = clamp_c_mem; 
+    plan.clamp_near = clamp_near_mem;
+    plan.clamp_far_0 = clamp_far_0_mem; 
+    plan.clamp_far_1 = clamp_far_1_mem; 
 
     bconv2d_int8_impl(&plan);
 }
