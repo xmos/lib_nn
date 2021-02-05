@@ -135,46 +135,15 @@ VECT_INT8_MIN:
 #define S_TEMP_6                43
 #define S_TEMP_7                44
 
-//doesn't have to be double work aligned
-#define S_VLSAT_0               45
-#define S_VLSAT_1               46
-#define S_VLSAT_2               47
-#define S_VLSAT_3               48
-#define S_VLSAT_4               49
-#define S_VLSAT_5               50
-#define S_VLSAT_6               51
-#define S_VLSAT_7               52
+#define S_SAVE_R10              45
+#define S_SAVE_R4               46
+#define S_SAVE_R5               47
+#define S_SAVE_R6               48
+#define S_SAVE_R7               49
+#define S_SAVE_R8               50
+#define S_SAVE_R9               51
 
-//doesn't have to be double word aligned
-#define S_BIAS_SHIFT_0          53
-#define S_BIAS_SHIFT_1          54 
-#define S_BIAS_SHIFT_2          55
-#define S_BIAS_SHIFT_3          56
-#define S_BIAS_SHIFT_4          57
-#define S_BIAS_SHIFT_5          58
-#define S_BIAS_SHIFT_6          59
-#define S_BIAS_SHIFT_7          60
-
-//doesn't have to be double word aligned
-#define S_FINAL_SHR_0           61
-#define S_FINAL_SHR_1           62 
-#define S_FINAL_SHR_2           63
-#define S_FINAL_SHR_3           64
-#define S_FINAL_SHR_4           65
-#define S_FINAL_SHR_5           66
-#define S_FINAL_SHR_6           67
-#define S_FINAL_SHR_7           68
-
-#define S_SAVE_R10              69
-#define S_SAVE_R4               70
-#define S_SAVE_R5               71
-#define S_SAVE_R6               72
-#define S_SAVE_R7               73
-#define S_SAVE_R8               74
-#define S_SAVE_R9               75
-
-
-#define NSTACKWORDS  80 //TODO
+#define NSTACKWORDS  54 //TODO
 
 
 //Helpers that reference the above
@@ -309,14 +278,14 @@ bnn_compute_patch:
     {vlsub r[0]; nop}
     {vlsub s[0]; nop}
 
-
     {vstr t[0]; nop}
     {vclrdr; nop}
 
     //Scale and bias
     ldd t, s, sp[S_CUR_PA_MUL_p_CUR_PA_BIAS_p]
 
-    {vldc t[0]; ldaw r, sp[S_BIAS_SHIFT_0]}
+    {ldw r, sp[S_BIAS_MULTIPLIER]; nop}
+    {vldc t[0]; nop}
 
     {vlmacc r[0]; ldaw r, sp[S_TEMP]}
     {vldc r[0]; add t, t, r_256_bits}
@@ -391,46 +360,6 @@ FUNCTION_NAME:
     {vldr t[0]; add t, t, r_256_bits}
     {vstr s[0]; add s, s, r_256_bits} //fifth copy 
     //half of the above copy will have gone over S_TEMP but it wont matter
-
-    ldaw t, sp[S_VLSAT_0]
-    {ldw t, sp[S_VLSAT]; mov s, t}
-    { stw s, sp[S_VLSAT]; shl s, t, 16}
-    { add t, t, s; nop}
-
-    stw t, sp[S_VLSAT_0]
-    stw t, sp[S_VLSAT_1]
-    stw t, sp[S_VLSAT_2]
-    stw t, sp[S_VLSAT_3]
-    stw t, sp[S_VLSAT_4]
-    stw t, sp[S_VLSAT_5]
-    stw t, sp[S_VLSAT_6]
-    stw t, sp[S_VLSAT_7]
-
-    ldaw t, sp[S_BIAS_SHIFT_0]
-    {ldw t, sp[S_BIAS_MULTIPLIER]; mov s, t}
-    { stw s, sp[S_BIAS_MULTIPLIER]; shl s, t, 16}
-    { add t, t, s; nop}
-    stw t, sp[S_BIAS_SHIFT_0]
-    stw t, sp[S_BIAS_SHIFT_1]
-    stw t, sp[S_BIAS_SHIFT_2]
-    stw t, sp[S_BIAS_SHIFT_3]
-    stw t, sp[S_BIAS_SHIFT_4]
-    stw t, sp[S_BIAS_SHIFT_5]
-    stw t, sp[S_BIAS_SHIFT_6]
-    stw t, sp[S_BIAS_SHIFT_7]
-
-    ldaw t, sp[S_FINAL_SHR_0]
-    {ldw t, sp[S_FINAL_SHR]; mov s, t}
-    { stw s, sp[S_FINAL_SHR]; shl s, t, 16}
-    { add t, t, s; nop}
-    stw t, sp[S_FINAL_SHR_0]
-    stw t, sp[S_FINAL_SHR_1]
-    stw t, sp[S_FINAL_SHR_2]
-    stw t, sp[S_FINAL_SHR_3]
-    stw t, sp[S_FINAL_SHR_4]
-    stw t, sp[S_FINAL_SHR_5]
-    stw t, sp[S_FINAL_SHR_6]
-    stw t, sp[S_FINAL_SHR_7]
 
     bnn_h_loop:
 

@@ -15,6 +15,15 @@
 #define BCONV2D_INT8_INPUT_CH_INCREMENT       (8*sizeof(int32_t))
 #define BCONV2D_INT8_OUTPUT_CH_INCREMENT      (sizeof(int32_t))
 
+void bnn_populate_output_transform_values(
+  output_transform_values_t * otv, 
+  const int16_t clamp_near,
+  const int16_t clamp_far_0,
+  const int16_t clamp_far_1,
+
+  const int accu_shr,
+  const int16_t bias_multiplier,
+  const int16_t final_shr);
 
 /**
  * Reference implementation of the post accumulation activation.
@@ -163,13 +172,7 @@ void bconv2d_int8_DIDO_valid(int8_t* Y_p,
     const int16_t* post_activation_multiplier_q, 
     const int16_t* post_activation_bias_q,
 
-    const int16_t clamp_near,
-    const int16_t clamp_far_0,
-    const int16_t clamp_far_1,
-
-    const int accu_shr,
-    const int16_t bias_multiplier,
-    const int final_shr,
+    const output_transform_values_t * otv,
 
     const nn_image_params_t* x,
     const nn_image_params_t* y,
@@ -187,13 +190,8 @@ void bconv2d_int8_valid(int8_t* Y_p,
     const int16_t* post_activation_bias_q,
 
     const int16_t * quantised_accu_modifier,
-    const int16_t clamp_near,
-    const int16_t clamp_far_0,
-    const int16_t clamp_far_1,
 
-    const int accu_shr,
-    const int16_t bias_multiplier,
-    const int final_shr,
+    const output_transform_values_t * otv,
 
     bnn_b32_t * data_scratch,
 
@@ -413,13 +411,7 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
     const int16_t* post_activation_multiplier, 
     const int16_t* post_activation_bias,
 
-    const int16_t clamp_near,
-    const int16_t clamp_far_0,
-    const int16_t clamp_far_1,
-
-    const int accu_shr,
-    const int16_t bias_multipler,
-    const int final_shr,
+    const output_transform_values_t * otv,
     
     const nn_image_params_t* x, //The full image of x
     const nn_image_params_t* y, // the full image of y
@@ -438,13 +430,8 @@ void bconv2d_int8(int8_t* Y_p,
     const int16_t* post_activation_bias_q,
 
     const int16_t * quantised_accu_modifier,
-    const int16_t clamp_near,
-    const int16_t clamp_b,
-    const int16_t clamp_c,
-
-    const int accu_shr,
-    const int16_t bias_multipler,
-    const int final_shr,
+    
+    const output_transform_values_t * otv,
 
     bnn_b32_t * data_scratch,
     

@@ -14,6 +14,37 @@
 
 #include <stdio.h>
 
+static inline int min(int a, int b) { return (a < b) ? a : b; }
+static inline int max(int a, int b) { return (a > b) ? a : b; }
+
+void bnn_populate_output_transform_values(
+  output_transform_values_t * otv, 
+  const int16_t clamp_near,
+  const int16_t clamp_far_0,
+  const int16_t clamp_far_1,
+
+  const int accu_shr,
+  const int16_t bias_multiplier,
+  const int16_t final_shr){
+
+  int16_t shr = max(0, accu_shr);
+  int32_t shl = min(accu_shr, 0);
+
+  // This is implemented with a vlsat, if it's less than zero then its going to break
+  assert(final_shr >=0);
+
+  otv->accu_shl = shl; //for the vlashr
+  for(unsigned i=0;i<VPU_INT16_EPV;i++){
+    otv->clamp_near[i] = clamp_near;
+    otv->clamp_far_0[i] = clamp_far_0;
+    otv->clamp_far_1[i] = clamp_far_1;
+    otv->accu_shr[i] = shr; //for the vlsat
+    otv->final_shr[i] = final_shr;
+    otv->bias_multipler[i] = bias_multiplier;
+  }
+}
+
+
 static int64_t vpu_saturate(
     const int64_t input,
     const unsigned bits)
@@ -80,9 +111,6 @@ static int clrsbll(long long x){
   return __builtin_clrsbll(x);
   #endif
 }
-
-static inline int min(int a, int b) { return (a < b) ? a : b; }
-static inline int max(int a, int b) { return (a > b) ? a : b; }
 
 // This puts upper and lower limits on the range of A
 // A must reduce the vpu accumulator to 16 bit

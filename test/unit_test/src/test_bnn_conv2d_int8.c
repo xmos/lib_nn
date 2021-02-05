@@ -1269,13 +1269,13 @@ static void generic_kernel_subregion(
       int16_t * post_activation_bias_q,
 
       const int16_t * quantised_accu_modifier,
-      const int16_t clamp_a,
-      const int16_t clamp_b,
+      const int16_t clamp_near,
+      const int16_t clamp_far_0,
       const int16_t clamp_far_1,
 
       const int accu_shr,
       const int16_t bias_multiplier,
-      const int final_shr,
+      const int16_t final_shr,
 
       const nn_image_params_t* x,
       const nn_image_params_t* y,
@@ -1285,12 +1285,20 @@ static void generic_kernel_subregion(
 
   bnn_b32_t *data_scratch = (bnn_b32_t *) malloc(sizeof(bnn_b32_t)*(k->shape.height * k->shape.width * 
   x->channels/32 + DATA_SCRATCH_OVERREADWRITE_WORDS)); 
-      
+
+  output_transform_values_t otv;
+
+  bnn_populate_output_transform_values(
+    &otv, 
+    clamp_near, clamp_far_0, clamp_far_1,
+    accu_shr, bias_multiplier, final_shr
+  );
+
   bconv2d_int8_valid(Y_p, X_p,
                       K_p, post_activation_multiplier_q,
                       post_activation_bias_q, 
-                      quantised_accu_modifier, clamp_a, clamp_b, clamp_far_1,
-                      accu_shr, bias_multiplier, final_shr, 
+                      quantised_accu_modifier, 
+                      &otv,
                       data_scratch, x, y, k,
                       y_loc_x, y_loc_y, y_sub_width, y_sub_height);
   free(data_scratch);
@@ -1305,13 +1313,13 @@ static void DIDO_kernel_subregion(
       int16_t * post_activation_bias_q,
 
       const int16_t * quantised_accu_modifier,
-      const int16_t clamp_a,
-      const int16_t clamp_b,
+      const int16_t clamp_near,
+      const int16_t clamp_far_0,
       const int16_t clamp_far_1,
 
       const int accu_shr,
       const int16_t bias_multiplier,
-      const int final_shr,
+      const int16_t final_shr,
 
       const nn_image_params_t* x,
       const nn_image_params_t* y,
@@ -1319,11 +1327,17 @@ static void DIDO_kernel_subregion(
       unsigned y_loc_x, unsigned y_loc_y, 
       unsigned y_sub_width, unsigned y_sub_height){
 
+  output_transform_values_t otv;
+
+  bnn_populate_output_transform_values(
+    &otv, 
+    clamp_near, clamp_far_0, clamp_far_1,
+    accu_shr, bias_multiplier, final_shr
+  );
+
   bconv2d_int8_DIDO_valid(Y_p, (const bnn_b256_t*)X_p,
         (const bnn_b256_t*)K_p, post_activation_multiplier_q,
-        post_activation_bias_q, 
-        clamp_a, clamp_b, clamp_far_1,
-        accu_shr, bias_multiplier, final_shr, 
+        post_activation_bias_q, &otv,
         x, y, k,
         y_loc_x, y_loc_y, y_sub_width, y_sub_height);
 }
@@ -1338,13 +1352,13 @@ static void generic_kernel_full_image(
       int16_t * post_activation_bias_q,
 
       const int16_t * quantised_accu_modifier,
-      const int16_t clamp_a,
-      const int16_t clamp_b,
+      const int16_t clamp_near,
+      const int16_t clamp_far_0,
       const int16_t clamp_far_1,
       
       const int accu_shr,
       const int16_t bias_multiplier,
-      const int final_shr,
+      const int16_t final_shr,
 
       const nn_image_params_t* x,
       const nn_image_params_t* y,
@@ -1353,11 +1367,18 @@ static void generic_kernel_full_image(
   bnn_b32_t *data_scratch = (bnn_b32_t *) malloc(sizeof(bnn_b32_t)*(k->shape.height * k->shape.width * 
     x->channels/32 + DATA_SCRATCH_OVERREADWRITE_WORDS)); 
       
+  output_transform_values_t otv;
+
+  bnn_populate_output_transform_values(
+    &otv, 
+    clamp_near, clamp_far_0, clamp_far_1,
+    accu_shr, bias_multiplier, final_shr
+  );
+
   bconv2d_int8(Y_p, X_p,
                       K_p, post_activation_multiplier_q,
                       post_activation_bias_q, 
-                      quantised_accu_modifier, clamp_a, clamp_b, clamp_far_1,
-                      accu_shr, bias_multiplier, final_shr, 
+                      quantised_accu_modifier, &otv,
                       data_scratch, x, y, k,
                       0, 0, y->width, y->height, 0, 0);
   free(data_scratch);
@@ -1372,23 +1393,29 @@ static void DIDO_kernel_full_image(
       int16_t * post_activation_bias_q,
 
       const int16_t * quantised_accu_modifier,
-      const int16_t clamp_a,
-      const int16_t clamp_b,
+      const int16_t clamp_near,
+      const int16_t clamp_far_0,
       const int16_t clamp_far_1,
 
       const int accu_shr,
       const int16_t bias_multiplier,
-      const int final_shr,
+      const int16_t final_shr,
 
       const nn_image_params_t* x,
       const nn_image_params_t* y,
       const nn_window_params_t* k){
 
+  output_transform_values_t otv;
+
+  bnn_populate_output_transform_values(
+    &otv, 
+    clamp_near, clamp_far_0, clamp_far_1,
+    accu_shr, bias_multiplier, final_shr
+  );
+
   bconv2d_int8_DIDO(Y_p, (const bnn_b256_t*)X_p,
                       (const bnn_b256_t*)K_p, post_activation_multiplier_q,
-                      post_activation_bias_q, 
-                      clamp_a, clamp_b, clamp_far_1,
-                      accu_shr, bias_multiplier, final_shr, 
+                      post_activation_bias_q, &otv,
                       x, y, k,
                       0, 0, y->width, y->height, 0, 0);
 }
