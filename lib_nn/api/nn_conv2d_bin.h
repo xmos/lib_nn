@@ -15,6 +15,15 @@
 #define BCONV2D_INT8_INPUT_CH_INCREMENT       (8*sizeof(int32_t))
 #define BCONV2D_INT8_OUTPUT_CH_INCREMENT      (sizeof(int32_t))
 
+void bnn_populate_output_transform_values(
+  output_transform_values_t * otv, 
+  const int16_t clamp_near,
+  const int16_t clamp_far_0,
+  const int16_t clamp_far_1,
+
+  const int accu_shr,
+  const int16_t bias_multiplier,
+  const int16_t final_shr);
 
 /**
  * Reference implementation of the post accumulation activation.

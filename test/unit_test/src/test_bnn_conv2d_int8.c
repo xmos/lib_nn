@@ -1260,46 +1260,6 @@ void impl_bconv2d_int8_directed4(void (*valid_impl)()) {
 }
 
 
-void bnn_populate_output_transform_values(
-  output_transform_values_t * otv, 
-  const int16_t clamp_near,
-  const int16_t clamp_far_0,
-  const int16_t clamp_far_1,
-
-  const int accu_shr,
-  const int16_t bias_multiplier,
-  const int16_t final_shr)
-{
-
-  int16_t shr;
-  int32_t shl;
-
-  if(accu_shr >= 0){
-    shr = accu_shr;
-    shl = 0;
-  } else {
-    shr = 0;
-    shl = accu_shr;
-  }
-
-  // This is implemented with a vlsat, if it's less than zero then its going to break
-  assert(final_shr >=0);
-
-  // The vlashr is only used for shifting left as the vlsat is for shifting right
-  assert(shl <= 0);
-  assert(shr >= 0);
-
-  otv->accu_shl = shl; //for the vlashr
-  for(unsigned i=0;i<VPU_INT16_EPV;i++){
-    otv->clamp_near[i] = clamp_near;
-    otv->clamp_far_0[i] = clamp_far_0;
-    otv->clamp_far_1[i] = clamp_far_1;
-    otv->accu_shr[i] = shr; //for the vlsat
-    otv->final_shr[i] = final_shr;
-    otv->bias_multipler[i] = bias_multiplier;
-  }
-}
-
 static void generic_kernel_subregion(   
       int8_t* Y_p, 
       const bnn_b32_t* X_p,
