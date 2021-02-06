@@ -178,11 +178,9 @@ typedef struct {
     int16_t clamp_near[VPU_INT16_EPV];
     int16_t clamp_far_0[VPU_INT16_EPV];
     int16_t clamp_far_1[VPU_INT16_EPV];
-
-    int16_t accu_shr[VPU_INT16_EPV]; //for the vlsat
-    int32_t accu_shl;                //for the vlashr
-
     int16_t bias_multipler[VPU_INT16_EPV];
     int16_t final_shr[VPU_INT16_EPV];
+    int16_t accu_shr[VPU_INT16_EPV]; //for the vlsat
+    int32_t accu_shl;                //for the vlashr
 
 } output_transform_values_t;
