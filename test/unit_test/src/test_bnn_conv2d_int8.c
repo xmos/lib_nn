@@ -118,13 +118,30 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
     &x, &y, &k,
     start_channel, channel_count);
   
-  // printf("\n");
-  // for (unsigned e=0;e<y_height * y_width * chans_out;++e){
-  //   printf("ref: %d act: %d\n", Y_ref_p[e], Y_p[e]);
-  // }
-  for (unsigned e=0;e<y_height * y_width * chans_out;++e)
-    TEST_ASSERT_INT8_WITHIN(1, Y_ref_p[e], Y_p[e]);
-  // exit(10);
+  int8_t(*Y)[y.width][y.channels] =
+      (int8_t(*)[y.width][y.channels])Y_p;
+
+  int8_t(*Y_ref)[y.width][y.channels] =
+      (int8_t(*)[y.width][y.channels])Y_ref_p;
+
+  for (unsigned h = 0; h < y.height; h++) {
+    for (unsigned w = 0; w < y.width; w++) {
+
+      for (unsigned c = 0; c < start_channel; c++) {
+        TEST_ASSERT_EQUAL_INT8(undef_sentinal, Y[h][w][c]);
+      }
+      for (unsigned c = start_channel; c < channel_count; c++) {
+        TEST_ASSERT_INT8_WITHIN(1, Y_ref[h][w][c], Y[h][w][c]);
+      }
+      for (unsigned c = start_channel+channel_count; c < y.channels; c++) {
+        TEST_ASSERT_EQUAL_INT8(undef_sentinal, Y[h][w][c]);
+      }
+    }
+  }
+  
+  // for (unsigned e=0;e<y_height * y_width * chans_out;++e)
+  //   TEST_ASSERT_INT8_WITHIN(1, Y_ref_p[e], Y_p[e]);
+
   //FIXME - why wont this link? The above is a workaround
   // TEST_ASSERT_INT8_ARRAY_WITHIN(1, Y_ref_p, Y_p, y_height * y_width * chans_out);
 }
@@ -184,8 +201,9 @@ void impl_bconv2d_int8_pseudo_random(
                   float * post_activation_bias = (float *)malloc(sizeof(float)*chans_out);
                   int * chan_overlaps = (int *)malloc(sizeof(int)*(chans_out));
 
-                  int8_t * Y     = (int8_t *) malloc(sizeof(int8_t) * y_height * y_width * chans_out);
-                  int8_t * Y_ref = (int8_t *) malloc(sizeof(int8_t) * y_height * y_width * chans_out);
+                  size_t Y_bytes = sizeof(int8_t) * y_height * y_width * chans_out;
+                  int8_t * Y     = (int8_t *) malloc(Y_bytes);
+                  int8_t * Y_ref = (int8_t *) malloc(Y_bytes);
       
                   assert(X_ref);
                   assert(Y);
@@ -206,9 +224,9 @@ void impl_bconv2d_int8_pseudo_random(
                     for(unsigned c=0;c<1<<0;c++){
                       int seed = c;
 
+                    
                       for(unsigned b=0;b<X_ref_bytes/sizeof(int);b++)
                         ((int*)X_ref)[b] = pseudo_rand(&seed);
-
                       
                       for(unsigned b=0;b<K_ref_bytes/sizeof(int);b++)
                         ((int*)K_ref)[b] = pseudo_rand(&seed);
@@ -222,6 +240,8 @@ void impl_bconv2d_int8_pseudo_random(
 
                         for(unsigned start_channel = 0; start_channel < chans_out - chans_out_inc; start_channel += chans_out_inc ){
                           for(unsigned channel_count = chans_out_inc; channel_count <= chans_out -  start_channel;channel_count += chans_out_inc){
+                            memset(Y_ref, undef_sentinal, Y_bytes);
+                            memset(Y, undef_sentinal, Y_bytes);
                           
                             run_int8_config(
                                 (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
@@ -245,20 +265,22 @@ void impl_bconv2d_int8_pseudo_random(
 
                         for(unsigned start_channel = 0; start_channel < chans_out - chans_out_inc; start_channel += chans_out_inc ){
                           for(unsigned channel_count = chans_out_inc; channel_count <= chans_out -  start_channel;channel_count += chans_out_inc){
-                          run_int8_config(
-                              (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
-                              (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
-                              (float*)post_activation_multiplier,
-                              (float*)post_activation_bias, 
-                              (int16_t*)post_activation_multiplier_q,
-                              (int16_t*)post_activation_bias_q,  
-                              (int16_t*)quantised_accu_modifier,
-                              (int*) chan_overlaps,
-                              x_height,
-                              x_width, k_height, k_width, chans_in, chans_out, h_stride,
-                              v_stride, larq_clamp_min, larq_clamp_max, start_channel, channel_count, valid_impl);
+                            memset(Y_ref, undef_sentinal, Y_bytes);
+                            memset(Y, undef_sentinal, Y_bytes);
+                            run_int8_config(
+                                (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
+                                (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
+                                (float*)post_activation_multiplier,
+                                (float*)post_activation_bias, 
+                                (int16_t*)post_activation_multiplier_q,
+                                (int16_t*)post_activation_bias_q,  
+                                (int16_t*)quantised_accu_modifier,
+                                (int*) chan_overlaps,
+                                x_height,
+                                x_width, k_height, k_width, chans_in, chans_out, h_stride,
+                                v_stride, larq_clamp_min, larq_clamp_max, start_channel, channel_count, valid_impl);
+                            }
                           }
-                        }
                         }
                       }
 
@@ -268,20 +290,22 @@ void impl_bconv2d_int8_pseudo_random(
                           int32_t larq_clamp_max = 2*(int32_t)receptive_volume + delta_max;
 
                           for(unsigned start_channel = 0; start_channel < chans_out - chans_out_inc; start_channel += chans_out_inc ){
-                            for(unsigned channel_count = chans_out_inc; channel_count <= chans_out -  start_channel;channel_count += chans_out_inc){
-                          run_int8_config(
-                              (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
-                              (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
-                              (float*)post_activation_multiplier,
-                              (float*)post_activation_bias, 
-                              (int16_t*)post_activation_multiplier_q,
-                              (int16_t*)post_activation_bias_q,  
-                              (int16_t*)quantised_accu_modifier,
-                              (int*) chan_overlaps,
-                              x_height,
-                              x_width, k_height, k_width, chans_in, chans_out, h_stride,
-                              v_stride, larq_clamp_min, larq_clamp_max, start_channel, channel_count,valid_impl);
-                            }
+                            for(unsigned channel_count = chans_out_inc; channel_count <= chans_out -  start_channel;channel_count += chans_out_inc){ 
+                              memset(Y_ref, undef_sentinal, Y_bytes);
+                              memset(Y, undef_sentinal, Y_bytes);
+                              run_int8_config(
+                                  (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
+                                  (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
+                                  (float*)post_activation_multiplier,
+                                  (float*)post_activation_bias, 
+                                  (int16_t*)post_activation_multiplier_q,
+                                  (int16_t*)post_activation_bias_q,  
+                                  (int16_t*)quantised_accu_modifier,
+                                  (int*) chan_overlaps,
+                                  x_height,
+                                  x_width, k_height, k_width, chans_in, chans_out, h_stride,
+                                  v_stride, larq_clamp_min, larq_clamp_max, start_channel, channel_count,valid_impl);
+                              }
                             }
 
                         }
@@ -356,8 +380,9 @@ void impl_bconv2d_int8_pseudo_random2(
           float * post_activation_bias = (float *)malloc(sizeof(float)*chans_out);
           int * chan_overlaps = (int *)malloc(sizeof(int)*(chans_out));
 
-          int8_t * Y     = (int8_t *) malloc(sizeof(int8_t) * y_height * y_width * chans_out);
-          int8_t * Y_ref = (int8_t *) malloc(sizeof(int8_t) * y_height * y_width * chans_out);
+          size_t Y_bytes = sizeof(int8_t) * y_height * y_width * chans_out;
+          int8_t * Y     = (int8_t *) malloc(Y_bytes);
+          int8_t * Y_ref = (int8_t *) malloc(Y_bytes);
 
           assert(X_ref);
           assert(Y);
@@ -394,6 +419,9 @@ void impl_bconv2d_int8_pseudo_random2(
             for(unsigned start_channel = 0; start_channel < chans_out - chans_out_inc; start_channel += chans_out_inc ){
               for(unsigned channel_count = chans_out_inc; channel_count <= chans_out -  start_channel;channel_count += chans_out_inc){
                       
+                memset(Y_ref, undef_sentinal, Y_bytes);
+                memset(Y, undef_sentinal, Y_bytes);
+                
                 run_int8_config(
                     (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
                     (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
@@ -472,8 +500,14 @@ static void run_int8_sub_image(
     for (unsigned w = 0; w < y->width; w++) {
       if((h >= y_loc_y) && (h < (y_loc_y + y_sub_height)) && (w >= y_loc_x) && (w < (y_loc_x + y_sub_width))){
         //If the result should have been computed then check it against the reference
-        for (unsigned c = 0; c < y->channels; c++) {
+        for (unsigned c = 0; c < start_channel; c++) {
+          TEST_ASSERT_EQUAL_INT8(undef_sentinal, Y[h][w][c]);
+        }
+        for (unsigned c = start_channel; c < channel_count; c++) {
           TEST_ASSERT_INT8_WITHIN(1, Y_ref[h][w][c], Y[h][w][c]);
+        }
+        for (unsigned c = start_channel+channel_count; c < y->channels; c++) {
+          TEST_ASSERT_EQUAL_INT8(undef_sentinal, Y[h][w][c]);
         }
       } else {
         //Otherwise check thet is hasn't been written to
