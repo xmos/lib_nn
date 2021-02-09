@@ -14,6 +14,37 @@
 
 #include <stdio.h>
 
+static inline int min(int a, int b) { return (a < b) ? a : b; }
+static inline int max(int a, int b) { return (a > b) ? a : b; }
+
+void bnn_populate_output_transform_values(
+  output_transform_values_t * otv, 
+  const int16_t clamp_near,
+  const int16_t clamp_far_0,
+  const int16_t clamp_far_1,
+
+  const int accu_shr,
+  const int16_t bias_multiplier,
+  const int16_t final_shr){
+
+  int16_t shr = max(0, accu_shr);
+  int32_t shl = min(accu_shr, 0);
+
+  // This is implemented with a vlsat, if it's less than zero then its going to break
+  assert(final_shr >=0);
+
+  otv->accu_shl = shl; //for the vlashr
+  for(unsigned i=0;i<VPU_INT16_EPV;i++){
+    otv->clamp_near[i] = clamp_near;
+    otv->clamp_far_0[i] = clamp_far_0;
+    otv->clamp_far_1[i] = clamp_far_1;
+    otv->accu_shr[i] = shr; //for the vlsat
+    otv->final_shr[i] = final_shr;
+    otv->bias_multipler[i] = bias_multiplier;
+  }
+}
+
+
 static int64_t vpu_saturate(
     const int64_t input,
     const unsigned bits)
@@ -81,9 +112,6 @@ static int clrsbll(long long x){
   #endif
 }
 
-static inline int min(int a, int b) { return (a < b) ? a : b; }
-static inline int max(int a, int b) { return (a > b) ? a : b; }
-
 // This puts upper and lower limits on the range of A
 // A must reduce the vpu accumulator to 16 bit
 // A must not remove all the imformation from the vpu accumulator
@@ -140,11 +168,12 @@ static void solve_constraint(
 
   get_bounds_on_Exp(&min_M, &max_M, vpu_output_transform_multiplier, chans_out, 16);
 
-  get_bounds_on_Exp(&min_B, &max_B, vpu_output_transform_bias, chans_out, 32);
+  //This is 30 as we cannot make a 32 bit bias with a shr of 14
+  get_bounds_on_Exp(&min_B, &max_B, vpu_output_transform_bias, chans_out, 16 + 14);
 
   // we also know that A + M = B;
-  // Subtract two to ensure the addition is fine (one from A*M and one from B)
-  max_B = max(max_A + max_M, max_B) - 2;
+  // Subtract one to ensure the addition is fine (one from A*M, B is already 30 bit at most)
+  max_B = min(max_A + max_M - 1, max_B);
     
   // printf("min_B:%d max_B:%d\n", min_B, max_B);
 
@@ -154,9 +183,9 @@ static void solve_constraint(
       // max_Product = max_A * max_M
       // this way we wouldnt need to subtract 2 from max_B
 
-      int B = A + M; //TODO does this need a plus one to account for the addition?
+      int B = A + M; 
 
-      if ((min_B < B) && (B < max_B)) {
+      if ((B >= min_B) && (B <= max_B)) {
         *B_res = B;
         *A_res = A;
         *M_res = M;
@@ -181,9 +210,9 @@ void bnn_quantise_activation(
                int32_t larq_clamp_max,
 
                int16_t * quantised_accu_modifier,
-               int16_t * clamp_a,
-               int16_t * clamp_b,
-               int16_t * clamp_c,
+               int16_t * clamp_near,
+               int16_t * clamp_far_0,
+               int16_t * clamp_far_1,
 
                int * accu_shr,
                int16_t * bias_multipler,
@@ -242,12 +271,10 @@ void bnn_quantise_activation(
     vpu_clamp_min,
     vpu_clamp_max);
     
-  // printf("A %d M %d B %d\n", A, M, B);
-  // We want to raise each bias by B 
-
   int min_16_bit_B, max_16_bit_B;
 
   get_bounds_on_Exp(&min_16_bit_B, &max_16_bit_B, vpu_output_transform_bias, chans_out, 16);
+ 
   *bias_multipler = 1 << max(0, B - max_16_bit_B);
   int adjusted_B = min(B, max_16_bit_B);
 
@@ -293,17 +320,17 @@ void bnn_quantise_activation(
   int32_t t_low_clamp_offset  = (int32_t)((float)low_clamp_limit - min_shifted_accu); //round?
   int32_t t_high_clamp_offset = (int32_t)((float)high_clamp_limit - max_shifted_accu);
 
-  int32_t t_clamp_a = t_low_clamp_offset, t_clamp_b = t_high_clamp_offset;
-  if (abs(t_clamp_a) >= abs(t_clamp_b)) {
-    t_clamp_a = t_high_clamp_offset;
-    t_clamp_b = t_low_clamp_offset;
+  int32_t t_clamp_near = t_low_clamp_offset, t_clamp_far_0 = t_high_clamp_offset;
+  if (abs(t_clamp_near) >= abs(t_clamp_far_0)) {
+    t_clamp_near = t_high_clamp_offset;
+    t_clamp_far_0 = t_low_clamp_offset;
   }
-  int32_t t_clamp_c = t_clamp_b / 2;
-  t_clamp_b -= t_clamp_c;
+  int32_t t_clamp_far_1 = t_clamp_far_0 / 2;
+  t_clamp_far_0 -= t_clamp_far_1;
 
-  *clamp_a = -t_clamp_a;
-  *clamp_b = -t_clamp_b;
-  *clamp_c = t_clamp_c;
+  *clamp_near = -t_clamp_near;
+  *clamp_far_0 = -t_clamp_far_0;
+  *clamp_far_1 = t_clamp_far_1;
 
 
   free(vpu_output_transform_multiplier);

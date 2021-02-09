@@ -124,7 +124,7 @@ VECT_INT8_MIN:
 #define S_SAVE_R9               34
 #define S_SAVE_R10              35
 
-//Note: The elements 30 -> 37 will be clobbered when copying the plan to the stack
+//Note: The elements 36 -> 43 will be clobbered when copying the plan to the stack
 //      this might mean leaving some spare stack space
 
 //doesn't have to be double word aligned
@@ -137,37 +137,7 @@ VECT_INT8_MIN:
 #define S_TEMP_6 42
 #define S_TEMP_7 43
 
-//doesn't have to be double word aligned
-#define S_VLSAT_0 44
-#define S_VLSAT_1 45 
-#define S_VLSAT_2 46
-#define S_VLSAT_3 47
-#define S_VLSAT_4 48
-#define S_VLSAT_5 49
-#define S_VLSAT_6 50
-#define S_VLSAT_7 51
-
-//doesn't have to be double word aligned
-#define S_BIAS_SHIFT_0 52
-#define S_BIAS_SHIFT_1 53 
-#define S_BIAS_SHIFT_2 54
-#define S_BIAS_SHIFT_3 55
-#define S_BIAS_SHIFT_4 56
-#define S_BIAS_SHIFT_5 57
-#define S_BIAS_SHIFT_6 58
-#define S_BIAS_SHIFT_7 59
-
-//doesn't have to be double word aligned
-#define S_FINAL_SHR_0 60
-#define S_FINAL_SHR_1 61 
-#define S_FINAL_SHR_2 62
-#define S_FINAL_SHR_3 63
-#define S_FINAL_SHR_4 64
-#define S_FINAL_SHR_5 65
-#define S_FINAL_SHR_6 66
-#define S_FINAL_SHR_7 67
-
-#define NSTACKWORDS  84 
+#define NSTACKWORDS  46 
 
 //Helpers that reference the above
 #define S_X_p_S_OUTER_X_H_STEP (S_X_p/2)                        //1
@@ -305,46 +275,6 @@ FUNCTION_NAME:
     {vldr t[0]; add t, t, r_256_bits}
     {vstr s[0]; add s, s, r_256_bits} //This could use a bit mask to only store the relavent fields
 
-
-    ldaw t, sp[S_VLSAT_0]
-    {ldw t, sp[S_VLSAT]; mov s, t}
-    { stw s, sp[S_VLSAT]; shl s, t, 16}
-    { add t, t, s; nop}
-    stw t, sp[S_VLSAT_0]
-    stw t, sp[S_VLSAT_1]
-    stw t, sp[S_VLSAT_2]
-    stw t, sp[S_VLSAT_3]
-    stw t, sp[S_VLSAT_4]
-    stw t, sp[S_VLSAT_5]
-    stw t, sp[S_VLSAT_6]
-    stw t, sp[S_VLSAT_7]
-
-    ldaw t, sp[S_BIAS_SHIFT_0]
-    {ldw t, sp[S_BIAS_MULTIPLIER]; mov s, t}
-    { stw s, sp[S_BIAS_MULTIPLIER]; shl s, t, 16}
-    { add t, t, s; nop}
-    stw t, sp[S_BIAS_SHIFT_0]
-    stw t, sp[S_BIAS_SHIFT_1]
-    stw t, sp[S_BIAS_SHIFT_2]
-    stw t, sp[S_BIAS_SHIFT_3]
-    stw t, sp[S_BIAS_SHIFT_4]
-    stw t, sp[S_BIAS_SHIFT_5]
-    stw t, sp[S_BIAS_SHIFT_6]
-    stw t, sp[S_BIAS_SHIFT_7]
-
-    ldaw t, sp[S_FINAL_SHR_0]
-    {ldw t, sp[S_FINAL_SHR]; mov s, t}
-    { stw s, sp[S_FINAL_SHR]; shl s, t, 16}
-    { add t, t, s; nop}
-    stw t, sp[S_FINAL_SHR_0]
-    stw t, sp[S_FINAL_SHR_1]
-    stw t, sp[S_FINAL_SHR_2]
-    stw t, sp[S_FINAL_SHR_3]
-    stw t, sp[S_FINAL_SHR_4]
-    stw t, sp[S_FINAL_SHR_5]
-    stw t, sp[S_FINAL_SHR_6]
-    stw t, sp[S_FINAL_SHR_7]
-
     bnn_h_loop:
 
         {ldw x_width_loop, sp[S_X_WIDTH_LOOP_COUNTER]; nop}
@@ -385,7 +315,8 @@ FUNCTION_NAME:
                 //Scale and bias
                 ldd t, s, sp[S_CUR_PA_MUL_p_CUR_PA_BIAS_p] //s in mul, t is bias
 
-                {vldc t[0]; ldaw r, sp[S_BIAS_SHIFT_0]}
+                {ldw r, sp[S_BIAS_MULTIPLIER]; nop}
+                {vldc t[0]; nop}
                 {vlmacc r[0]; ldaw r, sp[S_TEMP]}
                 {vldc r[0]; add t, t, r_256_bits}
                 {vlmacc s[0]; add s, s, r_256_bits}

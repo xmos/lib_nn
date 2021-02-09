@@ -86,7 +86,7 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
 
   int16_t clamp_a;
   int16_t clamp_b;
-  int16_t clamp_c;
+  int16_t clamp_far_1;
 
   bnn_quantise_activation(
       post_activation_multiplier_q,
@@ -103,7 +103,7 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
       quantised_accu_modifier,
       &clamp_a,
       &clamp_b,
-      &clamp_c,
+      &clamp_far_1,
 
       &accu_shr, &bias_multipler, &final_shr, receptive_volume, chan_overlaps
   );
@@ -111,7 +111,7 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
   test_fn((int8_t*)Y_p, (const bnn_b32_t*)X_ref,
     (const bnn_b32_t*)K_p, post_activation_multiplier_q, 
     post_activation_bias_q, 
-    quantised_accu_modifier, clamp_a, clamp_b, clamp_c,
+    quantised_accu_modifier, clamp_a, clamp_b, clamp_far_1,
     accu_shr, bias_multipler, final_shr,
     &x, &y, &k);
   
@@ -418,7 +418,7 @@ static void run_int8_sub_image(
               int16_t * quantised_accu_modifier,
               int16_t clamp_a,
               int16_t clamp_b,
-              int16_t clamp_c,
+              int16_t clamp_far_1,
               
               const int accu_shr,
               const int16_t bias_multiplier,
@@ -436,7 +436,7 @@ static void run_int8_sub_image(
       K_p, post_activation_multiplier_q,
       post_activation_bias_q, 
       
-      quantised_accu_modifier, clamp_a, clamp_b, clamp_c,
+      quantised_accu_modifier, clamp_a, clamp_b, clamp_far_1,
       accu_shr, bias_multiplier, final_shr, 
       x, y, k,
       y_loc_x, y_loc_y, y_sub_width, y_sub_height);
@@ -563,7 +563,7 @@ void impl_bconv2d_int8_sub_image(
 
             int16_t clamp_a;
             int16_t clamp_b;
-            int16_t clamp_c;
+            int16_t clamp_far_1;
 
             bnn_quantise_activation(
                 post_activation_multiplier_q,
@@ -580,7 +580,7 @@ void impl_bconv2d_int8_sub_image(
                quantised_accu_modifier,
                &clamp_a,
                &clamp_b,
-               &clamp_c,
+               &clamp_far_1,
 
                 &accu_shr, &bias_multiplier, &final_shr, receptive_volume, chan_overlaps
             );
@@ -606,7 +606,7 @@ void impl_bconv2d_int8_sub_image(
                           (int16_t *) quantised_accu_modifier,
                           clamp_a,
                           clamp_b,
-                          clamp_c,
+                          clamp_far_1,
 
                           (const int )accu_shr,
                           (const int16_t) bias_multiplier,
@@ -1260,48 +1260,7 @@ void impl_bconv2d_int8_directed4(void (*valid_impl)()) {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-static void SISO_valid(   
+static void generic_kernel_subregion(   
       int8_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 
@@ -1310,13 +1269,13 @@ static void SISO_valid(
       int16_t * post_activation_bias_q,
 
       const int16_t * quantised_accu_modifier,
-      const int16_t clamp_a,
-      const int16_t clamp_b,
-      const int16_t clamp_c,
+      const int16_t clamp_near,
+      const int16_t clamp_far_0,
+      const int16_t clamp_far_1,
 
       const int accu_shr,
       const int16_t bias_multiplier,
-      const int final_shr,
+      const int16_t final_shr,
 
       const nn_image_params_t* x,
       const nn_image_params_t* y,
@@ -1326,19 +1285,27 @@ static void SISO_valid(
 
   bnn_b32_t *data_scratch = (bnn_b32_t *) malloc(sizeof(bnn_b32_t)*(k->shape.height * k->shape.width * 
   x->channels/32 + DATA_SCRATCH_OVERREADWRITE_WORDS)); 
-      
+
+  output_transform_values_t otv;
+
+  bnn_populate_output_transform_values(
+    &otv, 
+    clamp_near, clamp_far_0, clamp_far_1,
+    accu_shr, bias_multiplier, final_shr
+  );
+
   bconv2d_int8_valid(Y_p, X_p,
                       K_p, post_activation_multiplier_q,
                       post_activation_bias_q, 
-                      quantised_accu_modifier, clamp_a, clamp_b, clamp_c,
-                      accu_shr, bias_multiplier, final_shr, 
+                      quantised_accu_modifier, 
+                      &otv,
                       data_scratch, x, y, k,
                       y_loc_x, y_loc_y, y_sub_width, y_sub_height,
                       0, x->channels);
   free(data_scratch);
 }
 
-static void DI_valid(   
+static void DIDO_kernel_subregion(   
       int8_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 
@@ -1347,13 +1314,13 @@ static void DI_valid(
       int16_t * post_activation_bias_q,
 
       const int16_t * quantised_accu_modifier,
-      const int16_t clamp_a,
-      const int16_t clamp_b,
-      const int16_t clamp_c,
+      const int16_t clamp_near,
+      const int16_t clamp_far_0,
+      const int16_t clamp_far_1,
 
       const int accu_shr,
       const int16_t bias_multiplier,
-      const int final_shr,
+      const int16_t final_shr,
 
       const nn_image_params_t* x,
       const nn_image_params_t* y,
@@ -1361,18 +1328,24 @@ static void DI_valid(
       unsigned y_loc_x, unsigned y_loc_y, 
       unsigned y_sub_width, unsigned y_sub_height){
 
+  output_transform_values_t otv;
+
+  bnn_populate_output_transform_values(
+    &otv, 
+    clamp_near, clamp_far_0, clamp_far_1,
+    accu_shr, bias_multiplier, final_shr
+  );
+
   bconv2d_int8_DIDO_valid(Y_p, (const bnn_b256_t*)X_p,
         (const bnn_b256_t*)K_p, post_activation_multiplier_q,
-        post_activation_bias_q, 
-        clamp_a, clamp_b, clamp_c,
-        accu_shr, bias_multiplier, final_shr, 
+        post_activation_bias_q, &otv,
         x, y, k,
         y_loc_x, y_loc_y, y_sub_width, y_sub_height,
         0, x->channels);
 }
 
 
-static void SISO_full(   
+static void generic_kernel_full_image(   
       int8_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 
@@ -1381,13 +1354,13 @@ static void SISO_full(
       int16_t * post_activation_bias_q,
 
       const int16_t * quantised_accu_modifier,
-      const int16_t clamp_a,
-      const int16_t clamp_b,
-      const int16_t clamp_c,
+      const int16_t clamp_near,
+      const int16_t clamp_far_0,
+      const int16_t clamp_far_1,
       
       const int accu_shr,
       const int16_t bias_multiplier,
-      const int final_shr,
+      const int16_t final_shr,
 
       const nn_image_params_t* x,
       const nn_image_params_t* y,
@@ -1396,18 +1369,25 @@ static void SISO_full(
   bnn_b32_t *data_scratch = (bnn_b32_t *) malloc(sizeof(bnn_b32_t)*(k->shape.height * k->shape.width * 
     x->channels/32 + DATA_SCRATCH_OVERREADWRITE_WORDS)); 
       
+  output_transform_values_t otv;
+
+  bnn_populate_output_transform_values(
+    &otv, 
+    clamp_near, clamp_far_0, clamp_far_1,
+    accu_shr, bias_multiplier, final_shr
+  );
+
   bconv2d_int8(Y_p, X_p,
                       K_p, post_activation_multiplier_q,
                       post_activation_bias_q, 
-                      quantised_accu_modifier, clamp_a, clamp_b, clamp_c,
-                      accu_shr, bias_multiplier, final_shr, 
+                      quantised_accu_modifier, &otv,
                       data_scratch, x, y, k,
                       0, 0, y->width, y->height, 0, 0,
                       0, x->channels);
   free(data_scratch);
 }
 
-static void DI_full(   
+static void DIDO_kernel_full_image(   
       int8_t* Y_p, 
       const bnn_b32_t* X_p,
       const bnn_b32_t* K_p, 
@@ -1416,76 +1396,88 @@ static void DI_full(
       int16_t * post_activation_bias_q,
 
       const int16_t * quantised_accu_modifier,
-      const int16_t clamp_a,
-      const int16_t clamp_b,
-      const int16_t clamp_c,
+      const int16_t clamp_near,
+      const int16_t clamp_far_0,
+      const int16_t clamp_far_1,
 
       const int accu_shr,
       const int16_t bias_multiplier,
-      const int final_shr,
+      const int16_t final_shr,
 
       const nn_image_params_t* x,
       const nn_image_params_t* y,
       const nn_window_params_t* k){
 
+  output_transform_values_t otv;
+
+  bnn_populate_output_transform_values(
+    &otv, 
+    clamp_near, clamp_far_0, clamp_far_1,
+    accu_shr, bias_multiplier, final_shr
+  );
+
   bconv2d_int8_DIDO(Y_p, (const bnn_b256_t*)X_p,
                       (const bnn_b256_t*)K_p, post_activation_multiplier_q,
-                      post_activation_bias_q, 
-                      clamp_a, clamp_b, clamp_c,
-                      accu_shr, bias_multiplier, final_shr, 
+                      post_activation_bias_q, &otv,
                       x, y, k,
                       0, 0, y->width, y->height, 0, 0,
                       0, x->channels);
 }
 
 void test_bconv2d_int8_sub_image(){
-  impl_bconv2d_int8_sub_image(5, 5, 3, 3, 32*1, 32*9, 4*1, 4*3, 32, 4, 1, 3, 1, 3, (void*)&SISO_valid);
+  impl_bconv2d_int8_sub_image(5, 5, 3, 3, 32*1, 32*9, 4*1, 4*3, 32, 4, 1, 3, 1, 3, 
+    (void*)&generic_kernel_subregion);
 }
 
-void test_bconv2d_int8_DI_sub_image(){
-  impl_bconv2d_int8_sub_image(5, 5, 3, 3, 256*1, 256*2, 16*1, 16*3, 256, 32, 1, 3, 1, 3, (void*)&DI_valid);
+void test_bconv2d_int8_DIDO_sub_image(){
+  impl_bconv2d_int8_sub_image(5, 5, 3, 3, 256*1, 256*2, 16*1, 16*3, 256, 32, 1, 3, 1, 3, 
+    (void*)&DIDO_kernel_subregion);
 }
 
 void test_bconv2d_int8_pseudo_random(){
-  impl_bconv2d_int8_pseudo_random(1, 5,1, 5, 32*1, 32*9, 4*1, 4*3, 32, 4, 1, 3, 1, 3, (void*)&SISO_full);
+  impl_bconv2d_int8_pseudo_random(1, 5,1, 5, 32*1, 32*9, 4*1, 4*3, 32, 4, 1, 3, 1, 3, 
+    (void*)&generic_kernel_full_image);
 }
 
-void test_bconv2d_int8_DI_pseudo_random(){
-  impl_bconv2d_int8_pseudo_random(1, 4, 1, 4, 256*1, 256*2, 32*1, 32*3, 256, 32, 1, 3, 1, 3, (void*)&DI_full);
+void test_bconv2d_int8_DIDO_pseudo_random(){
+  impl_bconv2d_int8_pseudo_random(1, 4, 1, 4, 256*1, 256*2, 32*1, 32*3, 256, 32, 1, 3, 1, 3, 
+    (void*)&DIDO_kernel_full_image);
 }
 
 void test_bconv2d_int8_pseudo_random2(){
-  impl_bconv2d_int8_pseudo_random2(1, 32, 32, 4, 4, 32, 4, (void*)&SISO_full);
+  impl_bconv2d_int8_pseudo_random2(1, 32, 32, 4, 4, 32, 4, 
+    (void*)&generic_kernel_full_image);
 }
 
-void test_bconv2d_int8_DI_pseudo_random2(){
-  impl_bconv2d_int8_pseudo_random2(1, 32, 256, 32, 32, 256, 32, (void*)&DI_full);
+void test_bconv2d_int8_DIDO_pseudo_random2(){
+  impl_bconv2d_int8_pseudo_random2(1, 32, 256, 32, 32, 256, 32, 
+    (void*)&DIDO_kernel_full_image);
 }
 
 void test_bconv2d_int8_directed(){
-  impl_bconv2d_int8_directed((void*)&SISO_full);
+  impl_bconv2d_int8_directed((void*)&generic_kernel_full_image);
 }
 void test_bconv2d_int8_directed2(){
-  impl_bconv2d_int8_directed2((void*)&SISO_full);
+  impl_bconv2d_int8_directed2((void*)&generic_kernel_full_image);
 }
 
 void test_bconv2d_int8_directed3(){
-  impl_bconv2d_int8_directed3((void*)&SISO_full);
+  impl_bconv2d_int8_directed3((void*)&generic_kernel_full_image);
 }
 void test_bconv2d_int8_directed4(){
-  impl_bconv2d_int8_directed4((void*)&SISO_full);
+  impl_bconv2d_int8_directed4((void*)&generic_kernel_full_image);
 }
 
 void test_bnn_conv2d_int8() {
   UNITY_SET_FILE();
 
+  RUN_TEST(test_bconv2d_int8_DIDO_pseudo_random);
+  RUN_TEST(test_bconv2d_int8_DIDO_pseudo_random2);
+  RUN_TEST(test_bconv2d_int8_DIDO_sub_image);
+
   RUN_TEST(test_bconv2d_int8_pseudo_random);
   RUN_TEST(test_bconv2d_int8_pseudo_random2);
   RUN_TEST(test_bconv2d_int8_sub_image);
-
-  RUN_TEST(test_bconv2d_int8_DI_pseudo_random);
-  RUN_TEST(test_bconv2d_int8_DI_pseudo_random2);
-  RUN_TEST(test_bconv2d_int8_DI_sub_image);
 
   RUN_TEST(test_bconv2d_int8_directed);
   RUN_TEST(test_bconv2d_int8_directed2);

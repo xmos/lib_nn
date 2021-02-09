@@ -102,18 +102,18 @@ typedef struct {
   int16_t * cur_post_activation_mul;  //These are needed to hold variables that will
   int16_t * cur_post_activation_bias; //be indexed with ldd
 
-  int32_t vlsat;
+  const int16_t * vlsat;
   int32_t ashr;
-  int32_t final_shr;
-  int32_t bias_multiplier;
+  const int16_t * final_shr;
+  const int16_t * bias_multiplier;
   const int16_t* post_activation_mul;  
   const int16_t* post_activation_bias; 
   int32_t input_channel_loop_counter;
   int8_t* Y;
 
-  int16_t * clamp_a;
-  int16_t * clamp_b;
-  int16_t * clamp_c;
+  const int16_t * clamp_near;
+  const int16_t * clamp_far_0;
+  const int16_t * clamp_far_1;
 
 } nn_bconv2d_int8_DIDO_impl_plan_t;
 
@@ -143,7 +143,7 @@ typedef struct {
   const bnn_b32_t* K;
   int16_t * cur_post_activation_mul;  //These are needed to hold variables that will
   int16_t * cur_post_activation_bias; //be indexed with ldd
-  int32_t vlsat;
+  const int16_t * vlsat;
   int32_t ashr;
   const int16_t* post_activation_mul;  
   const int16_t* post_activation_bias; 
@@ -158,15 +158,29 @@ typedef struct {
   int32_t final_channels_bytes;
   int32_t patch_loop_counter;
 
-  int32_t final_shr;
+  const int16_t * final_shr;
   int32_t k_p_rewind;
   int32_t x_width_loop_counter;
   int32_t x_height_loop_counter;
-  int32_t bias_multiplier;
+  const int16_t * bias_multiplier;
   int16_t * quantised_accu_modifier;
-  int16_t * clamp_a;
-  int16_t * clamp_b;
+  const int16_t * clamp_near;
+  const int16_t * clamp_far_0;
   
-  int16_t * clamp_c;
+  const int16_t * clamp_far_1;
 
 } nn_bconv2d_int8_impl_plan_t;
+
+
+
+typedef struct {
+
+    int16_t clamp_near[VPU_INT16_EPV];
+    int16_t clamp_far_0[VPU_INT16_EPV];
+    int16_t clamp_far_1[VPU_INT16_EPV];
+    int16_t bias_multipler[VPU_INT16_EPV];
+    int16_t final_shr[VPU_INT16_EPV];
+    int16_t accu_shr[VPU_INT16_EPV]; //for the vlsat
+    int32_t accu_shl;                //for the vlashr
+
+} output_transform_values_t;
