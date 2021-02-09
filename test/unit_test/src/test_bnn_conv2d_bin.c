@@ -29,6 +29,7 @@ static void run_bin_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b32_t* X_ref,
                unsigned x_height, unsigned x_width,
                unsigned k_height, unsigned k_width, unsigned chans_in,
                unsigned chans_out, unsigned h_stride, unsigned v_stride, int seed,
+               unsigned start_channel, unsigned channel_count,
                void (*impl_fn)()) {
                   
   // printf("h_stride:%u v_stride:%u k_height:%u k_width:%u x_height:%u x_width:%u chans_in:%u chans_out:%u seed:%d\n", 
@@ -80,7 +81,8 @@ static void run_bin_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b32_t* X_ref,
 
   impl_fn(Y_p, X_ref,
     K_p, thresholds_p, 
-    &x, &y, &k);
+    &x, &y, &k, 
+    start_channel, channel_count);
 
   unsigned chan_b32_out = DIV_BY_AND_ROUND_UP(chans_out, 32);
 
@@ -177,15 +179,20 @@ void impl_bconv2d_bin_DI_pseudo_random(
                       for(unsigned b=0;b<K_ref_bytes/sizeof(int);b++)
                         ((int*)K_ref)[b] = pseudo_rand(&seed);
 
-                      run_bin_config(
-                          (bnn_b32_t*)Y, (bnn_b32_t*)Y_ref, (bnn_b32_t*)X_ref,
-                          (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
-                          (int32_t*)thresholds_ref,
-                          (int32_t*)thresholds,  
-                          (int*) chan_overlaps,
-                          x_height,
-                          x_width, k_height, k_width, chans_in, chans_out, h_stride,
-                          v_stride, seed, valid_impl);
+                      for(unsigned start_channel = 0; start_channel < chans_out - chans_out_inc; start_channel += chans_out_inc ){
+                        for(unsigned channel_count = chans_out_inc; channel_count <= chans_out -  start_channel;channel_count += chans_out_inc){
+                          run_bin_config(
+                              (bnn_b32_t*)Y, (bnn_b32_t*)Y_ref, (bnn_b32_t*)X_ref,
+                              (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
+                              (int32_t*)thresholds_ref,
+                              (int32_t*)thresholds,  
+                              (int*) chan_overlaps,
+                              x_height,
+                              x_width, k_height, k_width, chans_in, chans_out, h_stride,
+                              v_stride, seed, 
+                              start_channel, channel_count, valid_impl);
+                        }
+                      }
                     }
 
                     free(X_ref);
@@ -271,15 +278,23 @@ void impl_bconv2d_bin_DI_pseudo_random2(
           for(unsigned b=0;b<K_ref_bytes/sizeof(int);b++)
             ((int*)K_ref)[b] = pseudo_rand(&seed);
 
-          run_bin_config(
-              (bnn_b32_t*)Y, (bnn_b32_t*)Y_ref, (bnn_b32_t*)X_ref,
-              (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
-              (int32_t*)thresholds_ref,
-              (int32_t*)thresholds, 
-              (int*) chan_overlaps,
-              x_height,
-              x_width, k_height, k_width, chans_in, chans_out, 1,
-              1, seed, valid_impl);
+          for(unsigned start_channel = 0; start_channel < chans_out - chans_out_inc; start_channel += chans_out_inc ){
+            for(unsigned channel_count = chans_out_inc; channel_count <= chans_out -  start_channel;channel_count += chans_out_inc){
+              // printf("chans_out:%d start_channel:%d channel_count:%d\n", chans_out, start_channel, channel_count);
+
+              run_bin_config(
+                  (bnn_b32_t*)Y, (bnn_b32_t*)Y_ref, (bnn_b32_t*)X_ref,
+                  (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
+                  (int32_t*)thresholds_ref,
+                  (int32_t*)thresholds, 
+                  (int*) chan_overlaps,
+                  x_height,
+                  x_width, k_height, k_width, chans_in, chans_out, 1,
+                  1, seed, start_channel, channel_count, valid_impl);
+
+            } 
+
+          } 
 
         free(X_ref);
         free(Y);
@@ -308,11 +323,12 @@ static void run_bin_sub_image(
               const nn_window_params_t* k,
               unsigned y_loc_x, unsigned y_loc_y, 
               unsigned y_sub_width, unsigned y_sub_height,
+              unsigned start_channel, unsigned channel_count, 
               void (* valid_impl)()){
 
   valid_impl(Y_p, X_p,
       K_p, thresholds, 
-      x, y, k, y_loc_x, y_loc_y, y_sub_width, y_sub_height);
+      x, y, k, y_loc_x, y_loc_y, y_sub_width, y_sub_height, start_channel, channel_count);
 
   bnn_b32_t(*Y)[y->width][y->channels/32] =
       (bnn_b32_t(*)[y->width][y->channels/32])Y_p;
@@ -435,17 +451,22 @@ void impl_bconv2d_bin_sub_image(
                 for (unsigned y_sub_width = 1; y_sub_width<y.width-y_loc_x; ++y_sub_width){
                   for (unsigned y_sub_height = 1; y_sub_height<y.height-y_loc_y; ++y_sub_height){
 
-                      memset(Y, undef_sentinal, addressable_Y_bytes);
-                      run_bin_sub_image(
-                        (bnn_b32_t*)Y, 
-                        (const bnn_b32_t*)Y_ref,
-                        (const bnn_b32_t*) X_ref,
-                        (const bnn_b32_t*) K, 
+                      for(unsigned start_channel = 0; start_channel < chans_out - chans_out_inc; start_channel += chans_out_inc ){
+                        for(unsigned channel_count = chans_out_inc; channel_count <= chans_out -  start_channel;channel_count += chans_out_inc){
+                          memset(Y, undef_sentinal, addressable_Y_bytes);
+                          
+                          run_bin_sub_image(
+                            (bnn_b32_t*)Y, 
+                            (const bnn_b32_t*)Y_ref,
+                            (const bnn_b32_t*) X_ref,
+                            (const bnn_b32_t*) K, 
 
-                        thresholds,
+                            thresholds,
 
-                        &x, &y, &k,
-                        y_loc_x, y_loc_y, y_sub_width, y_sub_height, valid_impl);
+                            &x, &y, &k,
+                            y_loc_x, y_loc_y, y_sub_width, y_sub_height, start_channel, channel_count, valid_impl);
+                        }
+                      }
                     }
                   }
                 } 
@@ -476,7 +497,8 @@ static void generic_kernel_subregion(
       const nn_image_params_t* y,
       const nn_window_params_t* k,
       unsigned y_loc_x, unsigned y_loc_y, 
-      unsigned y_sub_width, unsigned y_sub_height){
+      unsigned y_sub_width, unsigned y_sub_height,
+      unsigned start_channel, unsigned channel_count){
 
   bnn_b32_t *data_scratch = (bnn_b32_t *) malloc(sizeof(bnn_b32_t)*(k->shape.height * k->shape.width * 
     x->channels/32 + DATA_SCRATCH_OVERREADWRITE_WORDS)); 
@@ -485,7 +507,7 @@ static void generic_kernel_subregion(
                       K_p, thresholds,
                       data_scratch, x, y, k,
                       y_loc_x, y_loc_y, y_sub_width, y_sub_height,
-                      0, x->channels);
+                      start_channel, channel_count);
 
   free(data_scratch);
 }
@@ -501,13 +523,14 @@ static void DI_kernel_subregion(
       const nn_image_params_t* y,
       const nn_window_params_t* k,
       unsigned y_loc_x, unsigned y_loc_y, 
-      unsigned y_sub_width, unsigned y_sub_height){
+      unsigned y_sub_width, unsigned y_sub_height,
+      unsigned start_channel, unsigned channel_count){
 
   bconv2d_bin_DI_valid(Y_p, (const bnn_b256_t*)X_p,
                       (const bnn_b256_t*)K_p, thresholds,
                       x, y, k,
                       y_loc_x, y_loc_y, y_sub_width, y_sub_height,
-                      0, x->channels);
+                      start_channel, channel_count);
 }
 
 
@@ -520,7 +543,8 @@ static void generic_kernel_full_image(
 
       const nn_image_params_t* x,
       const nn_image_params_t* y,
-      const nn_window_params_t* k){
+      const nn_window_params_t* k,
+      unsigned start_channel, unsigned channel_count){
 
   bnn_b32_t *data_scratch = (bnn_b32_t *) malloc(sizeof(bnn_b32_t)*(k->shape.height * k->shape.width * 
     x->channels/32 + DATA_SCRATCH_OVERREADWRITE_WORDS)); 
@@ -530,7 +554,7 @@ static void generic_kernel_full_image(
                       data_scratch,
                       x, y, k,
                       0, 0, y->width, y->height, 0, 0,
-                      0, x->channels);
+                      start_channel, channel_count);
   free(data_scratch);
 }
 
@@ -543,13 +567,14 @@ static void DI_kernel_full_image(
 
       const nn_image_params_t* x,
       const nn_image_params_t* y,
-      const nn_window_params_t* k){
+      const nn_window_params_t* k,
+      unsigned start_channel, unsigned channel_count){
 
   bconv2d_bin_DI(Y_p, (const bnn_b256_t*)X_p,
                       (const bnn_b256_t*)K_p, thresholds, 
                       x, y, k,
                       0, 0, y->width, y->height, 0, 0, 
-                      0, x->channels);
+                      start_channel, channel_count);
 }
 
 void test_bconv2d_bin_pseudo_random(){

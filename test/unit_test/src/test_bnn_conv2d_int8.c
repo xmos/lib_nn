@@ -39,6 +39,8 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
 
                int32_t larq_clamp_min, 
                int32_t larq_clamp_max, 
+               
+               unsigned start_channel, unsigned channel_count,
 
                void (*test_fn)()) {
                  
@@ -113,7 +115,8 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
     post_activation_bias_q, 
     quantised_accu_modifier, clamp_a, clamp_b, clamp_far_1,
     accu_shr, bias_multipler, final_shr,
-    &x, &y, &k);
+    &x, &y, &k,
+    start_channel, channel_count);
   
   // printf("\n");
   // for (unsigned e=0;e<y_height * y_width * chans_out;++e){
@@ -216,26 +219,32 @@ void impl_bconv2d_int8_pseudo_random(
                       for (unsigned clamps_loop=0;clamps_loop<clamps_count;clamps_loop++){
                         int32_t larq_clamp_min = pseudo_rand(&seed) % (2*receptive_volume);
                         int32_t larq_clamp_max = larq_clamp_min + pseudo_rand(&seed) % (2*receptive_volume);
-                        // int32_t larq_clamp_min = 0;
-                        // int32_t larq_clamp_max = 2*receptive_volume;
-                        run_int8_config(
-                            (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
-                            (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
-                            (float*)post_activation_multiplier,
-                            (float*)post_activation_bias, 
-                            (int16_t*)post_activation_multiplier_q,
-                            (int16_t*)post_activation_bias_q,  
-                            (int16_t*)quantised_accu_modifier,
-                            (int*) chan_overlaps,
-                            x_height,
-                            x_width, k_height, k_width, chans_in, chans_out, h_stride,
-                            v_stride, larq_clamp_min, larq_clamp_max, valid_impl);
+
+                        for(unsigned start_channel = 0; start_channel < chans_out - chans_out_inc; start_channel += chans_out_inc ){
+                          for(unsigned channel_count = chans_out_inc; channel_count <= chans_out -  start_channel;channel_count += chans_out_inc){
+                          
+                            run_int8_config(
+                                (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
+                                (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
+                                (float*)post_activation_multiplier,
+                                (float*)post_activation_bias, 
+                                (int16_t*)post_activation_multiplier_q,
+                                (int16_t*)post_activation_bias_q,  
+                                (int16_t*)quantised_accu_modifier,
+                                (int*) chan_overlaps,
+                                x_height,
+                                x_width, k_height, k_width, chans_in, chans_out, h_stride,
+                                v_stride, larq_clamp_min, larq_clamp_max, start_channel, channel_count, valid_impl);
+                          }
+                        }
                       }
                       for (int32_t delta_min=0; delta_min <=5 ;delta_min++){
                         for (int32_t delta_max=-5; delta_max <=5 ;delta_max++){
                           int32_t larq_clamp_min = 0 + delta_min;
                           int32_t larq_clamp_max = (int32_t)receptive_volume + delta_max;
 
+                        for(unsigned start_channel = 0; start_channel < chans_out - chans_out_inc; start_channel += chans_out_inc ){
+                          for(unsigned channel_count = chans_out_inc; channel_count <= chans_out -  start_channel;channel_count += chans_out_inc){
                           run_int8_config(
                               (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
                               (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
@@ -247,7 +256,9 @@ void impl_bconv2d_int8_pseudo_random(
                               (int*) chan_overlaps,
                               x_height,
                               x_width, k_height, k_width, chans_in, chans_out, h_stride,
-                              v_stride, larq_clamp_min, larq_clamp_max, valid_impl);
+                              v_stride, larq_clamp_min, larq_clamp_max, start_channel, channel_count, valid_impl);
+                          }
+                        }
                         }
                       }
 
@@ -256,6 +267,8 @@ void impl_bconv2d_int8_pseudo_random(
                           int32_t larq_clamp_min = 0 + delta_min;
                           int32_t larq_clamp_max = 2*(int32_t)receptive_volume + delta_max;
 
+                          for(unsigned start_channel = 0; start_channel < chans_out - chans_out_inc; start_channel += chans_out_inc ){
+                            for(unsigned channel_count = chans_out_inc; channel_count <= chans_out -  start_channel;channel_count += chans_out_inc){
                           run_int8_config(
                               (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
                               (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
@@ -267,7 +280,10 @@ void impl_bconv2d_int8_pseudo_random(
                               (int*) chan_overlaps,
                               x_height,
                               x_width, k_height, k_width, chans_in, chans_out, h_stride,
-                              v_stride, larq_clamp_min, larq_clamp_max, valid_impl);
+                              v_stride, larq_clamp_min, larq_clamp_max, start_channel, channel_count,valid_impl);
+                            }
+                            }
+
                         }
                       }
 
@@ -375,19 +391,23 @@ void impl_bconv2d_int8_pseudo_random2(
             int32_t larq_clamp_min = pseudo_rand(&seed) % (2*receptive_volume);
             int32_t larq_clamp_max = larq_clamp_min + pseudo_rand(&seed) % (2*receptive_volume);
 
-
-            run_int8_config(
-                (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
-                (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
-                (float*)post_activation_multiplier,
-                (float*)post_activation_bias, 
-                (int16_t*)post_activation_multiplier_q,
-                (int16_t*)post_activation_bias_q,  
-                (int16_t*)quantised_accu_modifier,
-                (int*) chan_overlaps,
-                x_height,
-                x_width, k_height, k_width, chans_in, chans_out, 1,
-                1, larq_clamp_min, larq_clamp_max, valid_impl);
+            for(unsigned start_channel = 0; start_channel < chans_out - chans_out_inc; start_channel += chans_out_inc ){
+              for(unsigned channel_count = chans_out_inc; channel_count <= chans_out -  start_channel;channel_count += chans_out_inc){
+                      
+                run_int8_config(
+                    (int8_t*)Y, (int8_t*)Y_ref, (bnn_b32_t*)X_ref,
+                    (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
+                    (float*)post_activation_multiplier,
+                    (float*)post_activation_bias, 
+                    (int16_t*)post_activation_multiplier_q,
+                    (int16_t*)post_activation_bias_q,  
+                    (int16_t*)quantised_accu_modifier,
+                    (int*) chan_overlaps,
+                    x_height,
+                    x_width, k_height, k_width, chans_in, chans_out, 1,
+                    1, larq_clamp_min, larq_clamp_max, start_channel, channel_count, valid_impl);
+              }
+            }
           }
         free(X_ref);
         free(Y);
@@ -429,6 +449,7 @@ static void run_int8_sub_image(
               const nn_window_params_t* k,
               unsigned y_loc_x, unsigned y_loc_y, 
               unsigned y_sub_width, unsigned y_sub_height,
+              unsigned start_channel, unsigned channel_count, 
               void (* valid_impl)()){
 
       
@@ -439,7 +460,7 @@ static void run_int8_sub_image(
       quantised_accu_modifier, clamp_a, clamp_b, clamp_far_1,
       accu_shr, bias_multiplier, final_shr, 
       x, y, k,
-      y_loc_x, y_loc_y, y_sub_width, y_sub_height);
+      y_loc_x, y_loc_y, y_sub_width, y_sub_height, start_channel, channel_count);
 
   int8_t(*Y)[y->width][y->channels] =
       (int8_t(*)[y->width][y->channels])Y_p;
@@ -594,26 +615,31 @@ void impl_bconv2d_int8_sub_image(
                       memset(Y, undef_sentinal, addressable_Y_bytes);
 
                       for (unsigned clamps_loop=0;clamps_loop<clamps_count;clamps_loop++){
+                        for(unsigned start_channel = 0; start_channel < chans_out - chans_out_inc; start_channel += chans_out_inc ){
+                          for(unsigned channel_count = chans_out_inc; channel_count <= chans_out -  start_channel;channel_count += chans_out_inc){
+                              memset(Y, undef_sentinal, addressable_Y_bytes);
+                              
+                            run_int8_sub_image(
+                              (int8_t*)Y, 
+                              (const int8_t*)Y_ref,
+                              (const bnn_b32_t*) X_ref,
+                              (const bnn_b32_t*) K, 
 
-                        run_int8_sub_image(
-                          (int8_t*)Y, 
-                          (const int8_t*)Y_ref,
-                          (const bnn_b32_t*) X_ref,
-                          (const bnn_b32_t*) K, 
+                              (int16_t * )post_activation_multiplier_q,
+                              (int16_t *) post_activation_bias_q,
+                              (int16_t *) quantised_accu_modifier,
+                              clamp_a,
+                              clamp_b,
+                              clamp_far_1,
 
-                          (int16_t * )post_activation_multiplier_q,
-                          (int16_t *) post_activation_bias_q,
-                          (int16_t *) quantised_accu_modifier,
-                          clamp_a,
-                          clamp_b,
-                          clamp_far_1,
+                              (const int )accu_shr,
+                              (const int16_t) bias_multiplier,
+                              (const int )final_shr,
 
-                          (const int )accu_shr,
-                          (const int16_t) bias_multiplier,
-                          (const int )final_shr,
-
-                          &x, &y, &k,
-                          y_loc_x, y_loc_y, y_sub_width, y_sub_height, valid_impl);
+                              &x, &y, &k,
+                              y_loc_x, y_loc_y, y_sub_width, y_sub_height, start_channel, channel_count, valid_impl);
+                          }
+                        }
 
                       }
                     }
@@ -909,7 +935,7 @@ void impl_bconv2d_int8_directed(void (*valid_impl)()) {
 
         (int *)chan_overlaps, x_height,
         x_width, k_height, k_width, chans_in, chans_out, h_stride, v_stride,
-        larq_clamp_min, larq_clamp_max, valid_impl);
+        larq_clamp_min, larq_clamp_max, 0, chans_out, valid_impl);
   }
 
   free(Y);
@@ -1051,7 +1077,7 @@ void impl_bconv2d_int8_directed2(void (*valid_impl)()) {
 
       (int *)chan_overlaps, x_height,
       x_width, k_height, k_width, chans_in, chans_out, h_stride, v_stride,
-      larq_clamp_min, larq_clamp_max, valid_impl);
+      larq_clamp_min, larq_clamp_max, 0, chans_out, valid_impl);
   
   free(Y);
   free(Y_ref);
@@ -1149,6 +1175,7 @@ void impl_bconv2d_int8_directed3(void (*valid_impl)()) {
 
       (int *)chan_overlaps, x_height, x_width, k_height, k_width, chans_in,
       chans_out, h_stride, v_stride, larq_clamp_min, larq_clamp_max,
+      0, chans_out,
       valid_impl);
 
   free(Y);
@@ -1247,7 +1274,7 @@ void impl_bconv2d_int8_directed4(void (*valid_impl)()) {
       (int16_t *)quantised_accu_modifier,
 
       (int *)chan_overlaps, x_height, x_width, k_height, k_width, chans_in,
-      chans_out, h_stride, v_stride, larq_clamp_min, larq_clamp_max,
+      chans_out, h_stride, v_stride, larq_clamp_min, larq_clamp_max, 0, chans_out,
       valid_impl);
 
   free(Y);

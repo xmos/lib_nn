@@ -337,7 +337,8 @@ static void bconv2d_int8_prepare(
     const nn_window_params_t* k, 
     const unsigned y_loc_x, const unsigned y_loc_y,
     const unsigned y_sub_width, const unsigned y_sub_height,
-    const unsigned x_loc_x, const unsigned x_loc_y)
+    const unsigned x_loc_x, const unsigned x_loc_y,
+    const unsigned start_channel, const unsigned channel_count)
 {
 
   const unsigned bits_per_b32 = 32;
@@ -443,7 +444,8 @@ static void bconv2d_int8_DIDO_prepare(
 
     const unsigned y_loc_x, const unsigned y_loc_y,
     const unsigned y_sub_width, const unsigned y_sub_height,
-    const unsigned x_loc_x, const unsigned x_loc_y
+    const unsigned x_loc_x, const unsigned x_loc_y,
+    const unsigned start_channel, const unsigned channel_count
   ) {
 
   const unsigned chan_b256_in = (x->channels + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS;
@@ -543,7 +545,7 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
       otv,
       x, y, k, 
       y_loc_x, y_loc_y, y_sub_width, y_sub_height,
-      x_loc_x, x_loc_y);
+      x_loc_x, x_loc_y, start_channel, channel_count);
 
   bconv2d_int8_DIDO_impl(&plan);
 }
@@ -579,7 +581,7 @@ void bconv2d_int8(int8_t* Y_p,
         otv,
         x, y, k, 
         y_loc_x, y_loc_y, y_sub_width, y_sub_height,
-        x_loc_x, x_loc_y);
+        x_loc_x, x_loc_y, start_channel, channel_count);
 
 
     bconv2d_int8_impl(&plan);

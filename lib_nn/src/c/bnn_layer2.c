@@ -10,7 +10,8 @@ void bconv2d_bin_DI_valid(bnn_b32_t* Y_p,
     const nn_window_params_t* k, 
 
     const unsigned y_loc_x, const unsigned y_loc_y,
-    const unsigned y_sub_width, const unsigned y_sub_height
+    const unsigned y_sub_width, const unsigned y_sub_height,
+    const unsigned start_channel, const unsigned channel_count
 ){  
     unsigned x_loc_x = y_loc_x*k->stride.horizontal;
     unsigned x_loc_y = y_loc_y*k->stride.vertical;
@@ -19,7 +20,7 @@ void bconv2d_bin_DI_valid(bnn_b32_t* Y_p,
         x,  y, k, 
         y_loc_x, y_loc_y,
         y_sub_width, y_sub_height,
-        x_loc_x,  x_loc_y);
+        x_loc_x,  x_loc_y, start_channel, channel_count);
 }
 
 void bconv2d_bin_valid(bnn_b32_t* Y_p,
@@ -31,7 +32,8 @@ void bconv2d_bin_valid(bnn_b32_t* Y_p,
     const nn_window_params_t* k, 
 
     const unsigned y_loc_x, const unsigned y_loc_y,
-    const unsigned y_sub_width, const unsigned y_sub_height
+    const unsigned y_sub_width, const unsigned y_sub_height,
+    const unsigned start_channel, const unsigned channel_count
 ){  
     unsigned x_loc_x = y_loc_x*k->stride.horizontal;
     unsigned x_loc_y = y_loc_y*k->stride.vertical;
@@ -40,7 +42,7 @@ void bconv2d_bin_valid(bnn_b32_t* Y_p,
         x,  y, k, 
         y_loc_x, y_loc_y,
         y_sub_width, y_sub_height,
-        x_loc_x,  x_loc_y);
+        x_loc_x,  x_loc_y, start_channel, channel_count);
 }
 
 void bconv2d_int8_DIDO_valid(int8_t* Y_p,
@@ -56,7 +58,8 @@ void bconv2d_int8_DIDO_valid(int8_t* Y_p,
     const nn_window_params_t* k, 
 
     const unsigned y_loc_x, const unsigned y_loc_y,
-    const unsigned y_sub_width, const unsigned y_sub_height
+    const unsigned y_sub_width, const unsigned y_sub_height,
+    const unsigned start_channel, const unsigned channel_count
 ){  
     unsigned x_loc_x = y_loc_x*k->stride.horizontal;
     unsigned x_loc_y = y_loc_y*k->stride.vertical;
@@ -71,7 +74,7 @@ void bconv2d_int8_DIDO_valid(int8_t* Y_p,
         x,  y,  k, 
         y_loc_x, y_loc_y,
         y_sub_width, y_sub_height, 
-        x_loc_x,  x_loc_y);
+        x_loc_x,  x_loc_y, start_channel, channel_count);
 }
 
 void bconv2d_int8_valid(int8_t* Y_p,
@@ -91,7 +94,8 @@ void bconv2d_int8_valid(int8_t* Y_p,
     const nn_window_params_t* k, 
 
     const unsigned y_loc_x, const unsigned y_loc_y,
-    const unsigned y_sub_width, const unsigned y_sub_height
+    const unsigned y_sub_width, const unsigned y_sub_height,
+    const unsigned start_channel, const unsigned channel_count
 ){  
     unsigned x_loc_x = y_loc_x*k->stride.horizontal;
     unsigned x_loc_y = y_loc_y*k->stride.vertical;
@@ -109,5 +113,5 @@ void bconv2d_int8_valid(int8_t* Y_p,
         x,  y,  k, 
         y_loc_x, y_loc_y,
         y_sub_width, y_sub_height, 
-        x_loc_x,  x_loc_y);
+        x_loc_x,  x_loc_y, start_channel, channel_count);
 }
