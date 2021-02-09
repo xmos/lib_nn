@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 
 #if defined(__XS3A__)
 
@@ -28,7 +30,11 @@ void nn_conv2d_hstrip_deep_padded(
         const int8_t* zero_point_vec)
 */
 
-#define FUNCTION_NAME nn_conv2d_hstrip_deep_padded
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME nn_conv2d_hstrip_deep_padded
+#else
+  #define FUNCTION_NAME nn_conv2d_hstrip_deep_padded_asm
+#endif // NN_USE_REF
 
 
 #define NSTACKVECS  (4)
@@ -589,25 +595,48 @@ FUNCTION_NAME:
 #else
 
         {   shl r11, _32, 3                         ;   ldw tmp, sp[STACK_BSO]                  }
+        // Change to 16-bit mode
         {   ldaw r11, sp[STACK_VEC_TMP2]            ;   vsetc r11                               }
+        // Apply the shift1 to the accumulators
         {   add tmp, tmp, _32                       ;   vlsat tmp[0]                            }
+        // Store the 16-bit post-shift1 values to vec_tmp2
         {                                           ;   vstr r11[0]                             }
+        // Load scale into vC
         {   add tmp, tmp, _32                       ;   vldc tmp[0]                             }
+        // Clear the accumulators
         {                                           ;   vclrdr                                  }
+        // Apply scale to the 16-bit post-shift1 values 
         {                                           ;   vlmacc r11[0]                           }
+        // Load offset_scale into vC
         {   add tmp, tmp, _32                       ;   vldc tmp[0]                             }
+        // Add offset*offset_scale to the accumulators
         {   add tmp, tmp, _32                       ;   vlmacc tmp[0]                           }
-
+        // Apply shift2 to the accumulators
         {                                           ;   vlsat tmp[0]                            }
+        // Store 16-bit post-shift2 values into vec_tmp2
+        // For values other than -128, this will be the final value, except it's still encoded as
+        // 16 bits. We'll reduce the bit-depth to 8 bits later.
         {   ldaw r11, cp[VPU_VEC_0x007F]            ;   vstr r11[0]                             }
+        // Add 127 to vR
         {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
+        // Any elements of vR that were -128 before the previous instruction are now -1,
+        // and all other elements are non-negative. The vdepth1 creates 16-bit bitmask in 
+        // vR[0] with a 1 for any element that was -128. (The output Y[] has already had
+        // -128s written to all the elements, so this mask just says which elements to not
+        // overwrite).
         {   mkmsk Q(rows_left), 4                   ;   vdepth1                                 }
+        // Store the bitmask in tmp (note: stored as 32-bit word, with the top 16 bits all being 0)
         vstrpv r11[0], Q(rows_left)
         {   ldc Q(rows_left), 0                     ;   ldw Q(cig_left), sp[STACK_Y]            }
         {   ldaw r11, sp[STACK_VEC_TMP2]            ;   sub Q(rows_left), Q(rows_left), 8       }
+        // reload the 16-bit post-shift2 values, left-shifting them all 8 bits (i.e. multiply by 256)
         vlashr r11[0], Q(rows_left)
+        // load the bitmask into a register
         {   mkmsk r11, 16                           ;   ldw Q(rows_left), sp[STACK_TMP]         }
+        // r11 <-- 0xFFFF & ~(bitmask)
+        // Reduce bit-depth of elements to 8 bits (i.e. divide by 256)
         {   andnot r11, Q(rows_left)                ;   vdepth8                                 }
+        // Store final results in Y[]
         vstrpv Q(cig_left)[0], r11
         {   shl r11, _32, 4                         ;   ldw tmp, sp[STACK_Y_H_STRIDE]           }
         {   add Q(cig_left), Q(cig_left), tmp       ;   vsetc r11                               }

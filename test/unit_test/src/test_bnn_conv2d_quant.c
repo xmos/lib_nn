@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -67,11 +69,16 @@ void run_quantisation(void (*fun_ptr)()){
 
         unsigned receptive_volume = k_dim*chans_in; 
 
-        int32_t clamp_low = 0;
-        int32_t clamp_high = receptive_volume*2;
+        int32_t larq_clamp_low = 0;
+        int32_t larq_clamp_high = receptive_volume*2;
+
+        int16_t clamp_a;
+        int16_t clamp_b;
+        int16_t clamp_c;
         
         int16_t *post_activation_multiplier_q = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
         int16_t *post_activation_bias_q = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
+        int16_t *quantised_accu_modifier = (int16_t *)malloc(sizeof(int16_t)*(chans_out+(16 - chans_out%16)));
 
         float * post_activation_multiplier = (float *)malloc(sizeof(float)*chans_out);
         float * post_activation_bias = (float *)malloc(sizeof(float)*chans_out);
@@ -92,7 +99,14 @@ void run_quantisation(void (*fun_ptr)()){
 
             chans_out,
 
-            clamp_low, clamp_high,
+            larq_clamp_low, 
+            larq_clamp_high,
+
+            quantised_accu_modifier,
+            &clamp_a,
+            &clamp_b,
+            &clamp_c,
+
             &accu_shr, &bias_multipler, &final_shr, receptive_volume, chan_overlaps
         );
 
@@ -105,13 +119,14 @@ void run_quantisation(void (*fun_ptr)()){
 
             chans_out,
 
-            clamp_low, clamp_high,
+            clamp_a, clamp_b,
             accu_shr, bias_multipler, final_shr, receptive_volume, 
 
             &error_sum, &abs_error_sum, &sum_count);
 
         free(post_activation_multiplier_q);
         free(post_activation_bias_q);
+        free(quantised_accu_modifier);
 
         free(post_activation_multiplier);
         free(post_activation_bias);

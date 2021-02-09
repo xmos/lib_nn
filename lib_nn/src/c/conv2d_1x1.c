@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 
 #include "nn_operator.h"
 #include "../nn_op_helper.h"
@@ -112,8 +114,7 @@ void conv2d_1x1(
 }
 
 
-WEAK_FUNC
-void conv2d_1x1_ext(
+void conv2d_1x1_ext_ref(
     nn_image_t* Y,
     const nn_image_t* X,
     const nn_tensor_t* K,
@@ -262,3 +263,21 @@ void conv2d_1x1_ext(
     }
 }
 #undef ADDR
+
+
+#ifdef NN_USE_REF
+
+void conv2d_1x1_ext(
+    nn_image_t* Y,
+    const nn_image_t* X,
+    const nn_tensor_t* K,
+    const nn_bso_block_t* BSO,
+    const nn_image_params_t* x_params,
+    const nn_image_params_t* y_params,
+    const nn_conv2d_1x1_job_params_t* job_params,
+    const nn_conv2d_1x1_flags_e flags)
+{
+    conv2d_1x1_ext_ref(Y, X, K, BSO, x_params, y_params, job_params, flags);
+}
+
+#endif // NN_USE_REF

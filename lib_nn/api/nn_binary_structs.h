@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 #include "nn_bin_types.h"
 
 #define NN_BCONV2D_KERNEL_OVERRUN_WORDS 8
@@ -109,6 +111,10 @@ typedef struct {
   int32_t input_channel_loop_counter;
   int8_t* Y;
 
+  int16_t * clamp_a;
+  int16_t * clamp_b;
+  int16_t * clamp_c;
+
 } nn_bconv2d_int8_DIDO_impl_plan_t;
 
 
@@ -157,5 +163,10 @@ typedef struct {
   int32_t x_width_loop_counter;
   int32_t x_height_loop_counter;
   int32_t bias_multiplier;
+  int16_t * quantised_accu_modifier;
+  int16_t * clamp_a;
+  int16_t * clamp_b;
+  
+  int16_t * clamp_c;
 
 } nn_bconv2d_int8_impl_plan_t;

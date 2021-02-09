@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 #include "nn_operator.h"
 #include "../nn_op_helper.h"
 
@@ -9,7 +11,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#if defined(__XS3A__)
+#if defined(__XS3A__) && !defined(NN_USE_REF)
 /* Bsign_8 optimised for XS3A */
 void bsign_8_( 
     bnn_b32_t* y,
@@ -34,7 +36,7 @@ void bsign_8(
     /* Note, at this point we have no more use for the plan..*/
     bsign_8_(y, x, (const int8_t*)&zero_point_vect, job);
 }
-#endif
+#endif // defined(__XS3A__) && !defined(NN_USE_REF)
 
 void bsign_8_prepare(
     nn_bsign_8_plan_t* plan,

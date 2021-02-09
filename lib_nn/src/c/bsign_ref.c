@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 
 #include "nn_operator.h"
 #include "../nn_op_helper.h"
@@ -44,7 +46,9 @@ void bsign_8_ref(
     }
 }
 
-WEAK_FUNC
+
+#ifdef NN_USE_REF
+
 void bsign_8( 
     bnn_b32_t* y,
     const int8_t* x,
@@ -54,3 +58,5 @@ void bsign_8(
     /* Fall back to reference if no optimised version available */
     bsign_8_ref(y, x, plan, job);
 }
+
+#endif // NN_USE_REF

@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 #ifndef STRUCTS_H_
 #define STRUCTS_H_
 

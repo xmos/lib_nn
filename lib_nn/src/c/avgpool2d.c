@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 
 
 #include "nn_operator.h"
@@ -54,6 +56,34 @@ typedef struct {
 } nn_avgpool2d_job_t;
 
 
+void avgpool2d_gen(
+    int8_t* Y,
+    const int8_t* X, 
+    const channel_count_t image_chans,
+    const nn_window_params_t* pooling_window,
+    const nn_window_op_job_params_t* job_params,
+    const nn_avgpool2d_flags_e flags,
+    const nn_avgpool2d_job_t* job);
+
+void avgpool2d_2x2(
+    int8_t* Y,
+    const int8_t* X, 
+    const channel_count_t image_chans,
+    const nn_window_params_t* pooling_window,
+    const nn_window_op_job_params_t* job_params,
+    const nn_avgpool2d_flags_e flags,
+    const nn_avgpool2d_job_t* job);
+
+void avgpool2d_global_ext(
+    nn_image_t* Y,
+    const nn_image_t* X, 
+    const int32_t bias,
+    const int8_t scale,
+    const uint16_t shift,
+    const nn_image_params_t* x_params,
+    const unsigned chan_start,
+    const unsigned chan_count,
+    const nn_avgpool2d_global_flags_e flags);
 
 
 static inline int matches_2x2_impl(
@@ -178,9 +208,7 @@ static void avgpool2d_prepare(
 }
 
 
-
-WEAK_FUNC
-void avgpool2d_gen(
+void avgpool2d_gen_ref(
     int8_t* Y,
     const int8_t* X, 
     const channel_count_t image_chans,
@@ -238,8 +266,7 @@ void avgpool2d_gen(
     }
 }
 
-WEAK_FUNC
-void avgpool2d_2x2(
+void avgpool2d_2x2_ref(
     int8_t* Y,
     const int8_t* X, 
     const channel_count_t image_chans,
@@ -368,8 +395,8 @@ void avgpool2d_global(
                         0, x_params->channels, AVGPOOL2D_GLOBAL_FLAG_NONE);
 }
 
-WEAK_FUNC
-void avgpool2d_global_ext(
+
+void avgpool2d_global_ext_ref(
     nn_image_t* Y,
     const nn_image_t* X, 
     const int32_t bias,
@@ -403,3 +430,46 @@ void avgpool2d_global_ext(
 
 
 
+
+
+#ifdef NN_USE_REF
+
+void avgpool2d_gen(
+    int8_t* Y,
+    const int8_t* X, 
+    const channel_count_t image_chans,
+    const nn_window_params_t* pooling_window,
+    const nn_window_op_job_params_t* job_params,
+    const nn_avgpool2d_flags_e flags,
+    const nn_avgpool2d_job_t* job)
+{
+    avgpool2d_gen_ref(Y, X, image_chans, pooling_window, job_params, flags, job);
+}
+
+void avgpool2d_2x2(
+    int8_t* Y,
+    const int8_t* X, 
+    const channel_count_t image_chans,
+    const nn_window_params_t* pooling_window,
+    const nn_window_op_job_params_t* job_params,
+    const nn_avgpool2d_flags_e flags,
+    const nn_avgpool2d_job_t* job)
+{
+    avgpool2d_2x2_ref(Y, X, image_chans, pooling_window, job_params, flags, job);
+}
+
+void avgpool2d_global_ext(
+    nn_image_t* Y,
+    const nn_image_t* X, 
+    const int32_t bias,
+    const int8_t scale,
+    const uint16_t shift,
+    const nn_image_params_t* x_params,
+    const unsigned chan_start,
+    const unsigned chan_count,
+    const nn_avgpool2d_global_flags_e flags)
+{
+    avgpool2d_global_ext_ref(Y, X, bias, scale, shift, x_params, chan_start, chan_count, flags);
+}
+
+#endif //NN_USE_REF

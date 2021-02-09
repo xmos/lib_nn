@@ -1,15 +1,17 @@
+# Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the
+# XMOS Public License: Version 1
 
 from trace_parser import InstructionFetch
 
-class TraceContextTree(object):
 
+class TraceContextTree(object):
     def __init__(self, parent, op):
-        assert(op.is_frame_entry())
+        assert op.is_frame_entry()
 
         self.parent = parent
         self.children = []
 
-        self.histogram = {'fnop': 0}
+        self.histogram = {"fnop": 0}
 
         self.tile = op.tile
         self.core = op.core
@@ -21,15 +23,15 @@ class TraceContextTree(object):
         self.update_hist(op)
 
     def update_hist(self, op):
-        
+
         self.exclusive_ops += 1
 
         if isinstance(op, InstructionFetch):
-            self.histogram['fnop'] = self.histogram['fnop'] + 1
+            self.histogram["fnop"] = self.histogram["fnop"] + 1
             return
 
         for inst in op.instructions():
-            if (inst in self.histogram):
+            if inst in self.histogram:
                 self.histogram[inst] = self.histogram[inst] + 1
             else:
                 self.histogram[inst] = 1
@@ -48,15 +50,16 @@ class TraceContextTree(object):
 
         return self
 
-    def op_count(self, include_children = True):
+    def op_count(self, include_children=True):
         total = self.exclusive_ops
-        if not include_children: return total
+        if not include_children:
+            return total
 
         for child in self.children:
             total += child.op_count()
         return total
 
-    def instruction_count(self, *instructions, include_children = True):
+    def instruction_count(self, *instructions, include_children=True):
         total = 0
 
         for x in instructions:
@@ -68,5 +71,5 @@ class TraceContextTree(object):
         if include_children:
             for child in self.children:
                 total += child.instruction_count(instructions, True)
-        
+
         return total

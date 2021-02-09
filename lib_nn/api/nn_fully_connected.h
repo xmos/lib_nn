@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 #ifndef FULLY_CONNECTED_H_
 #define FULLY_CONNECTED_H_
 

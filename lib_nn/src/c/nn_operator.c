@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 
 
 #include "nn_operator.h"
@@ -12,7 +14,7 @@
 #include <assert.h>
 
 
-WEAK_FUNC
+// Note: There currently is no assembly implementation.
 void argmax_16(
     int32_t* Y,
     const int16_t* X,
@@ -82,8 +84,8 @@ void argmax_16(
   #define NEG_SAT_VAL   (-128)
 #endif 
 
-WEAK_FUNC
-void requantize_16_to_8(
+
+void requantize_16_to_8_ref(
     int8_t* y,
     const int16_t* x,
     const unsigned elm_start,
@@ -101,8 +103,8 @@ void requantize_16_to_8(
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-WEAK_FUNC
-void lookup8(
+
+void lookup8_ref(
     uint8_t* Y,
     const uint8_t* X,
     const uint8_t* lut,
@@ -115,3 +117,26 @@ void lookup8(
 }
 
 
+
+#ifdef NN_USE_REF
+
+void requantize_16_to_8(
+    int8_t* y,
+    const int16_t* x,
+    const unsigned elm_start,
+    const unsigned elm_count)
+{
+    requantize_16_to_8_ref(y, x, elm_start, elm_count);
+}
+    
+void lookup8(
+    uint8_t* Y,
+    const uint8_t* X,
+    const uint8_t* lut,
+    const unsigned elm_start,
+    const unsigned elm_count)
+{
+    lookup8_ref(Y, X, lut, elm_start, elm_count);
+}
+
+#endif // NN_USE_REF

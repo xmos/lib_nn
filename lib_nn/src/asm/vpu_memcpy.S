@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 
 #if defined(__XS3A__)
 
@@ -11,7 +13,12 @@ void vpu_memcpy(
     size_t size);
 */
 
-#define FUNCTION_NAME vpu_memcpy
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME vpu_memcpy
+#else
+  #define FUNCTION_NAME vpu_memcpy_asm
+#endif //NN_USE_REF
+
 
 #define NSTACKWORDS  0
     

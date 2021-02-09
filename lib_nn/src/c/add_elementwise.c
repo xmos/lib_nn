@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 
 #include "nn_operator.h"
 #include "../nn_op_helper.h"
@@ -33,8 +35,8 @@
 #define MIN(A,B)        (((A) <= (B))? (A) : (B))
 
 
-WEAK_FUNC
-void add_elementwise(
+
+void add_elementwise_ref(
     int8_t Y[],
     const int8_t X0[],
     const int8_t X1[],
@@ -60,3 +62,19 @@ void add_elementwise(
         Y[i] = (int8_t) acc;
     }   
 }
+
+
+#ifdef NN_USE_REF
+
+void add_elementwise(
+    int8_t Y[],
+    const int8_t X0[],
+    const int8_t X1[],
+    const nn_add_params_t* params,
+    const unsigned output_start,
+    const unsigned output_count)
+{
+    add_elementwise_ref(Y, X0, X1, params, output_start, output_count);
+}
+
+#endif // NN_USE_REF

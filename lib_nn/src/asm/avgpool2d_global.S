@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 
 #if defined(__XS3A__)
 
@@ -17,7 +19,11 @@ void avgpool2d_global_ext(
     const nn_avgpool2d_global_flags_e flags);
 */
 
-#define FUNCTION_NAME avgpool2d_global_ext
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME avgpool2d_global_ext
+#else
+  #define FUNCTION_NAME avgpool2d_global_ext_asm
+#endif //NN_USE_REF
 
 #define NSTACKWORDS  (5*8 + 12)
     

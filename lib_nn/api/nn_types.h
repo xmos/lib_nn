@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 #ifndef NN_TYPES_H_
 #define NN_TYPES_H_
 

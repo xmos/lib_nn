@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 
 #if defined(__XS3A__)
 
@@ -13,7 +15,11 @@ void fully_connected_16(
     const channel_count_t out_chan_count);
 */
 
-#define FUNCTION_NAME fully_connected_16
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME fully_connected_16
+#else
+  #define FUNCTION_NAME fully_connected_16_asm
+#endif //NN_USE_REF
 
 #ifndef FULLY_CONNECTED_8_SAFETY_CHECKS_ENABLED
   #define FULLY_CONNECTED_8_SAFETY_CHECKS_ENABLED (1)

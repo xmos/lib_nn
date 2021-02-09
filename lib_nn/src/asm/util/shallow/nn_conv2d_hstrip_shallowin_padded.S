@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 
 #if defined(__XS3A__)
 
@@ -23,7 +25,11 @@ void nn_conv2d_hstrip_shallowin_padded(
         const int8_t* zero_point_vec)
 */
 
-#define FUNCTION_NAME nn_conv2d_hstrip_shallowin_padded
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME nn_conv2d_hstrip_shallowin_padded
+#else
+  #define FUNCTION_NAME nn_conv2d_hstrip_shallowin_padded_asm
+#endif // NN_USE_REF
 
 
 #define NSTACKVECS  (4)

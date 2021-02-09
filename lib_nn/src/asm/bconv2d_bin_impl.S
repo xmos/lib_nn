@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 #if defined(__XS3A__)
 
 .issue_mode  dual
@@ -210,7 +212,11 @@ bnn_compute_patch:
 void bconv2d_bin_impl(const nn_bconv2d_bin_DI_impl_plan_t* plan);
 */
 
-#define FUNCTION_NAME bconv2d_bin_impl
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME bconv2d_bin_impl
+#else
+  #define FUNCTION_NAME bconv2d_bin_impl_asm
+#endif // NN_USE_REF
 
 #define NSTACKWORDS  40 //FIXME should be lower
     

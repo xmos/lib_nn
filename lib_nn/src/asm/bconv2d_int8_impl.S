@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 #if defined(__XS3A__)
 
 .section        .cp.const32,"aMc",@progbits,32
@@ -64,7 +66,11 @@ VECT_INT8_MIN:
 #define PLAN_X_WIDTH_LOOP_COUNTER  26
 #define PLAN_X_HEIGHT_LOOP_COUNTER 27  
 #define PLAN_BIAS_MULTIPLIER       28  
+#define PLAN_QUANT_ACCU_MOD_P      29
+#define PLAN_CLAMP_NEAR            30
+#define PLAN_CLAMP_FAR_0           31
 
+#define PLAN_CLAMP_FAR_1           32
 
 //Stack Usage
 
@@ -112,58 +118,63 @@ VECT_INT8_MIN:
 #define S_X_WIDTH_LOOP_COUNTER  29
 #define S_X_HEIGHT_LOOP_COUNTER 30 
 #define S_BIAS_MULTIPLIER       31  
-
-
-//doesn't have to be double work aligned
-#define S_TEMP_0                32
-#define S_TEMP_1                33 
-#define S_TEMP_2                34
-#define S_TEMP_3                35
-#define S_TEMP_4                36
-#define S_TEMP_5                37
-#define S_TEMP_6                38
-#define S_TEMP_7                39
+ 
+#define S_QUANT_ACCU_MOD_P      32
+#define S_CLAMP_NEAR            33
+#define S_CLAMP_FAR_0           34
+#define S_CLAMP_FAR_1           35
+#define S_CUR_QUANT_ACCU_MOD_P  36
 
 //doesn't have to be double work aligned
-#define S_VLSAT_0               40
-#define S_VLSAT_1               41 
-#define S_VLSAT_2               42
-#define S_VLSAT_3               43
-#define S_VLSAT_4               44
-#define S_VLSAT_5               45
-#define S_VLSAT_6               46
-#define S_VLSAT_7               47
+#define S_TEMP_0                37
+#define S_TEMP_1                38 
+#define S_TEMP_2                39
+#define S_TEMP_3                40
+#define S_TEMP_4                41
+#define S_TEMP_5                42
+#define S_TEMP_6                43
+#define S_TEMP_7                44
+
+//doesn't have to be double work aligned
+#define S_VLSAT_0               45
+#define S_VLSAT_1               46
+#define S_VLSAT_2               47
+#define S_VLSAT_3               48
+#define S_VLSAT_4               49
+#define S_VLSAT_5               50
+#define S_VLSAT_6               51
+#define S_VLSAT_7               52
 
 //doesn't have to be double word aligned
-#define S_BIAS_SHIFT_0          48
-#define S_BIAS_SHIFT_1          49 
-#define S_BIAS_SHIFT_2          50
-#define S_BIAS_SHIFT_3          51
-#define S_BIAS_SHIFT_4          52
-#define S_BIAS_SHIFT_5          53
-#define S_BIAS_SHIFT_6          54
-#define S_BIAS_SHIFT_7          55
+#define S_BIAS_SHIFT_0          53
+#define S_BIAS_SHIFT_1          54 
+#define S_BIAS_SHIFT_2          55
+#define S_BIAS_SHIFT_3          56
+#define S_BIAS_SHIFT_4          57
+#define S_BIAS_SHIFT_5          58
+#define S_BIAS_SHIFT_6          59
+#define S_BIAS_SHIFT_7          60
 
 //doesn't have to be double word aligned
-#define S_FINAL_SHR_0           56
-#define S_FINAL_SHR_1           57 
-#define S_FINAL_SHR_2           58
-#define S_FINAL_SHR_3           59
-#define S_FINAL_SHR_4           60
-#define S_FINAL_SHR_5           61
-#define S_FINAL_SHR_6           62
-#define S_FINAL_SHR_7           63
+#define S_FINAL_SHR_0           61
+#define S_FINAL_SHR_1           62 
+#define S_FINAL_SHR_2           63
+#define S_FINAL_SHR_3           64
+#define S_FINAL_SHR_4           65
+#define S_FINAL_SHR_5           66
+#define S_FINAL_SHR_6           67
+#define S_FINAL_SHR_7           68
 
-#define S_SAVE_R10              64
-#define S_SAVE_R4               65
-#define S_SAVE_R5               66
-#define S_SAVE_R6               67
-#define S_SAVE_R7               68
-#define S_SAVE_R8               69
-#define S_SAVE_R9               70
+#define S_SAVE_R10              69
+#define S_SAVE_R4               70
+#define S_SAVE_R5               71
+#define S_SAVE_R6               72
+#define S_SAVE_R7               73
+#define S_SAVE_R8               74
+#define S_SAVE_R9               75
 
 
-#define NSTACKWORDS  72 //TODO
+#define NSTACKWORDS  80 //TODO
 
 
 //Helpers that reference the above
@@ -278,14 +289,26 @@ bnn_compute_patch:
         {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
         {bt s, bnn_tail_loop; sub s, s, 1}
 
-    //TODO clamping would go here
-
-
     ldd s, t, sp[S_VLSAT_ASHR]
     {vlsat t[0]; ldaw t, sp[S_TEMP]}
 
     {vstr t[0]; nop}
     vlashr t[0], s
+
+    ldw s, sp[S_CUR_QUANT_ACCU_MOD_P]
+    {vladd s[0]; add s, s, r_256_bits}
+    stw s, sp[S_CUR_QUANT_ACCU_MOD_P]
+
+    {ldw s, sp[S_CLAMP_NEAR]; nop}
+    {vlsub s[0]; nop}
+    {vlsub s[0]; nop}
+    {ldw s, sp[S_CLAMP_FAR_0]; nop}
+    {ldw r, sp[S_CLAMP_FAR_1]; nop}
+    {vlsub s[0]; nop}
+    {vlsub r[0]; nop}
+    {vlsub r[0]; nop}
+    {vlsub s[0]; nop}
+
 
     {vstr t[0]; nop}
     {vclrdr; nop}
@@ -300,7 +323,8 @@ bnn_compute_patch:
     {vlmacc s[0]; add s, s, r_256_bits}
 
     std t, s, sp[S_CUR_PA_MUL_p_CUR_PA_BIAS_p]
-            
+
+
     ldw t, sp[S_FINAL_SHR]
     {vlsat t[0]; ldaw s, sp[S_TEMP]}
 
@@ -320,7 +344,11 @@ bnn_compute_patch:
 void bconv2d_int8_impl(const nn_bconv2d_int8_DIDO_impl_plan_t* plan);
 */
 
-#define FUNCTION_NAME bconv2d_int8_impl
+#ifndef NN_USE_REF
+  #define FUNCTION_NAME bconv2d_int8_impl
+#else
+  #define FUNCTION_NAME bconv2d_int8_impl_asm
+#endif // NN_USE_REF
     
 .text
 .issue_mode  dual
@@ -359,6 +387,9 @@ FUNCTION_NAME:
 
     {vldr t[0]; add t, t, r_256_bits}
     {vstr s[0]; add s, s, r_256_bits} //forth copy 
+
+    {vldr t[0]; add t, t, r_256_bits}
+    {vstr s[0]; add s, s, r_256_bits} //fifth copy 
     //half of the above copy will have gone over S_TEMP but it wont matter
 
     ldaw t, sp[S_VLSAT_0]
@@ -414,6 +445,8 @@ FUNCTION_NAME:
 
             ldd t, s, sp[S_PA_MUL_p_PA_BIAS_p]
             std t, s, sp[S_CUR_PA_MUL_p_CUR_PA_BIAS_p]
+            ldw t, sp[S_QUANT_ACCU_MOD_P]
+            stw t, sp[S_CUR_QUANT_ACCU_MOD_P]
 
             {bf oc_loop_counter, bnn_final_loop; sub oc_loop_counter, oc_loop_counter, 1}
 

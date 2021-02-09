@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -50,7 +52,7 @@ void run_bsign_test(int8_t* x, size_t inputLength, int8_t zeroPoint, size_t jobC
     /* Compare our reference implementation against the (external) golden reference) */
     for(int i = 0; i < jobCount; i++)
     {
-        bsign_8_ref(y, x, &plan, &jobs[i]);
+        bsign_8_ref((bnn_b32_t*) y, x, &plan, &jobs[i]);
     }
 
     for(int i = 0; i < outputLength; i++)
@@ -64,7 +66,7 @@ void run_bsign_test(int8_t* x, size_t inputLength, int8_t zeroPoint, size_t jobC
     /* Compare our optimised version for the platform under test */
     for(int i = 0; i < jobCount; i++)
     {
-        bsign_8(y, x, &plan, &jobs[i]);
+        bsign_8((bnn_b32_t*) y, x, &plan, &jobs[i]);
     }
     
     for(int i = 0; i < outputLength; i++)

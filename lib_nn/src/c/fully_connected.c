@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 
 
 #include "nn_operator.h"
@@ -21,10 +23,7 @@
 
 
 
-
-
-WEAK_FUNC
-void fc_deepin_shallowout_16(
+void fc_deepin_shallowout_16_ref(
     const int8_t* W, 
     const int32_t* B,
     const int8_t* X, 
@@ -79,12 +78,7 @@ void fc_deepin_shallowout_16(
 }
 
 
-
-
-
-
-WEAK_FUNC
-void fc_deepin_shallowout_8(
+void fc_deepin_shallowout_8_ref(
     const int8_t* W, 
     const int32_t* B,
     const int8_t* X, 
@@ -141,13 +135,7 @@ void fc_deepin_shallowout_8(
 }
 
 
-
-
-
-
-
-WEAK_FUNC
-void fully_connected_16(
+void fully_connected_16_ref(
     int16_t* Y,
     const int8_t* W, 
     const int8_t* X, 
@@ -207,13 +195,7 @@ void fully_connected_16(
 }
 
 
-
-
-
-
-
-WEAK_FUNC
-void fully_connected_8(
+void fully_connected_8_ref(
     int8_t* Y,
     const int8_t* W, 
     const int8_t* X, 
@@ -271,3 +253,58 @@ void fully_connected_8(
         Y[cout] = (int8_t) res;
     }
 }
+
+
+#ifdef NN_USE_REF
+
+void fc_deepin_shallowout_16(
+    const int8_t* W, 
+    const int32_t* B,
+    const int8_t* X, 
+    int16_t* Y,
+    const int32_t C_out, 
+    const int32_t C_in,
+    const uint16_t* shifts, 
+    const int16_t* scales)
+{
+    fc_deepin_shallowout_16_ref(W, B, X, Y, C_out, C_in, shifts, scales);
+}
+    
+void fc_deepin_shallowout_8(
+    const int8_t* W, 
+    const int32_t* B,
+    const int8_t* X, 
+    int8_t* Y,
+    const int32_t C_out, 
+    const int32_t C_in,
+    const uint16_t* shifts, 
+    const int16_t* scales)
+{
+    fc_deepin_shallowout_8_ref(W, B, X, Y, C_out, C_in, shifts, scales);
+}
+
+void fully_connected_16(
+    int16_t* Y,
+    const int8_t* W, 
+    const int8_t* X, 
+    const nn_bso_block_t* BSO,
+    const channel_count_t C_in,
+    const channel_count_t out_chan_start,
+    const channel_count_t out_chan_count)
+{
+    fully_connected_16_ref(Y, W, X, BSO, C_in, out_chan_start, out_chan_count);
+}
+
+void fully_connected_8(
+    int8_t* Y,
+    const int8_t* W, 
+    const int8_t* X, 
+    const nn_bso_block_t* BSO,
+    const channel_count_t C_in,
+    const channel_count_t out_chan_start,
+    const channel_count_t out_chan_count)
+{
+    fully_connected_8_ref(Y, W, X, BSO, C_in, out_chan_start, out_chan_count);
+}
+
+#endif // NN_USE_REF

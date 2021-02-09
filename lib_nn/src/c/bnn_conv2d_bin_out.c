@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 
 #include <stdint.h>
 #include <string.h>
@@ -8,6 +10,13 @@
 
 #include "xs3_vpu.h"
 #include "vpu_sim.h"
+
+void bconv2d_bin_DI_impl(
+    nn_bconv2d_bin_DI_impl_plan_t * plan);
+    
+void bconv2d_bin_impl(
+    nn_bconv2d_bin_impl_plan_t * plan);
+
 
 static void compute_bin_kernel(xs3_vpu * vpu, nn_bconv2d_bin_DI_impl_plan_t * plan, 
     void ** threshold_current, void* X_p, void ** K_p,  void * partial_res){
@@ -46,8 +55,10 @@ static void compute_bin_kernel(xs3_vpu * vpu, nn_bconv2d_bin_DI_impl_plan_t * pl
         
 }
 
-WEAK_FUNC
-void bconv2d_bin_DI_impl(nn_bconv2d_bin_DI_impl_plan_t * plan){
+
+void bconv2d_bin_DI_impl_ref(
+    nn_bconv2d_bin_DI_impl_plan_t * plan)
+{
 
   xs3_vpu vpu_data;
   memset(&vpu_data, 0, sizeof(vpu_data));
@@ -141,8 +152,9 @@ static void compute_patch(xs3_vpu * vpu, nn_bconv2d_bin_impl_plan_t * plan,
 }
 
 //Patch to Col version
-WEAK_FUNC
-void bconv2d_bin_impl(nn_bconv2d_bin_impl_plan_t * plan){
+void bconv2d_bin_impl_ref(
+    nn_bconv2d_bin_impl_plan_t * plan)
+{
 
   xs3_vpu vpu_data;
   memset(&vpu_data, 0, sizeof(vpu_data));
@@ -340,7 +352,7 @@ void bconv2d_bin_prepare(
   // Outer Loop
   plan->outer_x_h_step = bytes_per_input_channel * k->stride.horizontal;
 
-  plan->outer_x_v_step = (bytes_per_input_channel * x->width *k->stride.vertical) 
+  plan->outer_x_v_step = (bytes_per_input_channel * (int)x->width *k->stride.vertical) 
      - (plan->outer_x_h_step * x_width_loops);
 
   plan->y_v_step = chan_b32_out * sizeof(bnn_b32_t) * (y->width - y_sub_width);
@@ -393,5 +405,24 @@ void bconv2d_bin(bnn_b32_t* Y_p,
         y_loc_x, y_loc_y, y_sub_width, y_sub_height,
         x_loc_x, x_loc_y);
 
+    
+
     bconv2d_bin_impl(&plan);
 }
+
+
+#ifdef NN_USE_REF
+
+void bconv2d_bin_DI_impl(
+    nn_bconv2d_bin_DI_impl_plan_t * plan)
+{
+    bconv2d_bin_DI_impl_ref(plan);
+}
+
+void bconv2d_bin_impl(
+    nn_bconv2d_bin_impl_plan_t * plan)
+{
+    bconv2d_bin_impl_ref(plan);
+}
+
+#endif // NN_USE_REF

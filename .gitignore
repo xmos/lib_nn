@@ -12,7 +12,9 @@
 _build
 **/dist/
 **/bin/
+**/venv/*
 *.o
+lib_nn/lib
 
 # macOS cruft
 .DS_Store

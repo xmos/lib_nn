@@ -1,3 +1,5 @@
+// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
+// XMOS Public License: Version 1
 
 
 #include "nn_operator.h"
@@ -21,8 +23,7 @@
 #endif 
 
 
-WEAK_FUNC
-void nn_conv2d_hstrip_deep(
+void nn_conv2d_hstrip_deep_ref(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
@@ -171,15 +172,7 @@ void nn_conv2d_hstrip_deep(
 }
 
 
-
-
-
-
-
-
-
-WEAK_FUNC
-void nn_conv2d_hstrip_deep_padded(
+void nn_conv2d_hstrip_deep_padded_ref(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
@@ -195,7 +188,6 @@ void nn_conv2d_hstrip_deep_padded(
         const mem_stride_t x_v_stride,
         const mem_stride_t k_cout_stride,
         const mem_stride_t y_h_stride,
-
         const unsigned out_cols,
         const int8_t* zero_point_vec)
 {
@@ -546,8 +538,8 @@ void nn_conv2d_hstrip_deep_padded(
         }                                                                   \
     } while(0)
 
-WEAK_FUNC
-void nn_conv2d_hstrip_tail_deep(
+
+void nn_conv2d_hstrip_tail_deep_ref(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
@@ -715,8 +707,8 @@ void nn_conv2d_hstrip_tail_deep(
         }                                                                   \
     } while(0)
 
-WEAK_FUNC
-void nn_conv2d_hstrip_tail_deep_padded(
+
+void nn_conv2d_hstrip_tail_deep_padded_ref(
         nn_image_t* Y,
         const nn_image_t* X,
         const nn_tensor_t* K,
@@ -1042,3 +1034,98 @@ void nn_conv2d_hstrip_tail_deep_padded(
 }
 
 
+
+
+
+#ifdef NN_USE_REF
+
+void nn_conv2d_hstrip_deep(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,
+        const nn_bso_block_t* BSO,
+        const unsigned K_h,
+        const unsigned K_w,
+        const unsigned K_h_stride,
+        const channel_count_t C_in,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t k_cout_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols)
+{
+    nn_conv2d_hstrip_deep_ref(Y, X, K, BSO, K_h, K_w, K_h_stride, C_in,
+        x_v_stride, k_cout_stride, y_h_stride, out_cols);
+}
+
+
+void nn_conv2d_hstrip_deep_padded(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,
+        const nn_bso_block_t* BSO,
+        const unsigned K_h,
+        const unsigned K_w,
+        const unsigned K_h_stride,
+        const channel_count_t C_in,
+        const unsigned pad_t,
+        const unsigned pad_b,
+        const int pad_l_initial,
+        const int pad_r_initial,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t k_cout_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols,
+        const int8_t* zero_point_vec)
+{
+    nn_conv2d_hstrip_deep_padded_ref(Y, X, K, BSO, K_h, K_w, K_h_stride, C_in, 
+        pad_t, pad_b, pad_l_initial, pad_r_initial, x_v_stride, k_cout_stride, 
+        y_h_stride, out_cols, zero_point_vec);
+}
+
+
+void nn_conv2d_hstrip_tail_deep(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,
+        const nn_bso_block_t* BSO,
+        const unsigned K_h,
+        const unsigned K_w,
+        const unsigned K_h_stride,
+        const channel_count_t C_in,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t k_cout_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols,
+        const channel_count_t C_out_tail)
+{
+    nn_conv2d_hstrip_tail_deep_ref(Y, X, K, BSO, K_h, K_w, K_h_stride, C_in,
+        x_v_stride, k_cout_stride, y_h_stride, out_cols, C_out_tail);
+}
+
+
+void nn_conv2d_hstrip_tail_deep_padded(
+        nn_image_t* Y,
+        const nn_image_t* X,
+        const nn_tensor_t* K,
+        const nn_bso_block_t* BSO,
+        const unsigned K_h,
+        const unsigned K_w,
+        const unsigned K_h_stride,
+        const channel_count_t C_in,
+        const unsigned pad_t,
+        const unsigned pad_b,
+        const int pad_l_initial,
+        const int pad_r_initial,
+        const mem_stride_t x_v_stride,
+        const mem_stride_t k_cout_stride,
+        const mem_stride_t y_h_stride,
+        const unsigned out_cols,
+        const int8_t* zero_point_vec,
+        const channel_count_t C_out_tail)
+{
+    nn_conv2d_hstrip_tail_deep_padded_ref(Y, X, K, BSO, K_h, K_w, K_h_stride, C_in,
+        pad_t, pad_b, pad_l_initial, pad_r_initial, x_v_stride, k_cout_stride, 
+        y_h_stride, out_cols, zero_point_vec, C_out_tail);
+}
+
+#endif // NN_USE_REF
