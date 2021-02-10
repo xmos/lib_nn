@@ -35,6 +35,7 @@ typedef struct {
   const bnn_b256_t* X;
 
   const bnn_b256_t* K;
+  int32_t y_c_step;
 } nn_bconv2d_bin_DI_impl_plan_t;
 
 /**
@@ -114,6 +115,7 @@ typedef struct {
   const int16_t * clamp_near;
   const int16_t * clamp_far_0;
   const int16_t * clamp_far_1;
+  int32_t y_c_step;
 
 } nn_bconv2d_int8_DIDO_impl_plan_t;
 

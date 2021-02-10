@@ -133,6 +133,7 @@ void bconv2d_int8_DIDO_impl_ref(nn_bconv2d_int8_DIDO_impl_plan_t * plan){
         cur_post_activation_bias += XS3_VPU_VREG_WIDTH_BYTES;
       }
       X_p += plan->outer_x_h_step;
+      Y_p += plan->y_c_step;
     }
     X_p += plan->outer_x_v_step;
     Y_p += plan->y_v_step;
@@ -164,12 +165,12 @@ static void make_patch(xs3_vpu * vpu, nn_bconv2d_int8_impl_plan_t * plan, void *
 
 void compute_patch(nn_bconv2d_int8_impl_plan_t *plan, 
   void ** K_p, int step, xs3_vpu * vpu, 
-  int16_t * sat_mem, 
-  int16_t * bias_shift, 
-  int16_t * final_shr, 
-  int16_t * clamp_near_mem, 
-  int16_t * clamp_far_0_mem, 
-  int16_t * clamp_far_1_mem, 
+  const int16_t * sat_mem, 
+  const int16_t * bias_shift, 
+  const int16_t * final_shr, 
+  const int16_t * clamp_near_mem, 
+  const int16_t * clamp_far_0_mem, 
+  const int16_t * clamp_far_1_mem, 
   void * cur_post_activation_mul, 
   void * cur_post_activation_bias, 
   void * cur_quantised_accu_modifier
@@ -279,7 +280,7 @@ void bconv2d_int8_impl_ref(
 
       VSTRPV(vpu, Y_p, plan->final_channels_mask);
 
-      Y_p += plan->final_channels_bytes;
+      Y_p += plan->final_channels_bytes; //to this we add the amount to skip to the next pixel(i.e. skip channels we are not writing to)
       X_p += plan->outer_x_h_step;
     }
     X_p += plan->outer_x_v_step;
@@ -351,15 +352,18 @@ static void bconv2d_int8_prepare(
   bnn_b32_t(*X)[x->width][chan_b32_in] =
       (bnn_b32_t(*)[x->width][chan_b32_in])X_p;
 
-  // Relocate the pointers to the start of the region we care about.
-  plan->Y = (int8_t*)Y[y_loc_y][y_loc_x];
   plan->X = (bnn_b32_t*)X[x_loc_y][x_loc_x];
-  plan->K = K_p;
   plan->data_scratch = data_scratch;
+
+  // printf("start_channel:%d channel_count:%d y->channels:%d\n", start_channel, channel_count, y->channels);
+
+  // Relocate the pointers to the start of the region we care about.
+  plan->Y = (int8_t*)&(Y[y_loc_y][y_loc_x][start_channel]);
+  plan->K = &(K_p[start_channel*k->shape.height*k->shape.width*chan_b32_in]) ;// dereference by start_channel
   
-  plan->post_activation_mul = (int16_t *)post_activation_multiplier_q;
-  plan->post_activation_bias = (int16_t *)post_activation_bias_q;
-  plan->quantised_accu_modifier = (int16_t *)quantised_accu_modifier;
+  plan->post_activation_mul = (int16_t *)&(post_activation_multiplier_q[start_channel]);
+  plan->post_activation_bias = (int16_t *)&(post_activation_bias_q[start_channel]);
+  plan->quantised_accu_modifier = (int16_t *)&(quantised_accu_modifier[start_channel]);
 
   plan->clamp_near = (const int16_t * )otv->clamp_near;
   plan->clamp_far_0 = (const int16_t * )otv->clamp_far_0;
@@ -377,6 +381,8 @@ static void bconv2d_int8_prepare(
   assert(y->channels > 0);
   assert((x->channels % bits_per_b32) == 0);
   assert((y->channels % out_chans_multiplier) == 0);
+  assert((channel_count % out_chans_multiplier) == 0);
+  assert((start_channel % out_chans_multiplier) == 0);
 
   plan->k_height_loop_counter = k->shape.height - 1;
   plan->k_width_loop_counter = k->shape.width - 1;
@@ -397,15 +403,19 @@ static void bconv2d_int8_prepare(
   plan->x_height_loop_counter = x_height_loops;
   plan->x_width_loop_counter = x_width_loops - 1;
 
-  int32_t channels_to_process_on_tail_output_loop = (y->channels - 1) % VPU_INT16_EPV + 1;
+  int32_t channels_to_process_on_tail_output_loop = (channel_count - 1) % VPU_INT16_EPV + 1;
 
-  plan->output_channel_loop_counter = (y->channels-channels_to_process_on_tail_output_loop)/VPU_INT16_EPV;
+  plan->output_channel_loop_counter = (channel_count - channels_to_process_on_tail_output_loop)/VPU_INT16_EPV;
 
   plan->k_p_rewind = (channels_to_process_on_tail_output_loop - VPU_INT16_EPV + 1L)*XS3_VPU_VREG_WIDTH_BYTES;
 
   compute_int8_patch_loop_params(&(plan->k_p_adjust), &(plan->patch_loop_counter), x->channels, k->shape.height, k->shape.width);
 
-  plan->final_channels_bytes = channels_to_process_on_tail_output_loop;
+  //TODO this should move us along to the next pixel
+  int32_t f_mod = (y->channels - channel_count);
+  // printf("fmod: %d\n", f_mod);
+  plan->final_channels_bytes = channels_to_process_on_tail_output_loop + f_mod;
+
   plan->final_channels_mask = ((1 << channels_to_process_on_tail_output_loop)-1) ;
 
   if(bytes_per_input_channel%XS3_VPU_VREG_WIDTH_BYTES)
@@ -457,13 +467,22 @@ static void bconv2d_int8_DIDO_prepare(
   bnn_b256_t(*X)[x->width][chan_b256_in] =
       (bnn_b256_t(*)[x->width][chan_b256_in])X_p;
 
-  // Relocate the pointers to the start of the region we care about.
-  plan->Y = (int8_t*)Y[y_loc_y][y_loc_x];
   plan->X = (bnn_b256_t*)X[x_loc_y][x_loc_x];
-  plan->K = K_p;
 
-  plan->post_activation_mul = (int16_t *)post_activation_multiplier_q;
-  plan->post_activation_bias = (int16_t *)post_activation_bias_q;
+  // Relocate the pointers to the start of the region we care about.
+  // plan->Y = (int8_t*)Y[y_loc_y][y_loc_x];
+  // plan->K = K_p;
+
+  // plan->post_activation_mul = (int16_t *)post_activation_multiplier_q;
+  // plan->post_activation_bias = (int16_t *)post_activation_bias_q;
+
+
+  // Relocate the pointers to the start of the region we care about.
+  plan->Y = (int8_t*)&(Y[y_loc_y][y_loc_x][start_channel]);
+  plan->K = &(K_p[start_channel*k->shape.height*k->shape.width*chan_b256_in]) ;// dereference by start_channel
+  
+  plan->post_activation_mul = (int16_t *)&(post_activation_multiplier_q[start_channel]);
+  plan->post_activation_bias = (int16_t *)&(post_activation_bias_q[start_channel]);
   
   plan->clamp_near = otv->clamp_near;
   plan->clamp_far_0 = otv->clamp_far_0;
@@ -488,7 +507,9 @@ static void bconv2d_int8_DIDO_prepare(
 
   plan->input_channel_loop_counter =
       (x->channels / XS3_VPU_VREG_WIDTH_BITS) - 1;
-  plan->output_channel_loop_counter = (y->channels / VPU_INT16_EPV) - 1;
+  // plan->output_channel_loop_counter = (y->channels / VPU_INT16_EPV) - 1;
+  plan->output_channel_loop_counter = (channel_count / VPU_INT16_EPV) - 1;
+  plan->y_c_step = (y->channels - channel_count);
 
   int32_t x_height_loops = y_sub_height;
   int32_t x_width_loops = y_sub_width;
