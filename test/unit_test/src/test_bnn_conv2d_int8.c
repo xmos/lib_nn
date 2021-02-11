@@ -14,7 +14,8 @@
 
 static const char undef_sentinal = 0x55;
 
-static const unsigned clamps_count = 16;
+// static const unsigned clamps_count = 16;
+static const unsigned clamps_count = 1;
 
 /*
 X_ref and K_ref must be initialised before running this.
@@ -56,6 +57,8 @@ static void run_int8_config(int8_t* Y_p, int8_t* Y_ref_p, bnn_b32_t* X_ref,
 
   unsigned receptive_volume = k_width * k_height * chans_in;
 
+  // memset(Y_ref_p, undef_sentinal, y_height * y_width * chans_out);
+  // memset(Y_p, undef_sentinal, y_height * y_width * chans_out);
 
   // printf("h_stride:%u v_stride:%u k_height:%u k_width:%u x_height:%u x_width:%u chans_in:%u chans_out:%u larq_clamp_min: %d larq_clamp_max: %d\n", 
   //   h_stride, v_stride, k_height, k_width, x_height, x_width, chans_in, chans_out, larq_clamp_min, larq_clamp_max);
@@ -441,6 +444,7 @@ void impl_bconv2d_int8_pseudo_random2(
           for (unsigned clamps_loop=0;clamps_loop<clamps_count;clamps_loop++){
             int32_t larq_clamp_min = pseudo_rand(&seed) % (2*receptive_volume);
             int32_t larq_clamp_max = larq_clamp_min + pseudo_rand(&seed) % (2*receptive_volume);
+            
             unsigned channel_group_size = 16;
             for(unsigned output_channel_start = 0; output_channel_start < chans_out; output_channel_start += channel_group_size ){
 
@@ -451,6 +455,7 @@ void impl_bconv2d_int8_pseudo_random2(
                 if(output_channel_start + output_channel_count > chans_out){
                   output_channel_count = chans_out - output_channel_start;
                 }  
+
                 memset(Y_ref, undef_sentinal, Y_bytes);
                 memset(Y, undef_sentinal, Y_bytes);
 
@@ -622,7 +627,7 @@ void impl_bconv2d_int8_sub_image(
           if(y.height == 0 || y.width == 0)
             continue;
 
-          for(unsigned i=0;i<1<<6;i++){
+          for(unsigned itt=0;itt<1;itt++){
 
             for(unsigned b=0;b<X_ref_bytes/sizeof(int);b++)
               ((int*)X_ref)[b] = pseudo_rand(&seed);
@@ -1531,7 +1536,7 @@ static void DIDO_kernel_full_image(
 }
 
 void test_bconv2d_int8_sub_image(){
-  impl_bconv2d_int8_sub_image(5, 5, 3, 3, 32*1, 32*9, 4*1, 4*3, 32, 4, 1, 3, 1, 3, 
+  impl_bconv2d_int8_sub_image(5, 5, 3, 3, 32*1, 32*9, 4*1, 4*5, 32, 4, 1, 3, 1, 3, 
     (void*)&generic_kernel_subregion);
 }
 
@@ -1539,19 +1544,7 @@ void test_bconv2d_int8_DIDO_sub_image(){
   impl_bconv2d_int8_sub_image(5, 5, 3, 3, 256*1, 256*2, 16*1, 16*3, 256, 32, 1, 3, 1, 3, 
     (void*)&DIDO_kernel_subregion);
 }
-/*
 
-  const unsigned min_k_height, const unsigned max_k_height, 
-  const unsigned min_k_width, const unsigned max_k_width,  
-  
-  const unsigned min_chans_in, const unsigned max_chans_in,    
-  const unsigned min_chans_out, const unsigned max_chans_out,  
-
-  const unsigned chans_in_inc, const unsigned chans_out_inc,
-
-  const unsigned min_v_stride, const unsigned max_v_stride, 
-  const unsigned min_h_stride, const unsigned max_h_stride,
-*/
 void test_bconv2d_int8_pseudo_random(){
   impl_bconv2d_int8_pseudo_random(1, 5,1, 5, 32*1, 32*9, 4*1, 4*5, 32, 4, 1, 3, 1, 3, 
     (void*)&generic_kernel_full_image);

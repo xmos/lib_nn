@@ -23,6 +23,7 @@
 #define PLAN_Y_P                   14
 #define PLAN_X_P                   15
 #define PLAN_K_P                   16
+#define PLAN_Y_C_STEP              17
 
 //Stack Usage
 
@@ -66,6 +67,7 @@
 #define S_X_WIDTH_LOOP_COUNTER  25
 
 #define S_IC_LOOP_COUNTER       26 
+#define S_Y_C_STEP              27 
 
 //Note: The elements 27 -> 30 will be clobbered when copying the plan to the stack
 //      this might mean leaving some spare stack space
@@ -191,7 +193,8 @@ FUNCTION_NAME:
     {mov t, r0;  ldc s, PLAN_Y_P}
     {ldw r0, t[s]; ldc s, PLAN_X_P} //put PLAN_Y_P into r0
     {ldw r1, t[s]; ldc s, PLAN_K_P}
-    {ldw r2, t[s]; nop}
+    {ldw r2, t[s]; ldc s, PLAN_Y_C_STEP}
+    {ldw r4, t[s]; nop} //r4 used as a temp
 
     stw r1, sp[S_X_p]   //put PLAN_X_P into S_X_p and r1---- this seems unnessessary CHECK
     stw r2, sp[S_K_p]   //put PLAN_K_P into S_K_p and r2
@@ -202,6 +205,8 @@ FUNCTION_NAME:
 
     {vldr t[0]; add t, t, r_256_bits}
     {vstr s[0]; add s, s, r_256_bits} //This could use a bit mask to only store the relavent fields
+
+    {stw r4, sp[S_Y_C_STEP]; nop} //we are done with r4
 
     //Set up the zeros (and clear the over write from the vector copy)
     ldaw t, sp[S_ZERO_0]
@@ -251,6 +256,8 @@ FUNCTION_NAME:
             ldd X_p, t, sp[S_X_p_S_OUTER_X_H_STEP]
             {add X_p, X_p, t; nop }
             stw X_p, sp[S_X_p]
+            ldw t, sp[S_Y_C_STEP];
+            {add Y_p, Y_p, t; nop}
 
         {bt x_width_loop, bnn_w_loop; sub x_width_loop, x_width_loop, 1 }
 

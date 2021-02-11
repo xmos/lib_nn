@@ -71,6 +71,7 @@ typedef struct {
   int32_t input_channel_loop_counter;
   int32_t k_p_adjust;    //the amount to advance the kernel pointer after applying it
   bnn_b32_t* Y;
+  int32_t outer_y_c_step;
 
 } nn_bconv2d_bin_impl_plan_t;
 
