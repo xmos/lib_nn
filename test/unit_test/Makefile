@@ -30,14 +30,14 @@ TARGET_DEVICE = XCORE-AI-EXPLORER
 
 NN_PATH := ../../lib_nn
 
-THIRD_PARTY_PATH := ./../../third_party
+DEPS_PATH := ./../deps
 
-UNITY_PATH := $(THIRD_PARTY_PATH)/Unity
-COMPUTE_ENGINE_PATH := $(THIRD_PARTY_PATH)/compute-engine
-FLAT_BUFFERS_PATH := $(THIRD_PARTY_PATH)/flatbuffers
-RUY_PATH := $(THIRD_PARTY_PATH)/ruy
-TENSORFLOW_PATH := $(THIRD_PARTY_PATH)/tensorflow
-GEMMLOWP_PATH := $(THIRD_PARTY_PATH)/gemmlowp
+UNITY_PATH := $(DEPS_PATH)/Unity
+COMPUTE_ENGINE_PATH := $(DEPS_PATH)/compute-engine
+FLAT_BUFFERS_PATH := $(DEPS_PATH)/flatbuffers
+RUY_PATH := $(DEPS_PATH)/ruy
+TENSORFLOW_PATH := $(DEPS_PATH)/tensorflow
+GEMMLOWP_PATH := $(DEPS_PATH)/gemmlowp
 
 BUILD_DIR := .build
 BIN_DIR := bin

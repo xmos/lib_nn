@@ -5,7 +5,7 @@ getApproval()
 pipeline {
     agent {
         dockerfile {
-            args ""
+            args "-v /etc/passwd:/etc/passwd:ro -v /etc/group:/etc/group:ro -v /home/jenkins/.ssh:/home/jenkins/.ssh:ro"
         }
     }
 
@@ -43,9 +43,15 @@ pipeline {
                     userRemoteConfigs: [[credentialsId: 'xmos-bot',
                                          url: 'git@github.com:xmos/lib_nn']]
                 ])
+                // fetch dependencies
+                sshagent (credentials: ['xmos-bot']) {
+                    dir("${env.WORKSPACE}/test") {
+                        sh "python fetch_dependencies.py"
+                    }
+                }
                 // create venv
                 sh "conda env create -q -p lib_nn_venv -f environment.yml"
-                // Install xmos tools version
+                // install xmos tools version
                 sh "/XMOS/get_tools.py " + params.TOOLS_VERSION
             }
         }
