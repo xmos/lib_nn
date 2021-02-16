@@ -297,9 +297,7 @@ void impl_bconv2d_bin_DI_pseudo_random2(
 
             for(unsigned ch_group_count = 0; ch_group_count < channel_groups; ch_group_count++){
               unsigned y_sub_channel = (ch_group_count+1) * channel_group_size;
-              if(y_loc_channel + y_sub_channel > chans_out){
-                y_sub_channel = chans_out - y_loc_channel;
-              }
+                y_sub_channel = min(y_sub_channel, chans_out - y_loc_channel);
               run_bin_config(
                   (bnn_b32_t*)Y, (bnn_b32_t*)Y_ref, (bnn_b32_t*)X_ref,
                   (bnn_b32_t*)K, (bnn_b32_t*)K_ref,
