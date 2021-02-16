@@ -694,9 +694,7 @@ void impl_bconv2d_int8_sub_image(
 
                           for(unsigned ch_group_count = 0; ch_group_count < channel_groups; ch_group_count++){
                             unsigned y_sub_channel = (ch_group_count+1) * channel_group_size;
-                            if(y_loc_channel + y_sub_channel > chans_out){
-                              y_sub_channel = chans_out - y_loc_channel;
-                            }
+                            y_sub_channel = min(y_sub_channel, chans_out - y_loc_channel);
 
                             //TODO
                             memset(Y, undef_sentinal, addressable_Y_bytes);
