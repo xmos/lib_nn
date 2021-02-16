@@ -90,6 +90,7 @@ void bconv2d_bin_DI_impl_ref(
         Y_p += 4;
       }
       X_p += plan->outer_x_h_step;
+      Y_p += plan->y_c_step;
     }
     X_p += plan->outer_x_v_step;
     Y_p += plan->y_v_step;
@@ -187,6 +188,7 @@ void bconv2d_bin_impl_ref(
         ((unsigned*)Y_p)[0] = result;
         Y_p += 4;
       }
+      Y_p += plan->outer_y_c_step; //to this we add the amount to skip to the next pixel(i.e. skip channels we are not writing to)
       X_p += plan->outer_x_h_step;
     }
     X_p += plan->outer_x_v_step;
@@ -200,9 +202,10 @@ void bconv2d_bin_DI_prepare(
     const nn_image_params_t* x, 
     const nn_image_params_t* y,
     const nn_window_params_t* k, 
-    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_loc_width, const unsigned y_loc_height,
     const unsigned y_sub_width, const unsigned y_sub_height,
-    const unsigned x_loc_x, const unsigned x_loc_y) {
+    const unsigned x_loc_width, const unsigned x_loc_height,
+    const unsigned y_loc_channel, const unsigned y_sub_channel) {
 
   const int32_t chan_b256_in = (x->channels + XS3_VPU_VREG_WIDTH_BITS - 1) / XS3_VPU_VREG_WIDTH_BITS;
   const int32_t chan_b32_out = (y->channels + 32 - 1) / 32;
@@ -212,16 +215,17 @@ void bconv2d_bin_DI_prepare(
 
   bnn_b256_t(*X)[x->width][chan_b256_in] =
       (bnn_b256_t(*)[x->width][chan_b256_in])X_p;
-
-  bnn_b256_t(*K)[k->shape.height][k->shape.width][chan_b256_in] =
-      (bnn_b256_t(*)[k->shape.height][k->shape.width][chan_b256_in])K_p;
-
+      
 //relocate the pointers to the start of the region we care about.
-  plan->Y = (bnn_b32_t*)Y[y_loc_y][y_loc_x];
-  plan->X = (bnn_b256_t*)X[x_loc_y][x_loc_x];
-  plan->K = (void *) K;
+  
+  plan->X = (bnn_b256_t*)X[x_loc_height][x_loc_width];
+  
+  
+  const int32_t start_chan_b32_out = (y_loc_channel + 32 - 1) / 32;
 
-  plan->threshold_p = thresholds_p;
+  plan->Y = (bnn_b32_t*)&(Y[y_loc_height][y_loc_width][start_chan_b32_out]);
+  plan->K = &(K_p[y_loc_channel*k->shape.height*k->shape.width*chan_b256_in]) ;// dereference by y_loc_channel  
+  plan->threshold_p = (int32_t *)&(thresholds_p[y_loc_channel]);//TODO check this
 
   int32_t bytes_per_input_channel = x->channels / 8;
 
@@ -238,7 +242,10 @@ void bconv2d_bin_DI_prepare(
 
   plan->input_channel_loop_counter =
       (x->channels / XS3_VPU_VREG_WIDTH_BITS) - 1;
-  plan->output_channel_loop_counter = (y->channels / out_chans_multiplier) - 1;
+
+  plan->output_channel_loop_counter = (y_sub_channel / out_chans_multiplier) - 1;
+
+  plan->y_c_step = (y->channels - y_sub_channel) / out_chans_multiplier * sizeof(bnn_b32_t);
 
   int32_t x_height_loops = y_sub_height;
   int32_t x_width_loops = y_sub_width;
@@ -280,9 +287,10 @@ void bconv2d_bin_prepare(
     const nn_image_params_t* x, 
     const nn_image_params_t* y,
     const nn_window_params_t* k, 
-    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_loc_width, const unsigned y_loc_height,
     const unsigned y_sub_width, const unsigned y_sub_height,
-    const unsigned x_loc_x, const unsigned x_loc_y) {
+    const unsigned x_loc_width, const unsigned x_loc_height,
+    const unsigned y_loc_channel, const unsigned y_sub_channel) {
 
   const unsigned outputs_per_b32 = 32;
   const unsigned chan_b32_in = (x->channels + outputs_per_b32 - 1) / outputs_per_b32;
@@ -294,14 +302,16 @@ void bconv2d_bin_prepare(
   bnn_b32_t(*X)[x->width][chan_b32_in] =
       (bnn_b32_t(*)[x->width][chan_b32_in])X_p;
 
-  bnn_b32_t(*K)[k->shape.height][k->shape.width][chan_b32_in] =
-      (bnn_b32_t(*)[k->shape.height][k->shape.width][chan_b32_in])K_p;
-
 //relocate the pointers to the start of the region we care about.
-  plan->Y = (bnn_b32_t*)Y[y_loc_y][y_loc_x];
-  plan->X = (const bnn_b32_t*)X[x_loc_y][x_loc_x];
-  plan->K = (const bnn_b32_t*)K;
-  plan->threshold_p = thresholds_p;
+  plan->X = (const bnn_b32_t*)X[x_loc_height][x_loc_width];
+
+  const unsigned start_chan_b32_out = (y_loc_channel + outputs_per_b32 - 1) / outputs_per_b32;
+ 
+  plan->Y = (bnn_b32_t*)&(Y[y_loc_height][y_loc_width][start_chan_b32_out]);
+  plan->K = &(K_p[y_loc_channel*k->shape.height*k->shape.width*chan_b32_in]) ;// dereference by y_loc_channel  
+  plan->threshold_p = (int32_t *)&(thresholds_p[y_loc_channel]);
+
+
   plan->data_scratch = data_scratch;
 
   int32_t bytes_per_input_channel = x->channels / 8;
@@ -329,11 +339,12 @@ void bconv2d_bin_prepare(
   }
   plan->k_p_adjust = remainder_bits / 8;
 
-
   total_bits_copied_to_scratch -= plan->k_p_adjust;  
   plan->patch_loop_counter = total_bits_copied_to_scratch / XS3_VPU_VREG_WIDTH_BITS;
 
-  plan->output_channel_loop_counter = (y->channels / outputs_per_b32) - 1;
+  plan->output_channel_loop_counter = (y_sub_channel / outputs_per_b32) - 1;
+
+  plan->outer_y_c_step = (y->channels - y_sub_channel) / outputs_per_b32 * sizeof(bnn_b32_t);
 
   int32_t x_height_loops = y_sub_height;
   int32_t x_width_loops = y_sub_width;
@@ -365,10 +376,11 @@ void bconv2d_bin_DI(bnn_b32_t* Y_p,
     const nn_image_params_t* y, // the full image of y
     const nn_window_params_t* k, //the full kernel k
     
-    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_loc_width, const unsigned y_loc_height,
     const unsigned y_sub_width, const unsigned y_sub_height,
 
-    const unsigned x_loc_x, const unsigned x_loc_y
+    const unsigned x_loc_width, const unsigned x_loc_height,
+    const unsigned y_loc_channel, const unsigned y_sub_channel
 ) {
 
     nn_bconv2d_bin_DI_impl_plan_t plan;
@@ -376,8 +388,9 @@ void bconv2d_bin_DI(bnn_b32_t* Y_p,
     bconv2d_bin_DI_prepare(&plan, Y_p,
         X_p,  K_p, thresholds_p,
         x,  y, k, 
-        y_loc_x, y_loc_y, y_sub_width, y_sub_height,
-        x_loc_x, x_loc_y);
+        y_loc_width, y_loc_height, y_sub_width, y_sub_height,
+        x_loc_width, x_loc_height,
+        y_loc_channel,y_sub_channel );
 
     bconv2d_bin_DI_impl(&plan);
 }
@@ -389,10 +402,11 @@ void bconv2d_bin(bnn_b32_t* Y_p,
     const nn_image_params_t* y, // the full image of y
     const nn_window_params_t* k, //the full kernel k
     
-    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_loc_width, const unsigned y_loc_height,
     const unsigned y_sub_width, const unsigned y_sub_height,
 
-    const unsigned x_loc_x, const unsigned x_loc_y
+    const unsigned x_loc_width, const unsigned x_loc_height,
+    const unsigned y_loc_channel, const unsigned y_sub_channel
 ) {
 
     nn_bconv2d_bin_impl_plan_t plan;
@@ -400,10 +414,8 @@ void bconv2d_bin(bnn_b32_t* Y_p,
     bconv2d_bin_prepare(&plan, Y_p,
         X_p,  K_p, thresholds_p, data_scratch, 
         x,  y, k, 
-        y_loc_x, y_loc_y, y_sub_width, y_sub_height,
-        x_loc_x, x_loc_y);
-
-    
+        y_loc_width, y_loc_height, y_sub_width, y_sub_height,
+        x_loc_width, x_loc_height, y_loc_channel, y_sub_channel);
 
     bconv2d_bin_impl(&plan);
 }

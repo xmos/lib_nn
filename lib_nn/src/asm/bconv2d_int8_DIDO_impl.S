@@ -64,6 +64,7 @@ VECT_INT8_MIN:
 #define PLAN_CLAMP_NEAR            24
 #define PLAN_CLAMP_FAR_0           25
 #define PLAN_CLAMP_FAR_1           26
+#define PLAN_Y_C_STEP              27
 
 //Stack Usage
 
@@ -113,29 +114,31 @@ VECT_INT8_MIN:
 #define S_CLAMP_FAR_0           27
 #define S_CLAMP_FAR_1           28
 
-#define S_SAVE_R4               29
+#define S_Y_C_STEP              29
 
-#define S_SAVE_R5               30
-#define S_SAVE_R6               31
+#define S_SAVE_R4               30
 
-#define S_SAVE_R7               32
-#define S_SAVE_R8               33
+#define S_SAVE_R5               31
+#define S_SAVE_R6               32
 
-#define S_SAVE_R9               34
-#define S_SAVE_R10              35
+#define S_SAVE_R7               33
+#define S_SAVE_R8               34
+
+#define S_SAVE_R9               35
+#define S_SAVE_R10              36
 
 //Note: The elements 36 -> 43 will be clobbered when copying the plan to the stack
 //      this might mean leaving some spare stack space
 
 //doesn't have to be double word aligned
-#define S_TEMP_0 36
-#define S_TEMP_1 37 
-#define S_TEMP_2 38
-#define S_TEMP_3 39
-#define S_TEMP_4 40
-#define S_TEMP_5 41
-#define S_TEMP_6 42
-#define S_TEMP_7 43
+#define S_TEMP_0 37
+#define S_TEMP_1 38 
+#define S_TEMP_2 39
+#define S_TEMP_3 40
+#define S_TEMP_4 41
+#define S_TEMP_5 42
+#define S_TEMP_6 43
+#define S_TEMP_7 44
 
 #define NSTACKWORDS  46 
 
@@ -249,8 +252,6 @@ FUNCTION_NAME:
 	ldc r11, 256 //set int16 mode - 32 bit accumulators	
     {vsetc r11; shr r_256_bits, r11, 3} 
     
-
-    there:
     ldc t, PLAN_CLAMP_NEAR
     ldw t, r0[t]
     stw t, sp[S_CLAMP_NEAR]
@@ -260,6 +261,9 @@ FUNCTION_NAME:
     ldc t, PLAN_CLAMP_FAR_1
     ldw t, r0[t]
     stw t, sp[S_CLAMP_FAR_1]
+    ldc t, PLAN_Y_C_STEP
+    ldw t, r0[t]
+    stw t, sp[S_Y_C_STEP]
 
     {mov t, r0;  ldc s, PLAN_Y_P}
     {ldw r0, t[s]; ldc s, PLAN_K_P} //put PLAN_Y_P into r0
@@ -351,6 +355,9 @@ FUNCTION_NAME:
             ldd X_p, t, sp[S_X_p_S_OUTER_X_H_STEP]
             {add X_p, X_p, t; nop }
             stw X_p, sp[S_X_p]
+
+            ldw t, sp[S_Y_C_STEP]
+            {add Y_p, Y_p, t; nop}
 
         {bt x_width_loop, bnn_w_loop; sub x_width_loop, x_width_loop, 1 }
 

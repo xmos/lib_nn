@@ -27,9 +27,9 @@ void bnn_conv2d_bin_out_asm_prepare(
     const nn_image_params_t* x, 
     const nn_image_params_t* y,
     const nn_window_params_t* k, 
-    const unsigned y_loc_x, const unsigned y_loc_y,
+    const unsigned y_loc_width, const unsigned y_loc_height,
     const unsigned y_sub_width, const unsigned y_sub_height,
-    const unsigned x_loc_x, const unsigned x_loc_y, 
+    const unsigned x_loc_width, const unsigned x_loc_height, 
     const unsigned k_loc_x, const unsigned k_loc_y, 
     const unsigned k_sub_width, const unsigned k_sub_height);
 

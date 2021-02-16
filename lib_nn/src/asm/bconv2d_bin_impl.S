@@ -24,6 +24,7 @@
 #define PLAN_IC_LOOP_COUNTER       16
 #define PLAN_K_ADJUST              17  
 #define PLAN_Y_p                   18
+#define PlAN_OUTER_Y_C_STEP        19
 
 //Stack Usage
 
@@ -67,16 +68,17 @@
 #define S_IC_LOOP_COUNTER       26
 #define S_K_ADJUST              27  
 #define S_Y_p                   28
+#define S_OUTER_Y_C_STEP        29
 
 //doesn't have to be double work aligned
-#define S_ZERO_0 29
-#define S_ZERO_1 30 
-#define S_ZERO_2 31
-#define S_ZERO_3 32
-#define S_ZERO_4 33
-#define S_ZERO_5 34
-#define S_ZERO_6 35
-#define S_ZERO_7 36
+#define S_ZERO_0 30
+#define S_ZERO_1 31 
+#define S_ZERO_2 32
+#define S_ZERO_3 33
+#define S_ZERO_4 34
+#define S_ZERO_5 35
+#define S_ZERO_6 36
+#define S_ZERO_7 37
 
 //Helpers that reference the above
 #define S_SAVE_R4_R5 (S_SAVE_R4/2)                  //1
@@ -301,6 +303,8 @@ FUNCTION_NAME:
             ldd X_p, t, sp[S_X_p_OUTER_X_H_STEP]
             {add X_p, X_p, t; nop }
             stw X_p, sp[S_X_p]
+            {ldw t, sp[S_OUTER_Y_C_STEP]; nop}
+            {add Y_p, Y_p, t; nop}
 
         {bt x_width_loop, bnn_w_loop; sub x_width_loop, x_width_loop, 1 }
 
