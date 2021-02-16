@@ -44,28 +44,18 @@ void bsign_8_ref(
 {
     y = ADDR(y, job->start/32);
     x = ADDR(x, job->start);
-  
-    uint32_t j = 0;
-    uint32_t shift = 0;
 
-    // Note, this matches Larq - where 0's are witten to the upper unused bytes of the tail word
-    for(int i = 0; i < job->length; i++)
+    for(int input_idx = 0; input_idx < job->length; input_idx++)
     {
+        int32_t output_idx = input_idx / 32;
+        int32_t shift = input_idx % 32;
+
+        // Note, this matches Larq - where 0's are witten to the upper unused bytes of the tail word
         if(shift == 0)
-            y[j] = 0;
+            y[output_idx] = 0;
 
-        int32_t x_ = x[i] - plan->zero_point;
-
-        if(x_ < 0)
-            y[j] |= (1 << shift);
-
-        shift++;
-
-        if(shift == 32) 
-        {
-            ++j;
-            shift = 0;
-        }
+        if(x[input_idx] < plan->zero_point)
+            y[output_idx] |= (1 << shift);
     }
 }
 
