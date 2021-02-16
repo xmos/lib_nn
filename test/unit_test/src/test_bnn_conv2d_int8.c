@@ -707,9 +707,9 @@ void impl_bconv2d_int8_sub_image(
                               (const bnn_b32_t*) X_ref,
                               (const bnn_b32_t*) K, 
 
-                              (int16_t * )post_activation_multiplier_q,
-                              (int16_t *) post_activation_bias_q,
-                              (int16_t *) quantised_accu_modifier,
+                              post_activation_multiplier_q,
+                              post_activation_bias_q,
+                              quantised_accu_modifier,
                               clamp_near,
                               clamp_far_0,
                               clamp_far_1,
@@ -1008,10 +1008,10 @@ void impl_bconv2d_int8_directed(void (*valid_impl)()) {
       (bnn_b32_t *)K_ref, 
       (float *)post_activation_multiplier,
       (float *)post_activation_bias, 
-      (int16_t *)post_activation_multiplier_q,
-      (int16_t *)post_activation_bias_q, 
+      post_activation_multiplier_q,
+      post_activation_bias_q, 
 
-      (int16_t *)quantised_accu_modifier,
+      quantised_accu_modifier,
 
       (int *)chan_overlaps, x_height,
       x_width, k_height, k_width, chans_in, chans_out, h_stride, v_stride,
@@ -1149,10 +1149,10 @@ void impl_bconv2d_int8_directed2(void (*valid_impl)()) {
       (bnn_b32_t *)K_ref, 
       (float *)post_activation_multiplier,
       (float *)post_activation_bias, 
-      (int16_t *)post_activation_multiplier_q,
-      (int16_t *)post_activation_bias_q, 
+      post_activation_multiplier_q,
+      post_activation_bias_q, 
 
-      (int16_t *)quantised_accu_modifier,
+      quantised_accu_modifier,
 
       (int *)chan_overlaps, x_height,
       x_width, k_height, k_width, chans_in, chans_out, h_stride, v_stride,
@@ -1247,10 +1247,9 @@ void impl_bconv2d_int8_directed3(void (*valid_impl)()) {
   run_int8_config(
       (int8_t *)Y, (int8_t *)Y_ref, (bnn_b32_t *)X_ref, (bnn_b32_t *)K,
       (bnn_b32_t *)K_ref, (float *)post_activation_multiplier,
-      (float *)post_activation_bias, (int16_t *)post_activation_multiplier_q,
-      (int16_t *)post_activation_bias_q,
-
-      (int16_t *)quantised_accu_modifier,
+      (float *)post_activation_bias, post_activation_multiplier_q,
+      post_activation_bias_q,
+      quantised_accu_modifier,
 
       (int *)chan_overlaps, x_height, x_width, k_height, k_width, chans_in,
       chans_out, h_stride, v_stride, larq_clamp_min, larq_clamp_max,

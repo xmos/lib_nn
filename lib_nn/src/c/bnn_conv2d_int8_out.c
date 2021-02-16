@@ -359,8 +359,8 @@ static void bconv2d_int8_prepare(
   plan->Y = (int8_t*)&(Y[y_loc_height][y_loc_width][y_loc_channel]);
   plan->K = &(K_p[y_loc_channel*k->shape.height*k->shape.width*chan_b32_in]) ;// dereference by y_loc_channel
   
-  plan->post_activation_mul = (int16_t *)&(post_activation_multiplier_q[y_loc_channel]);
-  plan->post_activation_bias = (int16_t *)&(post_activation_bias_q[y_loc_channel]);
+  plan->post_activation_mul = &(post_activation_multiplier_q[y_loc_channel]);
+  plan->post_activation_bias = &(post_activation_bias_q[y_loc_channel]);
   plan->quantised_accu_modifier = (int16_t *)&(quantised_accu_modifier[y_loc_channel]);
 
   plan->clamp_near = (const int16_t * )otv->clamp_near;
@@ -470,8 +470,8 @@ static void bconv2d_int8_DIDO_prepare(
   plan->Y = (int8_t*)&(Y[y_loc_height][y_loc_width][y_loc_channel]);
   plan->K = &(K_p[y_loc_channel*k->shape.height*k->shape.width*chan_b256_in]) ;// dereference by y_loc_channel
   
-  plan->post_activation_mul = (int16_t *)&(post_activation_multiplier_q[y_loc_channel]);
-  plan->post_activation_bias = (int16_t *)&(post_activation_bias_q[y_loc_channel]);
+  plan->post_activation_mul = &(post_activation_multiplier_q[y_loc_channel]);
+  plan->post_activation_bias = &(post_activation_bias_q[y_loc_channel]);
   
   plan->clamp_near = otv->clamp_near;
   plan->clamp_far_0 = otv->clamp_far_0;

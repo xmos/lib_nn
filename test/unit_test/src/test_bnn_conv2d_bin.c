@@ -13,9 +13,9 @@
 #define K_OVERREAD_WORDS (8*12)
 #define DATA_SCRATCH_OVERREADWRITE_WORDS (8)
 
-static const char undef_sentinal = 0x55;
-static const int undef_word = (undef_sentinal<<24) + 
-  (undef_sentinal<<16) + (undef_sentinal<<8) + undef_sentinal;
+static const char undef_sentinel = 0x55;
+static const int undef_word = (undef_sentinel<<24) + 
+  (undef_sentinel<<16) + (undef_sentinel<<8) + undef_sentinel;
 /*
 X_ref and K_ref must be initialised before running this.
 This function test whole images, i.e. it wont work on a sub image.
@@ -45,8 +45,9 @@ static void run_bin_config(bnn_b32_t* Y_p, bnn_b32_t* Y_ref_p, bnn_b32_t* X_ref,
 
   pick_threshold_params(thresholds_ref, chans_out, chans_in * k_height * k_width);
 
-  memset(Y_ref_p, undef_sentinal, y_height * y_width * chans_out/32 * sizeof(bnn_b32_t));
-  memset(Y_p, undef_sentinal, y_height * y_width * chans_out/32* sizeof(bnn_b32_t));
+  size_t Y_size = y_height * y_width * chans_out/32 * sizeof(bnn_b32_t);
+  memset(Y_ref_p, undef_sentinel, Y_size);
+  memset(Y_p, undef_sentinel, Y_size);
 
   nn_image_params_t x;
   x.height = x_height;
@@ -259,8 +260,7 @@ void impl_bconv2d_bin_DI_pseudo_random2(
           size_t X_ref_bytes = sizeof(bnn_b32_t)*(x_height*x_width*chan_words_in+X_REF_OVERREAD_WORDS);
           bnn_b32_t * X_ref =(bnn_b32_t *)malloc(X_ref_bytes);
           int32_t *thresholds_ref = (int32_t *)malloc(sizeof(int32_t)*(chans_out+(16 - chans_out%16)));
-          // bnn_b32_t *data_scratch = (bnn_b32_t *)malloc(sizeof(bnn_b32_t)*(k_height * k_width * chan_words_in + DATA_SCRATCH_OVERREADWRITE_WORDS)); 
-          
+
           int32_t * thresholds = (int32_t *)malloc(sizeof(int32_t)*chans_out);
           int * chan_overlaps = (int *)malloc(sizeof(int)*(chans_out));
 
@@ -378,8 +378,8 @@ static void run_bin_sub_image(
       } else {
         //Otherwise check thet is hasn't been written to
         for (unsigned c = 0; c < y->channels/32; c++) {
-          // printf("au %02x %02x %d\n", undef_sentinal, Y[h][w][c], undef_sentinal == Y[h][w][c]);
-          TEST_ASSERT_EQUAL_INT8(undef_sentinal, Y[h][w][c]);
+          // printf("au %02x %02x %d\n", undef_sentinel, Y[h][w][c], undef_sentinel == Y[h][w][c]);
+          TEST_ASSERT_EQUAL_INT8(undef_sentinel, Y[h][w][c]);
         }
       }
     }
@@ -482,7 +482,7 @@ void impl_bconv2d_bin_sub_image(
 
                       for(unsigned y_loc_channel = 0; y_loc_channel < chans_out - chans_out_inc; y_loc_channel += chans_out_inc ){
                         for(unsigned y_sub_channel = chans_out_inc; y_sub_channel <= chans_out -  y_loc_channel;y_sub_channel += chans_out_inc){
-                          memset(Y, undef_sentinal, addressable_Y_bytes);
+                          memset(Y, undef_sentinel, addressable_Y_bytes);
                           
                           run_bin_sub_image(
                             (bnn_b32_t*)Y, 
