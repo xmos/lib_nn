@@ -47,36 +47,18 @@ void bsign_8_prepare(
 {
     plan->zero_point = zero_point;
 
-    for(int k = 0; k < job_count; k++){
-        jobs[k].length = 0;
+    // decompose length = k * job_count * 32 + p * 32 + r,
+    // where 0 <= p < job_count and 0 <= r < 32
+    int32_t r = length % 32;
+    int32_t full_vectors = (length - r) / 32;
+    int32_t p = full_vectors % job_count;
+    int32_t k = (full_vectors - p) / job_count;
+    assert(length == k * job_count * 32 + p * 32 + r);
+
+    for(int j = 0; j < job_count; j++)
+    {
+        jobs[j].start = (j > 0) ? jobs[j-1].start + jobs[j-1].length : 0;
+        jobs[j].length = k * 32 + (j < p) * 32;
     }
-
-    uint32_t left = (length >> 5) << 5;
-
-    while(left){
-        for(int k = 0; k < job_count; k++){
-            if(left >= 32){
-                jobs[k].length += 32;
-                left -= 32;
-            } else {
-                jobs[k].length += left;
-                left -= left;
-            }
-        }
-        if(left == 0) break;
-    }
-    jobs[job_count-1].length += (length % 32);
-
-    jobs[0].start = 0;
-
-    uint32_t pos = jobs[0].length;
-
-    for(int k = 1; k < job_count; k++){
-        jobs[k].start = jobs[k-1].start + jobs[k-1].length;
-        pos += jobs[k].length;
-   
-        assert(jobs[k].length % 8 == 0);
-    }
-
-    assert(pos == length);
+    jobs[job_count-1].length += r;
 }
