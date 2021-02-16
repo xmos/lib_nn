@@ -6,14 +6,15 @@
 #include "xs3_vpu.h"
 
 /*
-void bsign_8_(
-    uint32_t* Y,
+void bsign_8(
+    bnn_b32_t* Y,
     const int8_t* X,
+    const int8_t* zero_point_vect,
     const nn_bsign_8_job_t* job);
 */
 
 #ifndef NN_USE_REF
-  #define FUNCTION_NAME bsign_8_
+  #define FUNCTION_NAME bsign_8
 #else
   #define FUNCTION_NAME bsign_8_asm
 #endif // NN_USE_REF
@@ -43,10 +44,9 @@ void bsign_8_(
 #define JOB_START       0
 #define JOB_LENGTH      1
 
-#define PLAN_ZERO_POINT 0
-
 #define VSR_VALUE       XS1_VSR_TYPE_SET(0, XS1_VSETC_TYPE_INT8)
 
+.skip 8
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
     std r4, r5, sp[0]
