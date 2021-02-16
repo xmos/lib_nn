@@ -11,33 +11,6 @@
 #include <stdio.h>
 #include <assert.h>
 
-#if defined(__XS3A__) && !defined(NN_USE_REF)
-/* Bsign_8 optimised for XS3A */
-void bsign_8_( 
-    bnn_b32_t* y,
-    const int8_t* x,
-    const int8_t* zero_point_vect,
-    const nn_bsign_8_job_t* job);
-
-void bsign_8(
-    bnn_b32_t* y,
-    const int8_t* x,
-    const nn_bsign_8_plan_t * plan,
-    const nn_bsign_8_job_t* job)
-{
-    /* This implementation follows the convention of existing code - we are passing around a plan which contains 
-     * 1 byte zero_point. This actually costs us more in terms of memory usage than simply passing around the value.
-     * Worse than this we then generate a zero point vector PER JOB effecting memory and runtime 
-     * Therefore, TODO, put the zero-point vector in the plan and generate in init() 
-     */
-    int8_t zero_point_vect[VPU_INT8_EPV];
-    memset(zero_point_vect, plan->zero_point, sizeof(zero_point_vect));
-
-    /* Note, at this point we have no more use for the plan..*/
-    bsign_8_(y, x, (const int8_t*)&zero_point_vect, job);
-}
-#endif // defined(__XS3A__) && !defined(NN_USE_REF)
-
 void bsign_8_prepare(
     nn_bsign_8_plan_t* plan,
     nn_bsign_8_job_t* jobs,
@@ -62,3 +35,66 @@ void bsign_8_prepare(
     }
     jobs[job_count-1].length += r;
 }
+
+void bsign_8_ref(
+    bnn_b32_t* y,
+    const int8_t* x,
+    const nn_bsign_8_plan_t * plan,
+    const nn_bsign_8_job_t* job)
+{
+    y = ADDR(y, job->start/32);
+    x = ADDR(x, job->start);
+  
+    uint32_t j = 0;
+    uint32_t shift = 0;
+
+    // Note, this matches Larq - where 0's are witten to the upper unused bytes of the tail word
+    for(int i = 0; i < job->length; i++)
+    {
+        if(shift == 0)
+            y[j] = 0;
+
+        int32_t x_ = x[i] - plan->zero_point;
+
+        if(x_ < 0)
+            y[j] |= (1 << shift);
+
+        shift++;
+
+        if(shift == 32) 
+        {
+            ++j;
+            shift = 0;
+        }
+    }
+}
+
+void bsign_8_( 
+    bnn_b32_t* y,
+    const int8_t* x,
+    const int8_t* zero_point_vect,
+    const nn_bsign_8_job_t* job);
+
+void bsign_8( 
+    bnn_b32_t* y,
+    const int8_t* x,
+    const nn_bsign_8_plan_t * plan,
+    const nn_bsign_8_job_t* job)
+{
+#ifdef NN_USE_REF
+    /* Fall back to reference if no optimised version available */
+    bsign_8_ref(y, x, plan, job);
+#else
+    /* This implementation follows the convention of existing code - we are passing around a plan which contains 
+     * 1 byte zero_point. This actually costs us more in terms of memory usage than simply passing around the value.
+     * Worse than this we then generate a zero point vector PER JOB effecting memory and runtime 
+     * Therefore, TODO, put the zero-point vector in the plan and generate in init() 
+     */
+    int8_t zero_point_vect[VPU_INT8_EPV];
+    memset(zero_point_vect, plan->zero_point, sizeof(zero_point_vect));
+
+    /* Note, at this point we have no more use for the plan..*/
+    bsign_8_(y, x, (const int8_t*)&zero_point_vect, job);
+#endif // NN_USE_REF
+}
+
