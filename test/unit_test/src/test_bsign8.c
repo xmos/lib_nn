@@ -45,28 +45,14 @@ void run_bsign_test(int8_t* x, size_t inputLength, int8_t zeroPoint, size_t jobC
     gen_expected(x, y_exp, inputLength, zeroPoint); 
   
     nn_bsign_8_job_t jobs[MAX_JOBS];
-    nn_bsign_8_plan_t plan;
+    int8_t zero_point_vec[VPU_INT8_EPV];
 
-    bsign_8_prepare(&plan, jobs, inputLength, zeroPoint, jobCount);
-
-    /* Compare our reference implementation against the (external) golden reference) */
-    for(int i = 0; i < jobCount; i++)
-    {
-        bsign_8_ref((bnn_b32_t*) y, x, &plan, &jobs[i]);
-    }
-
-    for(int i = 0; i < outputLength; i++)
-    {
-        if(y[i] != y_exp[i])
-                sprintf(str_buff, "(jobs: %zu) (inputLen: %zu) (index: %d)", jobCount, inputLength, i);
-
-        TEST_ASSERT_EQUAL_MESSAGE(y_exp[i], y[i], str_buff);
-    }
+    bsign_8_prepare(jobs, zero_point_vec, inputLength, zeroPoint, jobCount);
 
     /* Compare our optimised version for the platform under test */
     for(int i = 0; i < jobCount; i++)
     {
-        bsign_8((bnn_b32_t*) y, x, &plan, &jobs[i]);
+        bsign_8((bnn_b32_t*) y, x, zero_point_vec, &jobs[i]);
     }
     
     for(int i = 0; i < outputLength; i++)
@@ -136,13 +122,8 @@ void test_bsign_8_basic1()
 /* Pseudo random test including multiple jobs */
 void test_bsign_8_rand0()
 {
-    uint32_t WORD_ALIGNED y[MAX_OUTPUT_WORDS] = {0};
-    uint32_t WORD_ALIGNED y_exp[MAX_OUTPUT_WORDS] = {0};
     int8_t WORD_ALIGNED x[MAX_INPUT_BYTES]  = {0};
     int8_t WORD_ALIGNED x_orig[MAX_INPUT_BYTES]  = {0};
-
-    nn_bsign_8_job_t jobs[MAX_JOBS];
-    nn_bsign_8_plan_t plan;
 
     for(int r = 0; r < REPS; r++)
     {

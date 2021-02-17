@@ -276,15 +276,8 @@ void requantize_16_to_8(
  */
 typedef struct {
     mem_stride_t start;
-    uint32_t length;
+    int32_t length;
 } nn_bsign_8_job_t;
-
-/**
- * Struct represents the shared parameters required to execute a `bsign_8()` operation. 
- */
-typedef struct {
-    int8_t zero_point;
-} nn_bsign_8_plan_t;
 
 /**
  * @brief Initialize an instance of the @oper{bsign_8} operator.
@@ -314,11 +307,11 @@ typedef struct {
  * @param job_count [in]    The number of jobs to be initialized.
  */
 void bsign_8_prepare(
-    nn_bsign_8_plan_t* plan,
     nn_bsign_8_job_t* jobs,
+    int8_t* zero_point_vect,
     const uint32_t N,
     const int8_t zero_point,
-    const unsigned job_count);
+    const int32_t job_count);
 
 /** 
  * @brief Execute @oper{bsign_8} job.
@@ -346,13 +339,7 @@ void bsign_8_prepare(
 void bsign_8(
     bnn_b32_t* Y,
     const int8_t* X,
-    const nn_bsign_8_plan_t* plan,
-    const nn_bsign_8_job_t* job);
-
-void bsign_8_ref(
-    bnn_b32_t* Y,
-    const int8_t* X,
-    const nn_bsign_8_plan_t* plan,
+    const int8_t* zero_point_vect,
     const nn_bsign_8_job_t* job);
 
 
