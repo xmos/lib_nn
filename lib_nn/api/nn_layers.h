@@ -276,7 +276,7 @@ void requantize_16_to_8(
  */
 typedef struct {
     mem_stride_t start;
-    uint32_t length;
+    int32_t length;
 } nn_bsign_8_job_t;
 
 /**
@@ -311,7 +311,7 @@ void bsign_8_prepare(
     int8_t* zero_point_vect,
     const uint32_t N,
     const int8_t zero_point,
-    const unsigned job_count);
+    const int32_t job_count);
 
 /** 
  * @brief Execute @oper{bsign_8} job.
