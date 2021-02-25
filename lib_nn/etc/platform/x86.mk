@@ -24,7 +24,7 @@ XCC := g++
 CXX := g++
 
 AR_FLAGS := -r
-CC_FLAGS  := -g -O3 -std=c99
+CC_FLAGS  := -g -O3 -std=c11
 XCC_FLAGS := -g -O3
 CXX_FLAGS := -g -O3 -std=c++11
 
