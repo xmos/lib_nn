@@ -738,7 +738,7 @@ void impl_bconv2d_int8_sub_image(
   }
 }
 
-
+#if 0
 void impl_bconv2d_int8_directed(void (*valid_impl)()) {
   const unsigned h_stride = 2, v_stride = 2;
   const unsigned k_height = 3, k_width = 3;
@@ -1355,7 +1355,21 @@ void impl_bconv2d_int8_directed4(void (*valid_impl)()) {
   free(chan_overlaps);
 }
 
+void test_bconv2d_int8_directed(){
+  impl_bconv2d_int8_directed((void*)&generic_kernel_full_image);
+}
+void test_bconv2d_int8_directed2(){
+  impl_bconv2d_int8_directed2((void*)&generic_kernel_full_image);
+}
 
+void test_bconv2d_int8_directed3(){
+  impl_bconv2d_int8_directed3((void*)&generic_kernel_full_image);
+}
+void test_bconv2d_int8_directed4(){
+  impl_bconv2d_int8_directed4((void*)&generic_kernel_full_image);
+}
+
+#endif
 static void generic_kernel_subregion(   
       int8_t* Y_p, 
       const bnn_b32_t* X_p,
@@ -1554,20 +1568,6 @@ void test_bconv2d_int8_DIDO_pseudo_random2(){
     (void*)&DIDO_kernel_full_image);
 }
 
-void test_bconv2d_int8_directed(){
-  impl_bconv2d_int8_directed((void*)&generic_kernel_full_image);
-}
-void test_bconv2d_int8_directed2(){
-  impl_bconv2d_int8_directed2((void*)&generic_kernel_full_image);
-}
-
-void test_bconv2d_int8_directed3(){
-  impl_bconv2d_int8_directed3((void*)&generic_kernel_full_image);
-}
-void test_bconv2d_int8_directed4(){
-  impl_bconv2d_int8_directed4((void*)&generic_kernel_full_image);
-}
-
 void test_bnn_conv2d_int8() {
   UNITY_SET_FILE();
 
@@ -1579,9 +1579,9 @@ void test_bnn_conv2d_int8() {
   RUN_TEST(test_bconv2d_int8_pseudo_random2);
   RUN_TEST(test_bconv2d_int8_sub_image);
 
-  RUN_TEST(test_bconv2d_int8_directed);
-  RUN_TEST(test_bconv2d_int8_directed2);
-  RUN_TEST(test_bconv2d_int8_directed3);
-  RUN_TEST(test_bconv2d_int8_directed4);
+  // RUN_TEST(test_bconv2d_int8_directed);
+  // RUN_TEST(test_bconv2d_int8_directed2);
+  // RUN_TEST(test_bconv2d_int8_directed3);
+  // RUN_TEST(test_bconv2d_int8_directed4);
   
 }
