@@ -76,3 +76,7 @@ $(OBJ_DIR)/%.a: $(OBJECT_FILES)
 	@$(AR) $(AR_FLAGS) $@ $^
 
 
+
+ifeq ($(MEMORY_SAFE),true)
+  CC_FLAGS  := $(CC_FLAGS) -DMEMORY_SAFE
+endif
