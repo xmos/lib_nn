@@ -37,3 +37,7 @@ ifeq ($(SANITIZE),true)
   CC_FLAGS  := $(CC_FLAGS) -fsanitize=address -fsanitize-recover=address
   LD_FLAGS  := -lasan $(LD_FLAGS) # NOTE: -lasan must be first
 endif
+
+ifeq ($(MEMORY_SAFE),true)
+  CC_FLAGS  := $(CC_FLAGS) -DMEMORY_SAFE
+endif

@@ -18,7 +18,8 @@ int main(void) {
   UNITY_BEGIN();
 
   CALL(test_vpu_memcpy);
-
+ 
+#ifndef MEMORY_SAFE
   CALL(test_nn_conv2d_hstrip_deep_padded);
   CALL(test_nn_conv2d_hstrip_deep);
   CALL(test_nn_conv2d_hstrip_tail_deep_padded);
@@ -34,13 +35,14 @@ int main(void) {
   CALL(test_conv2d_im2col);
   CALL(test_conv2d_1x1);
   CALL(test_conv2d_depthwise);
+  CALL(test_fully_connected_16);
+  CALL(test_fully_connected_8);
+#endif
 
   CALL(test_maxpool2d);
   CALL(test_avgpool2d);
   CALL(test_avgpool2d_global);
 
-  CALL(test_fully_connected_16);
-  CALL(test_fully_connected_8);
   CALL(test_requantize_16_to_8);
   CALL(test_lookup8);
 
