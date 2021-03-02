@@ -72,7 +72,6 @@ pipeline {
          }
          stage("Test") {
              steps {
-                 // below is how we can activate the tools
                  sh """cd test/unit_test && ./bin/x86/unit_test"""
             }
         }
