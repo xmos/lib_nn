@@ -251,5 +251,5 @@ void test_add_elementwise()
     
     RUN_TEST(test_add_elementwise_case0);
     RUN_TEST(test_add_elementwise_case1);
-    RUN_TEST(test_add_elementwise_case2);
+    // RUN_TEST(test_add_elementwise_case2);
 }
