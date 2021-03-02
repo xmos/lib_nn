@@ -2,12 +2,13 @@
 
 PLATFORM_NAME = xcore.ai
 
-PLATFORM_FLAGS_DEFAULT := -Os                           \
+PLATFORM_FLAGS_DEFAULT := -Os               \
 						-Wno-xcore-fptrgroup            \
 						-Wno-unused-variable            \
 						-report                         \
-						-MMD
-#                       -mcmodel=large
+						-MMD														\
+						-fno-rtti												\
+            -mcmodel=large
 #                       -DXCORE
 #                       -Wno-unknown-pragmas
 #                       -Wno-unknown-attributes
@@ -26,7 +27,7 @@ AR := xmosar
 AS_FLAGS := -g
 CC_FLAGS := -g
 XCC_FLAGS := -g -O3
-CXX_FLAGS := -std=c++11 -g
+CXX_FLAGS := -std=c++11 -g -fno-rtti
 LD_FLAGS :=
 
 AR_FLAGS := rc

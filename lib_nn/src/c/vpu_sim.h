@@ -2,6 +2,10 @@
 // XMOS Public License: Version 1
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <assert.h>
 #include <string.h>
@@ -34,9 +38,7 @@ typedef struct {
 } xs3_vpu;
 
 
-void VSETC(
-    xs3_vpu* vpu,
-    const vector_mode mode);
+void VSETC(xs3_vpu* vpu, const vector_mode mode);
 void VCLRDR(xs3_vpu* vpu);
 void VLDR(xs3_vpu* vpu, const void* addr);
 void VLDD(xs3_vpu* vpu, const void* addr);
@@ -65,3 +67,8 @@ void vpu_sim_mem_print(void * address, vector_mode mode);
 int64_t vpu_saturate(
     const int64_t input,
     const unsigned bits);
+
+
+#ifdef __cplusplus
+}
+#endif

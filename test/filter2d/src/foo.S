@@ -52,7 +52,7 @@ FUNCTION_NAME:
     .L_thing:
         vldd r11[0]
         sub k, k, 1
-        add r11, r11, 4
+        ldaw r11, r11[11]
         stw tmp, p[tmp]
         bt k, .L_thing
 

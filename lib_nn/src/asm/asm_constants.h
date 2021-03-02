@@ -4,6 +4,10 @@
 
 #ifndef __ASSEMBLER__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 
 #include "xs3_vpu.h"
@@ -35,3 +39,7 @@ extern const vpu_constants_t vpu_vects;
 #define VPU_VEC_0x01    (8)
 #define VPU_VEC_0x0002  (12)
 #define VPU_VEC_0x80    (20)
+
+#ifdef __cplusplus
+}
+#endif
