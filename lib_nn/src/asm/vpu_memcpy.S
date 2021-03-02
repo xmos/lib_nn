@@ -1,73 +1,49 @@
-// Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
-// XMOS Public License: Version 1
 
-#if defined(__XS3A__)
+#include <xs1.h>
 
-
-/*
-Source and dest must be word-aligned to use this.
-
-void vpu_memcpy(
-    void* dst,
-    const void* src,
-    size_t size);
-*/
-
-#ifndef NN_USE_REF
-  #define FUNCTION_NAME vpu_memcpy
-#else
-  #define FUNCTION_NAME vpu_memcpy_asm
-#endif //NN_USE_REF
-
-
-#define NSTACKWORDS  0
-    
-.text
-.issue_mode  dual
-.globl FUNCTION_NAME
+// r0 - dest addr            must be word aligned
+// r1 - src addr             must be word aligned
+// r2 - number of VPU_MEMCPU_BLOBS:   0 or more
+.globl vpu_memcpy_asm
+.globl vpu_memcpy_asm.nstackwords
+.linkset vpu_memcpy_asm.nstackwords,4
 .align 16
-.type FUNCTION_NAME,@function
-.cc_top FUNCTION_NAME.function,FUNCTION_NAME
+.issue_mode dual
 
-#define dst         r0
-#define src         r11
-#define len         r2
-#define _32         r1
-#define tail        r3
+vpu_memcpy_asm:
+    dualentsp 4
+    std  r4, r5, sp[0]
+    stw  r6,  sp[2]
+    
+    { ldc  r3, 32          ; bf r2, early_exit } // number of bytes address increments between vec accesses 
+    ldc  r4, 64       // number of bytes address increments, i.e. 2 lines, between 2 stages of loop 
+    ldc  r5, 68       // 2 lines + 1word offset to do misaligned prefetch of 2 lines, 2 lines ahead 
+    ldc  r6, 128      // 4 lines, the number of bytes to increment addresses per loop
 
-FUNCTION_NAME:
-/**/dualentsp NSTACKWORDS
-    {   mov tail, len               ;   mov src, r1                 }
-    {   zext tail, 5                ;   shr len , len , 5           }
-    {   ldc _32, 32                 ;   bf len , .L_loop_end        }
+    add r11, r1, 4                               // get the first 2 lines, for 1st iteration
+    { prefetch r11          ; add  r11, r1, r5  }
 
-    .L_loop_top:
-/**/    {   sub len , len , 1           ;   vldr src[0]                 }
-        {   add src, src, _32           ;   vstr dst[0]                 }
-        {   add dst, dst, _32           ;   bt len , .L_loop_top        }
-.L_loop_end:
-    {                               ;   bf tail, .Lfunc_end         }
-    // FNOP
-/**/{   mkmsk tail, tail            ;   vldr src[0]                 }
-    vstrpv dst[0], tail
+OMC_cpy_loop:
+    { prefetch r11          ; add  r11, r11, r4 }   // prefetch 2 lines for second half of loop
+    mov  r11, r1
+    
+    { vldc r11[0]           ; add  r11, r11, r3 }
+    { vldd r11[0]           ; mov  r11, r0      }
+    { vstc r11[0]           ; add  r11, r11, r3 }
+    { vstd r11[0]           ; add  r11, r1,  r5 }
+    
+    add r11, r11, r4
+    { prefetch r11          ; add  r11, r1,  r4 }
+    { vldc r11[0]           ; add  r11, r11, r3 }
+    { vldd r11[0]           ; add  r11, r0,  r4 }
+    { vstc r11[0]           ; add  r11, r11, r3 }
+    { vstd r11[0]           ; sub  r2,  r2,  1  }
 
-.Lfunc_end:
-    retsp NSTACKWORDS
+    { add  r1, r1, r6       ; add  r0,  r0, r6  } 
+    { bt   r2, OMC_cpy_loop ; add  r11, r1, r5  }
 
-    .cc_bottom FUNCTION_NAME.function
-    .set FUNCTION_NAME.nstackwords,NSTACKWORDS
-    .globl FUNCTION_NAME.nstackwords
-    .set FUNCTION_NAME.maxcores,1
-    .globl FUNCTION_NAME.maxcores
-    .set FUNCTION_NAME.maxtimers,0
-    .globl FUNCTION_NAME.maxtimers
-    .set FUNCTION_NAME.maxchanends,0
-    .globl FUNCTION_NAME.maxchanends
-.Ltmp0:
-    .size FUNCTION_NAME, .Ltmp0-FUNCTION_NAME
-    .issue_mode  single
-
-#endif
-
-
+early_exit: 
+    ldd r4, r5, sp[0]
+    ldw r6, sp[2]
+	retsp 4
 
