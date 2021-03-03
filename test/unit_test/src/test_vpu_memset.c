@@ -18,12 +18,12 @@
 
 void test_vpu_memset_directed_0(){
     #define DIR_TEST_0_WORDS 1024
-    int32_t dst[DIR_TEST_0_WORDS];   
+    int64_t dst[DIR_TEST_0_WORDS/2];   
     int seed = 69;             
     int32_t value = (int32_t)pseudo_rand(&seed);
     memset(dst, 0, DIR_TEST_0_WORDS*sizeof(int32_t));
 
-    vpu_memset(dst, value, DIR_TEST_0_WORDS);
+    vpu_memset_32(dst, value, DIR_TEST_0_WORDS);
 
     TEST_ASSERT_EACH_EQUAL_INT32(value, dst, DIR_TEST_0_WORDS);
 }
@@ -39,8 +39,10 @@ void impl_vpu_memset_pseudo_random(
 
     const int mem_words = mem_bytes / sizeof(int32_t);
 
-    int32_t * dst = (int32_t *)malloc(bytes_per_vpu_word * max_test_vpu_words );
+    int32_t * dst = (int32_t *)malloc(bytes_per_vpu_word * max_test_vpu_words + 1);
     
+    dst = (char*)dst + (4-(int)dst&3);
+
     int seed = 69;
 
     for(int dst_offset = 0; dst_offset < mem_words; dst_offset += pointer_inc){
@@ -55,7 +57,7 @@ void impl_vpu_memset_pseudo_random(
             for (unsigned i=0;i<mem_words;i++)
                 dst[i] = init_value;
             
-            vpu_memset(dst + dst_offset, value, set_words);
+            vpu_memset_32(dst + dst_offset, value, set_words);
 
             TEST_ASSERT_EACH_EQUAL_INT32(value, dst + dst_offset, set_words);
             

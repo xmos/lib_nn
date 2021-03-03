@@ -1,10 +1,17 @@
 #include <stdint.h>
-#include "xs3_vpu.h"
+#include <string.h>
 
-#define VPU_MEMSET_ASM_WORDS_PER_ITT XS3_VPU_VREG_WIDTH_WORDS
+#include "nn_op_utils.h"
+#include <assert.h>
 
 #ifdef NN_USE_REF
-void vpu_memset(void * dst, const int32_t value, const unsigned word_count){
+
+void vpu_memset_vector(void * dst, const int32_t value, const int vector_count){
+  
+  vpu_memset_32(dst, value, vector_count * VPU_MEMSET_VECTOR_WORDS);
+}
+
+void vpu_memset_32(void * dst, const int32_t value, const int word_count){
   int32_t * dst32 = (int32_t *)dst;
   for (int i=0; i < word_count; i++)
     dst32[i] = value;
@@ -12,21 +19,35 @@ void vpu_memset(void * dst, const int32_t value, const unsigned word_count){
 
 #else
 
-void vpu_memset32_asm(void * dst, const int32_t value, const unsigned byte_count);
+void vpu_memset32_asm(void * dst, const int32_t value, const int itts);
 
-void vpu_memset(void * dst, const int32_t value, const unsigned word_count){
+void vpu_memset_vector(void * dst, const int32_t value, const int vector_count){
   
+  assert(((int)dst&0x3) == 0);
+
+  int32_t * dst32 = (int32_t *)dst;
+  vpu_memset32_asm(dst32, value, vector_count);
+
+}
+
+void vpu_memset_32(void * dst, const int32_t value, const int word_count){
+
+  assert(((int)dst&0x3) == 0);
+
   int32_t * dst32 = (int32_t *)dst;
   
   //do the leading words
-  unsigned leading_words = word_count%VPU_MEMSET_ASM_WORDS_PER_ITT;
-  for (int i=0; i < word_count; i++)
+  unsigned leading_words = word_count%VPU_MEMSET_VECTOR_WORDS;
+  for (int i=0; i < leading_words; i++)
     dst32[i] = value;
 
   dst32 += leading_words;
+  int remaining_words = word_count - leading_words;
   
-  //do the remaining multiple of VPU_MEMSET_ASM_WORDS_PER_ITT words
-  vpu_memset32_asm(dst32, value, word_count / VPU_MEMSET_ASM_WORDS_PER_ITT);
+  assert(remaining_words % VPU_MEMSET_VECTOR_WORDS == 0);
+
+  int vector_count = remaining_words / VPU_MEMSET_VECTOR_WORDS;
+  vpu_memset_vector(dst32, value, vector_count);
 
 }
 #endif // NN_USE_REF
