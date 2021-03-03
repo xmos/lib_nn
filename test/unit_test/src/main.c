@@ -18,6 +18,7 @@ int main(void) {
   UNITY_BEGIN();
 
   CALL(test_vpu_memcpy);
+  CALL(test_vpu_memset);
  
 #ifndef MEMORY_SAFE
   CALL(test_nn_conv2d_hstrip_deep_padded);
