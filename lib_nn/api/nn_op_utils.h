@@ -107,6 +107,21 @@ void vpu_memcpy(
     unsigned size);
 
 
+/**
+ * @brief set `word_count` words from `value` to `dst`.
+ *   
+ * `dst` must be a word-aligned address.
+ *  
+ * @param dst  [out]    Destination address
+ * @param value  [in]   Source value.
+ * @param size [in]     Number of 32 bit words to be copied
+*/
+void vpu_memset(
+    void * dst, 
+    const int32_t value, 
+    const unsigned word_count);
+
+
 #ifdef __XC__
 }   //extern "C"
 #endif
