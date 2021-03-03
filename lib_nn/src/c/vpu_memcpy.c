@@ -16,7 +16,7 @@ void vpu_memcpy(void * dst, const void * src, size_t byte_count){
   //The head is from the src address to the first word aligned address
   int alignment = (int)src &0x3;
   if(alignment){
-    size_t head_bytes = 3 - alignment;
+    size_t head_bytes = 4 - alignment;
     byte_count -= head_bytes;
     memcpy(dst, src, head_bytes);
     dst += head_bytes;
