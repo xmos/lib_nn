@@ -5,6 +5,7 @@
 #ifndef XS3_VPU_H_
 #define XS3_VPU_H_
 
+#include <stdint.h>
 #include <xs3a_registers.h>
 
 /* TODO use from xs3a_kernel.h in a future tools release */
