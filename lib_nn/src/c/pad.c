@@ -21,20 +21,20 @@ void pad_prepare(nn_pad_plan_t* plan, const padding_sizes_t* p,
 }
 
 void pad_run(void* y, void* x, const nn_pad_plan_t* p, uint32_t pad_value) {
-  vpu_memset_32(y, pad_value, p->top_pad_bytes);
+  vpu_memset_32(y, pad_value, p->top_pad_bytes / 4);
   y += p->top_pad_bytes;
   for (unsigned i = 0; i < p->mid_loop_count; i++) {
-    vpu_memset_32(y, pad_value, p->left_pad_bytes);
+    vpu_memset_32(y, pad_value, p->left_pad_bytes / 4);
     y += p->left_pad_bytes;
 
     vpu_memcpy(y, x, p->mid_copy_bytes); // TODO: replace this with internal memcpy
     y += p->mid_copy_bytes;
     x += p->mid_copy_bytes;
 
-    vpu_memset_32(y, pad_value, p->right_pad_bytes);
+    vpu_memset_32(y, pad_value, p->right_pad_bytes / 4);
     y += p->right_pad_bytes;
   }
-  vpu_memset_32(y, pad_value, p->bottom_pad_bytes);
+  vpu_memset_32(y, pad_value, p->bottom_pad_bytes / 4);
 }
 
 void pad_ref(void* y, void* x, const padding_sizes_t* p,
@@ -51,7 +51,7 @@ void pad_ref(void* y, void* x, const padding_sizes_t* p,
 
   vpu_memset_32(y, pad_value,
            (xp->width + left_pad + right_pad) *
-               (top_pad + bottom_pad + xp->height) * bytes_per_pixel);
+               (top_pad + bottom_pad + xp->height) * bytes_per_pixel / 4);
 
   for (unsigned h = 0; h < xp->height; h++) {
     for (unsigned w = 0; w < xp->width; w++) {
