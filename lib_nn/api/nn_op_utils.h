@@ -4,6 +4,7 @@
 #define NN_OP_UTILS_H_
 
 #include <string.h>
+#include "xs3_vpu.h"
 #include "nn_bso.h"
 
 #ifdef __XC__
@@ -115,6 +116,30 @@ void vpu_memcpy_vector(
     const void* src,
     int vector_count);
 
+
+/**
+ * @brief set `word_count` words from `value` to `dst`.
+ *   
+ * `dst` must be a word-aligned address.
+ *  
+ * @param dst  [out]    Destination address, must be word aligned
+ * @param value  [in]   Source value.
+ * @param size [in]     Number of 32 bit words to be copied
+*/
+void vpu_memset_32(void * dst, const int32_t value, const int word_count);
+
+#define VPU_MEMSET_VECTOR_WORDS XS3_VPU_VREG_WIDTH_WORDS
+
+/**
+ * @brief set `vector_count` vector words from `value` to `dst`.
+ *   
+ * `dst` must be a word-aligned address.
+ *  
+ * @param dst  [out]            Destination address, must be word aligned
+ * @param value  [in]           Source value.
+ * @param vector_count [in]     Number of VPU_MEMSET_VECTOR_WORDS words vectors to be copied.
+*/
+void vpu_memset_vector(void * dst, const int32_t value, const int vector_count);
 
 #ifdef __XC__
 }   //extern "C"
