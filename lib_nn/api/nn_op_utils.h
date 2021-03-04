@@ -106,9 +106,8 @@ void nn_standard_BSO_layout(
  *  
  * @param dst  [out]    Destination address
  * @param src  [in]     Source address
- * @param size [in]     Number of bytes to be copied
+ * @param byte_count [in]     Number of bytes to be copied
 */
-
 void vpu_memcpy(void * dst, const void * src, size_t byte_count);
 
 /**
@@ -121,7 +120,7 @@ void vpu_memcpy(void * dst, const void * src, size_t byte_count);
  *  
  * @param dst  [out]    Destination address
  * @param src  [in]     Source address
- * @param size [in]     Number of bytes to be copied
+ * @param byte_count [in]     Number of bytes to be copied
 */
 void vpu_memcpy_int(void * dst, const void * src, size_t byte_count);
 
@@ -135,7 +134,7 @@ void vpu_memcpy_int(void * dst, const void * src, size_t byte_count);
  *  
  * @param dst  [out]    Destination address
  * @param src  [in]     Source address
- * @param size [in]     Number of bytes to be copied
+ * @param byte_count [in]     Number of bytes to be copied
 */
 void vpu_memcpy_ext(void * dst, const void * src, size_t byte_count);
 
@@ -151,7 +150,7 @@ void vpu_memcpy_ext(void * dst, const void * src, size_t byte_count);
  *  
  * @param dst  [out]    Destination address
  * @param src  [in]     Source address
- * @param size [in]     Number of MEMCPY_VECT_EXT_BYTES bytes copies to be bytes to be performed
+ * @param vector_count [in]     Number of MEMCPY_VECT_EXT_BYTES bytes copies to be bytes to be performed
 */
 void vpu_memcpy_vector_ext(void * dst, const void * src, int vector_count);
 
@@ -166,7 +165,7 @@ void vpu_memcpy_vector_ext(void * dst, const void * src, int vector_count);
  *  
  * @param dst  [out]    Destination address
  * @param src  [in]     Source address
- * @param size [in]     Number of MEMCPY_VECT_INT_BYTES bytes copies to be bytes to be performed
+ * @param vector_count [in]     Number of MEMCPY_VECT_INT_BYTES bytes copies to be bytes to be performed
 */
 void vpu_memcpy_vector_int(void * dst, const void * src, int vector_count);
 
