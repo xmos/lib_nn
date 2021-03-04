@@ -7,7 +7,6 @@
 #include <string.h>
 #include <assert.h>
 
-
 #include "tst_common.h"
 
 #include "nn_operator.h"
@@ -17,144 +16,134 @@
 #include "helpers.h"
 
 
-void test_vpu_memcpy_directed_0(){
-    #define DIR_TEST_0_BYTES 1024
-    int8_t src[DIR_TEST_0_BYTES];
-    int8_t dst[DIR_TEST_0_BYTES];   
-    int seed = 69;             
-    for(size_t b=0; b<DIR_TEST_0_BYTES;b++)
+void impl_vpu_memcpy_directed(size_t atom_bytes, int atom_count, int alignment, void (*mem_cpy_func)()){
+
+    size_t byte_count = atom_bytes*atom_count;
+
+    int8_t * src_unaligned = (int8_t*)malloc(byte_count + alignment);
+    int8_t * dst_unaligned = (int8_t*)malloc(byte_count + alignment);
+
+    int8_t * src = src_unaligned + alignment - ((int)src_unaligned%alignment);
+    int8_t * dst = dst_unaligned + alignment - ((int)dst_unaligned%alignment);
+
+    int seed = 69;           
+
+    for(size_t b=0; b<byte_count;b++)
         src[b] = (int8_t)pseudo_rand(&seed);
-    memset(dst, 0, DIR_TEST_0_BYTES);
 
-    vpu_memcpy(dst, src, DIR_TEST_0_BYTES);
+    memset(dst, 0, byte_count);
+    mem_cpy_func(dst, src, atom_count);
 
-    TEST_ASSERT_EQUAL_INT8_ARRAY(dst, src, DIR_TEST_0_BYTES);
+    TEST_ASSERT_EQUAL_INT8_ARRAY(dst, src, byte_count);
+
+    free(src_unaligned);
+    free(dst_unaligned);
 }
-
 
 void impl_vpu_memcpy_pseudo_random(
-    size_t pointer_inc, 
-    size_t cpy_bytes_inc,
-    int max_test_vpu_words ){
+    size_t src_pointer_inc, 
+    size_t dst_relative_pointer_inc, 
 
-    const size_t bytes_per_vpu_word = XS3_VPU_VREG_WIDTH_BYTES;
+    size_t atom_bytes, 
+    int atom_count, 
+    int alignment, 
+    void (*mem_cpy_func)() ){
 
-    const size_t mem_bytes = bytes_per_vpu_word * max_test_vpu_words;
+    size_t byte_count = atom_bytes*atom_count;
 
-    int8_t * src = malloc(bytes_per_vpu_word * max_test_vpu_words + 4);
-    int8_t * dst = malloc(bytes_per_vpu_word * max_test_vpu_words + 4);
-    
-    //ensure that the src and dst pointers are word aligned
-    src = (src + (4-(int)src&3));
-    dst = (dst + (4-(int)dst&3));
+    int8_t * src_unaligned = (int8_t*)malloc(byte_count + alignment);
+    int8_t * dst_unaligned = (int8_t*)malloc(byte_count + alignment);
+
+    int8_t * src = src_unaligned + alignment - ((int)src_unaligned%alignment);
+    int8_t * dst = dst_unaligned + alignment - ((int)dst_unaligned%alignment);
 
     int seed = 69;
-    for(size_t src_offset = 0; src_offset < mem_bytes; src_offset += pointer_inc){
 
-        for(size_t dst_offset = src_offset; dst_offset < mem_bytes; dst_offset += sizeof(int)){
+    for(size_t src_offset = 0; src_offset < byte_count - atom_bytes; src_offset += src_pointer_inc){
 
-            size_t max_cpy_bytes = mem_bytes - dst_offset;
+        for(size_t dst_offset = src_offset; dst_offset < byte_count - atom_bytes; dst_offset += dst_relative_pointer_inc){
 
-            for(size_t cpy_bytes = 1; cpy_bytes < max_cpy_bytes; cpy_bytes += cpy_bytes_inc){
+            size_t max_cpy_atoms = (byte_count - dst_offset) / atom_bytes;
+
+            for(size_t cpy_atoms = 1; cpy_atoms < max_cpy_atoms; cpy_atoms += 1){
 
                 int8_t dst_init = (int8_t)pseudo_rand(&seed);
 
-                memset(dst, dst_init, mem_bytes);
+                memset(dst, dst_init, byte_count);
 
-                memset(src, 0xff, mem_bytes);
+                memset(src, 0xff, byte_count);
+
+                size_t cpy_bytes = cpy_atoms * atom_bytes;
 
                 for(size_t b=0; b<cpy_bytes;b++)
                     src[b] = (int8_t)pseudo_rand(&seed);
 
-                vpu_memcpy(dst + dst_offset, src + src_offset, cpy_bytes);
+                mem_cpy_func(dst + dst_offset, src + src_offset, cpy_atoms);
 
                 TEST_ASSERT_EQUAL_INT8_ARRAY(dst + dst_offset, src + src_offset, cpy_bytes);
                 if(dst_offset)
                     TEST_ASSERT_EACH_EQUAL_INT8(dst_init, dst, dst_offset);
-                if (mem_bytes - dst_offset - cpy_bytes)
-                    TEST_ASSERT_EACH_EQUAL_INT8(dst_init, dst + dst_offset + cpy_bytes, mem_bytes - dst_offset - cpy_bytes);
+                if (byte_count - dst_offset - cpy_bytes)
+                    TEST_ASSERT_EACH_EQUAL_INT8(dst_init, dst + dst_offset + cpy_bytes, byte_count - dst_offset - cpy_bytes);
             }
         }
     }
-}
 
-void test_vpu_memcpy_vector_directed_0(){
-    #define DIR_TEST_0_VECTOR_WORDS 5
-    int8_t src[VPU_MEMCPU_VECTOR_BYTES*DIR_TEST_0_VECTOR_WORDS];
-    int8_t dst[VPU_MEMCPU_VECTOR_BYTES*DIR_TEST_0_VECTOR_WORDS];   
-    int seed = 69;             
-    for(size_t b=0; b<VPU_MEMCPU_VECTOR_BYTES*DIR_TEST_0_VECTOR_WORDS;b++)
-        src[b] = (int8_t)pseudo_rand(&seed);
-    memset(dst, 0, sizeof(dst));
-
-    vpu_memcpy_vector(dst, src, DIR_TEST_0_VECTOR_WORDS);
-
-    TEST_ASSERT_EQUAL_INT8_ARRAY(dst, src, VPU_MEMCPU_VECTOR_BYTES*DIR_TEST_0_VECTOR_WORDS);
-}
-
-void impl_vpu_memcpy_vector_pseudo_random(
-    size_t pointer_inc, 
-    int max_test_vpu_words ){
-
-    const size_t bytes_per_vpu_word = VPU_MEMCPU_VECTOR_BYTES;
-
-    const size_t mem_bytes = bytes_per_vpu_word * max_test_vpu_words;
-
-    int8_t * src = malloc(bytes_per_vpu_word * max_test_vpu_words + 4);
-    int8_t * dst = malloc(bytes_per_vpu_word * max_test_vpu_words + 4);
-    
-    //ensure that the src and dst pointers are word aligned
-    src = (src + (4-(int)src&3));
-    dst = (dst + (4-(int)dst&3));
-
-    int seed = 69;
-    for(size_t src_offset = 0; src_offset < mem_bytes - VPU_MEMCPU_VECTOR_BYTES; src_offset += pointer_inc){
-
-        for(size_t dst_offset = src_offset; dst_offset < mem_bytes - VPU_MEMCPU_VECTOR_BYTES; dst_offset += sizeof(int)){
-
-            size_t max_cpy_vector_words = (mem_bytes - dst_offset) / VPU_MEMCPU_VECTOR_BYTES;
-
-            for(size_t cpy_vector_words = 1; cpy_vector_words < max_cpy_vector_words; 
-                cpy_vector_words += 1){
-
-                int8_t dst_init = (int8_t)pseudo_rand(&seed);
-
-                memset(dst, dst_init, mem_bytes);
-
-                memset(src, 0xff, mem_bytes);
-
-                size_t cpy_bytes = cpy_vector_words * VPU_MEMCPU_VECTOR_BYTES;
-
-                for(size_t b=0; b<cpy_bytes;b++)
-                    src[b] = (int8_t)pseudo_rand(&seed);
-
-                vpu_memcpy_vector(dst + dst_offset, src + src_offset, cpy_vector_words);
-
-                TEST_ASSERT_EQUAL_INT8_ARRAY(dst + dst_offset, src + src_offset, cpy_bytes);
-                if(dst_offset)
-                    TEST_ASSERT_EACH_EQUAL_INT8(dst_init, dst, dst_offset);
-                if (mem_bytes - dst_offset - cpy_bytes)
-                    TEST_ASSERT_EACH_EQUAL_INT8(dst_init, dst + dst_offset + cpy_bytes, mem_bytes - dst_offset - cpy_bytes);
-            }
-        }
-    }
+    free(src_unaligned);
+    free(dst_unaligned);
 }
 
 void test_vpu_memcpy_pseudo_random(){
-    impl_vpu_memcpy_pseudo_random(1, 1, 5);
+    impl_vpu_memcpy_pseudo_random(1, 4, 1, 256, 4, vpu_memcpy);
 }
 
-void test_vpu_memcpy_vector_pseudo_random(){
-    impl_vpu_memcpy_vector_pseudo_random(4, 7);
+void test_vpu_memcpy_pseudo_random_int(){
+    impl_vpu_memcpy_pseudo_random(1, 4, 1, 256, 4, vpu_memcpy_int);
+}
+
+void test_vpu_memcpy_pseudo_random_ext(){
+    impl_vpu_memcpy_pseudo_random(1, 4, 1, 256, 4, vpu_memcpy_ext);
+}
+
+void test_vpu_memcpy_pseudo_random_vector_ext(){
+    impl_vpu_memcpy_pseudo_random(4, 4, MEMCPY_VECT_EXT_BYTES, 8, 4, vpu_memcpy_vector_ext);
+}
+
+void test_vpu_memcpy_pseudo_random_vector_int(){
+    impl_vpu_memcpy_pseudo_random(4, 4, MEMCPY_VECT_INT_BYTES, 8, 4, vpu_memcpy_vector_int);
+}
+
+void test_vpu_memcpy_directed(){
+    impl_vpu_memcpy_directed(1, 256, 4, vpu_memcpy);
+}
+
+void test_vpu_memcpy_directed_int(){
+    impl_vpu_memcpy_directed(1, 256, 4, vpu_memcpy_int);
+}
+
+void test_vpu_memcpy_directed_ext(){
+    impl_vpu_memcpy_directed(1, 256, 4, vpu_memcpy_ext);
+}
+
+void test_vpu_memcpy_directed_vector_ext(){
+    impl_vpu_memcpy_directed(MEMCPY_VECT_EXT_BYTES, 5, 4, vpu_memcpy_vector_ext);
+}
+
+void test_vpu_memcpy_directed_vector_int(){
+    impl_vpu_memcpy_directed(MEMCPY_VECT_INT_BYTES, 5, 4, vpu_memcpy_vector_int);
 }
 
 void test_vpu_memcpy()
 {
-
     UNITY_SET_FILE();
-
-    RUN_TEST(test_vpu_memcpy_directed_0);
+    RUN_TEST(test_vpu_memcpy_directed);
+    RUN_TEST(test_vpu_memcpy_directed_int);
+    RUN_TEST(test_vpu_memcpy_directed_ext);
+    RUN_TEST(test_vpu_memcpy_directed_vector_int);
+    RUN_TEST(test_vpu_memcpy_directed_vector_ext);
     RUN_TEST(test_vpu_memcpy_pseudo_random);
-    RUN_TEST(test_vpu_memcpy_vector_directed_0);
-    RUN_TEST(test_vpu_memcpy_vector_pseudo_random);
+    RUN_TEST(test_vpu_memcpy_pseudo_random_int);
+    RUN_TEST(test_vpu_memcpy_pseudo_random_ext);
+    RUN_TEST(test_vpu_memcpy_pseudo_random_vector_ext);
+    RUN_TEST(test_vpu_memcpy_pseudo_random_vector_int);
 }
