@@ -3,7 +3,33 @@
 
 #include "nn_op_utils.h"
 
+
+#ifdef NN_USE_REF
+
 void vpu_memcpy(void * dst, const void * src, size_t byte_count){
+  memcpy(dst, src, byte_count);
+}
+
+void vpu_memcpy_int(void * dst, const void * src, size_t byte_count){
+  memcpy(dst, src, byte_count);
+}
+
+void vpu_memcpy_ext(void * dst, const void * src, size_t byte_count){
+  memcpy(dst, src, byte_count);
+}
+
+void vpu_memcpy_vector_ext(void * dst, const void * src, int vector_count){
+  memcpy(dst, src, vector_count*MEMCPY_VECT_EXT_BYTES);
+}
+
+void vpu_memcpy_vector_int(void * dst, const void * src, int vector_count){
+  memcpy(dst, src, vector_count*MEMCPY_VECT_INT_BYTES);
+}
+
+#else
+
+static void vpu_memcpy_base(void * dst, const void * src, size_t byte_count, 
+  void (*mem_cpy_func)(), size_t vector_bytes){
   
   //The code below doesnt support such small copies
   if (byte_count < 4){
@@ -25,9 +51,9 @@ void vpu_memcpy(void * dst, const void * src, size_t byte_count){
   }
 
   //body
-  int vector_count = byte_count/VPU_MEMCPU_VECTOR_BYTES;
-  vpu_memcpy_vector(dst, src, vector_count);
-  size_t vpy_memcpy_bytes = VPU_MEMCPU_VECTOR_BYTES*vector_count;
+  int vector_count = byte_count/vector_bytes;
+  mem_cpy_func(dst, src, vector_count);
+  size_t vpy_memcpy_bytes = vector_bytes*vector_count;
   dst += vpy_memcpy_bytes;
   src += vpy_memcpy_bytes;
   byte_count -= vpy_memcpy_bytes;
@@ -37,22 +63,33 @@ void vpu_memcpy(void * dst, const void * src, size_t byte_count){
   memcpy(dst, src, tail_bytes);
 }
 
-#ifdef NN_USE_REF
+void vpu_memcpy_vector_ext_asm(void * dst, const void * src, size_t byte_count);
+void vpu_memcpy_vector_int_asm(void * dst, const void * src, size_t byte_count);
 
-void vpu_memcpy_vector(void * dst, const void * src, int vector_count){
-  memcpy(dst, src, vector_count*VPU_MEMCPU_VECTOR_BYTES);
+void vpu_memcpy(void * dst, const void * src, size_t byte_count){
+  vpu_memcpy_base(dst, src, byte_count, vpu_memcpy_vector_ext_asm, MEMCPY_VECT_EXT_BYTES);
 }
 
-#else
+void vpu_memcpy_int(void * dst, const void * src, size_t byte_count){
+  vpu_memcpy_base(dst, src, byte_count, vpu_memcpy_vector_int_asm, MEMCPY_VECT_INT_BYTES);
+}
 
-void vpu_memcpy_asm(void * dst, const void * src, size_t byte_count);
+void vpu_memcpy_ext(void * dst, const void * src, size_t byte_count){
+  vpu_memcpy_base(dst, src, byte_count, vpu_memcpy_vector_ext_asm, MEMCPY_VECT_EXT_BYTES);
+}
 
-void vpu_memcpy_vector(void * dst, const void * src, int vector_count){
+void vpu_memcpy_vector_ext(void * dst, const void * src, int vector_count){
 
   assert(((int)dst&0x3) == 0);
 
-  vpu_memcpy_asm(dst, src, vector_count);
+  vpu_memcpy_vector_ext_asm(dst, src, vector_count);
 }
 
+void vpu_memcpy_vector_int(void * dst, const void * src, int vector_count){
+
+  assert(((int)dst&0x3) == 0);
+
+  vpu_memcpy_vector_int_asm(dst, src, vector_count);
+}
 
 #endif // NN_USE_REF
