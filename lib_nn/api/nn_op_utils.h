@@ -4,6 +4,7 @@
 #define NN_OP_UTILS_H_
 
 #include <string.h>
+#include <stdint.h>
 #include "xs3_vpu.h"
 #include "nn_bso.h"
 
