@@ -4,13 +4,13 @@
 // r0 - dest addr            must be word aligned
 // r1 - src addr             must be word aligned
 // r2 - number of VPU_MEMCPU_BLOBS:   0 or more
-.globl vpu_memcpy_asm
-.globl vpu_memcpy_asm.nstackwords
-.linkset vpu_memcpy_asm.nstackwords,4
+.globl vpu_memcpy_vector_ext_asm
+.globl vpu_memcpy_vector_ext_asm.nstackwords
+.linkset vpu_memcpy_vector_ext_asm.nstackwords,4
 .align 16
 .issue_mode dual
 
-vpu_memcpy_asm:
+vpu_memcpy_vector_ext_asm:
     dualentsp 4
     std  r4, r5, sp[0]
     stw  r6,  sp[2]
@@ -46,4 +46,27 @@ early_exit:
     ldd r4, r5, sp[0]
     ldw r6, sp[2]
 	retsp 4
+
+// void vpu_memcpy_vector_int(void * dst, const void * src, int vector_count);
+
+.globl vpu_memcpy_vector_int_asm
+.globl vpu_memcpy_vector_int_asm.nstackwords
+.linkset vpu_memcpy_vector_int_asm.nstackwords,4
+
+.align 16
+
+.issue_mode dual
+
+vpu_memcpy_vector_int_asm:
+    dualentsp 0
+    
+    {sub r2, r2, 1; bf r2, done}
+    {ldc r11, 32;nop}
+
+loop:
+    {vldd r1[0]; add r1, r1, r11}
+    {vstd r0[0]; add r0, r0, r11}
+    {bt r2, loop; sub r2, r2, 1}
+done:
+	retsp 0
 
