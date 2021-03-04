@@ -3,6 +3,7 @@
 #ifndef NN_OP_UTILS_H_
 #define NN_OP_UTILS_H_
 
+#include <string.h>
 #include "nn_bso.h"
 
 #ifdef __XC__
@@ -90,6 +91,9 @@ void nn_standard_BSO_layout(
     data16_t* scratch,
     const unsigned C_out);
 
+
+#define VPU_MEMCPU_VECTOR_BYTES (128)
+
 /**
  * @brief Copy `size` bytes from `src` to `dst`.
  *   
@@ -104,7 +108,12 @@ void nn_standard_BSO_layout(
 void vpu_memcpy(
     void* dst,
     const void* src,
-    unsigned size);
+    size_t size);
+
+void vpu_memcpy_vector(
+    void* dst,
+    const void* src,
+    int vector_count);
 
 
 #ifdef __XC__
