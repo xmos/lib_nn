@@ -27,7 +27,7 @@ void pad_run(void* y, void* x, const nn_pad_plan_t* p, uint32_t pad_value) {
     vpu_memset_32(y, pad_value, p->left_pad_bytes / 4);
     y += p->left_pad_bytes;
 
-    vpu_memcpy(y, x, p->mid_copy_bytes); // TODO: replace this with internal memcpy
+    vpu_memcpy_int(y, x, p->mid_copy_bytes);
     y += p->mid_copy_bytes;
     x += p->mid_copy_bytes;
 
