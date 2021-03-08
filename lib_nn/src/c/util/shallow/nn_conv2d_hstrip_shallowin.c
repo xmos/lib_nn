@@ -8,7 +8,7 @@
 
 #include "xs3_vpu.h"
 #include "../../../asm/asm_constants.h"
-#include "../../vpu_sim.h"
+#include "vpu_sim.h"
 
 #include <stdlib.h>
 #include <stdint.h>
