@@ -51,7 +51,7 @@ class WindowGeometry {
           stride{stride_rows, stride_cols, stride_chans}, 
           dilation{dil_rows, dil_cols} {}
 
-    PointerCovector getPatchPointerCovector() const;
+    AddressCovector<T_elm_in> getPatchAddressCovector() const;
 
     unsigned pixelBytes() const;
     unsigned rowBytes() const;
@@ -65,8 +65,8 @@ class WindowGeometry {
 
 
 template <typename T>
-PointerCovector WindowGeometry<T>::getPatchPointerCovector() const
-  { return PointerCovector(rowBytes(), pixelBytes(), sizeof(T)); }
+AddressCovector<T> WindowGeometry<T>::getPatchAddressCovector() const
+  { return AddressCovector<T>(rowBytes(), pixelBytes(), sizeof(T)); }
 
 
 template <typename T>

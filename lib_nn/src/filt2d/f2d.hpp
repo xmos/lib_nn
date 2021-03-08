@@ -7,8 +7,8 @@
 #include "geom/ImageGeometry.hpp"
 #include "geom/WindowGeometry.hpp"
 #include "geom/Filter2dGeometry.hpp"
-#include "Filter2d.hpp"
+#include "Conv2dDeepFilter.hpp"
 
-#include "MemCopyHandlers.hpp"
+#include "PatchHandlers.hpp"
 #include "AggregationHandlers.hpp"
 #include "OutputTransformers.hpp"

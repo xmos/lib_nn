@@ -33,8 +33,8 @@ class ImageGeometry {
     mem_stride_t getStride(int const rows, int const cols, int const chans) const 
       { return rows * this->rowBytes() + cols * this->pixelBytes() + chans * sizeof(T_elm); }
 
-    PointerCovector getPointerCovector() const 
-      { return PointerCovector(rowBytes(),pixelBytes(),sizeof(T_elm)); }
+    AddressCovector<T_elm> getAddressCovector() const 
+      { return AddressCovector<T_elm>(rowBytes(),pixelBytes(),sizeof(T_elm)); }
 };
 
 

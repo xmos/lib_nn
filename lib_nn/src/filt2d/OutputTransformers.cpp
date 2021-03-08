@@ -9,10 +9,11 @@ void nn::filt2d::Int8OutputTransformHandler::transform(
       unsigned const channels_out)
 {
   const unsigned cog = output_coords.channel >> 4;
+  const auto* params = &this->config.ot_params[cog];
 
-  if(this->m_symmetric){
-    conv2d_output_transform_symmetric_int8(output, &accumulator, &this->m_ot_params[cog], channels_out);
+  if(this->config.symmetric){
+    conv2d_output_transform_symmetric_int8(output, &accumulator, params, channels_out);
   } else {
-    conv2d_output_transform_asymmetric_int8(output, &accumulator, &this->m_ot_params[cog], channels_out);
+    conv2d_output_transform_asymmetric_int8(output, &accumulator, params, channels_out);
   }
 }

@@ -6,8 +6,11 @@
 
 #include <cstdio>
 
-#define OFFSET(POINTER, BYTE_OFFSET) ((void*)(((uint32_t)(POINTER)) + (BYTE_OFFSET)))
-
+template <typename T>
+static inline T* offsetPointer(T* orig, int32_t offset_bytes)
+{
+  return (T*) (((char*)orig)+offset_bytes);
+}
 
 extern const uint32_t vpu_vect_zero[8];
 
@@ -23,7 +26,7 @@ EXTERN_C void conv2d_aggregate_deep_patch_int8(
   const mem_stride_t K_cig_stride = out_chans * K_cout_stride + VPU_INT8_EPV;
   const mem_stride_t acc_offset = 2*(VPU_INT8_ACC_PERIOD - out_chans);
 
-  unsigned cigs = (params->patch_bytes + VPU_INT8_EPV - 1) >> VPU_INT8_EPV_LOG2;
+  unsigned cigs =    (params->patch_bytes + VPU_INT8_EPV - 1) >> VPU_INT8_EPV_LOG2;
 
   // Start with the final channel.
   kernel += K_cig_stride - K_cout_stride - VPU_INT8_EPV;
@@ -31,8 +34,8 @@ EXTERN_C void conv2d_aggregate_deep_patch_int8(
   nn::VPU vpu;
 
   vpu.vsetc(MODE_S8);
-  vpu.vldd(OFFSET(accumulators->high, -acc_offset));
-  vpu.vldr(OFFSET(accumulators->low,  -acc_offset));
+  vpu.vldd(offsetPointer(accumulators->high, -acc_offset));
+  vpu.vldr(offsetPointer(accumulators->low,  -acc_offset));
 
   for(; cigs > 0; cigs--){
     vpu.vldc(patch);

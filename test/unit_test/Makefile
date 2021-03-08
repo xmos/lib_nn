@@ -2,6 +2,12 @@
 
 
 PLATFORM ?= xcore
+
+ifndef XMOS_TOOL_PATH
+  $(info Compiling for x86.)
+  PLATFORM = x86
+endif
+
 VERBOSE ?= 
 
 PLATFORM_MF = ../../lib_nn/etc/platform/$(strip $(PLATFORM)).mk

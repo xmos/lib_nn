@@ -14,7 +14,7 @@ namespace filt2d {
 template <typename T>
 static inline T* advancePointer(T* orig, int32_t offset_bytes)
 {
-  return (T*) (((int32_t)orig)+offset_bytes);
+  return (T*) (((char*)orig)+offset_bytes);
 }
 
 
@@ -27,9 +27,9 @@ class ImageVect {
 
   public:
 
-    const int row;
-    const int col;
-    const int channel;
+    int row;
+    int col;
+    int channel;
 
     ImageVect(
       int const img_row,
@@ -48,6 +48,11 @@ class ImageVect {
 
     ImageVect sub(int const rows, int const cols, int const chans) const
       { return ImageVect(this->row - rows, this->col - cols, this->channel - chans); }
+
+    bool operator==(const ImageVect& other) const 
+      { return (row==other.row)&&(col==other.col)&&(channel==other.channel); }
+    bool operator!=(const ImageVect& other) const 
+      { return !((row==other.row)&&(col==other.col)&&(channel==other.channel)); }
 };
 
 
@@ -78,10 +83,15 @@ class ImageRegion {
       unsigned const depth)
         : start{row,col,chan}, shape{height,width,depth} {}
 
+    ImageVect startVect() const
+      { return ImageVect(start.row, start.col, start.channel); }
+    ImageVect endVect() const 
+      { return ImageVect(start.row + shape.height, start.col + shape.width, start.channel + shape.depth); }
+
 };
 
 
-class PointerCovector {
+class AddressCovectorBase {
   public:
 
     int16_t row_bytes;
@@ -91,7 +101,7 @@ class PointerCovector {
 
   public:
 
-    PointerCovector(
+    AddressCovectorBase(
       int16_t rowbytes, 
       int16_t colbytes, 
       int16_t chanbytes)
@@ -100,14 +110,20 @@ class PointerCovector {
     int32_t dot(ImageVect coords) const;
 
     int32_t dot(int row, int col, int channel) const;
-    
-    template <typename T>
-    T* resolve(T* base_address, ImageVect coords) const
-      { return this->resolve<T>(base_address, coords.row, coords.col, coords.channel); }
+};
 
-    template <typename T>
-    T* resolve(T* base_address, int row, int col, int channel) const
-      { return (T*)(((int32_t)base_address) + this->dot(row, col, channel)); }
+template <typename T>
+class AddressCovector : public AddressCovectorBase {
+  
+  public:
+    AddressCovector(const int16_t rowbytes, const int16_t colbytes, const int16_t chanbytes)
+      : AddressCovectorBase(rowbytes, colbytes, chanbytes) {}
+
+    T* resolve(const T* base_address, const ImageVect& coords) const
+      { return this->resolve(base_address, coords.row, coords.col, coords.channel); }
+
+    T* resolve(const T* base_address, const int row, const int col, const int channel) const
+      { return (T*)(((char*)base_address) + this->dot(row, col, channel)); }
 };
 
 

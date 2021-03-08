@@ -2,6 +2,12 @@
 
 
 PLATFORM ?= xcore
+
+ifndef XMOS_TOOL_PATH
+  $(info Compiling for x86.)
+  PLATFORM = x86
+endif
+
 VERBOSE ?= 
 
 PLATFORM_MF = ../../lib_nn/etc/platform/$(strip $(PLATFORM)).mk
@@ -33,6 +39,7 @@ NN_PATH := ../../lib_nn
 DEPS_PATH := ./../deps
 
 UNITY_PATH := $(DEPS_PATH)/Unity
+GTEST_PATH := $(DEPS_PATH)/googletest/googletest
 COMPUTE_ENGINE_PATH := $(DEPS_PATH)/compute-engine
 FLAT_BUFFERS_PATH := $(DEPS_PATH)/flatbuffers
 RUY_PATH := $(DEPS_PATH)/ruy
@@ -56,9 +63,9 @@ ifneq ($(VERBOSE),$(EMPTY_STR))
 endif
 
 INCLUDES := $(NN_PATH)/api $(NN_PATH)/src $(UNITY_PATH)/src $(COMPUTE_ENGINE_PATH) $(FLAT_BUFFERS_PATH)/include
-INCLUDES += $(RUY_PATH) $(TENSORFLOW_PATH) $(GEMMLOWP_PATH)
+INCLUDES += $(RUY_PATH) $(TENSORFLOW_PATH) $(GEMMLOWP_PATH) $(GTEST_PATH)/include $(GTEST_PATH)
 SOURCE_DIRS := src 
-SOURCE_FILE_EXTENSIONS := c cpp cc S
+SOURCE_FILE_EXTENSIONS := c cpp cc
 
 SOURCE_FILES := 
 

@@ -1,11 +1,5 @@
 #pragma once
 
-// astew: Temporary. I'm not sure what's doing it, but VSCode refuses to be told that __CYGWIN__ shouldn't be defined,
-//        and that's messing up intellisense.
-#ifdef __CYGWIN__
-  #undef __CYGWIN__
-#endif
-
 #ifdef __cplusplus
   #define EXTERN_C  extern "C"
   #include <cstdint>
@@ -17,7 +11,7 @@
 #include "f2d_c_types.h" 
 
 #ifdef __cplusplus
-extern "C" {
+extern "C" {  
 #endif
 
 typedef struct {  

@@ -1,5 +1,5 @@
 
-#include "MemCopyHandlers.hpp"
+#include "PatchHandlers.hpp"
 
 #include <iostream>
 #include <cstring>
@@ -8,7 +8,7 @@ using namespace nn::filt2d;
 
 
 template <typename T>
-T const* UniversalPatchMemCopyHandler<T>::copy_mem(
+T const* UniversalPatchHandler<T>::copy_patch(
       ImageVect const& output_coords,
       T const* input_img,
       unsigned const out_chan_count)
@@ -51,29 +51,29 @@ T const* UniversalPatchMemCopyHandler<T>::copy_mem(
 
 
 
-template int8_t const* UniversalPatchMemCopyHandler<int8_t>::copy_mem(
+template int8_t const* UniversalPatchHandler<int8_t>::copy_patch(
       ImageVect const&, int8_t const*, unsigned const);
 
 
 
 template <typename T>
-T const* ValidDeepMemCopyHandler<T>::copy_mem(
+T const* ValidDeepPatchHandler<T>::copy_patch(
       ImageVect const& output_coords,
       T const* input_img,
       unsigned const out_chan_count)
 {
 
-  unsigned patch = (unsigned) this->m_patch;
-  unsigned image = (unsigned) this->m_input_covector.resolve(input_img, output_coords);
+  T* patch = this->patch_mem;
+  T* image = this->config.input_covector.resolve(input_img, output_coords);
 
-  for(int row = this->m_window_rows; row > 0; row--){
-    memcpy((void*)patch, (void*)image, this->m_window_row_bytes);
-    patch += this->m_window_row_bytes;
-    image += this->m_img_row_bytes;
+  for(int row = this->config.window_rows; row > 0; row--){
+    memcpy(patch, image, this->config.window_row_bytes);
+    patch = advancePointer(patch, this->config.window_row_bytes);
+    image = advancePointer(image, this->config.img_row_bytes);
   }
 
-  return this->m_patch;
+  return this->patch_mem;
 }
 
-template int8_t const* ValidDeepMemCopyHandler<int8_t>::copy_mem(
+template int8_t const* ValidDeepPatchHandler<int8_t>::copy_patch(
       ImageVect const&, int8_t const*, unsigned const);

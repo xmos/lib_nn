@@ -15,7 +15,7 @@ namespace filt2d {
 ////////////////////////////////////////////////////////
 
 
-template <typename T_acc = vpu_split_acc32_t, typename T_out = int8_t, unsigned N_cog_chans = 16>
+template <typename T_acc, typename T_out>
 class IOutputTransformHandler {
 
   public:
@@ -35,20 +35,30 @@ class IOutputTransformHandler {
 ////////////////////////////////////////////////////////
 
 
-class Int8OutputTransformHandler : public IOutputTransformHandler<vpu_split_acc32_t,int8_t,16> {
+
+class Int8OutputTransformHandler : public IOutputTransformHandler<vpu_split_acc32_t,int8_t> {
+
+  public:
+
+    static constexpr unsigned MAX_COG_CHANS = 16;
+
+    struct Config {
+      const nn_acc32_to_int8_params_t* ot_params;
+      const bool symmetric;
+
+      Config(const nn_acc32_to_int8_params_t* ot_params, const bool symmetric)
+        : ot_params(ot_params), symmetric(symmetric) {}
+    };
 
   protected:
 
-    const nn_acc32_to_int8_params_t* m_ot_params;
-    const bool m_symmetric;
+    const Config config;
 
   public: 
 
     Int8OutputTransformHandler(
-      nn_acc32_to_int8_params_t const* ot_params,
-      bool const symmetric = false)
-        : m_ot_params(ot_params),
-          m_symmetric(symmetric) {}
+      const Config& config)
+        : config(config) {}
 
     void transform(
       int8_t * output,
@@ -57,6 +67,7 @@ class Int8OutputTransformHandler : public IOutputTransformHandler<vpu_split_acc3
       unsigned const channels_out);
 
 };
+
 
 
 }}
