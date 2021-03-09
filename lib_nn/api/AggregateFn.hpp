@@ -18,6 +18,8 @@ class AggregateFn {
 
 class MatMulFn : public AggregateFn {
 
+  private:
+  int8_t * foo(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
   int8_t * weights;
   int32_t output_slice_channel_count;
   size_t bytes_per_kernel_channel;

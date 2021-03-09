@@ -17,7 +17,7 @@ MatMulFn::MatMulFn(
 
 }
 
-foo(){
+int8_t * MatMulFn::foo(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group){
 xs3_vpu vpu_mem;
   xs3_vpu * vpu = &vpu_mem;
 
@@ -75,19 +75,19 @@ xs3_vpu vpu_mem;
 }
 
 
-static int8_t* MatMulFn::boggle(int8_t* raw_weights) {
-  #if xs3
-    static_assert<false>;
-  #endif
-}
+// static int8_t* MatMulFn::boggle(int8_t* raw_weights) {
+//   #if xs3
+//     static_assert<false>;
+//   #endif
+// }
 
 int8_t * MatMulFn::aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group)
 {
-  #if xs3
-  foo_asm();
-  #else 
-  foo();
-  #endif
+  // #if xs3
+  // foo_asm();
+  // #else 
+  // foo();
+  // #endif
 }
 
 
