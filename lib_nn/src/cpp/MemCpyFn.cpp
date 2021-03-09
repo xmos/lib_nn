@@ -1,10 +1,28 @@
 #include <cmath>
 #include "MemCpyFn.hpp"
-#include <iostream>
 
 extern "C" {
   #include "vpu_sim.h"
 }
+
+NopValid::NopValid(ImageParams &X){
+  bytes_per_h_line = X.rowBytes(); 
+  bytes_per_pixel = X.pixelBytes();
+}
+
+size_t NopValid::get_scratch_bytes(){
+  return 0;
+}
+
+size_t NopValid::get_overread_bytes(){
+  return 0;
+}
+
+int8_t * NopValid::memcopy_fn(int8_t * T, int8_t * X, int32_t output_v_coord, int32_t output_h_coord){
+  return X + output_v_coord * bytes_per_h_line + output_h_coord * bytes_per_pixel;
+}
+
+
 
 Im_to_col_padded::Im_to_col_padded(ImageParams &X, ImageParams &Y, WindowGeometry &K, padding_t &padding){
 
@@ -31,7 +49,7 @@ size_t Im_to_col_padded::get_scratch_bytes(){
 }
 
 size_t Im_to_col_padded::get_overread_bytes(){
-  return XS3_VPU_VREG_WIDTH_BYTES; //FIXME
+  return XS3_VPU_VREG_WIDTH_BYTES; //TODO
 }
 
 int8_t * Im_to_col_padded::memcopy_fn(int8_t * T, int8_t * X, int32_t output_v_coord, int32_t output_h_coord){
@@ -97,7 +115,7 @@ Im_to_col_valid::Im_to_col_valid(ImageParams &X, ImageParams &Y, WindowGeometry 
   kernel_height = K.shape.height;
   kernel_width  = K.shape.width;
 
-  horizontal_mem_stride =  X.pixelBytes() * K.dilation.horizontal - bytes_actually_copied;
+  horizontal_mem_stride =  (int)X.pixelBytes() * K.dilation.horizontal - (int)bytes_actually_copied;
   vertical_mem_stride = X.rowBytes() - K.shape.width * X.pixelBytes() * K.dilation.vertical;
 }
 

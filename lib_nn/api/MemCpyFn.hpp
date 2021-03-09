@@ -10,6 +10,18 @@ class MemCpyFn {
     virtual size_t get_overread_bytes() = 0;
 };
 
+class NopValid : public MemCpyFn{
+
+  int32_t bytes_per_h_line; 
+  int32_t bytes_per_pixel; 
+
+  public:
+  NopValid(ImageParams &X);
+  int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w);
+  size_t get_scratch_bytes();
+  size_t get_overread_bytes();
+};
+
 class Im_to_col_padded : public MemCpyFn{
   int32_t kernel_height;
   int32_t kernel_width;

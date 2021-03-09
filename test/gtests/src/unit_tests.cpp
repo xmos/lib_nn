@@ -2,6 +2,7 @@
 #include <cstring>
 
 #include "MemCpyFn.hpp"
+#include "AggregateFn.hpp"
 
 namespace {
 
@@ -81,7 +82,7 @@ namespace {
       Im_to_col_valid cpy(X, Y, K);
       size_t scratch_bytes = cpy.get_scratch_bytes();
 
-      int overread_bytes = 0; cpy.get_overread_bytes();
+      int overread_bytes = cpy.get_overread_bytes();
 
       int8_t T[scratch_bytes];
       int8_t X_mem[x_width * x_height * x_channels + overread_bytes];
@@ -100,80 +101,72 @@ namespace {
     }
   }
 
-  class Test_Im_to_col_padded: public ::testing::Test {};
+  class Test_MatMulFn: public ::testing::Test {};
 
-  TEST_F(Test_Im_to_col_padded, BasicTest) {
-
-    int x_width = 12;
-    int x_height = 12;
-    int x_channels = 3;
+  TEST_F(Test_MatMulFn, BasicTest) {
 
     int k_width = 3;
     int k_height = 3;
-    int k_channels = 8;
+    int input_channels = 8;
 
-    padding_t padding = {1, 1, 1, 1};
+    int output_channel_count = 4;
 
-    ImageParams X(x_width, x_height, x_channels, 8); 
-    WindowGeometry K (k_width, k_height, 1, 1, 1, 1);
-    ImageParams Y(X, K, k_channels);
-
-    Im_to_col_padded cpy(X, Y, K, padding);
-    size_t scratch_bytes = cpy.get_scratch_bytes();
-
+    int8_t K[output_channel_count][k_height][k_width][input_channels];
+    size_t bytes_per_kernel_channel = k_height*k_width*input_channels;
+    
+    size_t scratch_bytes = bytes_per_kernel_channel + 32;
     int8_t T[scratch_bytes];
-    int8_t X_mem[x_width][x_height][x_channels];
 
-    for(int h=0;h<x_height-k_width; ++h){
-      for(int w=0;w<x_width-k_height; ++w){
+    int output_channel_groups = (output_channel_count  + 16 - 1)/ 16;
 
-        //todo random init X_mem
+    int8_t * weights = 0;//MatMulFn::boggle(K);
 
-        cpy.memcopy_fn(T, (int8_t*)X_mem, h, w);
+    MatMulFn mm(output_channel_count, bytes_per_kernel_channel, weights);
+    int seed = 69;
+    for (auto ocg =0; ocg < output_channel_groups; ++ocg){
+      vpu_ring_buffer_t A;
 
-        //todo verify the correct bytes were copied
+      for(auto j = 0; j < scratch_bytes; ++j)
+        T[j] = (int8_t)pseudo_rand(&seed);
 
+      // mm.aggregate_fn(&A, T, ocg);
+
+      int ocg_chanel_count = 16;
+
+      for (auto output_chan = 0; output_chan < 16; ++output_chan){
+        
+        //reinterpret K as a 1D array
+        int8_t * k = reinterpret_cast<int8_t*>(&K);
+
+        //product it with T
+        int32_t agg_sum = 0;
+        for(auto i=0; i<bytes_per_kernel_channel; ++i)
+          // agg_sum = vpu_prod(agg_sum, k[i], T[i]);
+        
+        //deal with the over run with the next output channel
+        if(1){
+          for(auto bytes_per_kernel_channel=0; i<scratch_bytes; ++i){
+            // agg_sum = vpu_prod(agg_sum, k[i], T[i]);
+          }
+        } else {
+        for(auto bytes_per_kernel_channel=0; i<scratch_bytes; ++i){
+          // agg_sum = vpu_prod(agg_sum, k[i], T[i]);
+        }
+        }
       }
+
+
     }
 
     EXPECT_EQ(0, 0);
   }
 
-  struct Conv2DParams{
 
-    int x_height;
-    int x_width;
-    int x_channels;
-
-    int k_height;
-    int k_width;
-    int k_channels;
-
-    int k_dilation_h;
-    int k_dilation_v;
-
-    int k_stride_h;
-    int k_stride_v;
-
-  };
-
-  class Conv2DIterator {
-
-    int cur_
-
-    public:
-    Conv2DIterator(Conv2DParams &param_min, Conv2DParams &param_max);
-
-  }
-
-  Conv2DIterator::Conv2DIterator(Conv2DParams &param_min, Conv2DParams &param_max){
-
-  }
 }
 
 int main(int argc, char **argv) {
 
 
-    // ::testing::InitGoogleTest(&argc, argv);
-    // return RUN_ALL_TESTS();
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }
