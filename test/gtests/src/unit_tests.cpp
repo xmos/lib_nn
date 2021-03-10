@@ -1,8 +1,13 @@
 #include "gtest/gtest.h"
 #include <cstring>
+#include <array>
+#include <iostream>
+#include <algorithm>
 
 #include "MemCpyFn.hpp"
 #include "AggregateFn.hpp"
+#include <tuple>
+#include <list>
 
 namespace {
 
@@ -101,65 +106,145 @@ namespace {
     }
   }
 
+
   class Test_MatMulFn: public ::testing::Test {};
-
+  /*
+    Simple test to verify memory accesses
+  */
   TEST_F(Test_MatMulFn, BasicTest) {
+    const int vpu_bytes = 32;
+    const int vpu_ring_buffer_length = 16;
 
-    int k_width = 3;
-    int k_height = 3;
-    int input_channels = 8;
+    for (auto input_bytes = 1; input_bytes < 48; ++input_bytes){
 
-    int output_channel_count = 4;
+      std::list<std::tuple<int8_t, int8_t, int16_t>> args = { 
+        std::tuple<int8_t, int8_t, int16_t>{1, 1, 1 },
+        std::tuple<int8_t, int8_t, int16_t>{1, 0, 0 },
+        std::tuple<int8_t, int8_t, int16_t>{0, 1, 0 },
+        // std::tuple<int8_t, int8_t, int16_t>{-1, 1, -1 },
+        // std::tuple<int8_t, int8_t, int16_t>{1, -1, -1 },
+        std::tuple<int8_t, int8_t, int16_t>{-1, -1, 1 },
+      };
 
-    int8_t K[output_channel_count][k_height][k_width][input_channels];
-    size_t bytes_per_kernel_channel = k_height*k_width*input_channels;
-    
-    size_t scratch_bytes = bytes_per_kernel_channel + 32;
-    int8_t T[scratch_bytes];
+      for (auto arg : args){
+        int16_t expected_vD;
+        int8_t kernel_fill, scratch_fill;
+        std::tie(kernel_fill, scratch_fill, expected_vD) = arg;
 
-    int output_channel_groups = (output_channel_count  + 16 - 1)/ 16;
+        for (auto output_channel_count = 1; output_channel_count < 48; ++output_channel_count){
+            
+          int scratch_bytes = MatMulFn::get_scratch_size(input_bytes);
+          int kernel_bytes = MatMulFn::get_kernel_size(input_bytes, output_channel_count);
 
-    int8_t * weights = 0;//MatMulFn::boggle(K);
+          int8_t K[kernel_bytes];
+          int8_t T[scratch_bytes];
 
-    MatMulFn mm(output_channel_count, bytes_per_kernel_channel, weights);
-    int seed = 69;
-    for (auto ocg =0; ocg < output_channel_groups; ++ocg){
-      vpu_ring_buffer_t A;
+          MatMulFn mm(output_channel_count, input_bytes, (int8_t *)K);
 
-      for(auto j = 0; j < scratch_bytes; ++j)
-        T[j] = (int8_t)pseudo_rand(&seed);
+          std::fill_n(K, kernel_bytes, kernel_fill);
+          std::fill_n(T, scratch_bytes, scratch_fill);
 
-      // mm.aggregate_fn(&A, T, ocg);
 
-      int ocg_chanel_count = 16;
+          int ocg_count = (output_channel_count + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
 
-      for (auto output_chan = 0; output_chan < 16; ++output_chan){
-        
-        //reinterpret K as a 1D array
-        int8_t * k = reinterpret_cast<int8_t*>(&K);
+          for (auto ocg = 0; ocg < ocg_count; ++ocg){
 
-        //product it with T
-        int32_t agg_sum = 0;
-        for(auto i=0; i<bytes_per_kernel_channel; ++i)
-          // agg_sum = vpu_prod(agg_sum, k[i], T[i]);
-        
-        //deal with the over run with the next output channel
-        if(1){
-          for(auto bytes_per_kernel_channel=0; i<scratch_bytes; ++i){
-            // agg_sum = vpu_prod(agg_sum, k[i], T[i]);
+            vpu_ring_buffer_t A;
+            mm.aggregate_fn(&A, T, ocg);
+
+            int c;
+            if((ocg+1) * vpu_ring_buffer_length < output_channel_count)
+              c = vpu_ring_buffer_length;
+            else
+              c = output_channel_count % vpu_ring_buffer_length;
+
+            for (auto output_chan = 0; output_chan < c; ++output_chan){
+              EXPECT_EQ(0, A.vR[output_chan]);
+              EXPECT_EQ(scratch_bytes*expected_vD, A.vD[output_chan]);
+            }
           }
-        } else {
-        for(auto bytes_per_kernel_channel=0; i<scratch_bytes; ++i){
-          // agg_sum = vpu_prod(agg_sum, k[i], T[i]);
-        }
         }
       }
+    }
+  }
 
+  class Test_MatMulDirectFn: public ::testing::Test {};
+  /*
+    Simple test to verify memory accesses. 
+  */
+  TEST_F(Test_MatMulDirectFn, BasicTest) {
 
+    const int vpu_bytes = 32;
+    const int vpu_ring_buffer_length = 16;
+
+    std::list<std::tuple<int8_t, int8_t, int16_t>> args = { 
+      std::tuple<int8_t, int8_t, int16_t>{1, 1, 1 },
+      std::tuple<int8_t, int8_t, int16_t>{1, 0, 0 },
+      std::tuple<int8_t, int8_t, int16_t>{0, 1, 0 },
+      // std::tuple<int8_t, int8_t, int16_t>{-1, 1, -1 },
+      // std::tuple<int8_t, int8_t, int16_t>{1, -1, -1 },
+      std::tuple<int8_t, int8_t, int16_t>{-1, -1, 1 },
+    };
+
+    for (auto arg : args){
+      int16_t expected_vD;
+      int8_t kernel_fill, scratch_fill;
+      std::tie(kernel_fill, scratch_fill, expected_vD) = arg;
+
+      for (auto x_height = 1; x_height <= 4; ++x_height){
+        for (auto x_width = 1; x_width <= 4; ++x_width){
+          for (auto x_channels = 32; x_channels <= 32*3; x_channels += 32){
+            for (auto k_height = 1; k_height <= x_height; ++k_height){
+              for (auto k_width = 1; k_width <= x_width; ++k_width){
+                for (auto y_channels = 32; y_channels < 32*3; y_channels += 32){
+                  
+                  ImageParams X_params(x_height, x_width, x_channels, 8);
+                  WindowGeometry K_params(k_height, k_width, 1, 1, 1, 1);
+
+                  int8_t K[y_channels][k_height][k_width][x_channels];
+                  int8_t T[x_height][x_width][x_channels];
+
+                  int8_t * weights = (int8_t*)K; //todo we will switch to usnig the boggler
+
+                  MatMulDirectFn mmd(X_params, K_params, weights);
+
+                  std::fill_n((int8_t*)K, sizeof K, kernel_fill);
+                  std::fill_n((int8_t*)T, x_height * x_width * x_channels, scratch_fill);
+
+                  // std::cout <<"size " << x_height * x_width * x_channels << std::endl;
+
+                  int ocg_count = (y_channels + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
+
+                  for (auto x = 0; x < x_height - k_height + 1; ++x){
+                    for (auto y = 0; y < x_width - k_width + 1; ++y){
+                      for (auto ocg = 0; ocg < ocg_count; ++ocg){
+
+                        vpu_ring_buffer_t A;
+                        mmd.aggregate_fn(&A, (int8_t *)T, ocg);
+
+                        for (auto output_chan = 0; output_chan < vpu_ring_buffer_length; ++output_chan){
+                          EXPECT_EQ(0, A.vR[output_chan]);
+                          EXPECT_EQ(k_width*k_height*x_channels*expected_vD, A.vD[output_chan]);
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
 
-    EXPECT_EQ(0, 0);
+    
   }
+
+
+
+
+
+
 
 
 }

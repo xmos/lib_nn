@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <cstring>
+#include <array>
 
 #include "vpu.hpp"
 #include "Image.hpp"
@@ -7,7 +8,7 @@
 // template <class T>
 class AggregateFn {
   public:
-    virtual int8_t * aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group) = 0;
+    virtual void aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group) = 0;
     // int8_t * inline aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group) {
     //   static_cast<T*>(this)->aggregate_fn(...);
     // }
@@ -19,19 +20,28 @@ class AggregateFn {
 class MatMulFn : public AggregateFn {
 
   private:
-  int8_t * foo(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
+  void mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
   int8_t * weights;
   int32_t output_slice_channel_count;
   size_t bytes_per_kernel_channel;
 
   public:
     MatMulFn(int output_slice_channel_count, size_t bytes_per_kernel_channel, int8_t * weights);
-    int8_t * aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
+    void aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
+
+    static int8_t* boggle(int8_t *raw_weights, std::array<int, 4> &shape, int bits_per_element);
+    static int get_kernel_size(int input_bytes, int output_channel_count);
+    static int get_scratch_size(int input_bytes) ;
 };
 
 class MatMulDirectFn : public AggregateFn {
+  private:
+
+  void mat_mul_direct_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
 
   int8_t * weights;
+
+  int32_t bytes_per_kernel_channel;
 
   int32_t k_height_loop_counter;
   int32_t k_width_loop_counter;
@@ -40,11 +50,8 @@ class MatMulDirectFn : public AggregateFn {
   int32_t inner_x_h_step;
   int32_t inner_x_v_step;
 
-  int32_t k_h_step;
-  int32_t k_v_step;
-
   public:
-    MatMulDirectFn(ImageParams &X, WindowGeometry &K);
-    int8_t * aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
+    MatMulDirectFn(ImageParams &X, WindowGeometry &K, int8_t * weights);
+    void aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
 
 };
