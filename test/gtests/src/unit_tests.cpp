@@ -22,89 +22,105 @@ namespace {
 
   TEST_F(Test_Im_to_col_valid, BasicTest) {
 
-    {
-      int x_width = 12;
-      int x_height = 12;
-      int x_channels = 3;
-      int k_width = 3;
-      int k_height = 3;
-      int k_channels = 8;
+    int seed = 42;
 
-      ImageParams X(x_width, x_height, x_channels, 8); 
-      WindowGeometry K (k_width, k_height, 1, 1, 1, 1);
-      ImageParams Y(X, K, k_channels);
+    //TODO put this ina generator class
+    auto k_h_stride = 1;
+    auto k_v_stride = 1;
+    for (auto x_height = 1; x_height <= 6; ++x_height){
+      for (auto x_width = 1; x_width <= 6; ++x_width){
+        for (auto x_channels = 4; x_channels <= 36; x_channels += 4){
+          for (auto k_height = 1; k_height <= x_height; ++k_height){
+            for (auto k_width = 1; k_width <= x_width; ++k_width){
+              for (auto k_h_dilation = 1; k_h_dilation <= 3; ++k_h_dilation){
+                for (auto k_v_dilation = 1; k_v_dilation <= 3; ++k_v_dilation){
 
-      Im_to_col_valid cpy(X, Y, K);
-      size_t scratch_bytes = cpy.get_scratch_bytes();
+                  ImageParams X(x_height, x_width, x_channels, 8); 
+                  WindowGeometry K (k_height, k_width, k_h_stride, k_v_stride, k_h_dilation, k_v_dilation);
 
-      int overread_bytes = 0; cpy.get_overread_bytes();
+                  Im_to_col_valid cpy(X, K);
 
-      int8_t T[scratch_bytes];
-      int8_t X_mem[x_width * x_height * x_channels + overread_bytes];
+                  size_t scratch_bytes = cpy.get_scratch_bytes(); //TODO add test that crashes when this is one less
+                  int overread_bytes = cpy.get_overread_bytes(); //TODO add test that crashes when this is one less
 
-      int seed = 42;
+                  int8_t T[scratch_bytes];
+                  int8_t X_mem[x_width * x_height * x_channels + overread_bytes];
 
-      for(auto h = 0; h < x_height - k_height; ++h){
-        for(auto w = 0 ; w < x_width - k_width; ++w){
+                  int output_height = CONV2D_OUTPUT_LENGTH(x_height, k_height, k_v_dilation, k_v_stride);
+                  int output_width = CONV2D_OUTPUT_LENGTH(x_width, k_width, k_h_dilation, k_h_stride);
 
-          for(auto j = 0; j < x_width * x_height * x_channels; ++j)
-            X_mem[j] = (int8_t)pseudo_rand(&seed);
-          
-          cpy.memcopy_fn(T, X_mem, h, w);
+                  for(auto h = 0; h < output_height; ++h){
+                    for(auto w = 0 ; w < output_width; ++w){
 
-          int j = 0;
-          for(int kh = 0; kh < k_height; ++kh){
-            for(int kw = 0 ; kw < k_width; ++kw){
-              for(int c = 0 ; c < x_channels; ++c){
-                EXPECT_EQ(T[j++], X_mem[(kh+h)*x_channels*x_height + (kw+w)*x_channels + c]);
+                      for(auto j = 0; j < x_width * x_height * x_channels + overread_bytes; ++j)
+                        X_mem[j] = (int8_t)pseudo_rand(&seed);
+
+                      std::memset(T, 0x55, sizeof T);
+                      
+                      cpy.memcopy_fn(T, X_mem, h, w);
+
+                      int j = 0;
+                      for(int kh = 0; kh < k_height; ++kh){
+                        for(int kw = 0 ; kw < k_width; ++kw){
+                          for(int c = 0 ; c < x_channels; ++c){
+                            EXPECT_EQ((int)T[j++], (int)X_mem[(kh*k_v_dilation +h)*x_channels*x_width + (kw*k_h_dilation+w)*x_channels + c]);
+                          }
+                        }
+                      }
+                      for(; j < scratch_bytes; ++j){
+                        EXPECT_EQ(0, T[j++]);
+                      }
+                    }
+                  }
+                }
               }
             }
           }
-          for(; j < scratch_bytes; ++j){
-            EXPECT_EQ(0, T[j++]);
-          }
         }
       }
     }
   }
 
-  class Test_Im_to_col_complete: public ::testing::Test {};
 
-  TEST_F(Test_Im_to_col_complete, BasicTest) {
+  //////////////////////////////////////////////////////////////////////////////////////////
 
-    {
-      int x_width = 12;
-      int x_height = 12;
-      int x_channels = 3;
-      int k_width = 3;
-      int k_height = 3;
-      int k_channels = 8;
+  // class Test_Im_to_col_complete: public ::testing::Test {};
 
-      ImageParams X(x_width, x_height, x_channels, 8); 
-      WindowGeometry K (k_width, k_height, 1, 1, 1, 1);
-      ImageParams Y(X, K, k_channels);
+  // TEST_F(Test_Im_to_col_complete, BasicTest) {
 
-      Im_to_col_valid cpy(X, Y, K);
-      size_t scratch_bytes = cpy.get_scratch_bytes();
+  //   {
+  //     int x_width = 12;
+  //     int x_height = 12;
+  //     int x_channels = 3;
+  //     int k_width = 3;
+  //     int k_height = 3;
+  //     int k_channels = 8;
 
-      int overread_bytes = cpy.get_overread_bytes();
+  //     ImageParams X(x_width, x_height, x_channels, 8); 
+  //     WindowGeometry K (k_width, k_height, 1, 1, 1, 1);
+  //     ImageParams Y(X, K, k_channels);
 
-      int8_t T[scratch_bytes];
-      int8_t X_mem[x_width * x_height * x_channels + overread_bytes];
+  //     Im_to_col_valid cpy(X, Y, K);
+  //     size_t scratch_bytes = cpy.get_scratch_bytes();
 
-      for(auto h = 0; h < x_height - k_height; ++h){
-        for(auto w = 0 ; w < x_width - k_width; ++w){
+  //     int overread_bytes = cpy.get_overread_bytes();
 
-          std::memset(X_mem, 0, sizeof X_mem);
-          std::memset(T, 0x55, sizeof T);
+  //     int8_t T[scratch_bytes];
+  //     int8_t X_mem[x_width * x_height * x_channels + overread_bytes];
+
+  //     for(auto h = 0; h < x_height - k_height; ++h){
+  //       for(auto w = 0 ; w < x_width - k_width; ++w){
+
+  //         std::memset(X_mem, 0, sizeof X_mem);
+  //         std::memset(T, 0x55, sizeof T);
           
-          cpy.memcopy_fn(T, X_mem, h, w);
-          for(auto j = 0; j < scratch_bytes; ++j)
-            EXPECT_EQ(0, T[j++]);
-        }
-      }
-    }
-  }
+  //         cpy.memcopy_fn(T, X_mem, h, w);
+  //         for(auto j = 0; j < scratch_bytes; ++j)
+  //           EXPECT_EQ(0, T[j++]);
+  //       }
+  //     }
+  //   }
+  // }
 
 
   class Test_MatMulFn: public ::testing::Test {};
@@ -236,8 +252,6 @@ namespace {
         }
       }
     }
-
-    
   }
 
 

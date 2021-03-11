@@ -1,9 +1,12 @@
 #include <cmath>
+#include <cassert>
 #include "MemCpyFn.hpp"
 
 extern "C" {
   #include "vpu_sim.h"
 }
+#include <iostream>
+#include <stdio.h>
 
 NopValid::NopValid(ImageParams &X){
   bytes_per_h_line = X.rowBytes(); 
@@ -21,8 +24,6 @@ size_t NopValid::get_overread_bytes(){
 int8_t * NopValid::memcopy_fn(int8_t * T, int8_t * X, int32_t output_v_coord, int32_t output_h_coord){
   return X + output_v_coord * bytes_per_h_line + output_h_coord * bytes_per_pixel;
 }
-
-
 
 Im_to_col_padded::Im_to_col_padded(ImageParams &X, ImageParams &Y, WindowGeometry &K, padding_t &padding){
 
@@ -96,35 +97,38 @@ int8_t * Im_to_col_padded::memcopy_fn(int8_t * T, int8_t * X, int32_t output_v_c
   VCLRDR(vpu);
   VSTD(vpu, T);
 
-  return T;
+  return T;//wrong t_in
 }
 
 /*
 This constructor is used for testing
 */
-Im_to_col_valid::Im_to_col_valid(ImageParams &X, ImageParams &Y, WindowGeometry &K){
+Im_to_col_valid::Im_to_col_valid(ImageParams &X, WindowGeometry &K){
   
-  bytes_per_h_line = X.rowBytes(); 
   bytes_per_pixel = X.pixelBytes();
+  bytes_per_h_line = X.rowBytes(); 
 
-  kernel_channel_groups = (X.pixelBytes()+XS3_VPU_VREG_WIDTH_BYTES-1)/XS3_VPU_VREG_WIDTH_BYTES;
+  assert (X.rowBytes() == X.width * bytes_per_pixel);
 
-  size_t bytes_actually_copied = kernel_channel_groups * XS3_VPU_VREG_WIDTH_BYTES;
-  T_rewind = bytes_actually_copied - X.pixelBytes();
+  input_channel_groups = (bytes_per_pixel + XS3_VPU_VREG_WIDTH_BYTES-1)/XS3_VPU_VREG_WIDTH_BYTES;
 
-  kernel_height = K.shape.height;
-  kernel_width  = K.shape.width;
+  int bytes_actually_copied = input_channel_groups * XS3_VPU_VREG_WIDTH_BYTES;
+  T_rewind = bytes_actually_copied - bytes_per_pixel;
 
-  horizontal_mem_stride =  (int)X.pixelBytes() * K.dilation.horizontal - (int)bytes_actually_copied;
-  vertical_mem_stride = X.rowBytes() - K.shape.width * X.pixelBytes() * K.dilation.vertical;
+  input_height = K.shape.height;
+  input_width  = K.shape.width;
+
+  horizontal_mem_stride = bytes_per_pixel * K.dilation.horizontal - bytes_actually_copied;
+  vertical_mem_stride = bytes_per_h_line * K.dilation.vertical - input_width * bytes_per_pixel * K.dilation.horizontal;
+
 }
 
 size_t Im_to_col_valid::get_scratch_bytes(){
-  return kernel_height * kernel_width * kernel_channel_groups * (XS3_VPU_VREG_WIDTH_BYTES - T_rewind) + XS3_VPU_VREG_WIDTH_BYTES;
+  return input_height * input_width * (input_channel_groups * XS3_VPU_VREG_WIDTH_BYTES - T_rewind) + XS3_VPU_VREG_WIDTH_BYTES;
 }
 
 size_t Im_to_col_valid::get_overread_bytes(){
-  return kernel_channel_groups * XS3_VPU_VREG_WIDTH_BYTES - bytes_per_pixel;
+  return input_channel_groups * XS3_VPU_VREG_WIDTH_BYTES - bytes_per_pixel;
 }
 
 int8_t * Im_to_col_valid::memcopy_fn(int8_t * T, int8_t * X, int32_t output_v_coord, int32_t output_h_coord){
@@ -132,19 +136,25 @@ int8_t * Im_to_col_valid::memcopy_fn(int8_t * T, int8_t * X, int32_t output_v_co
   xs3_vpu vpu_mem;
   xs3_vpu * vpu = &vpu_mem;
 
-  //translate X to the actual input pointer, i.e. X_t = X[h][w]
-  int8_t * X_cur_p = X + output_v_coord * bytes_per_h_line + output_h_coord * bytes_per_pixel;
+  // std::cout << "init X_cur[0]:" << (int)X[0] << std::endl;
 
-  for(int32_t k_height = 0; k_height < kernel_height; k_height++){
-    for(int32_t k_width = 0; k_width < kernel_width; k_width++){
+  //translate X to the actual input pointer, i.e. X_t = X[h][w]
+  // std::cout << "move: " <<(output_v_coord * bytes_per_h_line + output_h_coord * bytes_per_pixel)<<std::endl;
+  // printf("init X %p\n", X );
+  int8_t * X_cur_p = X + (int)(output_v_coord * bytes_per_h_line + output_h_coord * bytes_per_pixel);
+  
+  // printf("X_cur %p\n", X_cur_p );
+  // std::cout << "X_cur[0]:" << (int)X_cur_p[0] << std::endl;
+  int8_t * T_in = T;
+
+  for(int32_t i_height = 0; i_height < input_height; i_height++){
+    for(int32_t i_width = 0; i_width < input_width; i_width++){
       
       //This loop copies a whole pixel
-      for(int32_t kernel_channel_group=0; 
-        kernel_channel_group < kernel_channel_groups; kernel_channel_group++){
-      
-        VLDD(vpu, X_cur_p);
+      for(int32_t i_ch_group=0; i_ch_group < input_channel_groups; i_ch_group++){
+        VLDD(vpu, X_cur_p);      
+        // std::cout << "XS3_VPU_VREG_WIDTH_BYTES:"<< XS3_VPU_VREG_WIDTH_BYTES << std::endl;
         X_cur_p += XS3_VPU_VREG_WIDTH_BYTES;
-
 
         VSTD(vpu, T);
         T += XS3_VPU_VREG_WIDTH_BYTES;
@@ -153,10 +163,12 @@ int8_t * Im_to_col_valid::memcopy_fn(int8_t * T, int8_t * X, int32_t output_v_co
       T -= T_rewind; 
 
       //Advance the X_cur_p to the start of the next horizontal pixel
+      // std::cout << "horizontal_mem_stride:"<< horizontal_mem_stride << std::endl;
       X_cur_p += horizontal_mem_stride;
     }
 
     //Advance the X_cur_p to the start of the next vertical pixel
+    // std::cout << "vertical_mem_stride:"<< vertical_mem_stride << std::endl;
     X_cur_p += vertical_mem_stride;
   }
 
@@ -164,6 +176,6 @@ int8_t * Im_to_col_valid::memcopy_fn(int8_t * T, int8_t * X, int32_t output_v_co
   VCLRDR(vpu);
   VSTD(vpu, T);
 
-  return T;
+  return T_in;
 }
 

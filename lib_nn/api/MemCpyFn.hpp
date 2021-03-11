@@ -51,10 +51,11 @@ class Im_to_col_valid : public MemCpyFn{
   int32_t bytes_per_h_line; 
   int32_t bytes_per_pixel; 
 
-  int32_t kernel_height; //in pixels
-  int32_t kernel_width; //in pixels
+  int32_t input_height; //in pixels
+  int32_t input_width; //in pixels
 
-  int32_t kernel_channel_groups;
+  //This is the amount to copy in vpu words (round up)
+  int32_t input_channel_groups; 
 
   int32_t T_rewind; 
 
@@ -67,7 +68,7 @@ class Im_to_col_valid : public MemCpyFn{
   int32_t vertical_mem_stride;
 
   public:
-  Im_to_col_valid(ImageParams &X, ImageParams &Y, WindowGeometry &K);
+  Im_to_col_valid(ImageParams &X, WindowGeometry &K);
   size_t get_scratch_bytes();
   size_t get_overread_bytes();
 
