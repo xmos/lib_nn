@@ -1,5 +1,5 @@
-
-#include <xs1.h>
+// Copyright 2021 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 // r0 - dest addr            must be word aligned
 // r1 - src addr             must be word aligned
