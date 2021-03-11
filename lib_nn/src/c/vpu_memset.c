@@ -1,5 +1,7 @@
 // Copyright 2021 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
+#include <stdint.h>
+#include <string.h>
 
 #include "nn_op_utils.h"
 #include <assert.h>
