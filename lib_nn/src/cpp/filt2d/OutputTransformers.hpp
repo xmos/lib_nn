@@ -1,7 +1,7 @@
 #pragma once
 
-#include "util.h"
-#include "Filter2d_util.hpp"
+// #include "util.h"
+// #include "Filter2d_util.hpp"
 #include "geom/WindowGeometry.hpp"
 
 namespace nn {
@@ -33,6 +33,30 @@ class IOutputTransformHandler {
 ////////////////////////////////////////////////////////
 /////
 ////////////////////////////////////////////////////////
+
+
+
+EXTERN_C typedef struct {
+    uint16_t shift1[ 16 ];
+    int16_t  scale[ 16 ];
+    int16_t  offset_scale[ 16 ];
+    int16_t  offset[ 16 ];
+    uint16_t shift2[ 16 ];
+} nn_acc32_to_int8_params_t;
+
+
+EXTERN_C void conv2d_output_transform_symmetric_int8(
+      int8_t * output,
+      const vpu_split_acc32_t* accumulator,
+      const nn_acc32_to_int8_params_t* params,
+      unsigned const channels_out);
+
+EXTERN_C void conv2d_output_transform_asymmetric_int8(
+      int8_t * output,
+      const vpu_split_acc32_t* accumulator,
+      const nn_acc32_to_int8_params_t* params,
+      unsigned const channels_out);
+
 
 
 

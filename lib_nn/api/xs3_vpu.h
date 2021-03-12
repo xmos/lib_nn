@@ -7,10 +7,6 @@
 
 #include <xs3a_registers.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* TODO use from xs3a_kernel.h in a future tools release */
 #define XS1_VSR_HEADROOM_SHIFT 0x0
 #define XS1_VSR_HEADROOM_SIZE 0x5
@@ -193,9 +189,5 @@ enum {
 };
 
 #endif //__ASM__
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif //XS3_VPU_H_

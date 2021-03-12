@@ -1,61 +1,31 @@
 
-#include "util.h"
+#include "OutputTransformers.hpp"
 
-#include "../cpp/vpu_sim.hpp"
-#include "../asm/asm_constants.h"
+#include "nn_types.h"
+#include "misc.hpp"
+#include "xs3_vpu.h"
+#include "vpu_sim.h"
+#include "../src/asm/asm_constants.h"
 
-#include <cstdio>
+using namespace nn::filt2d;
 
-template <typename T>
-static inline T* offsetPointer(T* orig, int32_t offset_bytes)
+void Int8OutputTransformHandler::transform(
+      int8_t * output,
+      vpu_split_acc32_t const& accumulator,
+      ImageVect const& output_coords,
+      unsigned const channels_out)
 {
-  return (T*) (((char*)orig)+offset_bytes);
-}
+  const unsigned cog = output_coords.channel >> 4;
+  const auto* params = &this->config.ot_params[cog];
 
-extern const uint32_t vpu_vect_zero[8];
-
-
-EXTERN_C void conv2d_aggregate_deep_patch_int8(
-  vpu_split_acc32_t* accumulators,
-  const int8_t* patch,
-  const int8_t* kernel,
-  const conv2d_aggregate_deep_patch_int8_params_t* params,
-  const channel_count_t out_chans)
-{
-  const mem_stride_t K_cout_stride = params->K_cout_stride;
-  const mem_stride_t K_cig_stride = out_chans * K_cout_stride + VPU_INT8_EPV;
-  const mem_stride_t acc_offset = 2*(VPU_INT8_ACC_PERIOD - out_chans);
-
-  unsigned cigs =    (params->patch_bytes + VPU_INT8_EPV - 1) >> VPU_INT8_EPV_LOG2;
-
-  // Start with the final channel.
-  kernel += K_cig_stride - K_cout_stride - VPU_INT8_EPV;
-
-  nn::VPU vpu;
-
-  vpu.vsetc(MODE_S8);
-  vpu.vldd(offsetPointer(accumulators->high, -acc_offset));
-  vpu.vldr(offsetPointer(accumulators->low,  -acc_offset));
-
-  for(; cigs > 0; cigs--){
-    vpu.vldc(patch);
-    patch += VPU_INT8_EPV;
-
-    for(int k = 0; k < VPU_INT8_ACC_PERIOD; k++){
-      vpu.vlmaccr(kernel);
-      kernel -= K_cout_stride;
-    }
-
-    kernel += K_cig_stride;
+  if(this->config.symmetric){
+    conv2d_output_transform_symmetric_int8(output, &accumulator, params, channels_out);
+  } else {
+    conv2d_output_transform_asymmetric_int8(output, &accumulator, params, channels_out);
   }
-
-  for(int k = VPU_INT8_ACC_PERIOD - out_chans; k > 0; k--)
-    vpu.vlmaccr(vpu_vect_zero);
-  
-  vpu.vstd(accumulators->high);
-  vpu.vstr(accumulators->low);
-
 }
+
+
 
 
 
@@ -129,7 +99,5 @@ EXTERN_C void conv2d_output_transform_asymmetric_int8(
     vpu.vdepth8();
     vpu.vstrpv(output, mask);
 }
-
-
 
 

@@ -1,5 +1,10 @@
 #pragma once
 
+#include "nn_types.h"
+#include "../misc.hpp"
+#include "../util/AddressCovector.hpp"
+
+#include <cstdint>
 
 namespace nn {
 namespace filt2d {

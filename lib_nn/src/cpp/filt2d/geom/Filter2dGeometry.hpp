@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Filter2d_util.hpp"
+#include "util.hpp"
 #include "ImageGeometry.hpp"
 #include "WindowGeometry.hpp"
 
@@ -43,9 +43,6 @@ class Filter2dGeometry {
       WindowGeometry<T_input> const window_geom)
         : input(input_geom), output(output_geom), window(window_geom) {}
 
-    InputCoordTransform GetInputCoordTransform();
- 
-    PaddingTransform GetPaddingTransform() const;
 
     const ImageRegion GetFullJob() const { return ImageRegion(0,0,0, output.height, output.width, output.channels); }
 

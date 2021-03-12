@@ -1,11 +1,16 @@
 
 
-#include "../src/filt2d/util/conv2d_utils.hpp"
-#include "../src/filt2d/f2d.hpp"
-#include "gtest/gtest.h"
+#include "nn_types.h"
+#include "../src/cpp/filt2d/misc.hpp"
+#include "../src/cpp/filt2d/util/conv2d_utils.hpp"
+#include "../src/cpp/filt2d/geom/Filter2dGeometry.hpp"
+#include "../src/cpp/filt2d/Conv2dDeepFilter.hpp"
+#include "../src/cpp/filt2d/util/RectRange.hpp"
 
+#include "gtest/gtest.h"
 #include "tensorflow/lite/kernels/internal/reference/integer_ops/conv.h"
 
+#include <cstdint>
 #include <memory>
 #include <iostream>
 
@@ -126,7 +131,7 @@ std::unique_ptr<int8_t[]> Conv2dDeepReference(
 
 
 
-TEST(JustMeTesting, ShutUp){
+TEST(JustMeTesting, Experimenting){
 
   auto filt_geom = geom::Filter2dGeometry<int8_t,int8_t>(
                       geom::ImageGeometry<int8_t>(1, 1, 32),
@@ -206,78 +211,6 @@ TEST(JustMeTesting, ShutUp){
     std::cout << static_cast<int>(xcore_output[i]) << ", ";
   std::cout << "]" << std::endl;
 }
-
-
-
-class RectRange {
-
-  public:
-
-    struct Dim { int start, end, step; };
-
-    class iterator: public std::iterator<std::input_iterator_tag, std::vector<int>> {
-
-      private:
-
-        RectRange& parent;
-        std::vector<int> val;
-
-      public:
-
-        explicit iterator(RectRange& parent, std::vector<int> val)
-          : parent(parent), val(val) {}
-
-        iterator& operator++(){
-          for(int i = val.size()-1; i >= 0; --i){
-            auto dim = parent.getDim(i);
-            
-            val[i] += dim.step;
-
-            if(val[i] < dim.end){
-              for(int j = i+1; j < val.size(); ++j)
-                val[j] = parent.getDim(j).start; // I know this isn't great, but I think it should work..
-              break;
-            } else {
-              val[i] = dim.end;
-            }
-          }
-
-          return *this;
-        }
-
-        iterator operator++(int){ iterator retval = *this; ++(*this); return retval; }
-        bool operator==(iterator other) const { return this->val == other.val; }
-        bool operator!=(iterator other) const { return this->val != other.val; }
-        reference operator*() { return this->val; }
-
-    };
-
-  private:
-
-    std::vector<Dim> dims;
-
-  public:
-
-    RectRange(std::initializer_list<Dim> il)
-      : dims(il) {}
-
-    const Dim& getDim(int i){ return this->dims[i]; }
-
-    iterator begin() {
-      auto v = std::vector<int>(dims.size());
-      for(int i = 0; i < dims.size(); ++i)
-        v[i] = dims[i].start;
-      return iterator(*this, v);
-    }
-
-    iterator end() {
-      auto v = std::vector<int>(dims.size());
-      for(int i = 0; i < dims.size(); ++i)
-        v[i] = dims[i].end;
-      return iterator(*this, v);
-    }
-
-};
 
 
 

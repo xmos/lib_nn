@@ -1,9 +1,12 @@
 #pragma once
 
-#include "../f2d.hpp"
+#include "../misc.hpp"
+#include "../geom/Filter2dGeometry.hpp"
+#include "../OutputTransformers.hpp"
 
 #include <cstdint>
 #include <vector>
+
 
 
 namespace nn {

@@ -4,15 +4,11 @@
 
 #ifndef __ASSEMBLER__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdint.h>
 
 #include "xs3_vpu.h"
 
-
+// astew: Deprecated. Some asm kernels still use this, though.
 typedef struct {
 
     //Word offset = 0
@@ -27,7 +23,14 @@ typedef struct {
 
 } vpu_constants_t;
 
+// astew: Deprecated. Some asm kernels still use this, though.
 extern const vpu_constants_t vpu_vects;
+
+extern const uint32_t vpu_vect_zero[VPU_INT32_EPV];
+extern const int16_t  vpu_vect_0x007F[VPU_INT16_EPV];
+extern const int8_t   vpu_vect_0x01[VPU_INT8_EPV];
+extern const int8_t   vpu_vect_0x02[VPU_INT8_EPV];
+extern const int8_t   vpu_vect_0x80[VPU_INT8_EPV];
 
 #endif // __ASSEMBLER__
 
@@ -39,7 +42,3 @@ extern const vpu_constants_t vpu_vects;
 #define VPU_VEC_0x01    (8)
 #define VPU_VEC_0x0002  (12)
 #define VPU_VEC_0x80    (20)
-
-#ifdef __cplusplus
-}
-#endif

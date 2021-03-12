@@ -336,9 +336,7 @@ void avgpool2d(
     const nn_image_params_t* y_params,
     const nn_window_params_t* pooling_window)
 {
-    nn_window_op_job_params_t full_job = {{0,0,0},{ (int32_t) y_params->height, 
-                                                    (int32_t) y_params->width, 
-                                                    (int32_t) x_params->channels}};
+    nn_window_op_job_params_t full_job = {{0,0,0},{y_params->height, y_params->width, x_params->channels}};
 
     avgpool2d_ext(Y, X, x_params, y_params, pooling_window, &full_job, AVGPOOL2D_FLAG_NONE);
 }

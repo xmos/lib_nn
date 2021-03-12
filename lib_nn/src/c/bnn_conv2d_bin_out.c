@@ -180,8 +180,8 @@ void bconv2d_bin_impl_ref(
       void * threshold_current = (void*)plan->threshold_p;
       for (int oc = plan->output_channel_loop_counter; oc >= 0 ; oc-- ) {
 
-        compute_patch(vpu, plan, &threshold_current, &K_p, (unsigned*) partial_res_0_15_p);
-        compute_patch(vpu, plan, &threshold_current, &K_p, (unsigned*) partial_res_16_31_p);
+        compute_patch(vpu, plan, &threshold_current, &K_p, partial_res_0_15_p);
+        compute_patch(vpu, plan, &threshold_current, &K_p, partial_res_16_31_p);
 
         unsigned result = (partial_res_16_31<<16) + partial_res_0_15;
 

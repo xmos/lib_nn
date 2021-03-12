@@ -7,6 +7,7 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
+#include <cassert>
 
 using namespace nn::filt2d;
 

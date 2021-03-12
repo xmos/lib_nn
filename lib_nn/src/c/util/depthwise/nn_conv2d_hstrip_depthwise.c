@@ -7,7 +7,7 @@
 // #include "nn_op_structs.h"
 
 #include "xs3_vpu.h"
-#include "../../vpu_sim.h"
+#include "vpu_sim.h"
 
 #include <stdlib.h>
 #include <stdint.h>

@@ -1,7 +1,6 @@
 #pragma once
 
-#include "util.h"
-#include "Filter2d_util.hpp"
+// #include "util.h"
 #include "geom/WindowGeometry.hpp"
 
 namespace nn {
@@ -33,6 +32,23 @@ class IAggregationHandler {
 ////////////////////////////////////////////////////////
 /////
 ////////////////////////////////////////////////////////
+
+
+
+EXTERN_C typedef struct {  
+  uint32_t patch_bytes;  
+  mem_stride_t K_cout_stride;
+} conv2d_aggregate_deep_patch_int8_params_t; 
+
+EXTERN_C void conv2d_aggregate_deep_patch_int8(
+  vpu_split_acc32_t* accumulators,
+  const int8_t* patch,
+  const int8_t* kernel,
+  const conv2d_aggregate_deep_patch_int8_params_t* params,
+  const channel_count_t out_chans);
+
+
+
 
 template <typename T_elm_in = int8_t, 
           typename T_coef = int8_t, 

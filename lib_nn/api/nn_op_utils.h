@@ -3,6 +3,9 @@
 #ifndef NN_OP_UTILS_H_
 #define NN_OP_UTILS_H_
 
+#include <string.h>
+#include <stdint.h>
+#include "xs3_vpu.h"
 #include "nn_bso.h"
 
 #ifdef __XC__
@@ -90,6 +93,10 @@ void nn_standard_BSO_layout(
     data16_t* scratch,
     const unsigned C_out);
 
+
+#define MEMCPY_VECT_EXT_BYTES (128)
+#define MEMCPY_VECT_INT_BYTES (32)
+
 /**
  * @brief Copy `size` bytes from `src` to `dst`.
  *   
@@ -99,13 +106,92 @@ void nn_standard_BSO_layout(
  *  
  * @param dst  [out]    Destination address
  * @param src  [in]     Source address
- * @param size [in]     Number of bytes to be copied
+ * @param byte_count [in]     Number of bytes to be copied
 */
-void vpu_memcpy(
-    void* dst,
-    const void* src,
-    unsigned size);
+void vpu_memcpy(void * dst, const void * src, size_t byte_count);
 
+/**
+ * @brief Copy `size` bytes from `src` to `dst`.
+ * Faster for copies from internal SRAM.
+ *   
+ * `dst` and `src` both must be word-aligned addresses.
+ * 
+ * `size` need not be an integer number of words.
+ *  
+ * @param dst  [out]    Destination address
+ * @param src  [in]     Source address
+ * @param byte_count [in]     Number of bytes to be copied
+*/
+void vpu_memcpy_int(void * dst, const void * src, size_t byte_count);
+
+/**
+ * @brief Copy `size` bytes from `src` to `dst`.
+ * Faster for copies from external flash and DDR.
+ *   
+ * `dst` and `src` both must be word-aligned addresses.
+ * 
+ * `size` need not be an integer number of words.
+ *  
+ * @param dst  [out]    Destination address
+ * @param src  [in]     Source address
+ * @param byte_count [in]     Number of bytes to be copied
+*/
+void vpu_memcpy_ext(void * dst, const void * src, size_t byte_count);
+
+
+/**
+ * @brief Copy `vector_count` multiples of MEMCPY_VECT_EXT_BYTES bytes 
+ * from `src` to `dst`.
+ * Faster for copies from external flash and DDR.
+ *   
+ * `dst` and `src` both must be word-aligned addresses.
+ * 
+ * `size` need not be an integer number of words.
+ *  
+ * @param dst  [out]    Destination address
+ * @param src  [in]     Source address
+ * @param vector_count [in]     Number of MEMCPY_VECT_EXT_BYTES bytes copies to be bytes to be performed
+*/
+void vpu_memcpy_vector_ext(void * dst, const void * src, int vector_count);
+
+/**
+ * @brief Copy `vector_count` multiples of MEMCPY_VECT_INT_BYTES bytes 
+ * from `src` to `dst`.
+ * Faster for copies from internal SRAM.
+ *   
+ * `dst` and `src` both must be word-aligned addresses.
+ * 
+ * `size` need not be an integer number of words.
+ *  
+ * @param dst  [out]    Destination address
+ * @param src  [in]     Source address
+ * @param vector_count [in]     Number of MEMCPY_VECT_INT_BYTES bytes copies to be bytes to be performed
+*/
+void vpu_memcpy_vector_int(void * dst, const void * src, int vector_count);
+
+/**
+ * @brief set `word_count` words from `value` to `dst`.
+ *   
+ * `dst` must be a word-aligned address.
+ *  
+ * @param dst  [out]    Destination address, must be word aligned
+ * @param value  [in]   Source value.
+ * @param size [in]     Number of 32 bit words to be copied
+*/
+void vpu_memset_32(void * dst, const int32_t value, const int word_count);
+
+#define VPU_MEMSET_VECTOR_WORDS XS3_VPU_VREG_WIDTH_WORDS
+
+/**
+ * @brief set `vector_count` vector words from `value` to `dst`.
+ *   
+ * `dst` must be a word-aligned address.
+ *  
+ * @param dst  [out]            Destination address, must be word aligned
+ * @param value  [in]           Source value.
+ * @param vector_count [in]     Number of VPU_MEMSET_VECTOR_WORDS words vectors to be copied.
+*/
+void vpu_memset_vector(void * dst, const int32_t value, const int vector_count);
 
 #ifdef __XC__
 }   //extern "C"

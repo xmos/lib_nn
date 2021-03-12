@@ -1,6 +1,4 @@
 
-#include "../src/filt2d/f2d.hpp"
-
 #include "gtest/gtest.h"
 
 #include <iostream>

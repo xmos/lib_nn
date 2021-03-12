@@ -31,7 +31,7 @@ help:
 LIB_NAME := lib_nn
 
 OBJ_DIR   := $(BUILD_DIR)/$(PLATFORM)
-SOURCE_FILE_EXTENSIONS := c cc cpp
+SOURCE_FILE_EXTENSIONS := c cpp
 EMPTY_STR :=
 
 ifeq ($(PLATFORM),xcore)

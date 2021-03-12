@@ -1,6 +1,8 @@
 #pragma once
 
-#include "../Filter2d_util.hpp"
+#include "nn_types.h"
+#include "util.hpp"
+#include "../util/AddressCovector.hpp"
 
 namespace nn {
 namespace filt2d {

@@ -2,5 +2,6 @@ compute-engine               git@github.com:larq/compute-engine.git          e06
 flatbuffers                  git@github.com:google/flatbuffers.git           6df40a2471737b27271bdd9b900ab5f3aec746c7
 gemmlowp                     git@github.com:google/gemmlowp.git              2483d846ad865dd4190fe4a1a1ba2d9cfcea78e1
 ruy                          git@github.com:google/ruy.git                   baa860187fe7fc115c64210ca00bc90ccd197642
-tensorflow                   git@github.com:xmos/tensorflow                  fdfd74c614bf0850c332486826f91654f2a0181a
 Unity                        git@github.com:xmos/Unity.git                   1ab54b8bd2dfdc1216d5bec30cd29eb3052bad18
+googletest                   git@github.com:google/googletest.git            e7e591764baba0a0c3c9ad0014430e7a27331d16
+tensorflow                   git@github.com:xmos/tensorflow                  fdfd74c614bf0850c332486826f91654f2a0181a
