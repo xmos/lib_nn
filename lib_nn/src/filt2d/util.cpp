@@ -129,3 +129,7 @@ EXTERN_C void conv2d_output_transform_asymmetric_int8(
     vpu.vdepth8();
     vpu.vstrpv(output, mask);
 }
+
+
+
+

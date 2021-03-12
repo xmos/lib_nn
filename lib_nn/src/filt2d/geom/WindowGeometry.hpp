@@ -61,6 +61,8 @@ class WindowGeometry {
     unsigned pixelElements() const;
     unsigned rowElements() const;
     unsigned windowElements() const;
+
+    unsigned windowPixels() const;
 };
 
 
@@ -84,6 +86,8 @@ unsigned WindowGeometry<T>::rowBytes() const { return this->rowElements() * size
 template <typename T>
 unsigned WindowGeometry<T>::windowBytes() const { return this->windowElements() * sizeof(T); }
 
+template <typename T>
+unsigned WindowGeometry<T>::windowPixels() const { return this->shape.height * this->shape.width; }
 
 
 }}}

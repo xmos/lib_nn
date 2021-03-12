@@ -13,40 +13,37 @@ T const* UniversalPatchHandler<T>::copy_patch(
       T const* input_img,
       unsigned const out_chan_count)
 {
-  padding_t padding = this->getPadding(output_coords, true);
+
+  const auto input_cov = config.input.getAddressCovector();
+  const auto patch_cov = config.window.getPatchAddressCovector();
+
+  for(int row = 0; row < config.window.shape.height; row++){
+    for(int col = 0; col < config.window.shape.width; col++){
+      for(int chan = 0; chan < config.window.shape.depth; chan++){
+
+        const int x_row = config.window.start.row 
+                          + output_coords.row * config.window.stride.row 
+                          + row * config.window.dilation.row;
+
+        const int x_col = config.window.start.col
+                          + output_coords.col * config.window.stride.col
+                          + row * config.window.dilation.col;
+
+        const int x_chan = output_coords.channel * config.window.stride.channel + chan;
+
+        const bool in_padding =  ((x_row < 0) || (x_row >= config.input.height)) 
+                              || ((x_col < 0) || (x_col >= config.input.width ));
+
+        T* patch_add = patch_cov.resolve(this->patch_mem, row, col, chan);
+
+        patch_add[0] = in_padding? config.padding_value : input_cov.resolve(input_img, x_row, x_col, x_chan)[0];
 
 
-  unsigned row_bytes, pix_bytes;
-
-  unsigned X_row_elms;
-
-
-  for(int row = 0; row < m_K_h; row++){
-
-    bool row_in_pad = (row < padding.top || row >= (m_K_h - padding.bottom));
-
-    for(int col = 0; col < m_K_w; col++){
-      
-      bool col_in_pad = (col < padding.left || col >= (m_K_w - padding.right));
-      bool pix_in_pad = row_in_pad || col_in_pad;
-
-      if(pix_in_pad){
-        for(int chan = 0; chan < m_K_d; chan++){
-
-        }
-      } else {
-        for(int chan = 0; chan < m_K_d; chan++){
-
-        }
       }
-      
-
-
     }
-
   }
 
-  return this->m_patch;
+  return this->patch_mem;
 }
 
 

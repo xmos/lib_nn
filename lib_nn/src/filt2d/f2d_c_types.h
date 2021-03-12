@@ -44,6 +44,13 @@ typedef struct {
   int16_t left;
   int16_t bottom;
   int16_t right;
+
+  void makeUnsigned(){
+    top = (top <= 0)? 0 : top;
+    left = (left <= 0)? 0 : left;
+    bottom = (bottom <= 0)? 0 : bottom;
+    right = (right <= 0)? 0 : right;
+  }
 } padding_t;
 
 

@@ -13,16 +13,19 @@ class ImageGeometry {
 
     unsigned const height;
     unsigned const width;
-    unsigned const channels;
+    unsigned const depth;
 
     ImageGeometry(
       unsigned const rows,
       unsigned const cols,
       unsigned const chans)
-        : height(rows), width(cols), channels(chans){}
+        : height(rows), width(cols), depth(chans){}
 
+    unsigned const pixelElements() const { return this->depth; }
+    unsigned const rowElements() const { return this->width * this->pixelElements(); }
+    unsigned const imageElements() const { return this->height * this->rowElements(); }
 
-    unsigned const pixelBytes() const { return sizeof(T_elm) * this->channels; }
+    unsigned const pixelBytes() const { return sizeof(T_elm) * this->depth; }
     unsigned const rowBytes()   const { return pixelBytes()  * this->width;    }
     unsigned const imageBytes() const { return rowBytes()    * this->height;   }
 

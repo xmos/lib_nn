@@ -1,4 +1,0 @@
-
-#include "ImageGeometry.hpp"
-
-
