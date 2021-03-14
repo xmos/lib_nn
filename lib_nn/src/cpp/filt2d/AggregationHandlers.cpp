@@ -8,7 +8,7 @@
 
 using namespace nn::filt2d;
 
-template <>
+template<>
 vpu_split_acc32_t Conv2dDeepPatchAggregator<int8_t,int8_t,vpu_split_acc32_t>::aggregate(
         int8_t const* input_img,
         ImageVect const& output_coords,

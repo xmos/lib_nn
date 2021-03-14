@@ -20,7 +20,7 @@ using namespace nn::filt2d;
 
 //   protected:
 
-//     const geom::Filter2dGeometry<int8_t, int8_t> filter_geometry;
+//     const geom::Filter2dGeometry filter_geometry;
 
 //     std::unique_ptr<int8_t[]> kernel_tensor;
 //     std::unique_ptr<vpu_split_acc32_t[]> biases;
@@ -30,7 +30,7 @@ using namespace nn::filt2d;
 
 
 //     Conv2dDeepFilter_Valid_Test(
-//       const geom::Filter2dGeometry<int8_t, int8_t> geometry)
+//       const geom::Filter2dGeometry geometry)
 //         : filter_geometry(geometry) { 
 
 //       const unsigned kernel_tensor_elms = filter_geometry.window.windowElements() * filter_geometry.output.channels;
@@ -75,14 +75,14 @@ struct ExtraRefParams {
 };
 
 std::unique_ptr<int8_t[]> Conv2dDeepReference(
-    geom::Filter2dGeometry<int8_t,int8_t>& geom,
+    geom::Filter2dGeometry& geom,
     const int8_t* input_data, const int8_t* filter_data,
     const int32_t* bias_data, const ExtraRefParams& ref_params)
 {
   tflite::ConvParams op_params;
 
-  auto pad_initial = geom.InitialPadding();
-  auto pad_final   = geom.FinalPadding();
+  auto pad_initial = geom.ModelPadding(true);
+  auto pad_final   = geom.ModelPadding(false);
   op_params.padding_type = tflite::PaddingType::kSame;
   op_params.padding_values.height = pad_initial.top;
   op_params.padding_values.width = pad_initial.left;
@@ -133,10 +133,10 @@ std::unique_ptr<int8_t[]> Conv2dDeepReference(
 
 TEST(JustMeTesting, Experimenting){
 
-  auto filt_geom = geom::Filter2dGeometry<int8_t,int8_t>(
-                      geom::ImageGeometry<int8_t>(1, 1, 32),
-                      geom::ImageGeometry<int8_t>(1, 1, 16),
-                      geom::WindowGeometry<int8_t>(1, 1, 32));
+  auto filt_geom = geom::Filter2dGeometry(
+                      geom::ImageGeometry(1, 1, 32),
+                      geom::ImageGeometry(1, 1, 16),
+                      geom::WindowGeometry(1, 1, 32));
 
   int8_t input[1][1][32];
   int8_t kernel[16][1][1][32];
@@ -268,10 +268,10 @@ TEST(Conv2dDeepFilter_Valid, basicCase0)
     ot_params[ i>>4 ].scale [ i%16 ] = 1;
   } 
 
-  auto const filt_geom = geom::Filter2dGeometry<>(
-                              geom::ImageGeometry<>(X_SIZE,X_SIZE,X_CHAN),
-                              geom::ImageGeometry<>(Y_SIZE,Y_SIZE,Y_CHAN),
-                              geom::WindowGeometry<>(K_SIZE, K_SIZE, X_CHAN, 0, 0));
+  auto const filt_geom = geom::Filter2dGeometry(
+                              geom::ImageGeometry(X_SIZE,X_SIZE,X_CHAN),
+                              geom::ImageGeometry(Y_SIZE,Y_SIZE,Y_CHAN),
+                              geom::WindowGeometry(K_SIZE, K_SIZE, X_CHAN, 0, 0));
 
 
   auto filter = nn::filt2d::op::Conv2dDeepFilter_Valid(

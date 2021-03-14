@@ -7,8 +7,7 @@
 using namespace nn::filt2d;
 
 
-template <typename T>
-T const* UniversalPatchHandler<T>::copy_patch(
+UniversalPatchHandler::T const* UniversalPatchHandler::copy_patch(
       ImageVect const& output_coords,
       T const* input_img,
       unsigned const out_chan_count)
@@ -48,13 +47,7 @@ T const* UniversalPatchHandler<T>::copy_patch(
 
 
 
-template int8_t const* UniversalPatchHandler<int8_t>::copy_patch(
-      ImageVect const&, int8_t const*, unsigned const);
-
-
-
-template <typename T>
-T const* ValidDeepPatchHandler<T>::copy_patch(
+ValidDeepPatchHandler::T const* ValidDeepPatchHandler::copy_patch(
       ImageVect const& output_coords,
       T const* input_img,
       unsigned const out_chan_count)
@@ -71,6 +64,3 @@ T const* ValidDeepPatchHandler<T>::copy_patch(
 
   return this->patch_mem;
 }
-
-template int8_t const* ValidDeepPatchHandler<int8_t>::copy_patch(
-      ImageVect const&, int8_t const*, unsigned const);

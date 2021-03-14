@@ -31,20 +31,21 @@ class IPatchHandler {
 /////
 ////////////////////////////////////////////////////////
 
-template <typename T = int8_t>
-class UniversalPatchHandler : IPatchHandler<T> { 
+class UniversalPatchHandler : IPatchHandler<int8_t> { 
 
   public:
 
+    using T = int8_t;
+
     struct Config {
 
-        const geom::ImageGeometry<T> input;
-        const geom::WindowGeometry<T> window;
+        const geom::ImageGeometry input;
+        const geom::WindowGeometry window;
 
         const T padding_value;
 
-        Config(const geom::ImageGeometry<T> input,
-               const geom::WindowGeometry<T> window,
+        Config(const geom::ImageGeometry input,
+               const geom::WindowGeometry window,
                const T padding_value)
           : input(input), window(window), padding_value(padding_value) {}
     };
@@ -75,10 +76,10 @@ class UniversalPatchHandler : IPatchHandler<T> {
 ////////////////////////////////////////////////////////
 
 // Doesn't handle padding, depthwise stuff or dilation != 1
-template <typename T = int8_t>
-class ValidDeepPatchHandler : IPatchHandler<T> {
+class ValidDeepPatchHandler : IPatchHandler<int8_t> {
 
   public:
+    using T = int8_t;
 
     struct Config {
       AddressCovector<T> input_covector;
@@ -96,8 +97,7 @@ class ValidDeepPatchHandler : IPatchHandler<T> {
             window_row_bytes(window_row_bytes),
             img_row_bytes(img_row_bytes) {}
 
-      template<typename T_out = int8_t>
-      Config(geom::Filter2dGeometry<T,T_out> const filter)
+      Config(geom::Filter2dGeometry const filter)
         : Config(filter.input.getAddressCovector(), 
                  filter.window.shape.height,
                  filter.window.rowBytes(),

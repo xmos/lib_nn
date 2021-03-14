@@ -32,14 +32,14 @@ class Conv2dDeepFilter_Valid
     using T_coef = int8_t;
 
     // Aliases for the component classes used by this class
-    using T_patch = ValidDeepPatchHandler<T_elm_in>;
+    using T_patch = ValidDeepPatchHandler;
     using T_agg = Conv2dDeepPatchAggregator<T_elm_in, T_coef, T_acc>;
     using T_ot = Int8OutputTransformHandler;
 
     // Just to make it more readable.
-    using FilterGeometry = geom::Filter2dGeometry<T_elm_in, T_elm_out>;
-    using InputGeometry = geom::ImageGeometry<T_elm_in>;
-    using OutputGeometry = geom::ImageGeometry<T_elm_out>;
+    using FilterGeometry = geom::Filter2dGeometry;
+    using InputGeometry = geom::ImageGeometry;
+    using OutputGeometry = geom::ImageGeometry;
 
 
   /*********
@@ -212,14 +212,14 @@ class Conv2dDeepFilter
     using T_coef = int8_t;
 
     // Aliases for the component classes used by this class
-    using T_patch = UniversalPatchHandler<T_elm_in>;
+    using T_patch = UniversalPatchHandler;
     using T_agg = Conv2dDeepPatchAggregator<T_elm_in, T_coef, T_acc>;
     using T_ot = Int8OutputTransformHandler;
 
     // Just to make it more readable.
-    using FilterGeometry = geom::Filter2dGeometry<T_elm_in, T_elm_out>;
-    using InputGeometry = geom::ImageGeometry<T_elm_in>;
-    using OutputGeometry = geom::ImageGeometry<T_elm_out>;
+    using FilterGeometry = geom::Filter2dGeometry;
+    using InputGeometry = geom::ImageGeometry;
+    using OutputGeometry = geom::ImageGeometry;
 
     // Filter processes 16 output channels in parallel
     static constexpr unsigned N_max_cog_chans = 16;

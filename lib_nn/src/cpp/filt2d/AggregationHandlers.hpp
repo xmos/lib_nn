@@ -13,8 +13,8 @@ namespace filt2d {
 /////
 ////////////////////////////////////////////////////////
 
-template <typename T_elm_in = int8_t, 
-          typename T_acc = vpu_split_acc32_t>
+template <typename T_elm_in, 
+          typename T_acc>
 class IAggregationHandler {
 
 
@@ -53,7 +53,7 @@ EXTERN_C void conv2d_aggregate_deep_patch_int8(
 template <typename T_elm_in = int8_t, 
           typename T_coef = int8_t, 
           typename T_acc = vpu_split_acc32_t>
-class Conv2dDeepPatchAggregator : public IAggregationHandler<T_elm_in, T_acc> {
+class Conv2dDeepPatchAggregator : public IAggregationHandler<int8_t, int8_t> {
 
   public:
 
@@ -81,7 +81,7 @@ class Conv2dDeepPatchAggregator : public IAggregationHandler<T_elm_in, T_acc> {
       Config(
           const T_acc * biases,
           const T_coef * kernel_tensor,
-          geom::WindowGeometry<T_elm_in> const conv_window)
+          geom::WindowGeometry const conv_window)
         : Config(biases, kernel_tensor, conv_window.windowElements(), conv_window.windowBytes()) {}
           
         

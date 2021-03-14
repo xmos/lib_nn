@@ -8,6 +8,8 @@
 
 
 #include <cstdint>
+#include <iostream>
+#include <algorithm>
 
 namespace nn {
 namespace filt2d {
@@ -34,11 +36,15 @@ EXTERN_C typedef struct {
   int16_t bottom;
   int16_t right;
 
-  void makeUnsigned(){
-    top = (top <= 0)? 0 : top;
-    left = (left <= 0)? 0 : left;
-    bottom = (bottom <= 0)? 0 : bottom;
-    right = (right <= 0)? 0 : right;
+  void MakeUnsigned(){
+    top = std::max<int16_t>(0, top);
+    left = std::max<int16_t>(0, left);
+    bottom = std::max<int16_t>(0, bottom);
+    right = std::max<int16_t>(0, right);
+  }
+
+  bool HasPadding() const {
+    return top > 0 || left > 0 || bottom > 0 || right > 0;
   }
 } padding_t;
 

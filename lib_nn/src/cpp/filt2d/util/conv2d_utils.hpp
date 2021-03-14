@@ -20,14 +20,14 @@ class TfLiteConverter {
   public:
 
     static std::vector<vpu_split_acc32_t> ConvertBiases(
-        const geom::Filter2dGeometry<int8_t,int8_t>& filter,
+        const geom::Filter2dGeometry& filter,
         const int8_t kernel_weights[],
         const int32_t biases_in[],
         const int32_t input_zero_point,
         const bool is_depthwise);
         
     static std::vector<nn_acc32_to_int8_params_t> ConvertOutputParams(
-        const geom::Filter2dGeometry<int8_t,int8_t>& filter,
+        const geom::Filter2dGeometry& filter,
         const float effective_output_multiplier[],
         const int32_t output_zero_point);
 

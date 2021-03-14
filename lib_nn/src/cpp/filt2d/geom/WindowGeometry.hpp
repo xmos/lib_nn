@@ -10,37 +10,39 @@ namespace nn {
 namespace filt2d {
 namespace geom {
 
-template <typename T_elm_in = int8_t>
+
 class WindowGeometry {
+
+  using T_elm_in = int8_t;
 
   public:
 
     struct {
-      unsigned const height;
-      unsigned const width;
-      unsigned const depth;
+      unsigned height;
+      unsigned width;
+      unsigned depth;
     } shape;
 
     struct {
-      int const row;
-      int const col;
+      int row;
+      int col;
     } start;
 
     struct {
-      int const row;    
-      int const col;    
-      int const channel;
+      int row;    
+      int col;    
+      int channel;
     } stride;
 
     struct {
-      int const row;
-      int const col;
+      int row;
+      int col;
     } dilation;
 
 
   public:
 
-    WindowGeometry(
+    constexpr WindowGeometry(
       unsigned const height,
       unsigned const width,
       unsigned const depth,
@@ -50,7 +52,7 @@ class WindowGeometry {
       int const stride_cols = 1,
       int const stride_chans = 0,
       int const dil_rows = 1,
-      int const dil_cols = 1)
+      int const dil_cols = 1) noexcept
         : shape{height, width, depth}, 
           start{start_row, start_col}, 
           stride{stride_rows, stride_cols, stride_chans}, 
@@ -61,38 +63,17 @@ class WindowGeometry {
     unsigned pixelBytes() const;
     unsigned rowBytes() const;
     unsigned windowBytes() const;
-
     
     unsigned pixelElements() const;
     unsigned rowElements() const;
     unsigned windowElements() const;
 
     unsigned windowPixels() const;
+
+    
+    bool operator==(WindowGeometry other) const;
 };
 
-
-template <typename T>
-AddressCovector<T> WindowGeometry<T>::getPatchAddressCovector() const
-  { return AddressCovector<T>(rowBytes(), pixelBytes(), sizeof(T)); }
-
-
-template <typename T>
-unsigned WindowGeometry<T>::pixelElements() const { return this->shape.depth; }
-template <typename T>
-unsigned WindowGeometry<T>::rowElements() const { return this->shape.width * this->pixelElements(); }
-template <typename T>
-unsigned WindowGeometry<T>::windowElements() const { return this->shape.height * this->rowElements(); }
-
-
-template <typename T>
-unsigned WindowGeometry<T>::pixelBytes() const { return this->pixelElements() * sizeof(T); }
-template <typename T>
-unsigned WindowGeometry<T>::rowBytes() const { return this->rowElements() * sizeof(T); }
-template <typename T>
-unsigned WindowGeometry<T>::windowBytes() const { return this->windowElements() * sizeof(T); }
-
-template <typename T>
-unsigned WindowGeometry<T>::windowPixels() const { return this->shape.height * this->shape.width; }
 
 
 }}}
