@@ -73,7 +73,7 @@ T Rand::rand(T min_inclusive, T max_inclusive)
 {
   assert(min_inclusive <= max_inclusive);
   T span = max_inclusive - min_inclusive + 1;
-  T x = static_cast<T>(pseudo_rand() % span);
+  T x = static_cast<T>(((unsigned)pseudo_rand()) % span);
   return min_inclusive + x;
 }
 
