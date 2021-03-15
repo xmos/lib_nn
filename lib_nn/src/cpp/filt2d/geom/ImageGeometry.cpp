@@ -27,7 +27,7 @@ mem_stride_t geom::ImageGeometry::getStride(
 
 AddressCovector<geom::ImageGeometry::T_elm> geom::ImageGeometry::getAddressCovector() const 
 { 
-  return AddressCovector<T_elm>(rowBytes(),pixelBytes(),sizeof(T_elm)); 
+  return AddressCovector<T_elm>(width, depth);
 }
 
   

@@ -1,10 +1,6 @@
 #pragma once
 
-#ifdef __cplusplus
-  #define EXTERN_C extern "C"
-#else
-  #define EXTERN_C 
-#endif
+#include "nn_api.h"
 
 
 #include <cstdint>
@@ -22,7 +18,7 @@ static inline T* advancePointer(T* orig, int32_t offset_bytes)
 }
 
 
-EXTERN_C typedef struct {
+C_API typedef struct {
   int16_t  high[16];
   uint16_t low[16];
 } vpu_split_acc32_t;
@@ -30,7 +26,7 @@ EXTERN_C typedef struct {
 
 
 
-EXTERN_C typedef struct {
+C_API typedef struct {
   int16_t top;
   int16_t left;
   int16_t bottom;

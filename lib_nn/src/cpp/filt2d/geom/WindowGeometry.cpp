@@ -5,7 +5,7 @@ using namespace nn::filt2d::geom;
 
 nn::filt2d::AddressCovector<WindowGeometry::T_elm_in> WindowGeometry::getPatchAddressCovector() const
 { 
-  return AddressCovector<T_elm_in>(rowBytes(), pixelBytes(), sizeof(T_elm_in)); 
+  return AddressCovector<T_elm_in>(shape.width, shape.depth); 
 }
 
 
