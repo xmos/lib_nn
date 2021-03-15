@@ -17,6 +17,12 @@ class AggregateFn {
 // these should inherit from Conv2DAggrFn
 // Conv2DAggrFn class should have a boggle method
 
+struct Conv2dReorderedWeights{
+  int8_t * weights;
+  int weights_byte_count;
+  int8_t * final_vpu_load_addresses;
+};
+
 class MatMulFn : public AggregateFn {
 
   private:
@@ -29,7 +35,7 @@ class MatMulFn : public AggregateFn {
     MatMulFn(int output_slice_channel_count, size_t bytes_per_kernel_channel, int8_t * weights);
     void aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
 
-    static int8_t* boggle(int8_t *raw_weights, std::array<int, 4> &shape, int bits_per_element);
+    static int8_t* reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4> &shape, int bits_per_element, int8_t pad_value);
     static int get_kernel_size(int input_bytes, int output_channel_count);
     static int get_scratch_size(int input_bytes) ;
 };

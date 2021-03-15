@@ -1,25 +1,203 @@
+#include <algorithm>
+#include <iostream>
+#include <cassert>
+#include <vector>
+#include <algorithm>
+#include <cmath>
 #include "AggregateFn.hpp"
 
 extern "C" {
   #include "vpu_sim.h"
 }
 
-#include <iostream>
-#include <stdio.h>
+static int clrsb(int x){
+  #if defined(__XS3A__)
+  for (unsigned i=0;i<32;i++){
+    int y = (x<<i)>>i;
+    if (y != x)
+      return (i-1);
+  }
+  return 32;
+  #else
+  return __builtin_clrsb(x);
+  #endif
+}
+
+// This puts upper and lower limits on the range of A
+// A must reduce the vpu accumulator to 16 bit
+// A must not remove all the imformation from the vpu accumulator
+static void get_bounds_on_A(int* min_A, int* max_A, int32_t vpu_min_accu,
+                            int32_t vpu_max_accu, int32_t vpu_clamp_min,
+                            int32_t vpu_clamp_max) {
+  int32_t max_out =
+      std::max(std::max(std::max(vpu_min_accu, vpu_max_accu), vpu_clamp_min), vpu_clamp_max);
+  int32_t min_out =
+      std::min(std::min(std::min(vpu_min_accu, vpu_max_accu), vpu_clamp_min), vpu_clamp_max);
+  int rsb = std::min(clrsb(max_out), clrsb(min_out));
+
+  *max_A = rsb - 16;
+  *min_A = *max_A - 16 + 1;
+}
+
+// This puts upper and lower limits on the range of Exp
+// Exp will be applied to each of the values
+// Exp must not saturate and of the values
+// Exp must not leave all results as zero
+static void get_bounds_on_Exp(int* min_Exp, int* max_Exp, float* values,
+                              unsigned values_length, int bound_width) {
+  assert(values_length > 0);
+  int max_exponent = INT_MIN;
+  for (unsigned i = 0; i < values_length; i++) {
+    int e;
+    std::frexp(values[i], &e);
+    max_exponent = std::max(max_exponent, e);
+  }
+
+  *min_Exp = -max_exponent - 1;
+  *max_Exp = *min_Exp + bound_width;
+}
 
 
-int8_t* MatMulFn::boggle(int8_t *raw_weights, std::array<int, 4> &shape, int bits_per_element) {
+static void solve_constraint(
+    int * B_res, 
+    int * A_res, 
+    int * M_res,
 
-  int element_count = bits_per_element;
-  for (auto s : shape)
-    element_count *= s;
-  element_count /= 8; //8 bits per byte
+    float* vpu_output_transform_multiplier,
+    float* vpu_output_transform_bias, 
+    unsigned chans_out,
 
-  int kernel_size = get_kernel_size(element_count / shape[0], shape[0]);
+    int32_t vpu_min_accu,
+    int32_t vpu_max_accu, 
+    int32_t vpu_clamp_min, 
+    int32_t vpu_clamp_max
+    ){
+  int min_A, max_A;
+  int min_B, max_B;
+  int min_M, max_M;
+
+  get_bounds_on_A(&min_A, &max_A, vpu_min_accu, vpu_max_accu, vpu_clamp_min, vpu_clamp_max);
+
+  get_bounds_on_Exp(&min_M, &max_M, vpu_output_transform_multiplier, chans_out, 16);
+
+  //This is 30 as we cannot make a 32 bit bias with a shr of 14
+  get_bounds_on_Exp(&min_B, &max_B, vpu_output_transform_bias, chans_out, 16 + 14);
+
+  // we also know that A + M = B;
+  // Subtract one to ensure the addition is fine (one from A*M, B is already 30 bit at most)
+  max_B = std::min(max_A + max_M - 1, max_B);
+    
+  // printf("min_B:%d max_B:%d\n", min_B, max_B);
+
+  for (int A = max_A; A >= min_A; A--) {
+    for (int M = max_M; M >= min_M; M--) {
+      // We can squeeze a little more out of the arith by modelling
+      // max_Product = max_A * max_M
+      // this way we wouldnt need to subtract 2 from max_B
+
+      int B = A + M; 
+
+      if ((B >= min_B) && (B <= max_B)) {
+        *B_res = B;
+        *A_res = A;
+        *M_res = M;
+        return;
+      }
+    }
+  }
+  assert(0);
+}
+
+struct QuantisationParams{
+  int accu_shr;
+  int bias_shr;
+  int multiplier_shr;
+};
+
+/*
+  This is intended to handle 
+*/
+void quantise_activation(
+    std::vector<float> & output_transform_multiplier,
+    std::vector<float> & output_transform_bias, 
+    int accu_min,
+    int accu_max,
+    std::vector<int> & chan_overlaps)
+
+{
+
+
+  // QuantisationParams q = solve_constraint(
+    
+  //   vpu_output_transform_multiplier,
+  //   vpu_output_transform_bias, 
+
+  //   vpu_min_accu,
+  //   vpu_max_accu);
+
+}
+
+int8_t * deref2d(int8_t * p, int p_w, int h, int w){
+  return p + h*p_w + w;
+}
+
+int8_t* MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4> &shape, 
+  int bits_per_element, int8_t pad_value) 
+{
+
+  const int vpu_ring_buffer_length = 16;
+  const int vpu_bytes_per_word = 32;
+
+  int output_channel_count = shape[0];
+
+  //The number of bytes in the kernel for each output channel
+  int bytes_per_output_channel = (shape[1]*shape[2]*shape[3]*bits_per_element)/8;
+
+  int kernel_size = get_kernel_size(bytes_per_output_channel,output_channel_count);
 
   int8_t * boggled_weights = new int8_t [kernel_size]; 
-  //TODO 
 
+  //For each output channel keep a record of the final vpu load
+  //so the overlap betweek the desired channel and the next can
+  //be accounted for.
+  int8_t * final_load_locations[output_channel_count];
+
+  //The numberof output channel groups needed to compute the whole conv.
+  //This is rounded up.
+  int output_channel_groups = 
+    (output_channel_count + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
+
+  int dst_offset = 0;
+
+  for(int ocg = 0; ocg < output_channel_groups; ++ocg){
+    int output_channels_per_ocg = std::min(output_channel_count - ocg*vpu_ring_buffer_length, vpu_ring_buffer_length);
+
+    int input_channel_groups = (bytes_per_output_channel + vpu_bytes_per_word - 1) / vpu_bytes_per_word;
+
+    for(int icg = 0; icg < input_channel_groups; ++icg){
+
+      int ocg_offset = ocg*vpu_ring_buffer_length;
+
+      for (int out_ch = ocg_offset; out_ch < ocg_offset + output_channels_per_ocg; ++out_ch){
+        int bytes_in_this_vpu_copy = std::min(bytes_per_output_channel - icg*vpu_bytes_per_word, vpu_bytes_per_word);
+
+        int8_t * src = deref2d(raw_weights, bytes_per_output_channel, out_ch, vpu_bytes_per_word*icg);
+        int8_t * dst = boggled_weights + dst_offset;
+
+        memcpy(dst, src, bytes_in_this_vpu_copy);
+        dst_offset += bytes_in_this_vpu_copy;
+        
+        if(icg == input_channel_groups-1)
+          final_load_locations[out_ch] = dst;
+        
+      }
+    }
+  }
+  assert(dst_offset <= kernel_size);
+
+  memset(boggled_weights + dst_offset, pad_value, kernel_size - dst_offset);
+
+  //todo return channel final over lap pointers
 
   return boggled_weights;
 }
@@ -127,15 +305,6 @@ void MatMulFn::mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_c
   VSTD(vpu, &A->vR);
 }
 
-void MatMulFn::aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group)
-{
-#ifdef NN_USE_REF
-  mat_mul_impl(A, T, output_channel_group);
-#else
-  mat_mul_impl_asm(A, T, output_channel_group);
-#endif // NN_USE_REF
-}
-
 MatMulDirectFn::MatMulDirectFn(ImageParams &X, WindowGeometry &K, int8_t * weights): 
   weights(weights)
 {
@@ -198,5 +367,14 @@ void MatMulDirectFn::aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t ou
   mat_mul_direct_impl(A, T, output_channel_group);
 #else
   mat_mul_direct_impl_asm(A, T, output_channel_group);
+#endif // NN_USE_REF
+}
+
+void MatMulFn::aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group)
+{
+#ifdef NN_USE_REF
+  mat_mul_impl(A, T, output_channel_group);
+#else
+  mat_mul_impl_asm(A, T, output_channel_group);
 #endif // NN_USE_REF
 }

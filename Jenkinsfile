@@ -67,7 +67,12 @@ pipeline {
                 // below is how we can activate the tools
                 sh """pushd /XMOS/tools/${params.TOOLS_VERSION}/XMOS/xTIMEcomposer/${params.TOOLS_VERSION} && . SetEnv && popd &&
                       . activate ./lib_nn_venv &&
-                      cd test/unit_test && make all"""
+                       cd test/unit_test && make all && make all PLATFORM=x86  MEMORY_SAFE=true"""
+             }
+         }
+         stage("Test") {
+             steps {
+                 sh """cd test/unit_test && ./bin/x86/unit_test"""
             }
         }
     }
