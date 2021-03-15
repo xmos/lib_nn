@@ -5,6 +5,8 @@
 #ifndef XS3_VPU_H_
 #define XS3_VPU_H_
 
+#include "nn_api.h"
+
 #include <xs3a_registers.h>
 
 /* TODO use from xs3a_kernel.h in a future tools release */
@@ -46,7 +48,7 @@
 
 #ifndef __ASSEMBLER__
 
-enum {
+C_API enum {
     VEC_INT_32 = 0,   /**< 0 */
     VEC_INT_16 = 1,   /**< 1 */
     VEC_INT_8  = 2,   /**< 2 */
@@ -55,7 +57,7 @@ enum {
     VEC_FLT_8  = 6,   /**< 6 */
 };
 
-enum {
+C_API enum {
     VEC_SH0 = 0,   /**< 0 */
     VEC_SHL = 1,   /**< 1 */
     VEC_SHR = 2,   /**< 2 */
@@ -64,7 +66,7 @@ enum {
 /**
  * The saturation bounds for signed integers in each VPU operating mode.
  */
-enum {
+C_API enum {
     VPU_INT8_MAX =  0x7F,              /**<  0x7F */
     VPU_INT8_MIN = -0x7F,              /**< -0x7F */
 
@@ -83,7 +85,7 @@ enum {
  * most significant bits are stored in vD, and the least significant bits are stored
  * in vR.
  */
-enum {
+C_API enum {
     VPU_INT8_ACC_SIZE = 32,    /**< 32 */
     VPU_INT16_ACC_SIZE = 32,   /**< 32 */
     VPU_INT32_ACC_SIZE = 40,   /**< 40 */
@@ -93,7 +95,7 @@ enum {
  * When vD and vR contain accumulators, the values in this enum indicate how many least significant 
  * bits are stored in vR, with the remaining bits stored in vD.
  */
-enum {
+C_API enum {
     VPU_INT8_ACC_VR_BITS = 16,     /**< 16 */
     VPU_INT16_ACC_VR_BITS = 16,    /**< 16 */
     VPU_INT32_ACC_VR_BITS = 32,    /**< 32 */
@@ -102,7 +104,7 @@ enum {
  * When vD and vR contain accumulators, the values in this enum can be used to mask off the bits of
  * the accumulator value which correspond to the portion in vR.
  */
-enum {
+C_API enum {
     VPU_INT8_ACC_VR_MASK = 0xFFFF,         /**< 0xFFFF */
     VPU_INT16_ACC_VR_MASK = 0xFFFF,        /**< 0xFFFF */
     VPU_INT32_ACC_VR_MASK = 0xFFFFFFFF,    /**< 0xFFFFFFFF */
@@ -111,17 +113,17 @@ enum {
 /**
  * Integer type which fits a single accumulator (32-bits) corresponding to the 8-bit VPU mode.
  */
-typedef int32_t vpu_int8_acc_t;
+C_API typedef int32_t vpu_int8_acc_t;
 
 /**
  * Integer type which fits a single accumulator (32-bits) corresponding to the 16-bit VPU mode.
  */
-typedef int32_t vpu_int16_acc_t;
+C_API typedef int32_t vpu_int16_acc_t;
 
 /**
  * Integer type which fits a single accumulator (40-bits) corresponding to the 32-bit VPU mode.
  */
-typedef int64_t vpu_int32_acc_t;
+C_API typedef int64_t vpu_int32_acc_t;
 
 /**
  * The number of elements which fit into a vector register for each operating mode.
@@ -131,7 +133,7 @@ typedef int64_t vpu_int32_acc_t;
  *               VLSUB, VPOS, VSIGN
  *      
  */
-enum {
+C_API enum {
     VPU_INT8_EPV    = 32,   /**< 32 */
     VPU_INT16_EPV   = 16,   /**< 16 */
     VPU_INT32_EPV   =  8,   /**< 8 */
@@ -140,7 +142,7 @@ enum {
 /**
  * log-base-2 of the corresponding VPU_INT*_EPV values.
  */
-enum {
+C_API enum {
     VPU_INT8_EPV_LOG2    = 5,   /**< 5 */
     VPU_INT16_EPV_LOG2   = 4,   /**< 4 */
     VPU_INT32_EPV_LOG2   = 3,   /**< 3 */
@@ -152,7 +154,7 @@ enum {
  * This is also the number of elements consumed (number of multiplies) by the
  * VLMACC instruction.
  */
-enum {
+C_API enum {
     VPU_BIN_ACC_PERIOD   = 16,    /**< 16 */
     VPU_INT8_ACC_PERIOD  = 16,    /**< 16 */
     VPU_INT16_ACC_PERIOD = 16,    /**< 16 */
@@ -162,7 +164,7 @@ enum {
 /**
  * log-base-2 of the corresponding VPU_INT*_ACC_PERIOD values.
  */
-enum {
+C_API enum {
     VPU_INT8_ACC_PERIOD_LOG2  = 4,   /**< 4 */
     VPU_INT16_ACC_PERIOD_LOG2 = 4,   /**< 4 */
     VPU_INT32_ACC_PERIOD_LOG2 = 3,   /**< 3 */
@@ -173,7 +175,7 @@ enum {
  * In other words, the number of simultaneous multiply-accumulates performed by the VLMACC
  * instruction.
  */
-enum {
+C_API enum {
     VPU_INT8_VLMACC_ELMS = 16,    /**< 16 */
     VPU_INT16_VLMACC_ELMS = 16,   /**< 16 */
     VPU_INT32_VLMACC_ELMS = 8,    /**< 8 */
@@ -182,7 +184,7 @@ enum {
 /**
  * log-base-2 of the corresponding VPU_INT*_VLMACC_ELMS values.
  */
-enum {
+C_API enum {
     VPU_INT8_VLMACC_ELMS_LOG2 = 4,    /**< 4 */
     VPU_INT16_VLMACC_ELMS_LOG2 = 4,   /**< 4 */
     VPU_INT32_VLMACC_ELMS_LOG2 = 3,   /**< 3 */

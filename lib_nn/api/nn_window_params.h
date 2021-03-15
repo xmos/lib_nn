@@ -3,11 +3,14 @@
 #ifndef STRUCTS_H_
 #define STRUCTS_H_
 
+#include "nn_api.h"
+
 #include <stdint.h>
 
 /**
  * This struct represents an indexing vector for an image.
  */
+C_API
 typedef struct {
     /** Number of image pixel rows */
     int32_t rows;
@@ -35,6 +38,7 @@ typedef struct {
  *        start.cols     : (start.cols + size.cols), 
  *        start.channels : (start.channels + size.channels) ]`
  */
+C_API
 typedef struct {
     /** 
      * Indices in an output image at which to begin producing output.

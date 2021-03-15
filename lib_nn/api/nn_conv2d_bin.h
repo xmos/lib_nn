@@ -1,6 +1,7 @@
 // Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
 // XMOS Public License: Version 1
 
+#include "nn_api.h"
 #include "nn_conv2d_structs.h"
 #include "nn_binary_structs.h"
 // Binary Conv2D
@@ -15,7 +16,7 @@
 #define BCONV2D_INT8_INPUT_CH_INCREMENT       (8*sizeof(int32_t))
 #define BCONV2D_INT8_OUTPUT_CH_INCREMENT      (sizeof(int32_t))
 
-void bnn_populate_output_transform_values(
+C_API void bnn_populate_output_transform_values(
   output_transform_values_t * otv, 
   const int16_t clamp_near,
   const int16_t clamp_far_0,
@@ -37,7 +38,7 @@ void bnn_populate_output_transform_values(
  * @param final_shr                     [in]     The final shift right of the product to normalise the output.
  * 
  */
-int8_t bnn_post_activation_reference(
+C_API int8_t bnn_post_activation_reference(
               const int32_t vpu_acc,
               const unsigned ch,
               const int16_t * post_activation_multiplier_q,
@@ -48,7 +49,7 @@ int8_t bnn_post_activation_reference(
 /**
  * Reference implementation of activation quantisation. 
  */
-void bnn_quantise_activation(
+C_API void bnn_quantise_activation(
                int16_t * output_transform_multiplier_q,
                int16_t * output_transform_bias_q,
 
@@ -94,7 +95,7 @@ void bnn_quantise_activation(
  *                                    kernel height * kernel width * input channel count.           
  * @param chan_overlaps      [in]     The overlap between one channel and the next //FIXME
  */
-void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
+C_API void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
                                   const int32_t* thresholds_ref,
                                   const unsigned chans_out,
                                   const unsigned receptive_field,
@@ -126,7 +127,7 @@ void bnn_reorder_threshold_tensor(int32_t* thresh_boggled,
  * @param chans_out   [in]     The number of output channels
  * @param chan_overlaps   [in]     Array of the overlap between one channel and the next
  */
-void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
+C_API void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
                                const unsigned k_height, const unsigned k_width,
                                const unsigned chans_in,
                                const unsigned chans_out, 
@@ -166,7 +167,7 @@ void bnn_reorder_kernel_tensor(bnn_b32_t* K_p, const bnn_b32_t* K_ref_p,
  * @param y_sub_width   [in]     The width of the output sub-image that will be computed
  * @param y_sub_height  [in]     The height of the output sub-image that will be computed
  */
-void bconv2d_int8_DIDO_valid(int8_t* Y_p,
+C_API void bconv2d_int8_DIDO_valid(int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
     const int16_t* post_activation_multiplier_q, 
@@ -184,7 +185,7 @@ void bconv2d_int8_DIDO_valid(int8_t* Y_p,
 );
 
 
-void bconv2d_int8_valid(int8_t* Y_p,
+C_API void bconv2d_int8_valid(int8_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, 
     
     const int16_t* post_activation_multiplier_q, 
@@ -228,7 +229,7 @@ void bconv2d_int8_valid(int8_t* Y_p,
  * @param y_sub_width   [in]     The width of the output sub-image that will be computed
  * @param y_sub_height  [in]     The height of the output sub-image that will be computed
  */
-void bconv2d_bin_DI_valid(bnn_b32_t* Y_p,
+C_API void bconv2d_bin_DI_valid(bnn_b32_t* Y_p,
     const bnn_b256_t* X_p, 
     const bnn_b256_t* K_p, 
     const int32_t* thresholds_p,
@@ -264,7 +265,7 @@ void bconv2d_bin_DI_valid(bnn_b32_t* Y_p,
  * @param y_sub_width   [in]     The width of the output sub-image that will be computed
  * @param y_sub_height  [in]     The height of the output sub-image that will be computed
  */
-void bconv2d_bin_valid(bnn_b32_t* Y_p,
+C_API void bconv2d_bin_valid(bnn_b32_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, const int32_t* thresholds_p,
     bnn_b32_t * data_scratch, 
 
@@ -308,7 +309,7 @@ void bconv2d_bin_valid(bnn_b32_t* Y_p,
  * @param k_sub_width   [in]     The width of the input sub-kernel that will be computed
  * @param k_sub_height  [in]     The height of the input sub-kernel that will be computed
  */
-void bconv2d_bin_DI(bnn_b32_t* Y_p,
+C_API void bconv2d_bin_DI(bnn_b32_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, const int32_t* thresholds_p,
     
     const nn_image_params_t* x, //The full image of x
@@ -359,7 +360,7 @@ void bconv2d_bin_DI(bnn_b32_t* Y_p,
  * @param k_sub_width   [in]     The width of the input sub-kernel that will be computed
  * @param k_sub_height  [in]     The height of the input sub-kernel that will be computed
  */
-void bconv2d_bin(bnn_b32_t* Y_p,
+C_API void bconv2d_bin(bnn_b32_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, const int32_t* thresholds_p,
     bnn_b32_t * data_scratch, 
     const nn_image_params_t* x, //The full image of x
@@ -411,7 +412,7 @@ void bconv2d_bin(bnn_b32_t* Y_p,
  * @param x_h_loc       [in]     The x coordinate(horizontal) of where the input will start reading from
  * @param x_v_loc       [in]     The y coordinate(vertical) of where the input will start reading from
  */
-void bconv2d_int8_DIDO(int8_t* Y_p,
+C_API void bconv2d_int8_DIDO(int8_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, 
     
     const int16_t* post_activation_multiplier, 
@@ -430,7 +431,7 @@ void bconv2d_int8_DIDO(int8_t* Y_p,
     const unsigned y_loc_channel, const unsigned y_sub_channel
 ) ;
 
-void bconv2d_int8(int8_t* Y_p,
+C_API void bconv2d_int8(int8_t* Y_p,
     const bnn_b32_t* X_p, const bnn_b32_t* K_p, 
     
     const int16_t* post_activation_multiplier_q, 

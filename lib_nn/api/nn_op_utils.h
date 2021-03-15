@@ -5,12 +5,11 @@
 
 #include <string.h>
 #include <stdint.h>
+
+#include "nn_api.h"
 #include "xs3_vpu.h"
 #include "nn_bso.h"
 
-#ifdef __XC__
-extern "C" {
-#endif
 
 /** Helper for computing offsets between pixels in an 8-bit image.
  * 
@@ -82,6 +81,7 @@ extern "C" {
  * @param scratch       An optional scratch buffer, or NULL
  * @param C_out         The number of output channels
  */
+C_API
 void nn_standard_BSO_layout(
     nn_bso_block_t* bso_out,
     int32_t* bias,
@@ -108,6 +108,7 @@ void nn_standard_BSO_layout(
  * @param src  [in]     Source address
  * @param byte_count [in]     Number of bytes to be copied
 */
+C_API
 void vpu_memcpy(void * dst, const void * src, size_t byte_count);
 
 /**
@@ -122,6 +123,7 @@ void vpu_memcpy(void * dst, const void * src, size_t byte_count);
  * @param src  [in]     Source address
  * @param byte_count [in]     Number of bytes to be copied
 */
+C_API
 void vpu_memcpy_int(void * dst, const void * src, size_t byte_count);
 
 /**
@@ -136,6 +138,7 @@ void vpu_memcpy_int(void * dst, const void * src, size_t byte_count);
  * @param src  [in]     Source address
  * @param byte_count [in]     Number of bytes to be copied
 */
+C_API
 void vpu_memcpy_ext(void * dst, const void * src, size_t byte_count);
 
 
@@ -152,6 +155,7 @@ void vpu_memcpy_ext(void * dst, const void * src, size_t byte_count);
  * @param src  [in]     Source address
  * @param vector_count [in]     Number of MEMCPY_VECT_EXT_BYTES bytes copies to be bytes to be performed
 */
+C_API
 void vpu_memcpy_vector_ext(void * dst, const void * src, int vector_count);
 
 /**
@@ -167,6 +171,7 @@ void vpu_memcpy_vector_ext(void * dst, const void * src, int vector_count);
  * @param src  [in]     Source address
  * @param vector_count [in]     Number of MEMCPY_VECT_INT_BYTES bytes copies to be bytes to be performed
 */
+C_API
 void vpu_memcpy_vector_int(void * dst, const void * src, int vector_count);
 
 /**
@@ -178,6 +183,7 @@ void vpu_memcpy_vector_int(void * dst, const void * src, int vector_count);
  * @param value  [in]   Source value.
  * @param size [in]     Number of 32 bit words to be copied
 */
+C_API
 void vpu_memset_32(void * dst, const int32_t value, const int word_count);
 
 #define VPU_MEMSET_VECTOR_WORDS XS3_VPU_VREG_WIDTH_WORDS
@@ -191,6 +197,7 @@ void vpu_memset_32(void * dst, const int32_t value, const int word_count);
  * @param value  [in]           Source value.
  * @param vector_count [in]     Number of VPU_MEMSET_VECTOR_WORDS words vectors to be copied.
 */
+C_API
 void vpu_memset_vector(void * dst, const int32_t value, const int vector_count);
 
 #ifdef __XC__

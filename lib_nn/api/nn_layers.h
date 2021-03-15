@@ -2,12 +2,14 @@
 // XMOS Public License: Version 1
 #ifndef LAYERS_H_
 #define LAYERS_H_
+
 #include "nn_types.h"
 #include "nn_image.h"
 
 /**
  * Describes the parameters needed for an @oper{add_elementwise} operator. @see add_elementwise().
  */
+C_API
 typedef struct {
     /**
      * The parameters that are applied to each input element. Those in `input[0]` are applied to elements of 
@@ -101,6 +103,7 @@ typedef struct {
  * @param[in]   elm_start   Index of first output element to be computed
  * @param[in]   elm_count   Number of output elements to be computed
  */
+C_API
 void add_elementwise(
     int8_t Y[],
     const int8_t X0[],
@@ -146,6 +149,7 @@ void add_elementwise(
  * @param[in]   X   The input vector @tensor{x}
  * @param[in]   N   The number of elements @math{N} of the input vector @tensor{x}
  */
+C_API
 void argmax_16(
     int32_t* Y,
     const int16_t* X,
@@ -200,6 +204,7 @@ void argmax_16(
  * @param[in]   elm_start   Index of first output element to be computed.
  * @param[in]   elm_count   Number of output elements to be computed.
  */
+C_API
 void lookup8(
     uint8_t* Y,
     const uint8_t* X,
@@ -258,6 +263,7 @@ void lookup8(
  * @param[in]   elm_start   Index of first output element to be computed.
  * @param[in]   elm_count   Number of output elements to be computed.
  */
+C_API
 void requantize_16_to_8(
     int8_t* Y,
     const int16_t* X,
@@ -274,6 +280,7 @@ void requantize_16_to_8(
  * 
  * @note This struct is intended to be opaque.
  */
+C_API
 typedef struct {
     mem_stride_t start;
     int32_t length;
@@ -306,6 +313,7 @@ typedef struct {
  * @param[in]  zero_point   The value @math{z_0} to be used for padding (for all channels)
  * @param job_count [in]    The number of jobs to be initialized.
  */
+C_API
 void bsign_8_prepare(
     nn_bsign_8_job_t* jobs,
     int8_t* zero_point_vect,
@@ -336,6 +344,7 @@ void bsign_8_prepare(
  * @param plan [in]    The @oper{bsign_8} plan to be processed
  * @param job [in]     The @oper{bsign_8} job to be processed
  */
+C_API
 void bsign_8(
     bnn_b32_t* Y,
     const int8_t* X,
@@ -350,6 +359,7 @@ void bsign_8(
  *
  * @note This struct is intended to be opaque.
  */
+C_API
 typedef struct nn_pad_plan_t {
   unsigned top_pad_bytes;
   unsigned mid_loop_count;
@@ -359,6 +369,7 @@ typedef struct nn_pad_plan_t {
   unsigned bottom_pad_bytes;
 } nn_pad_plan_t;
 
+C_API
 typedef struct padding_sizes_t {
   int32_t top;
   int32_t bottom;
@@ -382,6 +393,7 @@ typedef struct padding_sizes_t {
  * @param x                [in]   Look-up table @tensor{T}
  * @param bytes_per_pixel  [in]   Length @math{N} of input and output vectors
  */
+C_API
 void pad_prepare(nn_pad_plan_t* plan, const padding_sizes_t* p,
                  const nn_image_params_t* x, const unsigned bytes_per_pixel);
 
@@ -402,8 +414,10 @@ void pad_prepare(nn_pad_plan_t* plan, const padding_sizes_t* p,
  * @param x   [in]     The input vector @tensor{x}
  * @param plan [in]    The prameters describing how to pad.
  */
+C_API
 void pad_run(void* y, void* x, const nn_pad_plan_t* p, uint32_t pad_value);
 
+C_API
 void pad_ref(void* y, void* x, const padding_sizes_t* p,
              const nn_image_params_t* xp, const unsigned bytes_per_pixel, uint32_t pad_value);
 

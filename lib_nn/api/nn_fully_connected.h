@@ -102,6 +102,7 @@
  * @param [in]  output_start    The first output element to compute (index of @tensor{y})
  * @param [in]  output_count    The number of output elements to compute
  */
+C_API
 void fully_connected_8(
     int8_t* Y,
     const int8_t* W, 
@@ -189,6 +190,7 @@ void fully_connected_8(
  * @param [in]  output_start    The first output element to compute (index of @tensor{y})
  * @param [in]  output_count    The number of output elements to compute
  */
+C_API
 void fully_connected_16(
     int16_t* Y,
     const int8_t* W, 
@@ -233,6 +235,7 @@ void fully_connected_16(
  *  \param  shifts  Shift tensor
  *  \param  scales  Scale tensor
  */
+C_API
 void fc_deepin_shallowout_16(
     const nn_tensor_t* W, 
     const int32_t* B,

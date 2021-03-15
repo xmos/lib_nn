@@ -1,5 +1,8 @@
 // Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the 
 // XMOS Public License: Version 1
+#pragma once
+
+#include "nn_api.h"
 #include "nn_bin_types.h"
 
 #define NN_BCONV2D_KERNEL_OVERRUN_WORDS 8
@@ -12,7 +15,7 @@
  *
  * @note This struct is intended to be opaque.
  */
-typedef struct {
+C_API typedef struct {
 
     //These are in a specific order - do not change
 
@@ -46,7 +49,7 @@ typedef struct {
  *
  * @note This struct is intended to be opaque.
  */
-typedef struct {
+C_API typedef struct {
 
     //These are in a pacific order - do not change
 
@@ -84,7 +87,7 @@ typedef struct {
  *
  * @note This struct is intended to be opaque.
  */
-typedef struct {
+C_API typedef struct {
     //These are in a specific order - do not change
   const bnn_b256_t* X;
   int32_t outer_x_h_step;
@@ -129,7 +132,7 @@ typedef struct {
  *
  * @note This struct is intended to be opaque.
  */
-typedef struct {
+C_API typedef struct {
 
     //These are in a specific order - do not change
 
@@ -176,7 +179,7 @@ typedef struct {
 
 
 
-typedef struct {
+C_API typedef struct {
 
     int16_t clamp_near[VPU_INT16_EPV];
     int16_t clamp_far_0[VPU_INT16_EPV];
