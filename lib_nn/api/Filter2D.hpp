@@ -43,6 +43,7 @@ class AbstractKernel {
 
   public:
     //calc_output_pixel_slice(TOutput *Y, TInput *X, int32_t h, int32_t w);
+
     void execute (int8_t * Y, int8_t * X) ;
 };
 

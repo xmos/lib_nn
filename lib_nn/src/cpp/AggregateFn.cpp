@@ -305,7 +305,6 @@ void MatMulFn::mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_c
   VSTD(vpu, &A->vR);
 }
 
-
 MatMulDirectFn::MatMulDirectFn(ImageParams &X, WindowGeometry &K, int8_t * weights): 
   weights(weights)
 {

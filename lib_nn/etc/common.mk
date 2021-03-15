@@ -71,7 +71,7 @@ load_dependency=$(eval $(call load_dependency_,$(1),$(2),$(3)))
 
 
 MAP_COMP_c   = CC
-MAP_COMP_cc  = CC
+MAP_COMP_cc  = CXX
 MAP_COMP_xc  = XCC
 MAP_COMP_cpp = CXX
 MAP_COMP_S   = AS

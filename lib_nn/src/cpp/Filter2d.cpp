@@ -16,7 +16,6 @@ void AbstractKernel<T>::execute (int8_t * Y, int8_t * X) {
   }
 }
 
-/*
   This is going to compute the output for output_channel_group_count channel groups of
   the output. The pointer is going to be set to the begining on the next output by 
   output_w_mem_stride. This allows it to address sub-channel regions.

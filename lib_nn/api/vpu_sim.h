@@ -9,6 +9,7 @@
 #include "nn_types.h"
 #include "xs3_vpu.h"
 
+
 typedef union {
     uint8_t  u8[VPU_INT8_EPV];
     int8_t   s8[VPU_INT8_EPV];
@@ -63,5 +64,5 @@ void vpu_sim_mem_print(void * address, vector_mode mode);
 
 //Function for implementing the saturation logic within the VPU.
 int64_t vpu_saturate(
-    const int64_t input,
+    const int64_t input, 
     const unsigned bits);

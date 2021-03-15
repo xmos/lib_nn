@@ -30,7 +30,7 @@ help:
 	$(info *************************************************************************************)
 
 
-APP_NAME := unit_test
+APP_NAME := filter2d
 
 TARGET_DEVICE = XCORE-AI-EXPLORER
 
@@ -39,6 +39,7 @@ NN_PATH := ../../lib_nn
 DEPS_PATH := ./../deps
 
 UNITY_PATH := $(DEPS_PATH)/Unity
+GTEST_PATH := $(DEPS_PATH)/googletest/googletest
 COMPUTE_ENGINE_PATH := $(DEPS_PATH)/compute-engine
 FLAT_BUFFERS_PATH := $(DEPS_PATH)/flatbuffers
 RUY_PATH := $(DEPS_PATH)/ruy
@@ -53,6 +54,9 @@ LIB_DIR   := $(OBJ_DIR)/lib
 EMPTY_STR :=
 LIB_NN_FILE := $(LIB_DIR)/lib_nn.a
 
+GTEST_LIB_FILE := lib/libgtest.a
+GTEST_MAIN_LIB_FILE := lib/libgtest_main.a
+
 ifneq ($(VERBOSE),$(EMPTY_STR))
   $(info XSCOPE_CONFIG: $(XSCOPE_CONFIG) )
   $(info NN_PATH: $(NN_PATH) )
@@ -62,9 +66,9 @@ ifneq ($(VERBOSE),$(EMPTY_STR))
 endif
 
 INCLUDES := $(NN_PATH)/api $(NN_PATH)/src $(UNITY_PATH)/src $(COMPUTE_ENGINE_PATH) $(FLAT_BUFFERS_PATH)/include
-INCLUDES += $(RUY_PATH) $(TENSORFLOW_PATH) $(GEMMLOWP_PATH)
+INCLUDES += $(RUY_PATH) $(TENSORFLOW_PATH) $(GEMMLOWP_PATH) $(GTEST_PATH)/include
 SOURCE_DIRS := src 
-SOURCE_FILE_EXTENSIONS := c cpp
+SOURCE_FILE_EXTENSIONS := c cpp cc
 
 SOURCE_FILES := 
 
@@ -158,7 +162,7 @@ $(OBJECT_FILES):
 
 # Libraries are built using a recursive make call.
 UNITY_STATIC_LIB := $(LIB_DIR)/unity.a
-DEPENDENCY_LIBS = $(UNITY_STATIC_LIB)
+DEPENDENCY_LIBS = $(UNITY_STATIC_LIB) 
 
 LIB_MAKE_OPTS := VERBOSE=$(VERBOSE) BUILD_DIR=$(abspath $(BUILD_DIR)/lib_nn) LIB_DIR=$(abspath $(LIB_DIR)) \
                  PLATFORM=$(PLATFORM) TARGET_DEVICE=$(TARGET_DEVICE)
@@ -207,7 +211,7 @@ APP_EXE_FILE = $(EXE_DIR)/$(APP_NAME)$(PLATFORM_EXE_SUFFIX)
 
 $(APP_EXE_FILE): $(OBJECT_FILES) $(ALL_STATIC_LIBS) $(XSCOPE_CONFIG)
 
-$(APP_EXE_FILE): REQUIRED_LIBRARIES = $(ALL_STATIC_LIBS)
+$(APP_EXE_FILE): REQUIRED_LIBRARIES = $(ALL_STATIC_LIBS) $(GTEST_LIB_FILE)
 
 
 $(APP_EXE_FILE):

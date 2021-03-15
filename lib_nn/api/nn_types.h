@@ -3,6 +3,10 @@
 #ifndef NN_TYPES_H_
 #define NN_TYPES_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 
 /**
@@ -63,5 +67,9 @@ typedef int32_t mem_stride_t;
  * a number of channels. 
  */
 typedef uint32_t channel_count_t;
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif //NN_TYPES_H_

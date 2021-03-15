@@ -35,6 +35,7 @@ size_t Im_to_col_padded::get_overread_bytes(){
 
 Im_to_col_padded::Im_to_col_padded(ImageParams &X, WindowGeometry &K, padding_t &padding){
 
+
   kernel_height = K.shape.height;
   kernel_width = K.shape.width;
 
@@ -50,13 +51,15 @@ Im_to_col_padded::Im_to_col_padded(ImageParams &X, WindowGeometry &K, padding_t 
 
   bytes_per_pixel = X.pixelBytes();
   bytes_per_h_line = X.rowBytes();
+
   horizontal_mem_stride = X.rowBytes();
   
 }
 
+
 int8_t * Im_to_col_padded::memcopy_fn(int8_t * T, int8_t * X, 
 int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
-  
+
   xs3_vpu vpu_mem;
   xs3_vpu * vpu = &vpu_mem;
 
@@ -72,6 +75,7 @@ int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
       p |= input_v_coord >= padding.top + input_v_length;
       p |= input_h_coord < padding.left;
       p |= input_h_coord >= padding.left + input_h_length;
+
 
       //it might be nice to do a memcopy of the padding rather than a memset(requires more memory though)
       if(p){
@@ -91,6 +95,7 @@ int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
       //Advance the X_cur_p to the start of the next horizontal pixel
       // probably w_stride = nput_bytes_per_pixel * horizontal_stride
       // X_cur_p += horizontal_mem_stride;
+
     }
     //There is no vertical mem stride as X_cur_p is recalculated each step of the kernel height
   }
@@ -107,7 +112,6 @@ This constructor is used for testing
 */
 Im_to_col_valid::Im_to_col_valid(ImageParams &X, WindowGeometry &K){
   
-
   int y_channels = 4;
   ImageParams Y(X, K, y_channels); 
 
@@ -139,6 +143,7 @@ size_t Im_to_col_valid::get_overread_bytes(){
 
 int8_t * Im_to_col_valid::memcopy_fn(int8_t * T, int8_t * X, 
   int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
+
 
   xs3_vpu vpu_mem;
   xs3_vpu * vpu = &vpu_mem;

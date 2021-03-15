@@ -18,7 +18,7 @@ namespace {
     return *seed;
   }
 
-  //TODO breal these up into different files
+  //TODO break these up into different files
 
   class Test_Im_to_col_valid: public ::testing::Test {};
 
@@ -26,7 +26,10 @@ namespace {
 
     int seed = 42;
 
-    //TODO put this in a generator class
+    //TODO put this ina generator class
+    auto k_h_stride = 1;
+    auto k_v_stride = 1;
+
     for (auto x_height = 1; x_height <= 6; ++x_height){
       for (auto x_width = 1; x_width <= 6; ++x_width){
         for (auto x_channels = 4; x_channels <= 36; x_channels += 4){
@@ -34,6 +37,7 @@ namespace {
             for (auto k_width = 1; k_width <= x_width; ++k_width){
               for (auto k_h_dilation = 1; k_h_dilation <= 3; ++k_h_dilation){
                 for (auto k_v_dilation = 1; k_v_dilation <= 3; ++k_v_dilation){
+
                   for (auto k_h_stride = 1; k_h_stride <= 1; ++k_h_stride){ //TODO test this
                     for (auto k_v_stride = 1; k_v_stride <= 1; ++k_v_stride){
                       
@@ -212,6 +216,7 @@ namespace {
   //////////////////////////////////////////////////////////////////////////////////////////
 
 
+
   class Test_MatMulFn: public ::testing::Test {};
   /*
     Simple test to verify memory accesses
@@ -374,11 +379,6 @@ namespace {
       }
     }
   }
-
-
-
-
-
 
 
 

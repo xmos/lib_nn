@@ -10,7 +10,6 @@ class MemCpyFn {
     virtual size_t get_overread_bytes() = 0;
 };
 
-//TODO rename
 class DerefInputFn : public MemCpyFn {
 
   int32_t bytes_per_h_line; 
@@ -75,4 +74,5 @@ class Im_to_col_valid : public MemCpyFn{
   size_t get_overread_bytes();
 
   int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
+  
 };
