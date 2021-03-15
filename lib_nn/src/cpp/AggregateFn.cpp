@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include "AggregateFn.hpp"
 
 extern "C" {
@@ -46,7 +47,7 @@ static void get_bounds_on_A(int* min_A, int* max_A, int32_t vpu_min_accu,
 static void get_bounds_on_Exp(int* min_Exp, int* max_Exp, float* values,
                               unsigned values_length, int bound_width) {
   assert(values_length > 0);
-  int max_exponent = INT_MIN;
+  int max_exponent = std::numeric_limits<int>::min();
   for (unsigned i = 0; i < values_length; i++) {
     int e;
     std::frexp(values[i], &e);
