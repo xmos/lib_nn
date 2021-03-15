@@ -8,24 +8,32 @@ extern "C" {
 #include <iostream>
 #include <stdio.h>
 
-NopValid::NopValid(ImageParams &X){
+DerefInputFn::DerefInputFn(ImageParams &X, WindowGeometry &K){
   bytes_per_h_line = X.rowBytes(); 
   bytes_per_pixel = X.pixelBytes();
+  //TODO deal with strides
 }
 
-size_t NopValid::get_scratch_bytes(){
-  return 0;
-}
+size_t DerefInputFn::get_scratch_bytes(){ return 0;}
+size_t DerefInputFn::get_overread_bytes(){ return 0;}
 
-size_t NopValid::get_overread_bytes(){
-  return 0;
-}
+int8_t * DerefInputFn::memcopy_fn(int8_t * T, int8_t * X, 
+  int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
 
-int8_t * NopValid::memcopy_fn(int8_t * T, int8_t * X, int32_t output_v_coord, int32_t output_h_coord){
+  //TODO this needs stride
+  //TODO make this into a base class function
   return X + output_v_coord * bytes_per_h_line + output_h_coord * bytes_per_pixel;
 }
 
-Im_to_col_padded::Im_to_col_padded(ImageParams &X, ImageParams &Y, WindowGeometry &K, padding_t &padding){
+size_t Im_to_col_padded::get_scratch_bytes(){
+  return kernel_height * kernel_width * bytes_per_pixel + XS3_VPU_VREG_WIDTH_BYTES;
+}
+
+size_t Im_to_col_padded::get_overread_bytes(){
+  return XS3_VPU_VREG_WIDTH_BYTES; //TODO
+}
+
+Im_to_col_padded::Im_to_col_padded(ImageParams &X, WindowGeometry &K, padding_t &padding){
 
   kernel_height = K.shape.height;
   kernel_width = K.shape.width;
@@ -41,29 +49,18 @@ Im_to_col_padded::Im_to_col_padded(ImageParams &X, ImageParams &Y, WindowGeometr
   padding_val = 0;
 
   bytes_per_pixel = X.pixelBytes();
+  bytes_per_h_line = X.rowBytes();
   horizontal_mem_stride = X.rowBytes();
   
 }
 
-size_t Im_to_col_padded::get_scratch_bytes(){
-  return kernel_height * kernel_width * bytes_per_pixel + XS3_VPU_VREG_WIDTH_BYTES;
-}
-
-size_t Im_to_col_padded::get_overread_bytes(){
-  return XS3_VPU_VREG_WIDTH_BYTES; //TODO
-}
-
-int8_t * Im_to_col_padded::memcopy_fn(int8_t * T, int8_t * X, int32_t output_v_coord, int32_t output_h_coord){
+int8_t * Im_to_col_padded::memcopy_fn(int8_t * T, int8_t * X, 
+int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
   
   xs3_vpu vpu_mem;
   xs3_vpu * vpu = &vpu_mem;
 
   for(int32_t k_height = 0; k_height < kernel_height; k_height++){
-
-    int bytes_per_h_line = bytes_per_pixel * (4);//TODO
-
-    int8_t * X_cur_p = X + (output_v_coord - padding.top) * bytes_per_h_line + 
-      (output_h_coord - padding.left) * bytes_per_pixel;
 
     for(int32_t k_width = 0; k_width < kernel_width; k_width++){
       
@@ -72,14 +69,19 @@ int8_t * Im_to_col_padded::memcopy_fn(int8_t * T, int8_t * X, int32_t output_v_c
 
       int p = 0;
       p |= input_v_coord < padding.top;
-      p |= input_v_coord + input_v_length > padding.bottom;
+      p |= input_v_coord >= padding.top + input_v_length;
       p |= input_h_coord < padding.left;
-      p |= input_h_coord + input_h_length > padding.right;
+      p |= input_h_coord >= padding.left + input_h_length;
 
       //it might be nice to do a memcopy of the padding rather than a memset(requires more memory though)
       if(p){
         memset(T, padding_val, bytes_per_pixel);
       } else {
+
+        //TODO this needs stride
+        int8_t * X_cur_p = X + (input_v_coord - padding.top) * bytes_per_h_line + 
+          (input_h_coord - padding.left) * bytes_per_pixel;
+
         //translate X to the actual input pointer
         memcpy(T, X_cur_p, bytes_per_pixel);
       }
@@ -88,7 +90,7 @@ int8_t * Im_to_col_padded::memcopy_fn(int8_t * T, int8_t * X, int32_t output_v_c
 
       //Advance the X_cur_p to the start of the next horizontal pixel
       // probably w_stride = nput_bytes_per_pixel * horizontal_stride
-      X_cur_p += horizontal_mem_stride;
+      // X_cur_p += horizontal_mem_stride;
     }
     //There is no vertical mem stride as X_cur_p is recalculated each step of the kernel height
   }
@@ -105,6 +107,10 @@ This constructor is used for testing
 */
 Im_to_col_valid::Im_to_col_valid(ImageParams &X, WindowGeometry &K){
   
+
+  int y_channels = 4;
+  ImageParams Y(X, K, y_channels); 
+
   bytes_per_pixel = X.pixelBytes();
   bytes_per_h_line = X.rowBytes(); 
 
@@ -131,7 +137,8 @@ size_t Im_to_col_valid::get_overread_bytes(){
   return input_channel_groups * XS3_VPU_VREG_WIDTH_BYTES - bytes_per_pixel;
 }
 
-int8_t * Im_to_col_valid::memcopy_fn(int8_t * T, int8_t * X, int32_t output_v_coord, int32_t output_h_coord){
+int8_t * Im_to_col_valid::memcopy_fn(int8_t * T, int8_t * X, 
+  int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
 
   xs3_vpu vpu_mem;
   xs3_vpu * vpu = &vpu_mem;
@@ -141,6 +148,8 @@ int8_t * Im_to_col_valid::memcopy_fn(int8_t * T, int8_t * X, int32_t output_v_co
   //translate X to the actual input pointer, i.e. X_t = X[h][w]
   // std::cout << "move: " <<(output_v_coord * bytes_per_h_line + output_h_coord * bytes_per_pixel)<<std::endl;
   // printf("init X %p\n", X );
+
+  //TODO this needs stride
   int8_t * X_cur_p = X + (int)(output_v_coord * bytes_per_h_line + output_h_coord * bytes_per_pixel);
   
   // printf("X_cur %p\n", X_cur_p );

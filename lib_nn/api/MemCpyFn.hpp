@@ -5,19 +5,20 @@
 
 class MemCpyFn {
   public:
-    virtual int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w) = 0;
+    virtual int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c=0) = 0;
     virtual size_t get_scratch_bytes() = 0;
     virtual size_t get_overread_bytes() = 0;
 };
 
-class NopValid : public MemCpyFn{
+//TODO rename
+class DerefInputFn : public MemCpyFn {
 
   int32_t bytes_per_h_line; 
   int32_t bytes_per_pixel; 
 
   public:
-  NopValid(ImageParams &X);
-  int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w);
+  DerefInputFn(ImageParams &X, WindowGeometry &K);
+  int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
   size_t get_scratch_bytes();
   size_t get_overread_bytes();
 };
@@ -36,12 +37,13 @@ class Im_to_col_padded : public MemCpyFn{
 
   int32_t padding_val;
 
+  int32_t bytes_per_h_line; 
   int32_t bytes_per_pixel;
 
   size_t horizontal_mem_stride;
   public:
-  Im_to_col_padded(ImageParams &X, ImageParams &Y, WindowGeometry &K, padding_t &padding);
-  int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w);
+  Im_to_col_padded(ImageParams &X, WindowGeometry &K, padding_t &padding);
+  int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
   size_t get_scratch_bytes();
   size_t get_overread_bytes();
 };
@@ -72,5 +74,5 @@ class Im_to_col_valid : public MemCpyFn{
   size_t get_scratch_bytes();
   size_t get_overread_bytes();
 
-  int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w);
+  int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
 };

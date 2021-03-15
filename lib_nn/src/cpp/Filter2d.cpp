@@ -16,31 +16,41 @@ void AbstractKernel<T>::execute (int8_t * Y, int8_t * X) {
   }
 }
 
+/*
+  This is going to compute the output for output_channel_group_count channel groups of
+  the output. The pointer is going to be set to the begining on the next output by 
+  output_w_mem_stride. This allows it to address sub-channel regions.
+*/
 void Filter2D::calc_output_pixel_slice(int8_t * Y, int8_t * X, int32_t h, int32_t w){
       
-  int8_t * input_img = memcpy_handler->memcopy_fn(scratch_mem, X, h, w);
+
+  int8_t * input_img = memcpy_handler->memcopy_fn(scratch_mem, X, h, w);//copy all input channels
 
   for (int32_t chan_group = 0; chan_group < kparams.output_channel_group_count; chan_group++){
     vpu_ring_buffer_t A;
 
     aggregate_handler->aggregate_fn(&A, input_img, chan_group);
 
-    //must calc size of current channel group
-    //offset from Y in order to write out result
-    //number of bytes to write to result
-    //offset into transform specific arrays
     Y = ot_handler->output_transform_fn(Y, &A, chan_group);
     
   }
 }
 
-// void Filter2D::execute(int8_t * Y, int8_t * X){
+// void Filter2D_dw::calc_output_pixel_slice(int8_t * Y, int8_t * X, int32_t h, int32_t w){
+      
+//   for (int32_t chan_group = 0; chan_group < kparams.output_channel_group_count; chan_group++){
 
-//   Y += kparams.output_channel_slice_offset;
-//   for(int32_t h = kparams.h_begin; h < kparams.h_end; h++){
-//     for(int32_t w = kparams.w_begin; w < kparams.w_end; w++){
-//   ;
-//     }
-//     Y += kparams.output_h_mem_stride;
+//     vpu_ring_buffer_t A;
+
+//     int8_t * input_img = memcpy_handler->memcopy_fn(scratch_mem, X, h, w, chan_group);//copy 1 channel group
+
+//     aggregate_handler->aggregate_fn(&A, input_img, chan_group);
+
+//     //must calc size of current channel group
+//     //offset from Y in order to write out result
+//     //number of bytes to write to result
+//     //offset into transform specific arrays
+//     Y = ot_handler->output_transform_fn(Y, &A, chan_group);
+    
 //   }
 // }

@@ -18,15 +18,15 @@ namespace {
     return *seed;
   }
 
+  //TODO breal these up into different files
+
   class Test_Im_to_col_valid: public ::testing::Test {};
 
   TEST_F(Test_Im_to_col_valid, BasicTest) {
 
     int seed = 42;
 
-    //TODO put this ina generator class
-    auto k_h_stride = 1;
-    auto k_v_stride = 1;
+    //TODO put this in a generator class
     for (auto x_height = 1; x_height <= 6; ++x_height){
       for (auto x_width = 1; x_width <= 6; ++x_width){
         for (auto x_channels = 4; x_channels <= 36; x_channels += 4){
@@ -34,41 +34,50 @@ namespace {
             for (auto k_width = 1; k_width <= x_width; ++k_width){
               for (auto k_h_dilation = 1; k_h_dilation <= 3; ++k_h_dilation){
                 for (auto k_v_dilation = 1; k_v_dilation <= 3; ++k_v_dilation){
-
-                  ImageParams X(x_height, x_width, x_channels, 8); 
-                  WindowGeometry K (k_height, k_width, k_h_stride, k_v_stride, k_h_dilation, k_v_dilation);
-
-                  Im_to_col_valid cpy(X, K);
-
-                  size_t scratch_bytes = cpy.get_scratch_bytes(); //TODO add test that crashes when this is one less
-                  int overread_bytes = cpy.get_overread_bytes(); //TODO add test that crashes when this is one less
-
-                  int8_t T[scratch_bytes];
-                  int8_t X_mem[x_width * x_height * x_channels + overread_bytes];
-
-                  int output_height = CONV2D_OUTPUT_LENGTH(x_height, k_height, k_v_dilation, k_v_stride);
-                  int output_width = CONV2D_OUTPUT_LENGTH(x_width, k_width, k_h_dilation, k_h_stride);
-
-                  for(auto h = 0; h < output_height; ++h){
-                    for(auto w = 0 ; w < output_width; ++w){
-
-                      for(auto j = 0; j < x_width * x_height * x_channels + overread_bytes; ++j)
-                        X_mem[j] = (int8_t)pseudo_rand(&seed);
-
-                      std::memset(T, 0x55, sizeof T);
+                  for (auto k_h_stride = 1; k_h_stride <= 1; ++k_h_stride){ //TODO test this
+                    for (auto k_v_stride = 1; k_v_stride <= 1; ++k_v_stride){
                       
-                      cpy.memcopy_fn(T, X_mem, h, w);
+                      ImageParams X(x_height, x_width, x_channels, 8); 
+                      WindowGeometry K (k_height, k_width, k_h_stride, k_v_stride, k_h_dilation, k_v_dilation);
 
-                      int j = 0;
-                      for(int kh = 0; kh < k_height; ++kh){
-                        for(int kw = 0 ; kw < k_width; ++kw){
-                          for(int c = 0 ; c < x_channels; ++c){
-                            EXPECT_EQ((int)T[j++], (int)X_mem[(kh*k_v_dilation +h)*x_channels*x_width + (kw*k_h_dilation+w)*x_channels + c]);
+                      Im_to_col_valid cpy(X, K);
+
+                      size_t scratch_bytes = cpy.get_scratch_bytes(); //TODO add test that crashes when this is one less
+                      int overread_bytes = cpy.get_overread_bytes(); //TODO add test that crashes when this is one less
+
+                      int8_t T[scratch_bytes];
+                      int8_t X_mem[x_width * x_height * x_channels + overread_bytes];
+
+                      int output_height = CONV2D_OUTPUT_LENGTH(x_height, k_height, k_v_dilation, k_v_stride);
+                      int output_width = CONV2D_OUTPUT_LENGTH(x_width, k_width, k_h_dilation, k_h_stride);
+
+                      for(auto h = 0; h < output_height; ++h){
+                        for(auto w = 0 ; w < output_width; ++w){
+
+                          for(auto j = 0; j < x_width * x_height * x_channels + overread_bytes; ++j)
+                            X_mem[j] = (int8_t)pseudo_rand(&seed);
+
+                          std::memset(T, 0x55, sizeof T);
+                          
+                          cpy.memcopy_fn(T, X_mem, h, w, 0);
+
+                          int j = 0;
+
+                          int output_height = CONV2D_OUTPUT_LENGTH(x_height, k_height, k_v_dilation, k_v_stride);
+                          int output_width = CONV2D_OUTPUT_LENGTH(x_width, k_width, k_h_dilation, k_h_stride);
+                          
+                          for(int kh = 0; kh < k_height; ++kh){
+                            for(int kw = 0 ; kw < k_width; ++kw){
+                              for(int c = 0 ; c < x_channels; ++c){
+
+                                EXPECT_EQ((int)T[j++], (int)X_mem[(kh*k_v_dilation +h)*x_channels*x_width + (kw*k_h_dilation+w)*x_channels + c]);
+                              }
+                            }
+                          }
+                          for(; j < scratch_bytes; ++j){
+                            EXPECT_EQ(0, T[j++]);
                           }
                         }
-                      }
-                      for(; j < scratch_bytes; ++j){
-                        EXPECT_EQ(0, T[j++]);
                       }
                     }
                   }
@@ -81,46 +90,126 @@ namespace {
     }
   }
 
+  class Test_DerefInputFn: public ::testing::Test {};
+
+  TEST_F(Test_DerefInputFn, BasicTest) {
+
+    int seed = 42;
+
+    //TODO use above generator class
+    //TODO add strides and dilations etc
+    int k_height= 1, k_v_dilation=1, k_v_stride=1;
+    int k_width=1, k_h_dilation=1, k_h_stride=1;
+    for (auto x_height = 1; x_height <= 6; ++x_height){
+      for (auto x_width = 1; x_width <= 6; ++x_width){
+        for (auto x_channels = 4; x_channels <= 36; x_channels += 4){
+
+          ImageParams X(x_height, x_width, x_channels, 8); 
+          WindowGeometry K (k_height, k_width, k_h_stride, k_v_stride, k_h_dilation, k_v_dilation);
+
+          DerefInputFn deref(X, K);
+          
+          int8_t X_mem[x_width * x_height * x_channels ];
+          for(auto j = 0; j < x_width * x_height * x_channels; ++j)
+            X_mem[j] = (int8_t)pseudo_rand(&seed);
+
+          int output_height = CONV2D_OUTPUT_LENGTH(x_height, k_height, k_v_dilation, k_v_stride);
+          int output_width = CONV2D_OUTPUT_LENGTH(x_width, k_width, k_h_dilation, k_h_stride);
+
+          for(auto h = 0; h < output_height; ++h){
+            for(auto w = 0 ; w < output_width; ++w){
+              
+              int8_t * p = deref.memcopy_fn(0, X_mem, h, w, 0);
+
+              EXPECT_EQ((int)*p, (int)X_mem[h*x_channels*x_width + w*x_channels]);
+ 
+            }
+          }
+        }
+      }
+    }
+  }
+
+  class Test_Im_to_col_padded: public ::testing::Test {};
+
+  TEST_F(Test_Im_to_col_padded, BasicTest) {
+
+    int seed = 42;
+
+    //TODO use above generator class
+    auto k_h_stride = 1;
+    auto k_v_stride = 1;
+
+
+    for (auto x_height = 1; x_height <= 6; ++x_height){
+      for (auto x_width = 1; x_width <= 6; ++x_width){
+        for (auto x_channels = 1; x_channels <= 36; x_channels += 1){
+          for (auto k_height = 1; k_height <= x_height; ++k_height){
+            for (auto k_width = 1; k_width <= x_width; ++k_width){
+              for (auto k_h_dilation = 1; k_h_dilation <= 1; ++k_h_dilation){
+                for (auto k_v_dilation = 1; k_v_dilation <= 1; ++k_v_dilation){
+
+                  padding_t padding = {0, 0, 0, 0}; //TODO add this to the generator
+
+                  // std::cout << " x_height:" << x_height
+                  //  << " x_width:" << x_width
+                  //   << " x_height:" << x_height
+                  //    << " x_channels:" << x_channels
+                  //     << " k_height:" << k_height
+                  //      << " k_width:" << k_width
+                  //       << " k_h_dilation:" << k_h_dilation
+                  //        << " k_v_dilation:" << k_v_dilation
+                  //          <<std::endl;
+
+                  ImageParams X(x_height, x_width, x_channels, 8); 
+                  WindowGeometry K (k_height, k_width, k_h_stride, k_v_stride, k_h_dilation, k_v_dilation);
+
+                  Im_to_col_padded cpy(X, K, padding);
+
+                  size_t scratch_bytes = cpy.get_scratch_bytes(); //TODO add test that crashes when this is one less
+                  int overread_bytes = cpy.get_overread_bytes(); //TODO add test that crashes when this is one less
+
+                  int8_t T[scratch_bytes];
+                  int8_t X_mem[x_width * x_height * x_channels + overread_bytes];
+
+                  int output_height = CONV2D_OUTPUT_LENGTH(x_height, k_height, k_v_dilation, k_v_stride);
+                  int output_width = CONV2D_OUTPUT_LENGTH(x_width, k_width, k_h_dilation, k_h_stride);
+                  if(output_height ==0 || output_width == 0){
+                    std::cout << "\tdid nothing" << std::endl;
+                  }
+                  for(auto h = 0; h < output_height; ++h){
+                    for(auto w = 0 ; w < output_width; ++w){
+
+                      for(auto j = 0; j < x_width * x_height * x_channels + overread_bytes; ++j)
+                        X_mem[j] = (int8_t)pseudo_rand(&seed);
+
+                      std::memset(T, 0x55, sizeof T);
+                      
+                      cpy.memcopy_fn(T, X_mem, h, w, 0);
+
+                      // int j = 0;
+                      // for(int kh = 0; kh < k_height; ++kh){
+                      //   for(int kw = 0 ; kw < k_width; ++kw){
+                      //     for(int c = 0 ; c < x_channels; ++c){
+                      //       EXPECT_EQ((int)T[j++], (int)X_mem[(kh*k_v_dilation +h)*x_channels*x_width + (kw*k_h_dilation+w)*x_channels + c]);
+                      //     }
+                      //   }
+                      // }
+                      // for(; j < scratch_bytes; ++j){
+                      //   EXPECT_EQ(0, T[j++]);
+                      // }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
   //////////////////////////////////////////////////////////////////////////////////////////
-
-  // class Test_Im_to_col_complete: public ::testing::Test {};
-
-  // TEST_F(Test_Im_to_col_complete, BasicTest) {
-
-  //   {
-  //     int x_width = 12;
-  //     int x_height = 12;
-  //     int x_channels = 3;
-  //     int k_width = 3;
-  //     int k_height = 3;
-  //     int k_channels = 8;
-
-  //     ImageParams X(x_width, x_height, x_channels, 8); 
-  //     WindowGeometry K (k_width, k_height, 1, 1, 1, 1);
-  //     ImageParams Y(X, K, k_channels);
-
-  //     Im_to_col_valid cpy(X, Y, K);
-  //     size_t scratch_bytes = cpy.get_scratch_bytes();
-
-  //     int overread_bytes = cpy.get_overread_bytes();
-
-  //     int8_t T[scratch_bytes];
-  //     int8_t X_mem[x_width * x_height * x_channels + overread_bytes];
-
-  //     for(auto h = 0; h < x_height - k_height; ++h){
-  //       for(auto w = 0 ; w < x_width - k_width; ++w){
-
-  //         std::memset(X_mem, 0, sizeof X_mem);
-  //         std::memset(T, 0x55, sizeof T);
-          
-  //         cpy.memcopy_fn(T, X_mem, h, w);
-  //         for(auto j = 0; j < scratch_bytes; ++j)
-  //           EXPECT_EQ(0, T[j++]);
-  //       }
-  //     }
-  //   }
-  // }
 
 
   class Test_MatMulFn: public ::testing::Test {};
@@ -253,6 +342,43 @@ namespace {
       }
     }
   }
+
+  class Test_Kernel_Reordering: public ::testing::Test {};
+
+  TEST_F(Test_Kernel_Reordering, BasicTest) {
+
+    for (auto x_channels = 1; x_channels <= 6; ++x_channels){
+      for (auto k_height = 1; k_height <= 6; ++k_height){
+        for (auto k_width = 1; k_width <= 6; ++k_width){
+          for (auto y_channels = 1; y_channels <= 6; ++y_channels){
+
+            int8_t raw_weights[y_channels][k_height][k_width][x_channels];
+
+            std::array<int, 4> shape = {y_channels, k_height, k_width, x_channels};
+            int bits_per_element = 8;
+
+            memset(raw_weights, 0, sizeof raw_weights); 
+
+            //should return the size and pointers to final vpu loads
+            int8_t * reordered_weights = 
+              MatMulFn::reorder_kernel_weights((int8_t *)raw_weights, shape, bits_per_element, 0);
+
+            //check that all values are 0
+            
+            for (auto i = 0; i < sizeof raw_weights; ++i){
+              EXPECT_EQ(0, reordered_weights[i]);
+            }
+
+          }
+        }
+      }
+    }
+  }
+
+
+
+
+
 
 
 
