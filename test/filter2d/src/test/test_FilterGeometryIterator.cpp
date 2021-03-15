@@ -4,6 +4,7 @@
 #include "../src/cpp/filt2d/misc.hpp"
 #include "../src/cpp/filt2d/util/FilterGeometryIterator.hpp"
 #include "xs3_vpu.h"
+#include "../src/cpp/filt2d/Conv2dDeepFilter.hpp"
 
 #include "gtest/gtest.h"
 #include "tensorflow/lite/kernels/internal/reference/integer_ops/conv.h"
@@ -14,17 +15,6 @@
 
 using namespace nn::filt2d;
 
-
-class MyFGI : public FilterGeometryIterator {
-
-  protected:
-
-
-  virtual void Next(FilterGeometry& filter) const override {
-    filter = FilterGeometryIterator::END();
-  }
-
-};
 
 static void printFilter(geom::Filter2dGeometry filter)
 {
@@ -50,60 +40,17 @@ static void printFilter(geom::Filter2dGeometry filter)
 
 }
 
-static int total = 1;
-static int passed = 1;
-
-bool MyPredicate(geom::Filter2dGeometry& filter)
-{
-  // printFilter(filter);
-  total++;
-
-  if(filter.ModelIsDepthwise()) {
-    return false;
-  }
-
-  if(filter.ModelRequiresPadding()) {
-    return false;
-  }
-
-  // Kind of unnecessary, because if it doesn't require padding, this should always
-  // be true
-  if(!filter.ModelConvWindowAlwaysIntersectsInput()) {
-    return false;
-  }
-
-  passed++;
-  return true;
-}
-
 
 TEST(FilterGeometryIterator,Blah){
 
-  auto iter = PredicateFilterGeometryIterator(
-                  geom::Filter2dGeometry(
-                      geom::ImageGeometry(1, 1, VPU_INT8_EPV),
-                      geom::ImageGeometry(1, 1, VPU_INT8_ACC_PERIOD),
-                      geom::WindowGeometry(1, 1, VPU_INT8_EPV, 
-                                                   0, 0,    1, 1, 0,    1, 1)),
-                  geom::Filter2dGeometry(
-                      geom::ImageGeometry(2, 2, VPU_INT8_EPV),
-                      geom::ImageGeometry(2, 2, VPU_INT8_ACC_PERIOD),
-                      geom::WindowGeometry(3, 3, VPU_INT8_EPV,
-                                                   0, 0,    1, 1, 0,    1, 1)),
-                  geom::Filter2dGeometry(
-                      geom::ImageGeometry(1, 1, 0),
-                      geom::ImageGeometry(1, 1, 0),
-                      geom::WindowGeometry(1, 1, 0,
-                                                   0, 0,    0, 0, 0,    0, 0)),
-                  MyPredicate);
 
-  for(auto filt: iter){
 
-    std::cout << "A Filter:" << std::endl;
+  int count = 0;
+  for(auto filt: op::Conv2dDeepFilter_Valid::GetGeometryIterator()){
     printFilter(filt);
-
+    count++;
   }
 
-  std::cout << passed << " / " << total << " geometries passed the predicate." << std::endl; 
+  std::cout << count << " geometries passed the predicate." << std::endl; 
 
 };

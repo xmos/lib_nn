@@ -1,6 +1,7 @@
 
 #include "Conv2dDeepFilter.hpp"
 #include "xs3_vpu.h"
+#include "util/FilterGeometryIterator.hpp"
 
 #include <memory>
 #include <vector>
@@ -8,7 +9,62 @@
 #include <cmath>
 #include <iostream>
 
+using namespace nn::filt2d::geom;
 using namespace nn::filt2d::op;
+using namespace nn::filt2d;
+
+
+
+bool Conv2dDeepFilter_Valid::SupportsGeometry(
+    const FilterGeometry& filter)
+{
+  //Doesn't support depthwise geometry
+  if(filter.ModelIsDepthwise()) return false;
+
+  //Doesn't support geometry involving padding
+  if(filter.ModelRequiresPadding()) return false;
+
+  //Input channel count must be a multiple of 4
+  if(filter.input.depth % 4 != 0)
+    return false;
+
+  //Output channel count must be a multiple of 4
+  if(filter.output.depth % 4 != 0)
+    return false;
+
+  //Window depth must equal input depth
+  if(filter.input.depth != filter.window.shape.depth)
+    return false;
+
+  // Doesn't support dilation != 1
+  if(filter.window.dilation.row != 1 || filter.window.dilation.col != 1)
+    return false;
+
+  // Otherwise it should be fine
+  return true;
+}
+
+
+PredicateFilterGeometryIterator Conv2dDeepFilter_Valid::GetGeometryIterator()
+{
+  auto iter = PredicateFilterGeometryIterator(
+                geom::Filter2dGeometry(
+                    geom::ImageGeometry(1, 1, 4),
+                    geom::ImageGeometry(1, 1, 4),
+                    geom::WindowGeometry(1, 1, 4,  0, 0,  1, 1, 0,   1, 1)),
+                geom::Filter2dGeometry(
+                    geom::ImageGeometry(8, 8, 2*VPU_INT8_EPV),
+                    geom::ImageGeometry(8, 8, 2*VPU_INT8_ACC_PERIOD),
+                    geom::WindowGeometry(8, 8, 2*VPU_INT8_EPV,   0, 0,    1, 1, 0,    1, 1)),
+                geom::Filter2dGeometry(
+                    geom::ImageGeometry(1, 1, 12),
+                    geom::ImageGeometry(1, 1, 12),
+                    geom::WindowGeometry(1, 1, 12,    0, 0,    0, 0, 0,    0, 0)),
+                Conv2dDeepFilter_Valid::SupportsGeometry);
+  
+  return iter;
+}
+
 
 
 
@@ -64,7 +120,7 @@ void Conv2dDeepFilter_Valid::execute(T_elm_in* patch_mem) const
 
 
 ////////////////////////////////////////////////////////
-/////
+/////  
 ////////////////////////////////////////////////////////
 
 void Conv2dDeepFilter::Job::computeSlice(

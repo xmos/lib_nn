@@ -6,6 +6,7 @@
 #include "PatchHandlers.hpp"
 #include "AggregationHandlers.hpp"
 #include "OutputTransformers.hpp"
+#include "util/FilterGeometryIterator.hpp"
 
 #include "util/SliceIterator.hpp"
 
@@ -150,12 +151,14 @@ class Conv2dDeepFilter_Valid
    ********/
   public:
 
-    static unsigned inline CogCount(const unsigned channels){
-      return (channels + N_max_cog_chans - 1) >> N_max_cog_chans_log2;
-    }
+    static unsigned inline CogCount(const unsigned channels)
+      { return (channels + N_max_cog_chans - 1) >> N_max_cog_chans_log2; }
 
-    static void GetGeometryIterator();
+    static bool SupportsGeometry(const FilterGeometry& filter);
 
+    // Would have made this a constexpr, except the predicate is a std::function,
+    // which can't be constexpr'ed
+    static nn::filt2d::PredicateFilterGeometryIterator GetGeometryIterator();
 
   
   /*********

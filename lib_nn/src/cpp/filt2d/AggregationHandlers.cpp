@@ -37,13 +37,14 @@ EXTERN_C void conv2d_aggregate_deep_patch_int8(
   const channel_count_t out_chans)
 {
   const mem_stride_t K_cout_stride = params->K_cout_stride;
-  const mem_stride_t K_cig_stride = out_chans * K_cout_stride + VPU_INT8_EPV;
+  const mem_stride_t K_cig_stride = VPU_INT8_ACC_PERIOD * K_cout_stride + VPU_INT8_EPV;
   const mem_stride_t acc_offset = 2*(VPU_INT8_ACC_PERIOD - out_chans);
 
   unsigned cigs =    (params->patch_bytes + VPU_INT8_EPV - 1) >> VPU_INT8_EPV_LOG2;
 
+
   // Start with the final channel.
-  kernel += K_cig_stride - K_cout_stride - VPU_INT8_EPV;
+  kernel += (out_chans - 1) * K_cout_stride;
 
   nn::VPU vpu;
 
@@ -63,7 +64,7 @@ EXTERN_C void conv2d_aggregate_deep_patch_int8(
     kernel += K_cig_stride;
   }
 
-  for(int k = VPU_INT8_ACC_PERIOD - out_chans; k > 0; k--)
+  for(int k = out_chans; k > 0; k--)
     vpu.vlmaccr(vpu_vect_zero);
   
   vpu.vstd(accumulators->high);

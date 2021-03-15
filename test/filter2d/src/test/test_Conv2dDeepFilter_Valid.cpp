@@ -12,54 +12,13 @@
 
 #include <cstdint>
 #include <memory>
+#include <algorithm>
+#include <vector>
 #include <iostream>
 
 using namespace nn::filt2d;
-
-// class Conv2dDeepFilter_Valid_Test : public ::testing::Test {
-
-//   protected:
-
-//     const geom::Filter2dGeometry filter_geometry;
-
-//     std::unique_ptr<int8_t[]> kernel_tensor;
-//     std::unique_ptr<vpu_split_acc32_t[]> biases;
-//     std::unique_ptr<nn_acc32_to_int8_params_t[]> ot_params;
-    
-//     std::unique_ptr<int8_t[]> patch_mem;
-
-
-//     Conv2dDeepFilter_Valid_Test(
-//       const geom::Filter2dGeometry geometry)
-//         : filter_geometry(geometry) { 
-
-//       const unsigned kernel_tensor_elms = filter_geometry.window.windowElements() * filter_geometry.output.channels;
-//       const unsigned cogs = (filter_geometry.output.channels + 15) >> 4;
-
-//       kernel_tensor = std::unique_ptr<int8_t[]>( new int8_t[kernel_tensor_elms] );
-//       biases = std::unique_ptr<vpu_split_acc32_t[]>( new vpu_split_acc32_t[cogs] );
-//       ot_params = std::unique_ptr<nn_acc32_to_int8_params_t[]>( new nn_acc32_to_int8_params_t[cogs] );
-//       patch_mem = std::unique_ptr<int8_t[]>( new int8_t[ filter_geometry.window.windowElements() ]);
-
-//     }
-
-//     void SetUp() override {
-
-
-
-//     }
-
-//     void TearDown() override {
-
-//     }
-
-
-
-// };
-
-
-namespace nn::test::filt2d::op {
-
+using namespace nn::filt2d::geom;
+using namespace nn::filt2d::op;
 
 
 
@@ -74,7 +33,7 @@ struct ExtraRefParams {
   } output;
 };
 
-std::unique_ptr<int8_t[]> Conv2dDeepReference(
+std::vector<int8_t> Conv2dDeepReference(
     geom::Filter2dGeometry& geom,
     const int8_t* input_data, const int8_t* filter_data,
     const int32_t* bias_data, const ExtraRefParams& ref_params)
@@ -116,194 +75,237 @@ std::unique_ptr<int8_t[]> Conv2dDeepReference(
       .im2col = { (int) geom.window.windowElements() },
   };
 
-  std::unique_ptr<int8_t[]> output_data( new int8_t[geom.output.imageElements()] );
+  auto output_data = std::vector<int8_t>( geom.output.imageElements() );
 
   tflite::reference_integer_ops::ConvPerChannel(op_params, 
                               ref_params.output.multiplier, ref_params.output.shift,
                               shape.input, input_data,
                               shape.filter, filter_data,
                               shape.bias, bias_data,
-                              shape.output, output_data.get());
+                              shape.output, &output_data[0]);
 
   return output_data;
 }
 
 
+std::vector<int8_t> Conv2dDeepLibNN(
+    geom::Filter2dGeometry& geom,
+    const int8_t* input_data, 
+    const int8_t* filter_data,
+    const vpu_split_acc32_t biases[], 
+    const nn_acc32_to_int8_params_t ot_params[])
+{
+  assert(Conv2dDeepFilter_Valid::SupportsGeometry(geom));
 
+  
+  auto xcore_output = std::vector<int8_t>(geom.output.imageElements());
+  auto patch_mem = std::vector<int8_t>(geom.window.windowBytes() + 32);
 
-TEST(JustMeTesting, Experimenting){
+  memset(&xcore_output[0], 0xCC, xcore_output.size());
+  memset(&patch_mem[0], 0, patch_mem.size());
 
-  auto filt_geom = geom::Filter2dGeometry(
-                      geom::ImageGeometry(1, 1, 32),
-                      geom::ImageGeometry(1, 1, 16),
-                      geom::WindowGeometry(1, 1, 32));
-
-  int8_t input[1][1][32];
-  int8_t kernel[16][1][1][32];
-
-  vpu_split_acc32_t biases[1];
-  int32_t ref_biases[16];
-
-  float effective_output_multiplier[16];
-
-  int32_t ref_output_multiplier[16];
-  int32_t ref_output_shift[16];
-
-  memset(input,  1, sizeof(input ));
-  memset(kernel, 1, sizeof(kernel));
-  memset(biases, 0, sizeof(biases));
-  memset(ref_biases, 0, sizeof(ref_biases));
-
-  for(int i = 0; i < 16; ++i){
-    effective_output_multiplier[i] = 1.0f;
-    nn::filt2d::conv2d::util::TfLiteConverter::QuantizeEffectiveOutputMultiplier(
-                                                ref_output_multiplier[i], 
-                                                ref_output_shift[i],
-                                                effective_output_multiplier[i] );
-  }
-
-  ExtraRefParams ref_params;
-  ref_params.input.zero_point = 0;
-  ref_params.filter.zero_point = 0;
-  ref_params.output.zero_point = 0;
-  ref_params.output.multiplier = ref_output_multiplier;
-  ref_params.output.shift = ref_output_shift;
-  ref_params.output.activation.min = std::numeric_limits<int8_t>::min();
-  ref_params.output.activation.max = std::numeric_limits<int8_t>::max();
-
-  auto output = Conv2dDeepReference(filt_geom, &input[0][0][0], &kernel[0][0][0][0], ref_biases, ref_params);
-
-  std::cout << "Ref output: [ ";
-  for(int i = 0; i < 16; i++)
-    std::cout << static_cast<int>(output.get()[i]) << ", ";
-  std::cout << "]" << std::endl;
-
-  // using nn::filt2d::conv2d::util::TfLiteConverter;
-  std::vector<vpu_split_acc32_t> xcore_biases = 
-      nn::filt2d::conv2d::util::TfLiteConverter::ConvertBiases(
-                                                    filt_geom, &kernel[0][0][0][0], 
-                                                    ref_biases, ref_params.input.zero_point, false);
-
-  std::vector<nn_acc32_to_int8_params_t> xcore_output_params = 
-      nn::filt2d::conv2d::util::TfLiteConverter::ConvertOutputParams(
-                                                    filt_geom, effective_output_multiplier,
-                                                    ref_params.output.zero_point);
-
-
-  std::vector<int8_t> xcore_output(filt_geom.output.imageElements());
-  std::vector<int8_t> patch_mem(filt_geom.window.windowBytes());
-
+  
   auto filter = nn::filt2d::op::Conv2dDeepFilter_Valid(
-                      &input[0][0][0], 
-                      &xcore_output[0],
-                      filt_geom, 
-                      &xcore_biases[0], 
-                      &kernel[0][0][0][0],
-                      &xcore_output_params[0], false);
+                      input_data, &xcore_output[0],
+                      geom, biases, filter_data,
+                      ot_params, false);
 
 
   filter.execute(&patch_mem[0]);
-  // filter.spawnJob(ImageRegion(0,0,0,1,1,16), &patch_mem[0]).execute();
 
-  
-  std::cout << "xCore output: [ ";
-  for(int i = 0; i < 16; i++)
-    std::cout << static_cast<int>(xcore_output[i]) << ", ";
-  std::cout << "]" << std::endl;
+  return xcore_output;
 }
 
 
 
-TEST(JustTryingSomething,RectRangeStuff){
-  
-  RectRange rr = { 
-  //  start,   end,   step 
-    {     0,     5,      1 }, // Iterates slowest 
-    {     0,     3,      1 }, 
-    {     0,     4,      2 }  // Iterates fastest
-  };
+static void printFilter(geom::Filter2dGeometry filter)
+{
 
-  for(auto v: rr){
+  std::cout << "Input Image:  { " << filter.input.height << ", " << filter.input.width << ", " 
+            << filter.input.depth << " }" << std::endl;
+  std::cout << "Output Image: { " << filter.output.height << ", " << filter.output.width << ", " 
+            << filter.output.depth << " }" << std::endl;
 
-    std::cout << "iter: " << "(";
-    for(int i = 0; i < v.size(); i++)
-      std::cout << v[i] << ", ";
-    std::cout << ")" << std::endl;
+  std::cout << "Window: " << "Shape { " << filter.window.shape.height << ", " 
+                                        << filter.window.shape.width  << ", " 
+                                        << filter.window.shape.depth << " }" << std::endl;
+  std::cout << "        " << "Start { " << filter.window.start.row << ", "
+                                        << filter.window.start.col << " }" << std::endl;
+  std::cout << "        " << "Stride { " << filter.window.stride.row << ", "
+                                         << filter.window.stride.col << ", "
+                                         << filter.window.stride.channel << " }" << std::endl;
+  std::cout << "        " << "Dilation { " << filter.window.dilation.row << ", "
+                                           << filter.window.dilation.col << " }" << std::endl;
 
-  }
+  std::cout << std::endl;
+
+
 }
 
 
-#define X_CHAN    8
-#define Y_CHAN    16
-#define X_SIZE    5
-#define K_SIZE    3
-#define Y_SIZE    3
-
-#define COGS    (((Y_CHAN)+15) >> 4)
-
-const vpu_split_acc32_t biases[COGS] = {{{0}}};
-
-int8_t kernel_tensor[Y_CHAN][K_SIZE][K_SIZE][X_CHAN];
-
-nn_acc32_to_int8_params_t ot_params[COGS];
-
-int8_t img_input[X_SIZE][X_SIZE][X_CHAN];
-int8_t img_output[Y_SIZE][Y_SIZE][Y_CHAN];
-
-int8_t patch_mem[K_SIZE*K_SIZE*X_CHAN + 32];
 
 
-using namespace nn::filt2d;
+TEST(Conv2dDeepFilter_Valid,BasicTest)
+{
 
-TEST(Conv2dDeepFilter_Valid, basicCase0)
-{  
-  memset(patch_mem, 0, sizeof(patch_mem));
-  memset(kernel_tensor, 1, sizeof(kernel_tensor));
-  memset(img_input, 1, sizeof(img_input));
-  memset(ot_params, 0, sizeof(ot_params));
+  unsigned count = 0;
 
-  for(int i = 0; i < Y_CHAN; i++){
-    ot_params[ i>>4 ].shift1[ i%16 ] = 3;
-    ot_params[ i>>4 ].scale [ i%16 ] = 1;
-  } 
+  for(auto filt_geom: Conv2dDeepFilter_Valid::GetGeometryIterator()){
 
-  auto const filt_geom = geom::Filter2dGeometry(
-                              geom::ImageGeometry(X_SIZE,X_SIZE,X_CHAN),
-                              geom::ImageGeometry(Y_SIZE,Y_SIZE,Y_CHAN),
-                              geom::WindowGeometry(K_SIZE, K_SIZE, X_CHAN, 0, 0));
+  
+    auto input = std::vector<int8_t>(filt_geom.input.imageBytes());
+    auto kernel = std::vector<int8_t>(filt_geom.window.windowBytes() * filt_geom.output.depth);
+    auto ref_biases = std::vector<int32_t>(filt_geom.output.depth);
+    auto effective_output_multiplier = std::vector<float>(filt_geom.output.depth);
+    auto ref_output_multiplier = std::vector<int32_t>(filt_geom.output.depth);
+    auto ref_output_shift = std::vector<int32_t>(filt_geom.output.depth);
 
+    auto window_elements = filt_geom.window.windowElements();
 
-  auto filter = nn::filt2d::op::Conv2dDeepFilter_Valid(
-                      &img_input[0][0][0], 
-                      &img_output[0][0][0],
-                      filt_geom, 
-                      biases, 
-                      &kernel_tensor[0][0][0][0],
-                      ot_params, 
-                      false);
+    memset(&input[0],  1, input.size());
+    memset(&kernel[0], 1, kernel.size());
+    // memset(&ref_biases[0], 0, ref_biases.size());
 
-  printf("Executing..\n");
-  // filter.execute(patch_mem);
-  filter.spawnJob(ImageRegion(0,0,0,1,Y_SIZE,Y_CHAN), patch_mem).execute();
-  printf("Executed..\n");
-
-
-
-  for(int row = 0; row < filt_geom.output.height; row++){
-    printf("{ ");
-    for(int col = 0; col < filt_geom.output.width; col++){
-      printf("{ ");
-      for(int chn = 0; chn < filt_geom.output.depth; chn++)
-        printf("%d, ", img_output[row][col][chn]);
-      printf("}, ");
+    for(int i = 0; i < filt_geom.output.depth; ++i){
+      ref_biases[i] = -window_elements + 27;
+      effective_output_multiplier[i] = 1.0f;
+      nn::filt2d::conv2d::util::TfLiteConverter::QuantizeEffectiveOutputMultiplier(
+                                                  ref_output_multiplier[i], 
+                                                  ref_output_shift[i],
+                                                  effective_output_multiplier[i] );
     }
-    printf("},\n");
+
+    ExtraRefParams ref_params;
+    ref_params.input.zero_point = 0;
+    ref_params.filter.zero_point = 0;
+    ref_params.output.zero_point = 0;
+    ref_params.output.multiplier = &ref_output_multiplier[0];
+    ref_params.output.shift = &ref_output_shift[0];
+    ref_params.output.activation.min = std::numeric_limits<int8_t>::min();
+    ref_params.output.activation.max = std::numeric_limits<int8_t>::max();
+
+    auto ref_output = Conv2dDeepReference(filt_geom, &input[0], &kernel[0], 
+                                          &ref_biases[0], ref_params);
+
+    auto xcore_biases = 
+        nn::filt2d::conv2d::util::TfLiteConverter::ConvertBiases(
+                                                      filt_geom, &kernel[0], 
+                                                      &ref_biases[0], ref_params.input.zero_point, 
+                                                      false);
+
+    auto xcore_output_params = 
+        nn::filt2d::conv2d::util::TfLiteConverter::ConvertOutputParams(
+                                                      filt_geom, &effective_output_multiplier[0],
+                                                      ref_params.output.zero_point);
+
+    auto nn_output = Conv2dDeepLibNN(filt_geom, &input[0], &kernel[0], 
+                                    &xcore_biases[0], &xcore_output_params[0]);
+
+
+    int8_t expected_out = 27;
+
+    ASSERT_EQ(ref_output.size(), filt_geom.output.imageElements());
+    ASSERT_EQ(nn_output.size(), filt_geom.output.imageElements());
+
+    for(int i = 0; i < filt_geom.output.imageElements(); ++i){
+      EXPECT_EQ(nn_output[i], expected_out);
+      EXPECT_EQ(ref_output[i], nn_output[i]);
+      
+      if(this->HasFailure()){
+        std::cout << "Test failed with geometry:" << std::endl;
+        printFilter(filt_geom);
+
+        FAIL();
+      }
+    }
+
+    count++;
   }
 
-  printf("Done!\n");
-
+  std::cout << "Tested " << count << " geometries." << std::endl;
 }
 
 
-}
+
+// TEST(Conv2dDeepFilter_Valid,SpecificTest)
+// {
+
+//   auto filt_geom = Filter2dGeometry(
+//                       ImageGeometry(1, 1, 36),
+//                       ImageGeometry(1, 1, 4),
+//                       WindowGeometry(1, 1, 36, 0, 0, 1, 1, 0, 1, 1));
+
+//   auto input = std::vector<int8_t>(filt_geom.input.imageBytes());
+//   auto kernel = std::vector<int8_t>(filt_geom.window.windowBytes() * filt_geom.output.depth);
+//   auto ref_biases = std::vector<int32_t>(filt_geom.output.depth);
+//   auto effective_output_multiplier = std::vector<float>(filt_geom.output.depth);
+//   auto ref_output_multiplier = std::vector<int32_t>(filt_geom.output.depth);
+//   auto ref_output_shift = std::vector<int32_t>(filt_geom.output.depth);
+
+//   memset(&input[0],  1, input.size());
+//   memset(&kernel[0], 1, kernel.size());
+//   memset(&ref_biases[0], 0, ref_biases.size());
+
+//   for(int i = 0; i < filt_geom.output.depth; ++i){
+//     effective_output_multiplier[i] = 1.0f;
+//     nn::filt2d::conv2d::util::TfLiteConverter::QuantizeEffectiveOutputMultiplier(
+//                                                 ref_output_multiplier[i], 
+//                                                 ref_output_shift[i],
+//                                                 effective_output_multiplier[i] );
+//   }
+
+//   ExtraRefParams ref_params;
+//   ref_params.input.zero_point = 0;
+//   ref_params.filter.zero_point = 0;
+//   ref_params.output.zero_point = 0;
+//   ref_params.output.multiplier = &ref_output_multiplier[0];
+//   ref_params.output.shift = &ref_output_shift[0];
+//   ref_params.output.activation.min = std::numeric_limits<int8_t>::min();
+//   ref_params.output.activation.max = std::numeric_limits<int8_t>::max();
+
+//   auto ref_output = Conv2dDeepReference(filt_geom, &input[0], &kernel[0], 
+//                                         &ref_biases[0], ref_params);
+
+//   // std::cout << "Ref output: [ ";
+//   // for(int i = 0; i < 16; i++)
+//   //   std::cout << static_cast<int>(ref_output[i]) << ", ";
+//   // std::cout << "]" << std::endl;
+
+//   auto xcore_biases = 
+//       nn::filt2d::conv2d::util::TfLiteConverter::ConvertBiases(
+//                                                     filt_geom, &kernel[0], 
+//                                                     &ref_biases[0], ref_params.input.zero_point, 
+//                                                     false);
+
+//   auto xcore_output_params = 
+//       nn::filt2d::conv2d::util::TfLiteConverter::ConvertOutputParams(
+//                                                     filt_geom, &effective_output_multiplier[0],
+//                                                     ref_params.output.zero_point);
+
+//   auto nn_output = Conv2dDeepLibNN(filt_geom, &input[0], &kernel[0], 
+//                                   &xcore_biases[0], &xcore_output_params[0]);
+
+  
+//   // std::cout << "xCore output: [ ";
+//   // for(int i = 0; i < 16; i++)
+//   //   std::cout << static_cast<int>(nn_output[i]) << ", ";
+//   // std::cout << "]" << std::endl;
+
+//   int8_t expected_out = filt_geom.window.windowElements();
+
+//   ASSERT_EQ(ref_output.size(), filt_geom.output.imageElements());
+//   ASSERT_EQ(nn_output.size(), filt_geom.output.imageElements());
+
+//   for(int i = 0; i < filt_geom.output.imageElements(); ++i){
+//     EXPECT_EQ(nn_output[i], expected_out);
+//     EXPECT_EQ(ref_output[i], nn_output[i]);
+    
+//     if(this->HasFailure()){
+//       std::cout << "Test failed with geometry:" << std::endl;
+//       printFilter(filt_geom);
+
+//       FAIL();
+//     }
+//   }
+
+// }
