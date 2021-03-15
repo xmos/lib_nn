@@ -37,6 +37,7 @@ TARGET_DEVICE = XCORE-AI-EXPLORER
 NN_PATH := ../../lib_nn
 
 DEPS_PATH := ./../deps
+SHARED_PATH := ./../shared
 
 UNITY_PATH := $(DEPS_PATH)/Unity
 GTEST_PATH := $(DEPS_PATH)/googletest/googletest
@@ -67,7 +68,8 @@ endif
 
 INCLUDES := $(NN_PATH)/api $(NN_PATH)/src $(UNITY_PATH)/src $(COMPUTE_ENGINE_PATH) $(FLAT_BUFFERS_PATH)/include
 INCLUDES += $(RUY_PATH) $(TENSORFLOW_PATH) $(GEMMLOWP_PATH) $(GTEST_PATH)/include
-SOURCE_DIRS := src 
+INCLUDES += $(SHARED_PATH)/include
+SOURCE_DIRS := src $(SHARED_PATH)/src
 SOURCE_FILE_EXTENSIONS := c cpp cc
 
 SOURCE_FILES := 
