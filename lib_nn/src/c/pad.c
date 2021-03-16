@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "nn_operator.h"
-// #include "nn_op_structs.h"
+#include "nn_op_utils.h"
 
 void pad_prepare(nn_pad_plan_t* plan, const padding_sizes_t* p,
                  const nn_image_params_t* x, const unsigned bytes_per_pixel) {
@@ -20,27 +20,21 @@ void pad_prepare(nn_pad_plan_t* plan, const padding_sizes_t* p,
   plan->right_pad_bytes = bytes_per_pixel * p->right;
 }
 
-void memset32(void* str, uint32_t c, size_t n) {
-  for (unsigned i = 0; i < n / sizeof(c); i++) {
-    ((uint32_t*)str)[i] = c;
-  }
-}
-
 void pad_run(void* y, void* x, const nn_pad_plan_t* p, uint32_t pad_value) {
-  memset32(y, pad_value, p->top_pad_bytes);
+  vpu_memset_32(y, pad_value, p->top_pad_bytes / 4);
   y += p->top_pad_bytes;
   for (unsigned i = 0; i < p->mid_loop_count; i++) {
-    memset32(y, pad_value, p->left_pad_bytes);
+    vpu_memset_32(y, pad_value, p->left_pad_bytes / 4);
     y += p->left_pad_bytes;
 
-    memcpy(y, x, p->mid_copy_bytes);
+    vpu_memcpy_int(y, x, p->mid_copy_bytes);
     y += p->mid_copy_bytes;
     x += p->mid_copy_bytes;
 
-    memset32(y, pad_value, p->right_pad_bytes);
+    vpu_memset_32(y, pad_value, p->right_pad_bytes / 4);
     y += p->right_pad_bytes;
   }
-  memset32(y, pad_value, p->bottom_pad_bytes);
+  vpu_memset_32(y, pad_value, p->bottom_pad_bytes / 4);
 }
 
 void pad_ref(void* y, void* x, const padding_sizes_t* p,
@@ -55,9 +49,9 @@ void pad_ref(void* y, void* x, const padding_sizes_t* p,
       (char(*)[xp->width + left_pad + right_pad][bytes_per_pixel]) y;
   char(*X)[xp->width][bytes_per_pixel] = (char(*)[xp->width][bytes_per_pixel])x;
 
-  memset32(y, pad_value,
+  vpu_memset_32(y, pad_value,
            (xp->width + left_pad + right_pad) *
-               (top_pad + bottom_pad + xp->height) * bytes_per_pixel);
+               (top_pad + bottom_pad + xp->height) * bytes_per_pixel / 4);
 
   for (unsigned h = 0; h < xp->height; h++) {
     for (unsigned w = 0; w < xp->width; w++) {
