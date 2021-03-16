@@ -2,6 +2,12 @@
 
 
 PLATFORM ?= xcore
+
+ifndef XMOS_TOOL_PATH
+  $(info Compiling for x86.)
+  PLATFORM = x86
+endif
+
 VERBOSE ?= 
 
 PLATFORM_MF = ../../lib_nn/etc/platform/$(strip $(PLATFORM)).mk
@@ -31,12 +37,14 @@ TARGET_DEVICE = XCORE-AI-EXPLORER
 NN_PATH := ../../lib_nn
 
 DEPS_PATH := ./../deps
+SHARED_PATH := ./../shared
 
+UNITY_PATH := $(DEPS_PATH)/Unity
+GTEST_PATH := $(abspath $(DEPS_PATH)/googletest)
 COMPUTE_ENGINE_PATH := $(DEPS_PATH)/compute-engine
 FLAT_BUFFERS_PATH := $(DEPS_PATH)/flatbuffers
 RUY_PATH := $(DEPS_PATH)/ruy
 TENSORFLOW_PATH := $(DEPS_PATH)/tensorflow
-GOOGLETEST_PATH := $(DEPS_PATH)/googletest
 GEMMLOWP_PATH := $(DEPS_PATH)/gemmlowp
 
 BUILD_DIR := .build
@@ -55,10 +63,11 @@ ifneq ($(VERBOSE),$(EMPTY_STR))
   $(info OBJ_DIR: $(OBJ_DIR) )
 endif
 
-INCLUDES := $(NN_PATH)/api $(NN_PATH)/src $(COMPUTE_ENGINE_PATH) $(FLAT_BUFFERS_PATH)/include 
-INCLUDES += $(RUY_PATH) $(TENSORFLOW_PATH) $(GEMMLOWP_PATH) $(GOOGLETEST_PATH)/googletest/include
-SOURCE_DIRS := src
-SOURCE_FILE_EXTENSIONS := c cpp
+INCLUDES := $(NN_PATH)/api $(NN_PATH)/src $(UNITY_PATH)/src $(COMPUTE_ENGINE_PATH) $(FLAT_BUFFERS_PATH)/include
+INCLUDES += $(RUY_PATH) $(TENSORFLOW_PATH) $(GEMMLOWP_PATH) $(GTEST_PATH)/googletest/include
+INCLUDES += $(SHARED_PATH)/include
+SOURCE_DIRS := src $(SHARED_PATH)/src
+SOURCE_FILE_EXTENSIONS := c cpp cc
 
 SOURCE_FILES := 
 
@@ -145,17 +154,40 @@ $(OBJECT_FILES):
 # header files have changed, for example.
 -include $(OBJECT_FILES:%.o=%.d)
 
+#######################################################
+# GOOGLETEST TARGETS
+#######################################################
+
+GTEST_LIB := $(LIB_DIR)/libgtest.a 
+GTEST_MAIN_LIB := $(LIB_DIR)/libgtest_main.a
+GMOCK_LIB := $(LIB_DIR)/libgmock.a
+GMOCK_MAIN_LIB := $(LIB_DIR)/libgmock_main.a
+
+$(GTEST_LIB): $(GTEST_PATH)/build/lib/libgtest.a
+	@cp $^ $@
+$(GTEST_MAIN_LIB): $(GTEST_PATH)/build/lib/libgtest_main.a
+	@cp $^ $@
+$(GMOCK_LIB): $(GTEST_PATH)/build/lib/libgmock.a
+	@cp $^ $@
+$(GMOCK_MAIN_LIB): $(GTEST_PATH)/build/lib/libgmock_main.a
+	@cp $^ $@
+
+$(GTEST_PATH)/build/lib/libgtest.a: $(GTEST_PATH)/build/Makefile
+	@$(MAKE) -C $(GTEST_PATH)/build all
+$(GTEST_PATH)/build/lib/libgtest_main.a: $(GTEST_PATH)/build/Makefile
+	@$(MAKE) -C $(GTEST_PATH)/build all
+$(GTEST_PATH)/build/lib/libgmock.a: $(GTEST_PATH)/build/Makefile
+	@$(MAKE) -C $(GTEST_PATH)/build all
+$(GTEST_PATH)/build/lib/libgmock_main.a: $(GTEST_PATH)/build/Makefile
+	@$(MAKE) -C $(GTEST_PATH)/build all
 
 #######################################################
 # LIBRARY TARGETS
 #######################################################
 
 # Libraries are built using a recursive make call.
-GOOGLETEST_STATIC_LIB := $(LIB_DIR)/libgtest_main.a
-GOOGLETEST_STATIC_LIB_ = $(LIB_DIR)/libgmock.a
-GOOGLETEST_STATIC_LIB_ += $(LIB_DIR)/libgmock_main.a
-GOOGLETEST_STATIC_LIB_ += $(LIB_DIR)/libgtest.a
-DEPENDENCY_LIBS = $(GOOGLETEST_STATIC_LIB) 
+UNITY_STATIC_LIB := $(LIB_DIR)/unity.a
+DEPENDENCY_LIBS = $(UNITY_STATIC_LIB) 
 
 LIB_MAKE_OPTS := VERBOSE=$(VERBOSE) BUILD_DIR=$(abspath $(BUILD_DIR)/lib_nn) LIB_DIR=$(abspath $(LIB_DIR)) \
                  PLATFORM=$(PLATFORM) TARGET_DEVICE=$(TARGET_DEVICE)
@@ -169,11 +201,11 @@ force_look:
 $(LIB_NN_FILE): force_look
 	@$(MAKE) -C $(NN_PATH) $(abspath $@ ) $(LIB_MAKE_OPTS)
 
-$(GOOGLETEST_STATIC_LIB): force_look
-	@$(MAKE) -C $(GOOGLETEST_PATH)/build 
-	cp $(GOOGLETEST_PATH)/build/lib/*.a $(LIB_DIR)
+$(UNITY_STATIC_LIB): force_look
+	@$(MAKE) -C ../etc/Unity $(abspath $@ ) $(DEP_MAKE_OPTS)
 
-ALL_STATIC_LIBS += $(LIB_NN_FILE) $(DEPENDENCY_LIBS) $(GOOGLETEST_STATIC_LIB_)
+ALL_STATIC_LIBS += $(LIB_NN_FILE) $(DEPENDENCY_LIBS) 
+ALL_STATIC_LIBS += $(GTEST_LIB) $(GTEST_MAIN_LIB)
 
 #######################################################
 # HOUSEKEEPING
@@ -211,7 +243,6 @@ $(APP_EXE_FILE): REQUIRED_LIBRARIES = $(ALL_STATIC_LIBS)
 $(APP_EXE_FILE):
 	$(call mkdir_cmd,$@)
 	$(info Linking binary $@)
-	
 	@$(XCC) $(LDFLAGS)                      \
 		$(APP_FLAGS)                        \
 		$(PLATFORM_FLAGS)                   \
