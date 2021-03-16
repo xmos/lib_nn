@@ -40,7 +40,7 @@ DEPS_PATH := ./../deps
 SHARED_PATH := ./../shared
 
 UNITY_PATH := $(DEPS_PATH)/Unity
-GTEST_PATH := $(DEPS_PATH)/googletest/googletest
+GTEST_PATH := $(abspath $(DEPS_PATH)/googletest)
 COMPUTE_ENGINE_PATH := $(DEPS_PATH)/compute-engine
 FLAT_BUFFERS_PATH := $(DEPS_PATH)/flatbuffers
 RUY_PATH := $(DEPS_PATH)/ruy
@@ -55,9 +55,6 @@ LIB_DIR   := $(OBJ_DIR)/lib
 EMPTY_STR :=
 LIB_NN_FILE := $(LIB_DIR)/lib_nn.a
 
-GTEST_LIB_FILE := lib/libgtest.a
-GTEST_MAIN_LIB_FILE := lib/libgtest_main.a
-
 ifneq ($(VERBOSE),$(EMPTY_STR))
   $(info XSCOPE_CONFIG: $(XSCOPE_CONFIG) )
   $(info NN_PATH: $(NN_PATH) )
@@ -67,7 +64,7 @@ ifneq ($(VERBOSE),$(EMPTY_STR))
 endif
 
 INCLUDES := $(NN_PATH)/api $(NN_PATH)/src $(UNITY_PATH)/src $(COMPUTE_ENGINE_PATH) $(FLAT_BUFFERS_PATH)/include
-INCLUDES += $(RUY_PATH) $(TENSORFLOW_PATH) $(GEMMLOWP_PATH) $(GTEST_PATH)/include
+INCLUDES += $(RUY_PATH) $(TENSORFLOW_PATH) $(GEMMLOWP_PATH) $(GTEST_PATH)/googletest/include
 INCLUDES += $(SHARED_PATH)/include
 SOURCE_DIRS := src $(SHARED_PATH)/src
 SOURCE_FILE_EXTENSIONS := c cpp cc
@@ -157,6 +154,32 @@ $(OBJECT_FILES):
 # header files have changed, for example.
 -include $(OBJECT_FILES:%.o=%.d)
 
+#######################################################
+# GOOGLETEST TARGETS
+#######################################################
+
+GTEST_LIB := $(LIB_DIR)/libgtest.a 
+GTEST_MAIN_LIB := $(LIB_DIR)/libgtest_main.a
+GMOCK_LIB := $(LIB_DIR)/libgmock.a
+GMOCK_MAIN_LIB := $(LIB_DIR)/libgmock_main.a
+
+$(GTEST_LIB): $(GTEST_PATH)/build/lib/libgtest.a
+	@cp $^ $@
+$(GTEST_MAIN_LIB): $(GTEST_PATH)/build/lib/libgtest_main.a
+	@cp $^ $@
+$(GMOCK_LIB): $(GTEST_PATH)/build/lib/libgmock.a
+	@cp $^ $@
+$(GMOCK_MAIN_LIB): $(GTEST_PATH)/build/lib/libgmock_main.a
+	@cp $^ $@
+
+$(GTEST_PATH)/build/lib/libgtest.a: $(GTEST_PATH)/build/Makefile
+	@$(MAKE) -C $(GTEST_PATH)/build all
+$(GTEST_PATH)/build/lib/libgtest_main.a: $(GTEST_PATH)/build/Makefile
+	@$(MAKE) -C $(GTEST_PATH)/build all
+$(GTEST_PATH)/build/lib/libgmock.a: $(GTEST_PATH)/build/Makefile
+	@$(MAKE) -C $(GTEST_PATH)/build all
+$(GTEST_PATH)/build/lib/libgmock_main.a: $(GTEST_PATH)/build/Makefile
+	@$(MAKE) -C $(GTEST_PATH)/build all
 
 #######################################################
 # LIBRARY TARGETS
@@ -181,7 +204,8 @@ $(LIB_NN_FILE): force_look
 $(UNITY_STATIC_LIB): force_look
 	@$(MAKE) -C ../etc/Unity $(abspath $@ ) $(DEP_MAKE_OPTS)
 
-ALL_STATIC_LIBS += $(LIB_NN_FILE) $(DEPENDENCY_LIBS)
+ALL_STATIC_LIBS += $(LIB_NN_FILE) $(DEPENDENCY_LIBS) 
+ALL_STATIC_LIBS += $(GTEST_LIB) $(GTEST_MAIN_LIB)
 
 #######################################################
 # HOUSEKEEPING
@@ -213,7 +237,7 @@ APP_EXE_FILE = $(EXE_DIR)/$(APP_NAME)$(PLATFORM_EXE_SUFFIX)
 
 $(APP_EXE_FILE): $(OBJECT_FILES) $(ALL_STATIC_LIBS) $(XSCOPE_CONFIG)
 
-$(APP_EXE_FILE): REQUIRED_LIBRARIES = $(ALL_STATIC_LIBS) $(GTEST_LIB_FILE)
+$(APP_EXE_FILE): REQUIRED_LIBRARIES = $(ALL_STATIC_LIBS)
 
 
 $(APP_EXE_FILE):
