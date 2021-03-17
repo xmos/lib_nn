@@ -27,14 +27,14 @@ int8_t * DerefInputFn::memcopy_fn(int8_t * T, int8_t * X,
 }
 
 size_t Im_to_col_padded::get_scratch_bytes(){
-  return kernel_height * kernel_width * bytes_per_pixel + XS3_VPU_VREG_WIDTH_BYTES;
+  return kernel_height * kernel_width * bytes_per_copy_per_channel + XS3_VPU_VREG_WIDTH_BYTES;
 }
 
 size_t Im_to_col_padded::get_overread_bytes(){
-  return XS3_VPU_VREG_WIDTH_BYTES; //TODO
+  return XS3_VPU_VREG_WIDTH_BYTES; //TODO this will be defined by the implementation of memcpy
 }
 
-Im_to_col_padded::Im_to_col_padded(ImageParams &X, WindowGeometry &K, padding_t &padding){
+Im_to_col_padded::Im_to_col_padded(ImageParams &X, WindowGeometry &K, padding_t &padding, int input_ch_per_output, int8_t pad_val){
 
 
   kernel_height = K.shape.height;
@@ -42,18 +42,22 @@ Im_to_col_padded::Im_to_col_padded(ImageParams &X, WindowGeometry &K, padding_t 
 
   vertical_stride = K.stride.vertical;
   horizontal_stride = K.stride.horizontal;
+  vertical_dilation = K.dilation.vertical;
+  horizontal_dilation = K.dilation.horizontal;
 
   this->padding = padding;
 
   input_v_length = X.height;
   input_h_length = X.width;
 
-  padding_val = 0;
+  padding_val = pad_val;
 
   bytes_per_pixel = X.pixelBytes();
   bytes_per_h_line = X.rowBytes();
 
   horizontal_mem_stride = X.rowBytes();
+
+  bytes_per_copy_per_channel = (input_ch_per_output *  X.bits_per_element) / CHAR_BIT; 
   
 }
 
@@ -63,35 +67,36 @@ int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
 
   xs3_vpu vpu_mem;
   xs3_vpu * vpu = &vpu_mem;
+  int8_t * T_in = T;
 
   for(int32_t k_height = 0; k_height < kernel_height; k_height++){
 
     for(int32_t k_width = 0; k_width < kernel_width; k_width++){
       
-      int32_t input_v_coord = output_v_coord * vertical_stride;
-      int32_t input_h_coord = output_h_coord * horizontal_stride;
+      int32_t input_v_coord = (output_v_coord * vertical_stride + k_height * vertical_dilation);
+      int32_t input_h_coord = (output_h_coord * horizontal_stride+ k_width * horizontal_dilation);
 
-      int p = 0;
-      p |= input_v_coord < padding.top;
+      int p = input_v_coord < padding.top;
       p |= input_v_coord >= padding.top + input_v_length;
       p |= input_h_coord < padding.left;
       p |= input_h_coord >= padding.left + input_h_length;
 
-
       //it might be nice to do a memcopy of the padding rather than a memset(requires more memory though)
       if(p){
-        memset(T, padding_val, bytes_per_pixel);
+        // std::cout << "padding" <<std::endl;
+        memset(T, padding_val, bytes_per_copy_per_channel);
       } else {
+        int8_t * X_cur_p = X + (int)((input_v_coord - padding.top) * bytes_per_h_line + (input_h_coord - padding.left) * bytes_per_pixel + output_c_coord);
 
-        //TODO this needs stride
-        int8_t * X_cur_p = X + (input_v_coord - padding.top) * bytes_per_h_line + 
-          (input_h_coord - padding.left) * bytes_per_pixel;
+        // std::cout << " input_v_coord " << input_v_coord << " input_h_coord " << input_h_coord << std::endl;
 
+        // for (int i=0;i<bytes_per_copy_per_channel;i++)
+        //   std::cout << (int)X_cur_p[i] << std::endl;
         //translate X to the actual input pointer
-        memcpy(T, X_cur_p, bytes_per_pixel);
+        memcpy(T, X_cur_p, bytes_per_copy_per_channel);
       }
 
-      T += bytes_per_pixel;
+      T += bytes_per_copy_per_channel;
 
       //Advance the X_cur_p to the start of the next horizontal pixel
       // probably w_stride = nput_bytes_per_pixel * horizontal_stride
@@ -105,7 +110,7 @@ int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
   VCLRDR(vpu);
   VSTD(vpu, T);
 
-  return T;//wrong t_in
+  return T_in;//wrong t_in
 }
 
 /*

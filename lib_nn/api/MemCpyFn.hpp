@@ -30,6 +30,8 @@ class Im_to_col_padded : public MemCpyFn{
 
   int32_t vertical_stride;
   int32_t horizontal_stride;
+  int32_t vertical_dilation;
+  int32_t horizontal_dilation;
 
   padding_t padding;
 
@@ -42,8 +44,11 @@ class Im_to_col_padded : public MemCpyFn{
   int32_t bytes_per_pixel;
 
   size_t horizontal_mem_stride;
+
+  int bytes_per_copy_per_channel;
+
   public:
-  Im_to_col_padded(ImageParams &X, WindowGeometry &K, padding_t &padding);
+  Im_to_col_padded(ImageParams &X, WindowGeometry &K, padding_t &padding, int input_ch_per_output, int8_t pad_val);
   int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
   size_t get_scratch_bytes();
   size_t get_overread_bytes();
