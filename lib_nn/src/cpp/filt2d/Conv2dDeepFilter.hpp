@@ -151,6 +151,8 @@ class Conv2dDeepFilter_Valid
    ********/
   public:
 
+    static constexpr bool IsDepthwise = false;
+
     static unsigned inline CogCount(const unsigned channels)
       { return (channels + N_max_cog_chans - 1) >> N_max_cog_chans_log2; }
 

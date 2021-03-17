@@ -13,7 +13,7 @@ using namespace nn::filt2d::geom;
 using namespace nn::filt2d::op;
 using namespace nn::filt2d;
 
-
+constexpr bool Conv2dDeepFilter_Valid::IsDepthwise;
 
 bool Conv2dDeepFilter_Valid::SupportsGeometry(
     const FilterGeometry& filter)
@@ -53,9 +53,9 @@ PredicateFilterGeometryIterator Conv2dDeepFilter_Valid::GetGeometryIterator()
                     geom::ImageGeometry(1, 1, 4),
                     geom::WindowGeometry(1, 1, 4,  0, 0,  1, 1, 0,   1, 1)),
                 geom::Filter2dGeometry(
-                    geom::ImageGeometry(8, 8, 2*VPU_INT8_EPV),
-                    geom::ImageGeometry(8, 8, 2*VPU_INT8_ACC_PERIOD),
-                    geom::WindowGeometry(8, 8, 2*VPU_INT8_EPV,   0, 0,    1, 1, 0,    1, 1)),
+                    geom::ImageGeometry(4, 4, 36),
+                    geom::ImageGeometry(4, 4, 32),
+                    geom::WindowGeometry(4, 4, 36,   0, 0,    1, 1, 0,    1, 1)),
                 geom::Filter2dGeometry(
                     geom::ImageGeometry(1, 1, 12),
                     geom::ImageGeometry(1, 1, 12),

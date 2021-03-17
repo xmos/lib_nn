@@ -45,5 +45,4 @@ C_API typedef struct {
 } padding_t;
 
 
-
 }}

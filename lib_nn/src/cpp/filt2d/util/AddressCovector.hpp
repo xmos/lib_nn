@@ -34,6 +34,11 @@ template <typename T>
 class AddressCovector : public AddressCovectorBase {
   
   public:
+    AddressCovector(const int16_t rowbytes, 
+                    const int16_t colbytes, 
+                    const int16_t chanbytes)
+      : AddressCovectorBase(rowbytes, colbytes, chanbytes) {}
+
     AddressCovector(const unsigned width, 
                     const unsigned depth)
       : AddressCovectorBase(width*depth*sizeof(T), depth * sizeof(T), sizeof(T)) {}

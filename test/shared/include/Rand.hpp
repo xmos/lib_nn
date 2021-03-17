@@ -22,6 +22,8 @@ class Rand {
 
     Rand(int seed) : state(seed) {}
 
+    void setSeed(int seed) { this->state = seed; }
+
     /**
      * Get a pseudo-random value of type `T`. 
      * 
