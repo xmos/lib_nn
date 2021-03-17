@@ -1,18 +1,16 @@
 #include <cmath>
 #include <cassert>
+#include <climits>
+
 #include "MemCpyFn.hpp"
 
 extern "C" {
   #include "vpu_sim.h"
 }
-#include <climits>
-#include <iostream>
-#include <stdio.h>
 
 DerefInputFn::DerefInputFn(ImageParams &X, WindowGeometry &K){
-  bytes_per_h_line = X.rowBytes(); 
-  bytes_per_pixel = X.pixelBytes();
-  //TODO deal with strides
+  bytes_per_h_line = X.rowBytes() * K.stride.vertical;
+  bytes_per_pixel = X.pixelBytes() * K.stride.horizontal; 
 }
 
 size_t DerefInputFn::get_scratch_bytes(){ return 0;}
@@ -21,9 +19,8 @@ size_t DerefInputFn::get_overread_bytes(){ return 0;}
 int8_t * DerefInputFn::memcopy_fn(int8_t * T, int8_t * X, 
   int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
 
-  //TODO this needs stride
-  //TODO make this into a base class function
-  return X + output_v_coord * bytes_per_h_line + output_h_coord * bytes_per_pixel+ output_c_coord;
+  return X + (int)(output_v_coord * bytes_per_h_line + 
+    output_h_coord * bytes_per_pixel + output_c_coord);
 }
 
 size_t Im_to_col_padded::get_scratch_bytes(){
@@ -35,7 +32,6 @@ size_t Im_to_col_padded::get_overread_bytes(){
 }
 
 Im_to_col_padded::Im_to_col_padded(ImageParams &X, WindowGeometry &K, padding_t &padding, int input_ch_per_output, int8_t pad_val){
-
 
   kernel_height = K.shape.height;
   kernel_width = K.shape.width;
@@ -61,7 +57,6 @@ Im_to_col_padded::Im_to_col_padded(ImageParams &X, WindowGeometry &K, padding_t 
   
 }
 
-
 int8_t * Im_to_col_padded::memcopy_fn(int8_t * T, int8_t * X, 
 int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
 
@@ -71,28 +66,26 @@ int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
 
   for(int32_t k_height = 0; k_height < kernel_height; k_height++){
 
+    int32_t input_v_coord = (output_v_coord * vertical_stride + k_height * vertical_dilation);
+
+    int p = input_v_coord < padding.top;
+    p |= input_v_coord >= padding.top + input_v_length;
+
+    int32_t input_h_coord = (output_h_coord * horizontal_stride );
+    int8_t * X_cur_p = X + (int)((input_v_coord - padding.top) * bytes_per_h_line + (input_h_coord - padding.left) * bytes_per_pixel + output_c_coord);
+
     for(int32_t k_width = 0; k_width < kernel_width; k_width++){
       
-      int32_t input_v_coord = (output_v_coord * vertical_stride + k_height * vertical_dilation);
-      int32_t input_h_coord = (output_h_coord * horizontal_stride+ k_width * horizontal_dilation);
-
-      int p = input_v_coord < padding.top;
-      p |= input_v_coord >= padding.top + input_v_length;
-      p |= input_h_coord < padding.left;
-      p |= input_h_coord >= padding.left + input_h_length;
+      // int32_t input_h_coord = (output_h_coord * horizontal_stride + k_width * horizontal_dilation);
+      int q = p;
+      q |= input_h_coord < padding.left;
+      q |= input_h_coord >= padding.left + input_h_length;
 
       //it might be nice to do a memcopy of the padding rather than a memset(requires more memory though)
-      if(p){
-        // std::cout << "padding" <<std::endl;
+      if(q){
         memset(T, padding_val, bytes_per_copy_per_channel);
       } else {
-        int8_t * X_cur_p = X + (int)((input_v_coord - padding.top) * bytes_per_h_line + (input_h_coord - padding.left) * bytes_per_pixel + output_c_coord);
-
-        // std::cout << " input_v_coord " << input_v_coord << " input_h_coord " << input_h_coord << std::endl;
-
-        // for (int i=0;i<bytes_per_copy_per_channel;i++)
-        //   std::cout << (int)X_cur_p[i] << std::endl;
-        //translate X to the actual input pointer
+        // int8_t * X_cur_p = X + (int)((input_v_coord - padding.top) * bytes_per_h_line + (input_h_coord - padding.left) * bytes_per_pixel + output_c_coord);
         memcpy(T, X_cur_p, bytes_per_copy_per_channel);
       }
 
@@ -100,7 +93,8 @@ int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
 
       //Advance the X_cur_p to the start of the next horizontal pixel
       // probably w_stride = nput_bytes_per_pixel * horizontal_stride
-      // X_cur_p += horizontal_mem_stride;
+      X_cur_p += bytes_per_pixel * horizontal_dilation;
+      input_h_coord += horizontal_dilation;
 
     }
     //There is no vertical mem stride as X_cur_p is recalculated each step of the kernel height
@@ -138,8 +132,8 @@ Im_to_col_valid::Im_to_col_valid(ImageParams &X, WindowGeometry &K, int input_ch
   vertical_mem_stride = bytes_per_h_line * K.dilation.vertical - input_width * bytes_per_pixel * K.dilation.horizontal;
 
   //TODO rename these to account for the multiplication of strides
-  bytes_per_h_line *=  K.stride.vertical;
-  bytes_per_pixel *=  K.stride.horizontal;
+  bytes_per_h_line *= K.stride.vertical;
+  bytes_per_pixel *= K.stride.horizontal;
 
 }
 
