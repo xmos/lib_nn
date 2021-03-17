@@ -169,6 +169,7 @@ int8_t* MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4>
 
   int dst_offset = 0;
 
+  //TODO reverse order of output channels
   for(int ocg = 0; ocg < output_channel_groups; ++ocg){
     int output_channels_per_ocg = std::min(output_channel_count - ocg*vpu_ring_buffer_length, vpu_ring_buffer_length);
 

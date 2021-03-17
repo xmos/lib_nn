@@ -64,57 +64,22 @@ class Filter2D : public AbstractKernel<Filter2D> {
     void inline calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h, int32_t w) ;
 };
 
-  
-// struct Conv2DParams{
+class Filter2D_DW : public AbstractKernel<Filter2D> {
+  private:
+    MemCpyFn * memcpy_handler;
 
-//   //needs to implement []
+    AggregateFn * aggregate_handler;
 
-//   int x_height;
-//   int x_width;
-//   int x_channels;
+    OutputTransformFn * ot_handler;
 
-//   int k_height;
-//   int k_width;
-//   int k_channels;
+    int output_channels_per_group; //should this go in the AbstractKernelParams??
 
-//   int k_dilation_h;
-//   int k_dilation_v;
+    //Pointer to scratch memory
+    int8_t * scratch_mem;
+  public:
+    Filter2D_DW(AbstractKernelParams * kparams, MemCpyFn * memcpy_handler, 
+      AggregateFn * aggregate_handler, OutputTransformFn * ot_handler, int8_t * scratch_mem);
 
-//   int k_stride_h;
-//   int k_stride_v;
+    void inline calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h, int32_t w) ;
+};
 
-//   public:
-//     int& operator[](int idx){
-//       return 0;
-//     };
-// };
-
-// template <class Tparams>
-// class ParamSequence {
-//   private:
-//     Tparams state_;
-//     const Tparams step_;
-//     const Tparams min_;
-//     const Tparams max_;
-
-//   public:
-
-//     ParamSequence(Tparams min, Tparams max, Tparams step) {
-//       state_ = min;
-//     };
-
-//     void next(){
-//       state_[0] += step_[0];
-//       int index = 0;
-//       while (state_[index] >= max[index]){
-//         state_[index] = min[index];
-//         index++;
-//         state_[index] += step_[index];
-//       }
-//     }
-
-//     Tparams* operator++() {
-//       state_ = min + step_;
-//     }; 
-
-// }

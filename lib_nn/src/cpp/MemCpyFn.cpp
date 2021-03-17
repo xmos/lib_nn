@@ -5,6 +5,7 @@
 extern "C" {
   #include "vpu_sim.h"
 }
+#include <climits>
 #include <iostream>
 #include <stdio.h>
 
@@ -22,7 +23,7 @@ int8_t * DerefInputFn::memcopy_fn(int8_t * T, int8_t * X,
 
   //TODO this needs stride
   //TODO make this into a base class function
-  return X + output_v_coord * bytes_per_h_line + output_h_coord * bytes_per_pixel;
+  return X + output_v_coord * bytes_per_h_line + output_h_coord * bytes_per_pixel+ output_c_coord;
 }
 
 size_t Im_to_col_padded::get_scratch_bytes(){
@@ -110,26 +111,30 @@ int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
 /*
 This constructor is used for testing
 */
-Im_to_col_valid::Im_to_col_valid(ImageParams &X, WindowGeometry &K){
-  
-  int y_channels = 4;
-  ImageParams Y(X, K, y_channels); 
+Im_to_col_valid::Im_to_col_valid(ImageParams &X, WindowGeometry &K, int input_ch_per_output){
+
+  int bytes_per_copy_per_channel = (input_ch_per_output *  X.bits_per_element) / CHAR_BIT; 
 
   bytes_per_pixel = X.pixelBytes();
   bytes_per_h_line = X.rowBytes(); 
 
   assert (X.rowBytes() == X.width * bytes_per_pixel);
 
-  input_channel_groups = (bytes_per_pixel + XS3_VPU_VREG_WIDTH_BYTES-1)/XS3_VPU_VREG_WIDTH_BYTES;
+  //This is the amount to copy in vpu words (round up)
+  input_channel_groups = (bytes_per_copy_per_channel + XS3_VPU_VREG_WIDTH_BYTES-1)/XS3_VPU_VREG_WIDTH_BYTES;
 
   int bytes_actually_copied = input_channel_groups * XS3_VPU_VREG_WIDTH_BYTES;
-  T_rewind = bytes_actually_copied - bytes_per_pixel;
+  T_rewind = bytes_actually_copied - bytes_per_copy_per_channel;
 
   input_height = K.shape.height;
   input_width  = K.shape.width;
 
   horizontal_mem_stride = bytes_per_pixel * K.dilation.horizontal - bytes_actually_copied;
   vertical_mem_stride = bytes_per_h_line * K.dilation.vertical - input_width * bytes_per_pixel * K.dilation.horizontal;
+
+  //TODO rename these to account for the multiplication of strides
+  bytes_per_h_line *=  K.stride.vertical;
+  bytes_per_pixel *=  K.stride.horizontal;
 
 }
 
@@ -138,27 +143,17 @@ size_t Im_to_col_valid::get_scratch_bytes(){
 }
 
 size_t Im_to_col_valid::get_overread_bytes(){
-  return input_channel_groups * XS3_VPU_VREG_WIDTH_BYTES - bytes_per_pixel;
+  return T_rewind;
 }
 
 int8_t * Im_to_col_valid::memcopy_fn(int8_t * T, int8_t * X, 
   int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
 
-
   xs3_vpu vpu_mem;
   xs3_vpu * vpu = &vpu_mem;
 
-  // std::cout << "init X_cur[0]:" << (int)X[0] << std::endl;
-
-  //translate X to the actual input pointer, i.e. X_t = X[h][w]
-  // std::cout << "move: " <<(output_v_coord * bytes_per_h_line + output_h_coord * bytes_per_pixel)<<std::endl;
-  // printf("init X %p\n", X );
-
-  //TODO this needs stride
-  int8_t * X_cur_p = X + (int)(output_v_coord * bytes_per_h_line + output_h_coord * bytes_per_pixel);
+  int8_t * X_cur_p = X + (int)(output_v_coord * bytes_per_h_line + output_h_coord * bytes_per_pixel + output_c_coord);
   
-  // printf("X_cur %p\n", X_cur_p );
-  // std::cout << "X_cur[0]:" << (int)X_cur_p[0] << std::endl;
   int8_t * T_in = T;
 
   for(int32_t i_height = 0; i_height < input_height; i_height++){
@@ -167,7 +162,6 @@ int8_t * Im_to_col_valid::memcopy_fn(int8_t * T, int8_t * X,
       //This loop copies a whole pixel
       for(int32_t i_ch_group=0; i_ch_group < input_channel_groups; i_ch_group++){
         VLDD(vpu, X_cur_p);      
-        // std::cout << "XS3_VPU_VREG_WIDTH_BYTES:"<< XS3_VPU_VREG_WIDTH_BYTES << std::endl;
         X_cur_p += XS3_VPU_VREG_WIDTH_BYTES;
 
         VSTD(vpu, T);
@@ -177,12 +171,10 @@ int8_t * Im_to_col_valid::memcopy_fn(int8_t * T, int8_t * X,
       T -= T_rewind; 
 
       //Advance the X_cur_p to the start of the next horizontal pixel
-      // std::cout << "horizontal_mem_stride:"<< horizontal_mem_stride << std::endl;
       X_cur_p += horizontal_mem_stride;
     }
 
     //Advance the X_cur_p to the start of the next vertical pixel
-    // std::cout << "vertical_mem_stride:"<< vertical_mem_stride << std::endl;
     X_cur_p += vertical_mem_stride;
   }
 

@@ -6,7 +6,9 @@
 // }
 template<class T>
 void AbstractKernel<T>::execute (int8_t * Y, int8_t * X) {
+
   Y += kparams.output_channel_slice_offset;
+
   for(int32_t h = kparams.h_begin; h < kparams.h_end; h++){
     for(int32_t w = kparams.w_begin; w < kparams.w_end; w++){
       static_cast<T*>(this)->calc_output_pixel_slice(Y, X, h, w);
@@ -15,6 +17,7 @@ void AbstractKernel<T>::execute (int8_t * Y, int8_t * X) {
     Y += kparams.output_h_mem_stride;
   }
 }
+
 /*
   This is going to compute the output for output_channel_group_count channel groups of
   the output. The pointer is going to be set to the begining on the next output by 
@@ -22,8 +25,7 @@ void AbstractKernel<T>::execute (int8_t * Y, int8_t * X) {
 */
 void Filter2D::calc_output_pixel_slice(int8_t * Y, int8_t * X, int32_t h, int32_t w){
       
-
-  int8_t * input_img = memcpy_handler->memcopy_fn(scratch_mem, X, h, w);//copy all input channels
+  int8_t * input_img = memcpy_handler->memcopy_fn(scratch_mem, X, h, w); //copy all input channels, channel start is implicitly 0.
 
   for (int32_t chan_group = 0; chan_group < kparams.output_channel_group_count; chan_group++){
     vpu_ring_buffer_t A;
@@ -35,21 +37,24 @@ void Filter2D::calc_output_pixel_slice(int8_t * Y, int8_t * X, int32_t h, int32_
   }
 }
 
-// void Filter2D_dw::calc_output_pixel_slice(int8_t * Y, int8_t * X, int32_t h, int32_t w){
+//This is an example of a depthwise conv or max pool
+void Filter2D_DW::calc_output_pixel_slice(int8_t * Y, int8_t * X, int32_t h, int32_t w){
       
-//   for (int32_t chan_group = 0; chan_group < kparams.output_channel_group_count; chan_group++){
+  for (int32_t chan_group = 0; chan_group < kparams.output_channel_group_count; chan_group++){
 
-//     vpu_ring_buffer_t A;
+    vpu_ring_buffer_t A;
 
-//     int8_t * input_img = memcpy_handler->memcopy_fn(scratch_mem, X, h, w, chan_group);//copy 1 channel group
+    int c = kparams.output_channel_slice_offset + chan_group * output_channels_per_group;
 
-//     aggregate_handler->aggregate_fn(&A, input_img, chan_group);
+    int8_t * input_img = memcpy_handler->memcopy_fn(scratch_mem, X, h, w, c); //will know how many channels it is copying
 
-//     //must calc size of current channel group
-//     //offset from Y in order to write out result
-//     //number of bytes to write to result
-//     //offset into transform specific arrays
-//     Y = ot_handler->output_transform_fn(Y, &A, chan_group);
+    aggregate_handler->aggregate_fn(&A, input_img, chan_group);
+
+    //must calc size of current channel group
+    //offset from Y in order to write out result
+    //number of bytes to write to result
+    //offset into transform specific arrays
+    Y = ot_handler->output_transform_fn(Y, &A, chan_group);
     
-//   }
-// }
+  }
+}

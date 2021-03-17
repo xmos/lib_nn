@@ -5,6 +5,8 @@
 
 class MemCpyFn {
   public:
+
+    //h, w, c are coordinates in the output space
     virtual int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c=0) = 0;
     virtual size_t get_scratch_bytes() = 0;
     virtual size_t get_overread_bytes() = 0;
@@ -69,7 +71,10 @@ class Im_to_col_valid : public MemCpyFn{
   int32_t vertical_mem_stride;
 
   public:
-  Im_to_col_valid(ImageParams &X, WindowGeometry &K);
+
+  //input_ch_per_output lets the kernel know how many input channels to copy to scratch
+  Im_to_col_valid(ImageParams &X, WindowGeometry &K, int input_ch_per_output);
+  
   size_t get_scratch_bytes();
   size_t get_overread_bytes();
 
