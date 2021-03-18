@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
+#include <tuple>
 #include "AggregateFn.hpp"
 
 extern "C" {
@@ -141,7 +142,7 @@ int8_t * deref2d(int8_t * p, int p_w, int h, int w){
   return p + h*p_w + w;
 }
 
-int8_t* MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4> &shape, 
+std::tuple<int8_t *, int8_t **, int> MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4> &shape, 
   int bits_per_element, int8_t pad_value) 
 {
 
@@ -160,7 +161,7 @@ int8_t* MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4>
   //For each output channel keep a record of the final vpu load
   //so the overlap betweek the desired channel and the next can
   //be accounted for.
-  int8_t * final_load_locations[output_channel_count];
+  int8_t ** final_load_locations = new int8_t*[output_channel_count];
 
   //The numberof output channel groups needed to compute the whole conv.
   //This is rounded up.
@@ -169,7 +170,6 @@ int8_t* MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4>
 
   int dst_offset = 0;
 
-  //TODO reverse order of output channels
   for(int ocg = 0; ocg < output_channel_groups; ++ocg){
     int output_channels_per_ocg = std::min(output_channel_count - ocg*vpu_ring_buffer_length, vpu_ring_buffer_length);
 
@@ -179,17 +179,19 @@ int8_t* MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4>
 
       int ocg_offset = ocg*vpu_ring_buffer_length;
 
-      for (int out_ch = ocg_offset; out_ch < ocg_offset + output_channels_per_ocg; ++out_ch){
+      for (int out_ch = 0; out_ch < output_channels_per_ocg; ++out_ch){
         int bytes_in_this_vpu_copy = std::min(bytes_per_output_channel - icg*vpu_bytes_per_word, vpu_bytes_per_word);
 
-        int8_t * src = deref2d(raw_weights, bytes_per_output_channel, out_ch, vpu_bytes_per_word*icg);
+        //reverse order of output channels
+        int reversed_out_ch = output_channels_per_ocg - 1 - out_ch;
+        int8_t * src = deref2d(raw_weights, bytes_per_output_channel, ocg_offset + reversed_out_ch, vpu_bytes_per_word*icg);
         int8_t * dst = boggled_weights + dst_offset;
 
         memcpy(dst, src, bytes_in_this_vpu_copy);
         dst_offset += bytes_in_this_vpu_copy;
         
         if(icg == input_channel_groups-1)
-          final_load_locations[out_ch] = dst;
+          final_load_locations[ocg_offset + reversed_out_ch] = dst;
         
       }
     }
@@ -200,7 +202,8 @@ int8_t* MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4>
 
   //todo return channel final over lap pointers
 
-  return boggled_weights;
+  //TODO put these in a class and make them an array/vector
+  return std::make_tuple(boggled_weights, final_load_locations, kernel_size);
 }
 
 int MatMulFn :: get_scratch_size(int input_bytes) {
