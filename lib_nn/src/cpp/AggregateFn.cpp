@@ -12,6 +12,7 @@ extern "C" {
   #include "vpu_sim.h"
 }
 
+
 static int clrsb(int x){
   #if defined(__XS3A__)
   for (unsigned i=0;i<32;i++){
@@ -256,11 +257,7 @@ void MatMulFn::mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_c
   const int vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
   const int vpu_epv = VPU_INT16_EPV;
   
-  int32_t cur_output_channels_in_scope; //TODO  -make this a one liner
-  if ((output_channel_group+1) * vpu_epv < output_slice_channel_count)
-    cur_output_channels_in_scope = vpu_epv;
-  else
-    cur_output_channels_in_scope = output_slice_channel_count - output_channel_group * vpu_epv;
+  int32_t cur_output_channels_in_scope = std::min(output_slice_channel_count - output_channel_group * vpu_epv, vpu_epv);
 
   int8_t * K_p = weights + bytes_per_kernel_channel * vpu_epv * output_channel_group;//changes
 
@@ -283,6 +280,9 @@ void MatMulFn::mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_c
 
   int input_channel_group_count = (bytes_per_kernel_channel - k_p_adjust) / vpu_bytes; 
 
+  // std::cout << "k_p_adjust: " << k_p_adjust << std::endl;
+  // std::cout << "input_channel_group_count: " << input_channel_group_count << std::endl;
+
   int8_t * D_p = T;
 
   for (auto p = 0; p < input_channel_group_count; ++p){
@@ -300,7 +300,7 @@ void MatMulFn::mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_c
 
   VLDC(vpu, D_p);
 
-  //Note: This forces kernels to be padded to word aligned boundaries 
+  //Note: This forces kernels to be padded to word aligned boundaries TODO put an assert on this
   for(auto l=0; l< tail_loops; l++){
     VLMACCR(vpu, K_p);
     K_p += k_p_adjust;

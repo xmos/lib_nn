@@ -343,13 +343,9 @@ namespace {
 
     int seed = 69;
 
-    for (auto input_bytes = 1; input_bytes < 48; ++input_bytes){
+    for (auto input_bytes = 1; input_bytes < 128; ++input_bytes){
 
-      // int16_t expected_vD;
-
-      int8_t scratch_fill = 1;
-
-      for (auto output_channel_count = 1; output_channel_count < 16; ++output_channel_count){
+      for (auto output_channel_count = 1; output_channel_count < 48; ++output_channel_count){
           
         int k_height = 1;
         int k_width = 1; //to make things easy
@@ -358,68 +354,70 @@ namespace {
         int8_t raw_weights[output_channel_count][k_height][k_width][input_bytes];
         assert(sizeof raw_weights == input_bytes*output_channel_count);
 
-        memset(raw_weights, 0, sizeof raw_weights); 
-
-        for(auto i=0;i<output_channel_count;++i)
-          for(auto j=0;j<input_bytes;++j)
-            raw_weights[i][0][0][j] = i;
+        for(auto j = 0; j < sizeof raw_weights; ++j)
+          ((int8_t*)raw_weights)[j] = (int8_t)pseudo_rand(&seed);
 
         int scratch_bytes = MatMulFn::get_scratch_size(input_bytes);
-
-        int8_t T[scratch_bytes];
-        std::fill_n(T, scratch_bytes, scratch_fill); //TODO fill with random mess
-
-        // for(auto j = 0; j < sizeof T; ++j)
-        //   T[j] = (int8_t)pseudo_rand(&seed);
 
         int8_t* reordered_weights;
         int8_t** final_load_locations;
         int kernel_bytes;
 
-        int8_t pad_val = (int8_t)pseudo_rand(&seed);//TODO make random
+        int8_t pad_val = (int8_t)pseudo_rand(&seed);
 
         std::tie(reordered_weights, final_load_locations, kernel_bytes) = 
           MatMulFn::reorder_kernel_weights( (int8_t* )raw_weights, shape, 8, pad_val) ;
         
+        int8_t T[scratch_bytes];
+
+        for(auto j = 0; j < sizeof T; ++j)
+          T[j] = (int8_t)pseudo_rand(&seed);
+
         int accu_modifier[output_channel_count];
+
         for (int i=0;i<output_channel_count;i++){
           int8_t * final_load_location = final_load_locations[i];
           
           int s = 0;
-          for(int j=input_bytes;j<vpu_bytes;j++)
-            s += (int)(final_load_location[j]) * (T[scratch_bytes - vpu_bytes + j]); 
-          accu_modifier[i] = s;
+          int channel_overlap_start = input_bytes%vpu_bytes;
 
+          if (channel_overlap_start){
+
+            for(int j=channel_overlap_start;j<vpu_bytes;j++)
+              s += (int)(final_load_location[j]) * T[scratch_bytes - vpu_bytes + j]; 
+            
+          }
+          accu_modifier[i] = s;
         }
 
-
         MatMulFn mm(output_channel_count, input_bytes, reordered_weights);
-
-
-
         int ocg_count = (output_channel_count + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
         
-        std::cout << "output_channel_count: " <<output_channel_count<< " input_bytes: " <<input_bytes<< std::endl;
         for (auto ocg = 0; ocg < ocg_count; ++ocg){
 
           vpu_ring_buffer_t A;
           mm.aggregate_fn(&A, T, ocg);
 
-          int c;
-          if((ocg+1) * vpu_ring_buffer_length < output_channel_count)
-            c = vpu_ring_buffer_length;
-          else
-            c = output_channel_count % vpu_ring_buffer_length;
+          int chs_in_group = std::min(output_channel_count - output_channel_count *ocg , vpu_ring_buffer_length);
 
-          for (auto output_chan = 0; output_chan < c; ++output_chan){
-            // std::cout << output_chan <<" " <<A.vD[output_chan]  - accu_modifier[output_chan]<< " " << A.vR[output_chan] << std::endl;
-            EXPECT_EQ(input_bytes*output_chan, A.vD[output_chan] - accu_modifier[output_chan]);
+          for (auto output_chan = 0; output_chan < chs_in_group; ++output_chan){
+
+            int actual_output_channel = output_chan + ocg * vpu_ring_buffer_length;
+
+            int expected_sum = 0;
+            for(int b = 0; b < input_bytes; b++)
+              expected_sum += ((int)raw_weights[actual_output_channel][0][0][b] * (int)T[b]);
+            
+            int32_t v;
+            ((int16_t *)&v)[0] = A.vD[output_chan];
+            ((int16_t *)&v)[1] = A.vR[output_chan];
+
+            EXPECT_EQ( v - accu_modifier[actual_output_channel], expected_sum);
           }
         }
-        //  std::cout << std::endl;
-        //  std::cout << std::endl;
 
         delete reordered_weights;
+        delete final_load_locations;
       }
 
     }
@@ -493,7 +491,7 @@ namespace {
       }
     }
   }
-
+/*
   class Test_Kernel_Reordering: public ::testing::Test {};
 
   TEST_F(Test_Kernel_Reordering, BasicTest) {
@@ -525,7 +523,7 @@ namespace {
       }
     }
   }
-
+*/
 
 
 
