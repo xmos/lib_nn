@@ -284,19 +284,18 @@ namespace {
 
     for (auto input_bytes = 1; input_bytes < 48; ++input_bytes){
 
-      std::list<std::tuple<int8_t, int8_t, int16_t>> args = { 
-        std::tuple<int8_t, int8_t, int16_t>{1, 1, 1 },
-        std::tuple<int8_t, int8_t, int16_t>{1, 0, 0 },
-        std::tuple<int8_t, int8_t, int16_t>{0, 1, 0 },
-        std::tuple<int8_t, int8_t, int16_t>{-1, 1, -1 },
-        std::tuple<int8_t, int8_t, int16_t>{1, -1, -1 },
-        std::tuple<int8_t, int8_t, int16_t>{-1, -1, 1 },
+      std::list<std::tuple<int8_t, int8_t>> args = { 
+        std::tuple<int8_t, int8_t>{1, 1 },
+        std::tuple<int8_t, int8_t>{1, 0},
+        std::tuple<int8_t, int8_t>{0, 1 },
+        std::tuple<int8_t, int8_t>{-1, 1},
+        std::tuple<int8_t, int8_t>{1, -1},
+        std::tuple<int8_t, int8_t>{-1, -1},
       };
 
       for (auto arg : args){
-        int16_t expected_vD;
         int8_t kernel_fill, scratch_fill;
-        std::tie(kernel_fill, scratch_fill, expected_vD) = arg;
+        std::tie(kernel_fill, scratch_fill) = arg;
 
         for (auto output_channel_count = 1; output_channel_count < 48; ++output_channel_count){
             
@@ -325,7 +324,12 @@ namespace {
               c = output_channel_count % vpu_ring_buffer_length;
 
             for (auto output_chan = 0; output_chan < c; ++output_chan){
-              EXPECT_EQ(scratch_bytes*expected_vD, A.vD[output_chan]);
+
+            int32_t v;
+            ((int16_t *)&v)[0] = A.vD[output_chan];
+            ((int16_t *)&v)[1] = A.vR[output_chan];
+
+              EXPECT_EQ(scratch_bytes*(kernel_fill*scratch_fill), v);
             }
           }
         }
@@ -373,8 +377,9 @@ namespace {
         for(auto j = 0; j < sizeof T; ++j)
           T[j] = (int8_t)pseudo_rand(&seed);
 
-        int accu_modifier[output_channel_count];
+        int accu_modifier[output_channel_count]; //=0
 
+        //TODO make this into an int8 specific function
         for (int i=0;i<output_channel_count;i++){
           int8_t * final_load_location = final_load_locations[i];
           
@@ -383,8 +388,9 @@ namespace {
 
           if (channel_overlap_start){
 
-            for(int j=channel_overlap_start;j<vpu_bytes;j++)
+            for(int j=channel_overlap_start;j<vpu_bytes;j++){
               s += (int)(final_load_location[j]) * T[scratch_bytes - vpu_bytes + j]; 
+            }
             
           }
           accu_modifier[i] = s;
@@ -423,28 +429,26 @@ namespace {
     }
   }
 
-  class Test_MatMulDirectFn: public ::testing::Test {};
+  class Test_Simple_MatMulDirectFn: public ::testing::Test {};
   /*
     Simple test to verify memory accesses. 
   */
-  TEST_F(Test_MatMulDirectFn, BasicTest) {
+  TEST_F(Test_Simple_MatMulDirectFn, BasicTest) {
 
-    const int vpu_bytes = 32;
     const int vpu_ring_buffer_length = 16;
 
-    std::list<std::tuple<int8_t, int8_t, int16_t>> args = { 
-      std::tuple<int8_t, int8_t, int16_t>{1, 1, 1 },
-      std::tuple<int8_t, int8_t, int16_t>{1, 0, 0 },
-      std::tuple<int8_t, int8_t, int16_t>{0, 1, 0 },
-      std::tuple<int8_t, int8_t, int16_t>{-1, 1, -1 },
-      std::tuple<int8_t, int8_t, int16_t>{1, -1, -1 },
-      std::tuple<int8_t, int8_t, int16_t>{-1, -1, 1 },
+    std::list<std::tuple<int8_t, int8_t>> args = { 
+      std::tuple<int8_t, int8_t>{1, 1 },
+      std::tuple<int8_t, int8_t>{1, 0},
+      std::tuple<int8_t, int8_t>{0, 1 },
+      std::tuple<int8_t, int8_t>{-1, 1},
+      std::tuple<int8_t, int8_t>{1, -1},
+      std::tuple<int8_t, int8_t>{-1, -1},
     };
 
     for (auto arg : args){
-      int16_t expected_vD;
       int8_t kernel_fill, scratch_fill;
-      std::tie(kernel_fill, scratch_fill, expected_vD) = arg;
+      std::tie(kernel_fill, scratch_fill) = arg;
 
       for (auto x_height = 1; x_height <= 4; ++x_height){
         for (auto x_width = 1; x_width <= 4; ++x_width){
@@ -466,8 +470,6 @@ namespace {
                   std::fill_n((int8_t*)K, sizeof K, kernel_fill);
                   std::fill_n((int8_t*)T, x_height * x_width * x_channels, scratch_fill);
 
-                  // std::cout <<"size " << x_height * x_width * x_channels << std::endl;
-
                   int ocg_count = (y_channels + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
 
                   for (auto x = 0; x < x_height - k_height + 1; ++x){
@@ -478,7 +480,12 @@ namespace {
                         mmd.aggregate_fn(&A, (int8_t *)T, ocg);
 
                         for (auto output_chan = 0; output_chan < vpu_ring_buffer_length; ++output_chan){
-                          EXPECT_EQ(k_width*k_height*x_channels*expected_vD, A.vD[output_chan]);
+
+                          int32_t v;
+                          ((int16_t *)&v)[0] = A.vD[output_chan];
+                          ((int16_t *)&v)[1] = A.vR[output_chan];
+
+                          EXPECT_EQ(k_width*k_height*x_channels*(kernel_fill*scratch_fill), v);
                         }
                       }
                     }
@@ -490,6 +497,73 @@ namespace {
         }
       }
     }
+  }
+
+
+  class Test_MatMulDirectFn: public ::testing::Test {};
+  /*
+    Simple test to verify memory accesses. 
+  */
+  TEST_F(Test_MatMulDirectFn, BasicTest) {
+    // const int vpu_bytes = 32;
+    // const int vpu_ring_buffer_length = 16;
+
+    int seed = 42;
+    
+    int k_h_stride = 1;
+    int k_v_stride = 1;
+
+    for (int x_height = 1; x_height <= 10; ++x_height){
+      for (int x_width = 1; x_width <= 10; ++x_width){
+        for (int x_channels = 1; x_channels <= 8; x_channels += 1){
+          for (int k_height = 1; k_height <= x_height; ++k_height){
+            for (int k_width = 1; k_width <= x_width; ++k_width){
+              for (int k_h_dilation = 1; k_h_dilation <= 4; ++k_h_dilation){
+                for (int k_v_dilation = 1; k_v_dilation <= 4; ++k_v_dilation){
+                  for (int output_channels = 1; x_channels <= 8; x_channels += 1){
+                  
+                    int output_height = CONV2D_OUTPUT_LENGTH(x_height, k_height, k_v_dilation, k_v_stride);
+                    int output_width = CONV2D_OUTPUT_LENGTH(x_width, k_width, k_h_dilation, k_h_stride);
+
+                    if (output_height <= 0 || output_width <= 0)
+                      continue;
+                      
+                    ImageParams X(x_height, x_width, x_channels, 8); 
+                    WindowGeometry K (k_height, k_width, k_h_stride, k_v_stride, k_h_dilation, k_v_dilation);
+
+                    int output_channel_count = 1;
+                    std::array<int, 4> shape = {output_channel_count, k_height, k_width, x_channels};
+                    int8_t raw_weights[output_channel_count][k_height][k_width][x_channels];
+
+                    for(auto j = 0; j < sizeof raw_weights; ++j)
+                      ((int8_t*)raw_weights)[j] = (int8_t)pseudo_rand(&seed);
+
+                    int scratch_bytes = MatMulFn::get_scratch_size(x_channels*k_height*k_width);
+
+                    int8_t* reordered_weights;
+                    int8_t** final_load_locations;
+                    int kernel_bytes;
+
+                    int8_t pad_val = (int8_t)pseudo_rand(&seed);
+
+                    std::tie(reordered_weights, final_load_locations, kernel_bytes) = 
+                      MatMulFn::reorder_kernel_weights( (int8_t* )raw_weights, shape, 8, pad_val) ;
+
+                    MatMulDirectFn mmd(X, K, reordered_weights);
+                    
+                    //TODO
+
+
+
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
   }
 /*
   class Test_Kernel_Reordering: public ::testing::Test {};

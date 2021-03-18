@@ -153,6 +153,8 @@ std::tuple<int8_t *, int8_t **, int> MatMulFn::reorder_kernel_weights(int8_t *ra
 
   int output_channel_count = shape[0];
 
+  Conv2dReorderedWeights reordered_weights(output_channel_count);
+
   //The number of bytes in the kernel for each output channel
   int bytes_per_output_channel = (shape[1]*shape[2]*shape[3]*bits_per_element)/8;
 
@@ -191,9 +193,12 @@ std::tuple<int8_t *, int8_t **, int> MatMulFn::reorder_kernel_weights(int8_t *ra
 
         memcpy(dst, src, bytes_in_this_vpu_copy);
         dst_offset += bytes_in_this_vpu_copy;
+        reordered_weights.weights.insert(reordered_weights.weights.end(), src, src + bytes_in_this_vpu_copy);
         
-        if(icg == input_channel_groups-1)
+        if(icg == input_channel_groups-1){
           final_load_locations[ocg_offset + reversed_out_ch] = dst;
+          reordered_weights.final_vpu_load_addresses[ocg_offset + reversed_out_ch] = dst;
+        }
         
       }
     }
@@ -201,10 +206,8 @@ std::tuple<int8_t *, int8_t **, int> MatMulFn::reorder_kernel_weights(int8_t *ra
   assert(dst_offset <= kernel_size);
 
   memset(boggled_weights + dst_offset, pad_value, kernel_size - dst_offset);
+  // reordered_weights.weights.insert(reordered_weights.weights.end(), src, src + bytes_in_this_vpu_copy);
 
-  //todo return channel final over lap pointers
-
-  //TODO put these in a class and make them an array/vector
   return std::make_tuple(boggled_weights, final_load_locations, kernel_size);
 }
 
