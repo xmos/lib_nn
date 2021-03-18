@@ -20,7 +20,7 @@
  * Represents the Bias, shifts and scale for a single output channel group.
  * 
  */
-typedef struct {
+C_API typedef struct {
     /**
      * Contains the upper 16-bits of output channel bias for an operator for (up to) 16 channels.
      * 

@@ -34,8 +34,14 @@ template <typename T>
 class AddressCovector : public AddressCovectorBase {
   
   public:
-    AddressCovector(const int16_t rowbytes, const int16_t colbytes, const int16_t chanbytes)
+    AddressCovector(const int16_t rowbytes, 
+                    const int16_t colbytes, 
+                    const int16_t chanbytes)
       : AddressCovectorBase(rowbytes, colbytes, chanbytes) {}
+
+    AddressCovector(const unsigned width, 
+                    const unsigned depth)
+      : AddressCovectorBase(width*depth*sizeof(T), depth * sizeof(T), sizeof(T)) {}
 
     T* resolve(const T* base_address, const ImageVect& coords) const
       { return this->resolve(base_address, coords.row, coords.col, coords.channel); }
@@ -43,7 +49,6 @@ class AddressCovector : public AddressCovectorBase {
     T* resolve(const T* base_address, const int row, const int col, const int channel) const
       { return (T*)(((char*)base_address) + this->dot(row, col, channel)); }
 };
-
 
 
 

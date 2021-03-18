@@ -99,4 +99,8 @@ class Filter2dGeometry {
 
 
 
+inline std::ostream& operator<<(std::ostream &stream, const Filter2dGeometry &filt){
+  return stream << "input{" << filt.input << "}, output{" << filt.output << "}, window{" << filt.window << "}";
+}
+
 }}}

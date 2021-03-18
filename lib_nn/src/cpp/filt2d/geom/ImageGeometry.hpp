@@ -4,6 +4,8 @@
 #include "util.hpp"
 #include "../util/AddressCovector.hpp"
 
+#include <ostream>
+
 namespace nn {
 namespace filt2d {
 namespace geom {
@@ -50,6 +52,9 @@ class ImageGeometry {
 };
 
 
+inline std::ostream& operator<<(std::ostream &stream, const ImageGeometry &image){
+  return stream << image.height << ", " << image.width << ", " << image.depth;
+}
 
 
 }}}

@@ -1,6 +1,7 @@
 
 #include "conv2d_utils.hpp"
 #include "xs3_vpu.h"
+#include "../src/cpp/filt2d/util/TensorWrap.hpp"
 
 #include <cstdlib>
 #include <iostream>
@@ -112,16 +113,19 @@ static int64_t sumConv2dWeights_Depthwise(
   const unsigned weight_count = filter.window.windowPixels();
 
   // In a depthwise convolution, the output channel corresponds to the last axis of the weight vector, not the first
-  // TODO: Really the shape of kernel_weights should depend on the TFlite weight tensor shape.
-  // const int8_t (*weights)[filter.window.shape.width][filter.window.shape.depth] 
-  //           = (int8_t (*)[filter.window.shape.width][filter.window.shape.depth]) kernel_weights;
+  
+  auto kernel = nn::TensorWrap<const int8_t>(kernel_weights, 
+                      {(int) filter.output.depth,
+                       (int) filter.window.shape.height,
+                       (int) filter.window.shape.width,
+                       (int) filter.window.shape.depth});
 
   int64_t acc = 0;
 
-  // Sum the weights
-  // for(int row = 0; row < filter.window.shape.height; ++row)
-  //   for(int col = 0; col < filter.window.shape.width; ++col)
-  //     acc += weights[row][col][output_channel];
+  // Sum the weights 
+  for(int row = 0; row < filter.window.shape.height; ++row)
+    for(int col = 0; col < filter.window.shape.width; ++col)
+      acc += kernel[{row, col, (int) output_channel}];
 
   return acc;
 }

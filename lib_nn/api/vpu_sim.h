@@ -10,6 +10,7 @@
 #include "xs3_vpu.h"
 
 
+C_API
 typedef union {
     uint8_t  u8[VPU_INT8_EPV];
     int8_t   s8[VPU_INT8_EPV];
@@ -21,12 +22,14 @@ typedef union {
     int32_t  s32[VPU_INT32_EPV];
 } vpu_vector_t;
 
+C_API
 typedef enum {
     MODE_S32 = 0x00,
     MODE_S16 = 0x100,
     MODE_S8  = 0x200,
 } vector_mode;
 
+C_API
 typedef struct {
     vector_mode mode;
     vpu_vector_t vR;
@@ -35,37 +38,36 @@ typedef struct {
 } xs3_vpu;
 
 
-void VSETC(
-    xs3_vpu* vpu,
-    const vector_mode mode);
-void VCLRDR(xs3_vpu* vpu);
-void VLDR(xs3_vpu* vpu, const void* addr);
-void VLDD(xs3_vpu* vpu, const void* addr);
-void VLDC(xs3_vpu* vpu, const void* addr);
-void VSTR(const xs3_vpu* vpu, void* addr);
-void VSTD(const xs3_vpu* vpu, void* addr);
-void VSTC(const xs3_vpu* vpu, void* addr);
-void VSTRPV(const xs3_vpu* vpu, void* addr, unsigned mask);
-void VLMACC(xs3_vpu* vpu, const void* addr);
-void VLMACCR(xs3_vpu* vpu, const void* addr);
-void VLMACCR1(xs3_vpu* vpu, const void* addr);
-void VLSAT(xs3_vpu* vpu, const void* addr);
-void VLASHR(xs3_vpu* vpu, const void* addr, const int32_t shr);
-void VLADD(xs3_vpu* vpu, const void* addr);
-void VLSUB(xs3_vpu* vpu, const void* addr);
-void VLMUL(xs3_vpu* vpu, const void* addr);
-void VDEPTH1(xs3_vpu* vpu);
-void VDEPTH8(xs3_vpu* vpu);
-void VDEPTH16(xs3_vpu* vpu);
+C_API void VSETC(xs3_vpu* vpu, const vector_mode mode);
+C_API void VCLRDR(xs3_vpu* vpu);
+C_API void VLDR(xs3_vpu* vpu, const void* addr);
+C_API void VLDD(xs3_vpu* vpu, const void* addr);
+C_API void VLDC(xs3_vpu* vpu, const void* addr);
+C_API void VSTR(const xs3_vpu* vpu, void* addr);
+C_API void VSTD(const xs3_vpu* vpu, void* addr);
+C_API void VSTC(const xs3_vpu* vpu, void* addr);
+C_API void VSTRPV(const xs3_vpu* vpu, void* addr, unsigned mask);
+C_API void VLMACC(xs3_vpu* vpu, const void* addr);
+C_API void VLMACCR(xs3_vpu* vpu, const void* addr);
+C_API void VLMACCR1(xs3_vpu* vpu, const void* addr);
+C_API void VLSAT(xs3_vpu* vpu, const void* addr);
+C_API void VLASHR(xs3_vpu* vpu, const void* addr, const int32_t shr);
+C_API void VLADD(xs3_vpu* vpu, const void* addr);
+C_API void VLSUB(xs3_vpu* vpu, const void* addr);
+C_API void VLMUL(xs3_vpu* vpu, const void* addr);
+C_API void VDEPTH1(xs3_vpu* vpu);
+C_API void VDEPTH8(xs3_vpu* vpu);
+C_API void VDEPTH16(xs3_vpu* vpu);
 
 /** Print vector register contents based on current vector_mode **/
-void vpu_sim_print(xs3_vpu* vpu);
-void vpu_sim_mem_print(void * address, vector_mode mode);
+C_API void vpu_sim_print(xs3_vpu* vpu);
+C_API void vpu_sim_mem_print(void * address, vector_mode mode);
 
 //Function for implementing the saturation logic within the VPU.
-int64_t vpu_saturate(
+C_API int64_t vpu_saturate(
     const int64_t input, 
     const unsigned bits);
+
 
 #ifdef __cplusplus
 

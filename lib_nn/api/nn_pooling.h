@@ -12,6 +12,7 @@
 /**
  * Flags used with maxpool2d_ext() for advanced scenarios.
  */
+C_API
 typedef enum {
     /** 
      * Placeholder flag used to indicate no other flags are needed.
@@ -23,6 +24,7 @@ typedef enum {
 /**
  * Flags used with avgpool2d_ext() for advanced scenarios.
  */
+C_API
 typedef enum {
     /** 
      * Placeholder flag used to indicate no other flags are needed.
@@ -34,6 +36,7 @@ typedef enum {
 /**
  * Flags used with avgpool2d_global_ext() for advanced scenarios.
  */
+C_API
 typedef enum {
     /** 
      * Placeholder flag used to indicate no other flags are needed.
@@ -174,6 +177,7 @@ typedef enum {
  * @param[in]   pooling_window  Parameters describing the relationship between the pooling window, the input image,
  *                              and the output image
  */
+C_API
 void maxpool2d(
     nn_image_t* Y,
     const nn_image_t* X, 
@@ -276,6 +280,7 @@ void maxpool2d(
  * @param[in]   job_params      Indicates which output elements will be computed by this invocation
  * @param[in]   flags           Flags which modify the behavior of maxpool2d_ext()
  */ 
+C_API
 void maxpool2d_ext(
     nn_image_t* Y,
     const nn_image_t* X, 
@@ -368,6 +373,7 @@ void maxpool2d_ext(
  * @param[in]   pooling_window  Parameters describing the relationship between the pooling window, the input image,
  *                              and the output image
  */
+C_API
 void avgpool2d(
     int8_t* Y,
     const int8_t* X, 
@@ -470,6 +476,7 @@ void avgpool2d(
  * @param[in]   job_params      Indicates which output elements will be computed by this invocation
  * @param[in]   flags           Flags which modify the behavior of avgpool2d_ext()
  */
+C_API
 void avgpool2d_ext(
     int8_t* Y,
     const int8_t* X, 
@@ -554,6 +561,7 @@ void avgpool2d_ext(
  * @param[in]   shift       The right-shift @math{r} applied to the 32-bit accumulators to yield an 8-bit result.
  * @param[in]   x_params    Parameters describing the shape of input image tensor @tensor{X}
  */
+C_API
 void avgpool2d_global(
     nn_image_t* Y,
     const nn_image_t* X, 
@@ -644,6 +652,7 @@ void avgpool2d_global(
  * @param[in]   shift       The right-shift @math{r} applied to the 32-bit accumulators to yield an 8-bit result.
  * @param[in]   x_params    Parameters describing the shape of input image tensor @tensor{X}
  */
+C_API
 void avgpool2d_global_ext(
     nn_image_t* Y,
     const nn_image_t* X, 

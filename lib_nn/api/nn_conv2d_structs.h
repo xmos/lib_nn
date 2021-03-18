@@ -3,6 +3,7 @@
 #ifndef CONV2D_STRUCTS_H_
 #define CONV2D_STRUCTS_H_
 
+#include "nn_api.h"
 #include "nn_image.h"
 
 #define CONV2D_OUTPUT_LENGTH(input_length, filter_size, dilation, stride)     \
@@ -16,6 +17,7 @@
  * Describes the relationship between the convolution window and the 
  * input image.
  */
+C_API
 typedef struct {
 
     /** The shape of the convolution window */

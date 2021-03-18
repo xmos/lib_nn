@@ -9,6 +9,7 @@
  * @brief Compute the number of extra bytes required to allow the general purpose int8 bconv2d kernels to
  * function without buffer overrunning.
  */
+C_API 
 int32_t compute_int8_over_RW_bytes(int32_t x_channels, int32_t k_height, int32_t k_width, int32_t chans_out);
 
 
@@ -85,6 +86,7 @@ int32_t compute_int8_over_RW_bytes(int32_t x_channels, int32_t k_height, int32_t
  * @param[in]  zero_point   The value to be used (for all channels) for padding
  * @param[in]  job_count    The number of jobs to initialize
  */
+C_API 
 void conv2d_im2col_init(
     nn_conv2d_im2col_plan_t* plan,
     nn_conv2d_im2col_job_t* jobs,
@@ -201,6 +203,7 @@ void conv2d_im2col_init(
  * @param[in]   conv_window Parameters describing the relationship between the convolution window, the input image,
  *                              and the output image
  */
+C_API 
 void conv2d_deep(
     nn_image_t* Y,
     const nn_image_t* X,
@@ -323,6 +326,7 @@ void conv2d_deep(
  * @param[in]   job_params  Indicates which output elements will be computed by this invocation
  * @param[in]   flags       Flags which modify the behavior of conv2d_deep_ext()
  */
+C_API 
 void conv2d_deep_ext(
     nn_image_t* Y,
     const nn_image_t* X,
@@ -444,6 +448,7 @@ void conv2d_deep_ext(
  * @param[in]   conv_window Parameters describing the relationship between the convolution window, the input image,
  *                              and the output image
  */
+C_API 
 void conv2d_shallowin(
     nn_image_t* Y,
     const nn_image_t* X,
@@ -577,6 +582,7 @@ void conv2d_shallowin(
  * @param[in]   job_params  Indicates which output elements will be computed by this invocation
  * @param[in]   flags       Flags which modify the behavior of conv2d_shallowin_ext()
  */
+C_API 
 void conv2d_shallowin_ext(
     nn_image_t* Y,
     const nn_image_t* X,
@@ -663,6 +669,7 @@ void conv2d_shallowin_ext(
  * @param[in]   x_params    Parameters describing the shape of input image tensor @tensor{X}
  * @param[in]   y_params    Parameters describing the shape of output image tensor @tensor{Y}
  */
+C_API 
 void conv2d_1x1(
     nn_image_t* Y,
     const nn_image_t* X,
@@ -762,6 +769,7 @@ void conv2d_1x1(
  * @param[in]   job_params  Indicates which output elements will be computed by this invocation
  * @param[in]   flags       Flags which modify the behavior of conv2d_1x1_ext()
  */
+C_API 
 void conv2d_1x1_ext(
     nn_image_t* Y,
     const nn_image_t* X,
@@ -872,6 +880,7 @@ void conv2d_1x1_ext(
  * @param[in]   conv_window Parameters describing the relationship between the convolution window, the input image,
  *                              and the output image
  */
+C_API 
 void conv2d_depthwise(
     int8_t* Y,
     const int8_t* X,
@@ -999,6 +1008,7 @@ void conv2d_depthwise(
  * @param[in]   job_params  Indicates which output elements will be computed by this invocation
  * @param[in]   flags       Flags which modify the behavior of conv2d_depthwise_ext()
  */
+C_API 
 void conv2d_depthwise_ext(
     int8_t* Y,
     const int8_t* X,
@@ -1077,6 +1087,7 @@ void conv2d_depthwise_ext(
  * @param[in]  plan     The convolution plan
  * @param[in]  job      The convolution job
  */
+C_API 
 void conv2d_im2col(
     nn_image_t* Y,
     const nn_image_t* X,
@@ -1209,6 +1220,7 @@ void conv2d_im2col(
  * \param chans_to_write    Number of channels to write in each output pixel
  * \param zero_point_vec    Vector of zero-points for each channel
  */
+C_API 
 void nn_conv2d_hstrip_depthwise_padded(
     int8_t* Y,
     const int8_t* X, 
@@ -1320,6 +1332,7 @@ void nn_conv2d_hstrip_depthwise_padded(
  * \param out_pixels        Number of pixels to be written
  * \param chans_to_write    Number of channels to write in each output pixel
  */
+C_API 
 void nn_conv2d_hstrip_depthwise(
     int8_t* Y,
     const int8_t* X, 
@@ -1470,6 +1483,7 @@ void nn_conv2d_hstrip_depthwise(
  * @param[in]  out_cols             Number of output pixels to write.
  * @param[in]  zero_point_vec       Vector containing `VPU_INT8_EPV` copies of the zero point value.
  */
+C_API 
 void nn_conv2d_hstrip_deep_padded(
         nn_image_t* Y,
         const nn_image_t* X,
@@ -1628,6 +1642,7 @@ void nn_conv2d_hstrip_deep_padded(
  * @param[in]  zero_point_vec       Vector containing `VPU_INT8_EPV` copies of the zero point value.
  * @param[in]  C_out_tail           The tail of the output channel count.
  */
+C_API 
 void nn_conv2d_hstrip_tail_deep_padded(
         nn_image_t* Y,
         const nn_image_t* X,
@@ -1648,6 +1663,7 @@ void nn_conv2d_hstrip_tail_deep_padded(
         const int8_t* zero_point_vec,
         const channel_count_t C_out_tail);
 
+C_API 
 void nn_conv2d_hstrip_deep(
         nn_image_t* Y,
         const nn_image_t* X,
@@ -1662,6 +1678,7 @@ void nn_conv2d_hstrip_deep(
         const mem_stride_t y_h_stride,
         const unsigned out_cols);
 
+C_API 
 void nn_conv2d_hstrip_tail_deep(
         nn_image_t* Y,
         const nn_image_t* X,
@@ -1677,6 +1694,7 @@ void nn_conv2d_hstrip_tail_deep(
         const unsigned out_cols,
         const channel_count_t C_out_tail);
 
+C_API 
 void nn_conv2d_hstrip_shallowin_padded(
         nn_image_t* Y,
         const nn_image_t* X,
@@ -1696,6 +1714,7 @@ void nn_conv2d_hstrip_shallowin_padded(
 
 
 
+C_API 
 void nn_conv2d_hstrip_shallowin(
         nn_image_t* Y,
         const nn_image_t* X,
@@ -1710,6 +1729,7 @@ void nn_conv2d_hstrip_shallowin(
 
 
 
+C_API 
 void nn_conv2d_hstrip_tail_shallowin_padded(
         nn_image_t* Y,
         const nn_image_t* X,
@@ -1730,6 +1750,7 @@ void nn_conv2d_hstrip_tail_shallowin_padded(
 
 
 
+C_API 
 void nn_conv2d_hstrip_tail_shallowin(
         nn_image_t* Y,
         const nn_image_t* X,

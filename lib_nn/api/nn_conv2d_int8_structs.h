@@ -6,10 +6,6 @@
 #include "nn_types.h"
 #include "nn_window_params.h"
 
-#ifdef __XC__
-extern "C" {
-#endif
-
 /**
  * Macro to get the address of the start of the last output channel of the `COG`<sup>th</sup> output
  * channel group of 4D kernel tensor `KRN`.
@@ -22,13 +18,13 @@ extern "C" {
 #define KERNEL_4D_COG_LAST_CHAN_START(KRN, COG)    ((nn_tensor_t*) &(KRN[(VPU_INT8_ACC_PERIOD*(COG))+(VPU_INT8_ACC_PERIOD-1)][0][0][0]))
 
 
-typedef nn_window_op_job_params_t nn_conv2d_job_params_t;
+C_API typedef nn_window_op_job_params_t nn_conv2d_job_params_t;
 
 
 /**
  * Flags used with conv2d_deep_ext() for advanced scenarios.
  */
-typedef enum {
+C_API typedef enum {
     /** 
      * If non-zero, this flag signals to conv2d_deep_ext() that the supplied kernel weight tensor (@tensor{K}) and 
      * the BSO tensor are slices, rather than the full tensors.
@@ -59,7 +55,7 @@ typedef enum {
 /**
  * Flags used with conv2d_shallowin_ext() for advanced scenarios.
  */
-typedef enum {
+C_API typedef enum {
     /** 
      * If non-zero, this flag signals to conv2d_shallowin_ext() that the supplied kernel weight tensor (@tensor{K}) and 
      * the BSO tensor are slices, rather than the full tensors.
@@ -87,7 +83,7 @@ typedef enum {
 /**
  * Struct represents the shared parameters required to execute a `conv2d_im2col()` operation. 
  */
-typedef struct {
+C_API typedef struct {
 
     struct {
         struct {
@@ -122,7 +118,7 @@ typedef struct {
 /**
  * Struct represents the job-specific parameters required to execute a `conv2d_im2col()` operation. 
  */
-typedef struct {
+C_API typedef struct {
 
     struct {
         struct {
@@ -168,7 +164,7 @@ typedef struct {
 /**
  * Flags used with conv2d_1x1_ext() for advanced scenarios.
  */
-typedef enum {
+C_API typedef enum {
     /** 
      * If non-zero, this flag signals to conv2d_1x1_ext() that the supplied kernel weight tensor (@tensor{K}) and 
      * the BSO tensor are slices, rather than the full tensors.
@@ -197,7 +193,7 @@ typedef enum {
 /**
 
  */
-typedef struct {
+C_API typedef struct {
     /** 
      * Indices in an output image at which to begin producing output.
      * 
@@ -226,7 +222,7 @@ typedef struct {
 /**
  * Flags used with conv2d_depthwise_ext() for advanced scenarios.
  */
-typedef enum {
+C_API typedef enum {
     /** 
      * If non-zero, this flag signals to conv2d_depthwise_ext() that the supplied kernel weight tensor (@tensor{K}) and 
      * the BSO tensor are slices, rather than the full tensors.
@@ -251,8 +247,5 @@ typedef enum {
     CONV2D_DEPTHWISE_FLAG_SLICED_K = (1<<0),
 } nn_conv2d_depthwise_flags_e;
 
-#ifdef __XC__
-}   //extern "C"
-#endif
 
 #endif //NN_CONV2D_STRUCTS_H_

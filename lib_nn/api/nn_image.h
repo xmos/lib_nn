@@ -8,6 +8,7 @@
 /**
  * This struct describes the basic parameters for an image tensor
  */
+C_API
 typedef struct {
     /**
      * Height of an image (in pixels)
