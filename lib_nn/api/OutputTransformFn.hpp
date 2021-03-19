@@ -26,8 +26,11 @@ class OTBinary_int8 : public OutputTransformFn
   output_transform_values_t * otv;
   int16_t * biases;//[output_slice_channel_count];
   int16_t * multipliers;//[output_slice_channel_count];
+  int16_t * accu_modifier;//[output_slice_channel_count];
+  int16_t temp_mem[16];
 
   public:
+    OTBinary_int8();
     int8_t * output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group);
 };
 
@@ -35,5 +38,6 @@ class OTBinary_bin : public OutputTransformFn{
 
   int16_t * thresholds;
   public:
+    OTBinary_bin();
     int8_t * output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group);
 };

@@ -1,4 +1,5 @@
 #include "OutputTransformFn.hpp"
+#include <algorithm>
 
 extern "C" {
   #include "vpu_sim.h"
@@ -29,57 +30,71 @@ static void VDEPTH8_FIXED(xs3_vpu* vpu){
     }
 }
 
+OTBinary_int8::OTBinary_int8(){
+
+}
+
 int8_t * OTBinary_int8::output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group)
 {
 
   xs3_vpu vpu_mem;
   xs3_vpu * vpu = &vpu_mem;
 
+  int16_t* cur_post_activation_bias = biases + output_channel_group * VPU_INT16_EPV;
+  int16_t* cur_accu_modifier = accu_modifier + output_channel_group * VPU_INT16_EPV;
+  int16_t* cur_post_activation_mul = multipliers + output_channel_group * VPU_INT16_EPV;
+
   VSETC(vpu, MODE_S8);
 
-  // vpu_vector_t temp_mem;
-  // memset(&temp_mem, 0, sizeof(temp_mem));
+  memset(&temp_mem, 0, sizeof(temp_mem));
 
-  // //Reduce the accumulator to 16 bits
-  // VLSAT(vpu, sat_mem);
-  // VSTR(vpu, &temp_mem);
-  // VLASHR(vpu, &temp_mem, plan->ashr);
+  //Reduce the accumulator to 16 bits
+  VLSAT(vpu, otv->accu_shr);
+  VSTR(vpu, &temp_mem);
+  VLASHR(vpu, &temp_mem, otv->accu_shl);
 
-  // //Subtract the channel overlap
-  // VLADD(vpu, cur_quantised_accu_modifier);
+  //Subtract the channel overlap
+  VLADD(vpu, cur_accu_modifier);
 
-  // //Saturate to larq high and low
+  VLSUB(vpu, otv->clamp_near);
+  VLSUB(vpu, otv->clamp_near);
+  VLSUB(vpu, otv->clamp_far_0);
+  VLSUB(vpu, otv->clamp_far_1);
+  VLSUB(vpu, otv->clamp_far_1);
+  VLSUB(vpu, otv->clamp_far_0);
 
-  // VLSUB(vpu, clamp_near_mem);
-  // VLSUB(vpu, clamp_near_mem);
-  // VLSUB(vpu, clamp_far_0_mem);
-  // VLSUB(vpu, clamp_far_1_mem);
-  // VLSUB(vpu, clamp_far_1_mem);
-  // VLSUB(vpu, clamp_far_0_mem);
+  //Save the 16 bit accumulator, A, to scratch
+  VSTR(vpu, &temp_mem);
 
-  // //Save the 16 bit accumulator, A, to scratch
-  // VSTR(vpu, &temp_mem);
+  //Clear the ring buffer
+  VCLRDR(vpu);
 
-  // //Clear the ring buffer
-  // VCLRDR(vpu);
+  //Multiply the channel-wise bias by the bias multiplier to make it 32 bit per channel
+  VLDC(vpu, cur_post_activation_bias);
+  VLMACC(vpu, otv->bias_multipler);
 
-  // //Multiply the channel-wise bias by the bias multiplier to make it 32 bit per channel
-  // VLDC(vpu, cur_post_activation_bias);
-  // VLMACC(vpu, bias_shift);
+  //Multiply A by the post_activation_mul and accumulate it to the bias
+  VLDC(vpu, &temp_mem);
+  VLMACC(vpu, cur_post_activation_mul);
 
-  // //Multiply A by the post_activation_mul and accumulate it to the bias
-  // VLDC(vpu, &temp_mem);
-  // VLMACC(vpu, cur_post_activation_mul);
+  //Reduce the accumulator to 16 bits
+  VLSAT(vpu, otv->final_shr);
 
-  // //Reduce the accumulator to 16 bits
-  // VLSAT(vpu, final_shr);
-
-  // VDEPTH8_FIXED(vpu);
+  VDEPTH8_FIXED(vpu);
   
-  // VSTRPV(vpu, Y_p, VPU_INT16_ACC_VR_MASK);
-  // Y_p += VPU_INT16_EPV;
+  //we need to know how many we are processing
+  int output_count = std::min(output_slice_channel_count - output_channel_group * VPU_INT16_EPV, (int)VPU_INT16_EPV);
+  
+  int mask = (1<<output_count)-1;
+
+  VSTRPV(vpu, Y, mask);
+  Y += output_count;
 
   return Y;
+}
+
+OTBinary_bin::OTBinary_bin(){
+
 }
 
 int8_t * OTBinary_bin::output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group)
