@@ -12,14 +12,14 @@
 namespace {
 
   int pseudo_rand(int *seed){
-    const int a = 1013904223;
-    const int c = 1664525;
+    const int a = 1664525;
+    const int c = 1013904223;
     *seed = (int)((long long)a * *seed + c);
     return *seed;
   }
 
   //TODO break these up into different files
-  /*
+  
   class Test_Im_to_col_valid: public ::testing::Test {};
 
   //TODO binary tests for Im_to_col_valid
@@ -270,7 +270,7 @@ namespace {
     }
   }
 
-*/
+
   //////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -465,7 +465,7 @@ namespace {
 
                   int8_t * weights = (int8_t*)K; //todo we will switch to usnig the boggler
 
-                  MatMulDirectFn mmd(X_params, K_params, weights);
+                  MatMulDirectFn mmd(X_params, K_params, x_channels, weights);
 
                   std::fill_n((int8_t*)K, sizeof K, kernel_fill);
                   std::fill_n((int8_t*)T, x_height * x_width * x_channels, scratch_fill);
@@ -506,55 +506,105 @@ namespace {
   */
   TEST_F(Test_MatMulDirectFn, BasicTest) {
     // const int vpu_bytes = 32;
-    // const int vpu_ring_buffer_length = 16;
+    const int vpu_ring_buffer_length = 16;
 
-    int seed = 42;
+    int seed = 69;
     
     int k_h_stride = 1;
     int k_v_stride = 1;
 
-    for (int x_height = 1; x_height <= 10; ++x_height){
-      for (int x_width = 1; x_width <= 10; ++x_width){
-        for (int x_channels = 1; x_channels <= 8; x_channels += 1){
+    //TODO replace 16 and 32
+    for (int x_height = 1; x_height <= 6; ++x_height){
+      for (int x_width = 1; x_width <= 6; ++x_width){
+        for (int x_channels = 32; x_channels <= 32*3; x_channels += 32){
           for (int k_height = 1; k_height <= x_height; ++k_height){
             for (int k_width = 1; k_width <= x_width; ++k_width){
               for (int k_h_dilation = 1; k_h_dilation <= 4; ++k_h_dilation){
                 for (int k_v_dilation = 1; k_v_dilation <= 4; ++k_v_dilation){
-                  for (int output_channels = 1; x_channels <= 8; x_channels += 1){
+                  for (int output_channels = 16; output_channels <= 16*3; output_channels += 16){
+                    for (int input_ch_per_output = x_channels; input_ch_per_output <= x_channels; input_ch_per_output += 32){
                   
-                    int output_height = CONV2D_OUTPUT_LENGTH(x_height, k_height, k_v_dilation, k_v_stride);
-                    int output_width = CONV2D_OUTPUT_LENGTH(x_width, k_width, k_h_dilation, k_h_stride);
+                      int output_height = CONV2D_OUTPUT_LENGTH(x_height, k_height, k_v_dilation, k_v_stride);
+                      int output_width = CONV2D_OUTPUT_LENGTH(x_width, k_width, k_h_dilation, k_h_stride);
 
-                    if (output_height <= 0 || output_width <= 0)
-                      continue;
+                      if (output_height <= 0 || output_width <= 0)
+                        continue;
+                        
+                      // std::cout << "x_height: " << x_height
+                      //           << " x_width: " << x_width
+                      //           << " x_channels: " << x_channels
+                      //           << " k_height: " << k_height
+                      //           << " k_width: " << k_width
+                      //           << " k_h_dilation: " << k_h_dilation
+                      //           << " k_v_dilation: " << k_v_dilation
+                      //           << " output_channels: " << output_channels
+                      //           << " input_ch_per_output: " << input_ch_per_output 
+                      //           << std::endl;
+
+                      ImageParams X(x_height, x_width, x_channels, 8); 
+                      WindowGeometry K (k_height, k_width, k_h_stride, k_v_stride, k_h_dilation, k_v_dilation);
+
+                      std::array<int, 4> shape = {output_channels, k_height, k_width, x_channels};
+                      int8_t raw_weights[output_channels][k_height][k_width][x_channels];
+
+                      for(auto j = 0; j < sizeof raw_weights; ++j)
+                        ((int8_t*)raw_weights)[j] = (int8_t)pseudo_rand(&seed);
+
+                      int8_t X_mem[x_height][x_width][x_channels];
+
+                      for(auto j = 0; j < sizeof X_mem; ++j)
+                        ((int8_t*)X_mem)[j] = (int8_t)pseudo_rand(&seed);
+
+                      int8_t* reordered_weights;
+                      int8_t** final_load_locations;
+                      int kernel_bytes;
+
+                      int8_t pad_val = (int8_t)pseudo_rand(&seed); //this should be unused in this case
+
+                      std::tie(reordered_weights, final_load_locations, kernel_bytes) = 
+                        MatMulFn::reorder_kernel_weights( (int8_t* )raw_weights, shape, 8, pad_val) ;
+
+                      MatMulDirectFn mmd(X, K, input_ch_per_output, reordered_weights);
                       
-                    ImageParams X(x_height, x_width, x_channels, 8); 
-                    WindowGeometry K (k_height, k_width, k_h_stride, k_v_stride, k_h_dilation, k_v_dilation);
+                      int ocg_count = (output_channels + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
+                      
+                      for (auto ocg = 0; ocg < ocg_count; ++ocg){
 
-                    int output_channel_count = 1;
-                    std::array<int, 4> shape = {output_channel_count, k_height, k_width, x_channels};
-                    int8_t raw_weights[output_channel_count][k_height][k_width][x_channels];
+                        vpu_ring_buffer_t A;
+                        // printf("start %p size:%d\n",  (int8_t*)X_mem, sizeof X_mem);
+                        mmd.aggregate_fn(&A, (int8_t*)X_mem, ocg);
 
-                    for(auto j = 0; j < sizeof raw_weights; ++j)
-                      ((int8_t*)raw_weights)[j] = (int8_t)pseudo_rand(&seed);
+                        int chs_in_group = std::min(output_channels - vpu_ring_buffer_length *ocg , vpu_ring_buffer_length);
 
-                    int scratch_bytes = MatMulFn::get_scratch_size(x_channels*k_height*k_width);
+                        for (auto output_chan = 0; output_chan < chs_in_group; ++output_chan){
 
-                    int8_t* reordered_weights;
-                    int8_t** final_load_locations;
-                    int kernel_bytes;
+                          int actual_output_channel = output_chan + ocg * vpu_ring_buffer_length;
 
-                    int8_t pad_val = (int8_t)pseudo_rand(&seed);
+                          int expected_sum = 0;
 
-                    std::tie(reordered_weights, final_load_locations, kernel_bytes) = 
-                      MatMulFn::reorder_kernel_weights( (int8_t* )raw_weights, shape, 8, pad_val) ;
+                          for(auto h = 0; h < k_height; ++h){
+                            for(auto w = 0 ; w < k_width; ++w){
+                              for(auto c = 0 ; c < input_ch_per_output; ++c){
+                                // std::cout <<"h: "<<h << " w: "<<w << " c: "<<c<<std::endl;
+                                int x = (int)X_mem[k_v_dilation*h][k_h_dilation*w][c];
+                                int t = raw_weights[actual_output_channel][h][w][c];
+                                expected_sum += x*t;
+                              }
+                            }
+                          }
 
-                    MatMulDirectFn mmd(X, K, reordered_weights);
-                    
-                    //TODO
+                          int32_t v;
+                          ((int16_t *)&v)[0] = A.vD[output_chan];
+                          ((int16_t *)&v)[1] = A.vR[output_chan];
+                          // std::cout << actual_output_channel<< " " << v << " " << expected_sum << std::endl;
+                          EXPECT_EQ(v, expected_sum);
+                        }
+                      }
 
+                      delete reordered_weights;
+                      delete final_load_locations;
 
-
+                    }
                   }
                 }
               }
@@ -565,7 +615,7 @@ namespace {
     }
 
   }
-/*
+
   class Test_Kernel_Reordering: public ::testing::Test {};
 
   TEST_F(Test_Kernel_Reordering, BasicTest) {
@@ -583,21 +633,23 @@ namespace {
             memset(raw_weights, 0, sizeof raw_weights); 
 
             //should return the size and pointers to final vpu loads
-            int8_t * reordered_weights = 0;
+            
+            int8_t* reordered_weights;
+            int8_t** final_load_locations;
+            int kernel_bytes;
+
+            std::tie(reordered_weights, final_load_locations, kernel_bytes) = 
               MatMulFn::reorder_kernel_weights((int8_t *)raw_weights, shape, bits_per_element, 0);
 
-            //check that all values are 0
-            
-            for (auto i = 0; i < sizeof raw_weights; ++i){
-              EXPECT_EQ(0, reordered_weights[i]);
-            }
+            delete reordered_weights;
+            delete final_load_locations;
 
           }
         }
       }
     }
   }
-*/
+
 
 
 

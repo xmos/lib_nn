@@ -70,7 +70,7 @@ class MatMulDirectFn : public AggregateFn {
   int32_t inner_x_v_step;
 
   public:
-    MatMulDirectFn(ImageParams &X, WindowGeometry &K, int8_t * weights);
+    MatMulDirectFn(ImageParams &X, WindowGeometry &K, int input_ch_per_output, int8_t * weights);
     void aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
 
 };
