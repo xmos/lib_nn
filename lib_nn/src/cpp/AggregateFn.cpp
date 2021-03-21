@@ -3,7 +3,6 @@
 #include <cassert>
 #include <vector>
 #include <algorithm>
-#include <cmath>
 #include <tuple>
 #include <limits>
 #include "AggregateFn.hpp"
@@ -13,132 +12,7 @@ extern "C" {
 }
 
 
-static int clrsb(int x){
-  #if defined(__XS3A__)
-  for (unsigned i=0;i<32;i++){
-    int y = (x<<i)>>i;
-    if (y != x)
-      return (i-1);
-  }
-  return 32;
-  #else
-  return __builtin_clrsb(x);
-  #endif
-}
 
-// This puts upper and lower limits on the range of A
-// A must reduce the vpu accumulator to 16 bit
-// A must not remove all the imformation from the vpu accumulator
-static void get_bounds_on_A(int* min_A, int* max_A, int32_t vpu_min_accu,
-                            int32_t vpu_max_accu, int32_t vpu_clamp_min,
-                            int32_t vpu_clamp_max) {
-  int32_t max_out =
-      std::max(std::max(std::max(vpu_min_accu, vpu_max_accu), vpu_clamp_min), vpu_clamp_max);
-  int32_t min_out =
-      std::min(std::min(std::min(vpu_min_accu, vpu_max_accu), vpu_clamp_min), vpu_clamp_max);
-  int rsb = std::min(clrsb(max_out), clrsb(min_out));
-
-  *max_A = rsb - 16;
-  *min_A = *max_A - 16 + 1;
-}
-
-// This puts upper and lower limits on the range of Exp
-// Exp will be applied to each of the values
-// Exp must not saturate and of the values
-// Exp must not leave all results as zero
-static void get_bounds_on_Exp(int* min_Exp, int* max_Exp, float* values,
-                              unsigned values_length, int bound_width) {
-  assert(values_length > 0);
-  int max_exponent = std::numeric_limits<int>::min();
-  for (unsigned i = 0; i < values_length; i++) {
-    int e;
-    std::frexp(values[i], &e);
-    max_exponent = std::max(max_exponent, e);
-  }
-
-  *min_Exp = -max_exponent - 1;
-  *max_Exp = *min_Exp + bound_width;
-}
-
-
-static void solve_constraint(
-    int * B_res, 
-    int * A_res, 
-    int * M_res,
-
-    float* vpu_output_transform_multiplier,
-    float* vpu_output_transform_bias, 
-    unsigned chans_out,
-
-    int32_t vpu_min_accu,
-    int32_t vpu_max_accu, 
-    int32_t vpu_clamp_min, 
-    int32_t vpu_clamp_max
-    ){
-  int min_A, max_A;
-  int min_B, max_B;
-  int min_M, max_M;
-
-  get_bounds_on_A(&min_A, &max_A, vpu_min_accu, vpu_max_accu, vpu_clamp_min, vpu_clamp_max);
-
-  get_bounds_on_Exp(&min_M, &max_M, vpu_output_transform_multiplier, chans_out, 16);
-
-  //This is 30 as we cannot make a 32 bit bias with a shr of 14
-  get_bounds_on_Exp(&min_B, &max_B, vpu_output_transform_bias, chans_out, 16 + 14);
-
-  // we also know that A + M = B;
-  // Subtract one to ensure the addition is fine (one from A*M, B is already 30 bit at most)
-  max_B = std::min(max_A + max_M - 1, max_B);
-    
-  // printf("min_B:%d max_B:%d\n", min_B, max_B);
-
-  for (int A = max_A; A >= min_A; A--) {
-    for (int M = max_M; M >= min_M; M--) {
-      // We can squeeze a little more out of the arith by modelling
-      // max_Product = max_A * max_M
-      // this way we wouldnt need to subtract 2 from max_B
-
-      int B = A + M; 
-
-      if ((B >= min_B) && (B <= max_B)) {
-        *B_res = B;
-        *A_res = A;
-        *M_res = M;
-        return;
-      }
-    }
-  }
-  assert(0);
-}
-
-struct QuantisationParams{
-  int accu_shr;
-  int bias_shr;
-  int multiplier_shr;
-};
-
-/*
-  This is intended to handle 
-*/
-void quantise_activation(
-    std::vector<float> & output_transform_multiplier,
-    std::vector<float> & output_transform_bias, 
-    int accu_min,
-    int accu_max,
-    std::vector<int> & chan_overlaps)
-
-{
-
-
-  // QuantisationParams q = solve_constraint(
-    
-  //   vpu_output_transform_multiplier,
-  //   vpu_output_transform_bias, 
-
-  //   vpu_min_accu,
-  //   vpu_max_accu);
-
-}
 
 int8_t * deref2d(int8_t * p, int p_w, int h, int w){
   return p + h*p_w + w;

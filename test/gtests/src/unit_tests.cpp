@@ -6,6 +6,7 @@
 
 #include "MemCpyFn.hpp"
 #include "AggregateFn.hpp"
+#include "OutputTransformFn.hpp"
 #include <tuple>
 #include <list>
 
@@ -650,13 +651,61 @@ namespace {
     }
   }
 
+ class Test_OT_int8: public ::testing::Test {};
+
+  TEST_F(Test_OT_int8, BasicTest) {
+    const int vpu_ring_buffer_length = VPU_INT16_EPV;
+
+
+    for(int output_ch_count = 1; output_ch_count < 32; ++output_ch_count){
+
+
+
+      std::vector<float> f_biases; //[output_ch_count];
+      std::vector<float> f_multipliers; //[output_ch_count];
+      int32_t accu_max = INT16_MAX;
+      int32_t accu_min = INT16_MIN;
+
+      int t = ((output_ch_count + vpu_ring_buffer_length-1)/vpu_ring_buffer_length)*vpu_ring_buffer_length;
+
+      int16_t accu_modifier[t]; //this comes from the aggregate fn
+
+      QuantisationParams qp = OTBinary_int8::quantise_activation(f_multipliers, f_biases, accu_min, accu_max);
+
+      OTBinary_int8 ot((int32_t)output_ch_count, &qp.otv, qp.biases.data(), 
+        qp.multipliers.data(), (int16_t*)accu_modifier);
+
+      int8_t Y[output_ch_count];
+
+      int ocg_count = (output_ch_count + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
+
+// int8_t * OTBinary_int8::output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group)
+
+      int8_t *y = (int8_t*)Y;
+      for (int ocg=0; ocg < ocg_count; ++ocg){
+
+        int chs_in_group = std::min(output_ch_count - output_ch_count * ocg , vpu_ring_buffer_length);
+
+        vpu_ring_buffer_t A;
+
+        //fill A with random value between accu_max and accu_min
+
+        //then add accu_modifier to each channel
+
+        y = ot.output_transform_fn(y, &A, ocg);
+
+
+      }
+
+    }
 
 
 
 
+  }
 
 
-
+  //end
 }
 
 int main(int argc, char **argv) {
