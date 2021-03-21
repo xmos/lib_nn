@@ -21,7 +21,7 @@ class AggregateFn {
 
 struct Conv2dReorderedWeights {
   std::vector<int8_t> weights;
-  std::vector<int8_t * > final_vpu_load_addresses;
+  std::vector<int> final_vpu_load_addresses;
   Conv2dReorderedWeights(int channels):
     weights(), 
     final_vpu_load_addresses(channels, 0)
@@ -43,7 +43,9 @@ class MatMulFn : public AggregateFn {
     void aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
 
     //return a Conv2dReorderedWeights
-    static std::tuple<int8_t *, int8_t **, int> reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4> &shape, int bits_per_element, int8_t pad_value);
+    // static std::tuple<int8_t *, int8_t **, int> reorder_kernel_weights(
+    static Conv2dReorderedWeights reorder_kernel_weights(
+      int8_t *raw_weights, std::array<int, 4> &shape, int bits_per_element, int8_t pad_value);
     static int get_kernel_size(int input_bytes, int output_channel_count);
     static int get_scratch_size(int input_bytes) ;
 };

@@ -18,7 +18,8 @@ int8_t * deref2d(int8_t * p, int p_w, int h, int w){
   return p + h*p_w + w;
 }
 
-std::tuple<int8_t *, int8_t **, int> MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4> &shape, 
+// std::tuple<int8_t *, int8_t **, int> MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4> &shape, 
+Conv2dReorderedWeights MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4> &shape, 
   int bits_per_element, int8_t pad_value) 
 {
 
@@ -66,13 +67,13 @@ std::tuple<int8_t *, int8_t **, int> MatMulFn::reorder_kernel_weights(int8_t *ra
         int8_t * dst = boggled_weights + dst_offset;
 
         memcpy(dst, src, bytes_in_this_vpu_copy);
-        dst_offset += bytes_in_this_vpu_copy;
         reordered_weights.weights.insert(reordered_weights.weights.end(), src, src + bytes_in_this_vpu_copy);
         
         if(icg == input_channel_groups-1){
           final_load_locations[ocg_offset + reversed_out_ch] = dst;
-          reordered_weights.final_vpu_load_addresses[ocg_offset + reversed_out_ch] = dst;
+          reordered_weights.final_vpu_load_addresses[ocg_offset + reversed_out_ch] = dst_offset;
         }
+        dst_offset += bytes_in_this_vpu_copy;
         
       }
     }
@@ -83,7 +84,8 @@ std::tuple<int8_t *, int8_t **, int> MatMulFn::reorder_kernel_weights(int8_t *ra
   // reordered_weights.weights.insert(reordered_weights.weights.end(), src, src + bytes_in_this_vpu_copy);
   reordered_weights.weights.resize(kernel_size, 0);
   
-  return std::make_tuple(boggled_weights, final_load_locations, kernel_size);
+  // return std::make_tuple(boggled_weights, final_load_locations, kernel_size);
+  return reordered_weights;
 }
 
 int MatMulFn :: get_scratch_size(int input_bytes) {

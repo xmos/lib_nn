@@ -364,13 +364,14 @@ namespace {
 
         int scratch_bytes = MatMulFn::get_scratch_size(input_bytes);
 
-        int8_t* reordered_weights;
-        int8_t** final_load_locations;
-        int kernel_bytes;
+        // int8_t* reordered_weights;
+        // int8_t** final_load_locations;
+        // int kernel_bytes;
 
         int8_t pad_val = (int8_t)pseudo_rand(&seed);
 
-        std::tie(reordered_weights, final_load_locations, kernel_bytes) = 
+        // std::tie(reordered_weights, final_load_locations, kernel_bytes) = 
+        Conv2dReorderedWeights rw = 
           MatMulFn::reorder_kernel_weights( (int8_t* )raw_weights, shape, 8, pad_val) ;
         
         int8_t T[scratch_bytes];
@@ -382,7 +383,8 @@ namespace {
 
         //TODO make this into an int8 specific function
         for (int i=0;i<output_channel_count;i++){
-          int8_t * final_load_location = final_load_locations[i];
+          int idx = rw.final_vpu_load_addresses[i];
+          // int8_t * final_load_location = final_load_locations[i];
           
           int s = 0;
           int channel_overlap_start = input_bytes%vpu_bytes;
@@ -390,14 +392,15 @@ namespace {
           if (channel_overlap_start){
 
             for(int j=channel_overlap_start;j<vpu_bytes;j++){
-              s += (int)(final_load_location[j]) * T[scratch_bytes - vpu_bytes + j]; 
+              // s += (int)(final_load_location[j]) * T[scratch_bytes - vpu_bytes + j]; 
+              s += (int)(rw.weights[idx+j]) * T[scratch_bytes - vpu_bytes + j]; 
             }
             
           }
           accu_modifier[i] = s;
         }
 
-        MatMulFn mm(output_channel_count, input_bytes, reordered_weights);
+        MatMulFn mm(output_channel_count, input_bytes, rw.weights.data());
         int ocg_count = (output_channel_count + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
         
         for (auto ocg = 0; ocg < ocg_count; ++ocg){
@@ -423,8 +426,8 @@ namespace {
           }
         }
 
-        delete reordered_weights;
-        delete final_load_locations;
+        // delete reordered_weights;
+        // delete final_load_locations;
       }
 
     }
@@ -556,16 +559,13 @@ namespace {
                       for(auto j = 0; j < sizeof X_mem; ++j)
                         ((int8_t*)X_mem)[j] = (int8_t)pseudo_rand(&seed);
 
-                      int8_t* reordered_weights;
-                      int8_t** final_load_locations;
-                      int kernel_bytes;
 
                       int8_t pad_val = (int8_t)pseudo_rand(&seed); //this should be unused in this case
 
-                      std::tie(reordered_weights, final_load_locations, kernel_bytes) = 
+                      Conv2dReorderedWeights rw = 
                         MatMulFn::reorder_kernel_weights( (int8_t* )raw_weights, shape, 8, pad_val) ;
 
-                      MatMulDirectFn mmd(X, K, input_ch_per_output, reordered_weights);
+                      MatMulDirectFn mmd(X, K, input_ch_per_output, rw.weights.data());
                       
                       int ocg_count = (output_channels + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
                       
@@ -602,9 +602,6 @@ namespace {
                         }
                       }
 
-                      delete reordered_weights;
-                      delete final_load_locations;
-
                     }
                   }
                 }
@@ -639,11 +636,8 @@ namespace {
             int8_t** final_load_locations;
             int kernel_bytes;
 
-            std::tie(reordered_weights, final_load_locations, kernel_bytes) = 
+            Conv2dReorderedWeights rw = 
               MatMulFn::reorder_kernel_weights((int8_t *)raw_weights, shape, bits_per_element, 0);
-
-            delete reordered_weights;
-            delete final_load_locations;
 
           }
         }
