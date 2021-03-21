@@ -127,7 +127,7 @@ void pad(std::vector<T> &vec, int pad_boundary, T pad_val){
 /*
   This is intended to handle 
 */
-QuantisationParams& OTBinary_int8::quantise_activation(
+QuantisationParams OTBinary_int8::quantise_activation(
     std::vector<float> & output_transform_multiplier,
     std::vector<float> & output_transform_bias, 
     int32_t accu_min,

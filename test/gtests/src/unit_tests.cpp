@@ -654,12 +654,10 @@ namespace {
  class Test_OT_int8: public ::testing::Test {};
 
   TEST_F(Test_OT_int8, BasicTest) {
+    
     const int vpu_ring_buffer_length = VPU_INT16_EPV;
 
-
     for(int output_ch_count = 1; output_ch_count < 32; ++output_ch_count){
-
-
 
       std::vector<float> f_biases; //[output_ch_count];
       std::vector<float> f_multipliers; //[output_ch_count];
@@ -679,9 +677,8 @@ namespace {
 
       int ocg_count = (output_ch_count + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
 
-// int8_t * OTBinary_int8::output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group)
-
       int8_t *y = (int8_t*)Y;
+
       for (int ocg=0; ocg < ocg_count; ++ocg){
 
         int chs_in_group = std::min(output_ch_count - output_ch_count * ocg , vpu_ring_buffer_length);

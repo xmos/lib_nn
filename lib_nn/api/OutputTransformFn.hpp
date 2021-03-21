@@ -39,7 +39,7 @@ class OTBinary_int8 : public OutputTransformFn
     OTBinary_int8(int32_t output_slice_channel_count, output_transform_values_t * otv, 
       int16_t * biases, int16_t * multipliers, int16_t * accu_modifier);
 
-    static QuantisationParams& quantise_activation( std::vector<float> & output_transform_multiplier, 
+    static QuantisationParams quantise_activation( std::vector<float> & output_transform_multiplier, 
       std::vector<float> & output_transform_bias, int32_t accu_min, int32_t accu_max);
 
     int8_t * output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group);

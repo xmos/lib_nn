@@ -6,14 +6,6 @@
 #include "vpu.hpp"
 #include "Image.hpp"
 
-class KernelWeights {
-
-  public:
-  KernelWeights();
-
-};
-
-
 
 // template <class T>
 class AggregateFn {
@@ -30,7 +22,10 @@ class AggregateFn {
 struct Conv2dReorderedWeights {
   std::vector<int8_t> weights;
   std::vector<int8_t * > final_vpu_load_addresses;
-  Conv2dReorderedWeights(int channels):weights(), final_vpu_load_addresses(channels, 0){
+  Conv2dReorderedWeights(int channels):
+    weights(), 
+    final_vpu_load_addresses(channels, 0)
+  {
 
   }
 };

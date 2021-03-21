@@ -81,7 +81,8 @@ std::tuple<int8_t *, int8_t **, int> MatMulFn::reorder_kernel_weights(int8_t *ra
 
   memset(boggled_weights + dst_offset, pad_value, kernel_size - dst_offset);
   // reordered_weights.weights.insert(reordered_weights.weights.end(), src, src + bytes_in_this_vpu_copy);
-
+  reordered_weights.weights.resize(kernel_size, 0);
+  
   return std::make_tuple(boggled_weights, final_load_locations, kernel_size);
 }
 
