@@ -630,12 +630,6 @@ namespace {
 
             memset(raw_weights, 0, sizeof raw_weights); 
 
-            //should return the size and pointers to final vpu loads
-            
-            int8_t* reordered_weights;
-            int8_t** final_load_locations;
-            int kernel_bytes;
-
             Conv2dReorderedWeights rw = 
               MatMulFn::reorder_kernel_weights((int8_t *)raw_weights, shape, bits_per_element, 0);
 
@@ -651,10 +645,18 @@ namespace {
     
     const int vpu_ring_buffer_length = VPU_INT16_EPV;
 
+    int seed = 69;
+
     for(int output_ch_count = 1; output_ch_count < 32; ++output_ch_count){
 
-      std::vector<float> f_biases; //[output_ch_count];
-      std::vector<float> f_multipliers; //[output_ch_count];
+      std::vector<float> f_biases(output_ch_count, 0);
+      std::vector<float> f_multipliers(output_ch_count, 0);
+
+      for(int i=0;i<output_ch_count;++i){
+        f_biases[i] = (float)pseudo_rand(&seed);
+        f_multipliers[i] =(float)pseudo_rand(&seed);
+      }
+
       int32_t accu_max = INT16_MAX;
       int32_t accu_min = INT16_MIN;
 
@@ -681,13 +683,25 @@ namespace {
 
         //fill A with random value between accu_max and accu_min
 
+
+        for (int output_chan = 0; output_chan < chs_in_group; ++output_chan){
+          int32_t v = pseudo_rand(&seed);
+          v = std::min(std::max(v, accu_min), accu_max);
+          A.vR[output_chan] = ((int16_t *)&v)[1];
+          A.vD[output_chan] = ((int16_t *)&v)[0];
+        }
+
         //then add accu_modifier to each channel
 
         y = ot.output_transform_fn(y, &A, ocg);
 
+        for (auto output_chan = 0; output_chan < chs_in_group; ++output_chan){
 
+          int actual_output_channel = output_chan + ocg * vpu_ring_buffer_length;
+
+
+        }
       }
-
     }
 
 

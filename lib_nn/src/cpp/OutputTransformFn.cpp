@@ -4,6 +4,7 @@
 #include <tuple>
 #include <cassert>
 
+#include <iostream>
 extern "C" {
   #include "vpu_sim.h"
 }
@@ -65,8 +66,9 @@ static void get_bounds_on_A(int* min_A, int* max_A, int32_t vpu_min_accu,
 // Exp must not saturate and of the values
 // Exp must not leave all results as zero
 static void get_bounds_on_Exp(int* min_Exp, int* max_Exp, std::vector<float>& values,
-                              int bound_width) {
-                                
+                              int bound_width) 
+{
+  assert(values.size() > 0);
   int max_exponent = std::numeric_limits<int>::min();
   for (float v : values) {
     int e;
@@ -79,7 +81,7 @@ static void get_bounds_on_Exp(int* min_Exp, int* max_Exp, std::vector<float>& va
 }
 
 
-std::tuple<int, int, int> solve_constraint(
+std::tuple<int, int, int> solve_for_constraint(
     std::vector<float> & vpu_output_transform_multiplier,
     std::vector<float> & vpu_output_transform_bias, 
 
@@ -90,12 +92,20 @@ std::tuple<int, int, int> solve_constraint(
   int min_B, max_B;
   int min_M, max_M;
 
+  std::cout << "vpu_min_accu: " << vpu_min_accu << " vpu_max_accu: " << vpu_max_accu << std::endl; 
+
   get_bounds_on_A(&min_A, &max_A, vpu_min_accu, vpu_max_accu);
+
+  std::cout << "min_A: " << min_A << " max_A: " << max_A << std::endl; 
 
   get_bounds_on_Exp(&min_M, &max_M, vpu_output_transform_multiplier, 16);
 
+  std::cout << "min_M: " << min_M << " max_M: " << max_M << std::endl; 
+
   //This is 30 as we cannot make a 32 bit bias with a shr of 14
   get_bounds_on_Exp(&min_B, &max_B, vpu_output_transform_bias, 16 + 14);
+
+  std::cout << "min_B: " << min_B << " max_B: " << max_B << std::endl; 
 
   // we also know that A + M = B;
   // Subtract one to ensure the addition is fine (one from A*M, B is already 30 bit at most)
@@ -112,6 +122,7 @@ std::tuple<int, int, int> solve_constraint(
       int B = A + M; 
 
       if ((B >= min_B) && (B <= max_B)) {
+        std::cout << "B: "<< B << " A: "<< A << " M: "<< M << std::endl;
         return std::make_tuple(B, A, M);
       }
     }
@@ -136,12 +147,11 @@ QuantisationParams OTBinary_int8::quantise_activation(
 
   assert (output_transform_multiplier.size() == output_transform_bias.size());
 
-  QuantisationParams q ;
 
   // TODO convert to the vpu space
 
   int B, A, M;
-  std::tie(B, A, M) = solve_constraint(output_transform_multiplier, output_transform_bias, accu_min, accu_max);   
+  std::tie(B, A, M) = solve_for_constraint(output_transform_multiplier, output_transform_bias, accu_min, accu_max);   
 
   int min_16_bit_B, max_16_bit_B;
 
@@ -150,11 +160,15 @@ QuantisationParams OTBinary_int8::quantise_activation(
   int16_t bias_multipler = 1 << std::max(0, B - max_16_bit_B);
   int adjusted_B = std::min(B, max_16_bit_B);
 
+  QuantisationParams q ;
+
   std::fill_n(q.otv.bias_multipler, sizeof q.otv.bias_multipler / sizeof bias_multipler, bias_multipler);
 
   // The -8 is here to leave the result in a 16 bit form so that the quantisation to 8 bit 
   // can deal with the asymertic rounding.
   int16_t final_shr = B - 8; 
+
+  std::cout << "final_shr: "<< final_shr<<std::endl;
 
   assert(final_shr >= 0);
 
@@ -256,7 +270,7 @@ int8_t * OTBinary_int8::output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, i
   int16_t* cur_accu_modifier = accu_modifier + output_channel_group * VPU_INT16_EPV;
   int16_t* cur_post_activation_mul = multipliers + output_channel_group * VPU_INT16_EPV;
 
-  VSETC(vpu, MODE_S8);
+  VSETC(vpu, MODE_S16);
 
   vpu_vector_t temp_mem;
   memset(&temp_mem, 0, sizeof(temp_mem));
