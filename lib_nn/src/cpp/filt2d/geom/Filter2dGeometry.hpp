@@ -14,16 +14,6 @@ namespace nn {
 namespace filt2d {
 namespace geom {
 
-template <typename T>
-static inline T max(T left, T right){
-  return (left >= right)? left : right;
-}
-
-template <typename T>
-static inline T min(T left, T right){
-  return (left <= right)? left : right;
-}
-
 
 class Filter2dGeometry {
 

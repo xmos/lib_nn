@@ -1,9 +1,13 @@
 
 #include "Rand.hpp"
-#include "../src/cpp/filt2d/geom/Filter2dGeometry.hpp"
+
 #include <ctime>
 #include <iostream>
 #include <cstring>
+#include <tuple>
+#include <cmath>
+
+#include "../src/cpp/filt2d/geom/Filter2dGeometry.hpp"
 
 
 using namespace nn::filt2d;
@@ -12,8 +16,8 @@ using namespace nn::test;
 
 int Rand::pseudo_rand()
 {
-    const int a = 1013904223;
-    const int c = 1664525;
+    const int a = 1664525;
+    const int c = 1013904223;
     this->state = (int)((long long)a * this->state + c);
     return this->state;
 }
@@ -39,4 +43,50 @@ Rand::Rand()
 {
   time_t t = time(nullptr);
   this->state = static_cast<int>(t);
+}
+
+template<>
+int8_t Rand::get_rand<int8_t>(Tag<int8_t>)
+{
+  return int8_t(pseudo_rand());
+}
+
+/**
+ * Random float with uniform distribution over [-1.0f, 1.0f)
+ */
+template<>
+float Rand::get_rand<float>(Tag<float>)
+{
+  auto t = this->rand<int32_t>();
+  return t * ldexpf(1, -31);
+}
+
+/**
+ * Random double with uniform distribution over [-1.0f, 1.0f)
+ */
+template<>
+double Rand::get_rand<double>(Tag<double>)
+{
+  auto t = this->rand<int64_t>();
+  return t * ldexp(1, -63);
+}
+
+/**
+ * Random float with uniform distribution over [min, max)
+ */
+template<>
+float Rand::get_rand<float>(Tag<float>, float min, float max)
+{
+  auto t = this->rand<uint32_t>();
+  return (t * ldexpf(1, -32)) * (max-min) + min;
+}
+
+/**
+ * Random double with uniform distribution over [min, max)
+ */
+template<>
+double Rand::get_rand<double>(Tag<double>, double min, double max)
+{
+  auto t = this->rand<uint64_t>();
+  return (t * ldexpf(1, -64)) * (max-min) + min;
 }
