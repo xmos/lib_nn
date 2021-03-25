@@ -3,7 +3,7 @@
 #include <cassert>
 #include <vector>
 #include <algorithm>
-#include <cmath>
+#include <tuple>
 #include <limits>
 #include "AggregateFn.hpp"
 
@@ -11,138 +11,15 @@ extern "C" {
   #include "vpu_sim.h"
 }
 
-static int clrsb(int x){
-  #if defined(__XS3A__)
-  for (unsigned i=0;i<32;i++){
-    int y = (x<<i)>>i;
-    if (y != x)
-      return (i-1);
-  }
-  return 32;
-  #else
-  return __builtin_clrsb(x);
-  #endif
-}
-
-// This puts upper and lower limits on the range of A
-// A must reduce the vpu accumulator to 16 bit
-// A must not remove all the imformation from the vpu accumulator
-static void get_bounds_on_A(int* min_A, int* max_A, int32_t vpu_min_accu,
-                            int32_t vpu_max_accu, int32_t vpu_clamp_min,
-                            int32_t vpu_clamp_max) {
-  int32_t max_out =
-      std::max(std::max(std::max(vpu_min_accu, vpu_max_accu), vpu_clamp_min), vpu_clamp_max);
-  int32_t min_out =
-      std::min(std::min(std::min(vpu_min_accu, vpu_max_accu), vpu_clamp_min), vpu_clamp_max);
-  int rsb = std::min(clrsb(max_out), clrsb(min_out));
-
-  *max_A = rsb - 16;
-  *min_A = *max_A - 16 + 1;
-}
-
-// This puts upper and lower limits on the range of Exp
-// Exp will be applied to each of the values
-// Exp must not saturate and of the values
-// Exp must not leave all results as zero
-static void get_bounds_on_Exp(int* min_Exp, int* max_Exp, float* values,
-                              unsigned values_length, int bound_width) {
-  assert(values_length > 0);
-  int max_exponent = std::numeric_limits<int>::min();
-  for (unsigned i = 0; i < values_length; i++) {
-    int e;
-    std::frexp(values[i], &e);
-    max_exponent = std::max(max_exponent, e);
-  }
-
-  *min_Exp = -max_exponent - 1;
-  *max_Exp = *min_Exp + bound_width;
-}
 
 
-static void solve_constraint(
-    int * B_res, 
-    int * A_res, 
-    int * M_res,
-
-    float* vpu_output_transform_multiplier,
-    float* vpu_output_transform_bias, 
-    unsigned chans_out,
-
-    int32_t vpu_min_accu,
-    int32_t vpu_max_accu, 
-    int32_t vpu_clamp_min, 
-    int32_t vpu_clamp_max
-    ){
-  int min_A, max_A;
-  int min_B, max_B;
-  int min_M, max_M;
-
-  get_bounds_on_A(&min_A, &max_A, vpu_min_accu, vpu_max_accu, vpu_clamp_min, vpu_clamp_max);
-
-  get_bounds_on_Exp(&min_M, &max_M, vpu_output_transform_multiplier, chans_out, 16);
-
-  //This is 30 as we cannot make a 32 bit bias with a shr of 14
-  get_bounds_on_Exp(&min_B, &max_B, vpu_output_transform_bias, chans_out, 16 + 14);
-
-  // we also know that A + M = B;
-  // Subtract one to ensure the addition is fine (one from A*M, B is already 30 bit at most)
-  max_B = std::min(max_A + max_M - 1, max_B);
-    
-  // printf("min_B:%d max_B:%d\n", min_B, max_B);
-
-  for (int A = max_A; A >= min_A; A--) {
-    for (int M = max_M; M >= min_M; M--) {
-      // We can squeeze a little more out of the arith by modelling
-      // max_Product = max_A * max_M
-      // this way we wouldnt need to subtract 2 from max_B
-
-      int B = A + M; 
-
-      if ((B >= min_B) && (B <= max_B)) {
-        *B_res = B;
-        *A_res = A;
-        *M_res = M;
-        return;
-      }
-    }
-  }
-  assert(0);
-}
-
-struct QuantisationParams{
-  int accu_shr;
-  int bias_shr;
-  int multiplier_shr;
-};
-
-/*
-  This is intended to handle 
-*/
-void quantise_activation(
-    std::vector<float> & output_transform_multiplier,
-    std::vector<float> & output_transform_bias, 
-    int accu_min,
-    int accu_max,
-    std::vector<int> & chan_overlaps)
-
-{
-
-
-  // QuantisationParams q = solve_constraint(
-    
-  //   vpu_output_transform_multiplier,
-  //   vpu_output_transform_bias, 
-
-  //   vpu_min_accu,
-  //   vpu_max_accu);
-
-}
 
 int8_t * deref2d(int8_t * p, int p_w, int h, int w){
   return p + h*p_w + w;
 }
 
-int8_t* MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4> &shape, 
+// std::tuple<int8_t *, int8_t **, int> MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4> &shape, 
+Conv2dReorderedWeights MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4> &shape, 
   int bits_per_element, int8_t pad_value) 
 {
 
@@ -150,6 +27,8 @@ int8_t* MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4>
   const int vpu_bytes_per_word = 32;
 
   int output_channel_count = shape[0];
+
+  Conv2dReorderedWeights reordered_weights(output_channel_count);
 
   //The number of bytes in the kernel for each output channel
   int bytes_per_output_channel = (shape[1]*shape[2]*shape[3]*bits_per_element)/8;
@@ -161,7 +40,7 @@ int8_t* MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4>
   //For each output channel keep a record of the final vpu load
   //so the overlap betweek the desired channel and the next can
   //be accounted for.
-  int8_t * final_load_locations[output_channel_count];
+  int8_t ** final_load_locations = new int8_t*[output_channel_count];
 
   //The numberof output channel groups needed to compute the whole conv.
   //This is rounded up.
@@ -179,17 +58,22 @@ int8_t* MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4>
 
       int ocg_offset = ocg*vpu_ring_buffer_length;
 
-      for (int out_ch = ocg_offset; out_ch < ocg_offset + output_channels_per_ocg; ++out_ch){
+      for (int out_ch = 0; out_ch < output_channels_per_ocg; ++out_ch){
         int bytes_in_this_vpu_copy = std::min(bytes_per_output_channel - icg*vpu_bytes_per_word, vpu_bytes_per_word);
 
-        int8_t * src = deref2d(raw_weights, bytes_per_output_channel, out_ch, vpu_bytes_per_word*icg);
+        //reverse order of output channels
+        int reversed_out_ch = output_channels_per_ocg - 1 - out_ch;
+        int8_t * src = deref2d(raw_weights, bytes_per_output_channel, ocg_offset + reversed_out_ch, vpu_bytes_per_word*icg);
         int8_t * dst = boggled_weights + dst_offset;
 
         memcpy(dst, src, bytes_in_this_vpu_copy);
-        dst_offset += bytes_in_this_vpu_copy;
+        reordered_weights.weights.insert(reordered_weights.weights.end(), src, src + bytes_in_this_vpu_copy);
         
-        if(icg == input_channel_groups-1)
-          final_load_locations[out_ch] = dst;
+        if(icg == input_channel_groups-1){
+          final_load_locations[ocg_offset + reversed_out_ch] = dst;
+          reordered_weights.final_vpu_load_addresses[ocg_offset + reversed_out_ch] = dst_offset;
+        }
+        dst_offset += bytes_in_this_vpu_copy;
         
       }
     }
@@ -197,10 +81,11 @@ int8_t* MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4>
   assert(dst_offset <= kernel_size);
 
   memset(boggled_weights + dst_offset, pad_value, kernel_size - dst_offset);
-
-  //todo return channel final over lap pointers
-
-  return boggled_weights;
+  // reordered_weights.weights.insert(reordered_weights.weights.end(), src, src + bytes_in_this_vpu_copy);
+  reordered_weights.weights.resize(kernel_size, 0);
+  
+  // return std::make_tuple(boggled_weights, final_load_locations, kernel_size);
+  return reordered_weights;
 }
 
 int MatMulFn :: get_scratch_size(int input_bytes) {
@@ -252,11 +137,7 @@ void MatMulFn::mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_c
   const int vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
   const int vpu_epv = VPU_INT16_EPV;
   
-  int32_t cur_output_channels_in_scope; //TODO  -make this a one liner
-  if ((output_channel_group+1) * vpu_epv < output_slice_channel_count)
-    cur_output_channels_in_scope = vpu_epv;
-  else
-    cur_output_channels_in_scope = output_slice_channel_count - output_channel_group * vpu_epv;
+  int32_t cur_output_channels_in_scope = std::min(output_slice_channel_count - output_channel_group * vpu_epv, vpu_epv);
 
   int8_t * K_p = weights + bytes_per_kernel_channel * vpu_epv * output_channel_group;//changes
 
@@ -279,6 +160,9 @@ void MatMulFn::mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_c
 
   int input_channel_group_count = (bytes_per_kernel_channel - k_p_adjust) / vpu_bytes; 
 
+  // std::cout << "k_p_adjust: " << k_p_adjust << std::endl;
+  // std::cout << "input_channel_group_count: " << input_channel_group_count << std::endl;
+
   int8_t * D_p = T;
 
   for (auto p = 0; p < input_channel_group_count; ++p){
@@ -296,7 +180,7 @@ void MatMulFn::mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_c
 
   VLDC(vpu, D_p);
 
-  //Note: This forces kernels to be padded to word aligned boundaries 
+  //Note: This forces kernels to be padded to word aligned boundaries TODO put an assert on this
   for(auto l=0; l< tail_loops; l++){
     VLMACCR(vpu, K_p);
     K_p += k_p_adjust;
@@ -306,26 +190,32 @@ void MatMulFn::mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_c
   VSTD(vpu, &A->vR);
 }
 
-MatMulDirectFn::MatMulDirectFn(ImageParams &X, WindowGeometry &K, int8_t * weights): 
+MatMulDirectFn::MatMulDirectFn(ImageParams &X, WindowGeometry &K, int input_ch_per_output, int8_t * weights): 
   weights(weights)
 {
+
+  int bytes_per_copy_per_channel = (input_ch_per_output *  X.bits_per_element) / CHAR_BIT; 
 
   k_height_loop_counter = K.shape.height - 1;
   k_width_loop_counter = K.shape.width - 1;
 
   input_channel_loop_counter =
-      (X.channels / XS3_VPU_VREG_WIDTH_BYTES) - 1;
+      (bytes_per_copy_per_channel / XS3_VPU_VREG_WIDTH_BYTES) - 1;
   
   bytes_per_kernel_channel = K.shape.height * K.shape.width * X.channels;
 
-  int bytes_per_input_channel = X.channels;
+  int bytes_per_pixel =  (X.channels *  X.bits_per_element) / CHAR_BIT; 
 
-  inner_x_h_step = bytes_per_input_channel * (K.dilation.horizontal - 1);
+  inner_x_h_step = bytes_per_pixel * K.dilation.horizontal - bytes_per_copy_per_channel;
 
-  inner_x_v_step =
-      (bytes_per_input_channel * ((X.width*K.dilation.vertical - K.shape.width))) 
-        - inner_x_h_step;
+  int k_actual_width = (K.shape.width - 1) * K.dilation.horizontal + 1;
 
+  // inner_x_v_step =
+  //     (bytes_per_pixel * ((X.width*K.dilation.vertical - k_actual_width))) 
+  //       - inner_x_h_step;
+
+  inner_x_v_step = bytes_per_pixel* X.width*K.dilation.vertical -  K.shape.width*bytes_per_pixel * K.dilation.horizontal;
+  // vertical_mem_stride = bytes_per_h_line * K.dilation.vertical - input_width * bytes_per_pixel * K.dilation.horizontal;
 }
 
 void MatMulDirectFn::mat_mul_direct_impl(vpu_ring_buffer_t * A , int8_t * X, int32_t output_channel_group)
