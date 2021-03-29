@@ -20,6 +20,8 @@ class ImageGeometry {
     unsigned width;
     unsigned depth;
 
+    constexpr ImageGeometry() : height(0), width(0), depth(0) {}
+
     constexpr ImageGeometry(
       unsigned const rows,
       unsigned const cols,

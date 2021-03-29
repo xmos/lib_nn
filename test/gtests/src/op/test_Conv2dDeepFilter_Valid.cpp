@@ -26,6 +26,9 @@ using namespace nn::filt2d::op;
 class Conv2dDeepFilter_ValidTest : public ::testing::TestWithParam<geom::Filter2dGeometry> {
   
   private: 
+
+    // Private because they should be accessed through GetNNOutput() and GetRefOutput(),
+    // which actually populate them by running the operator.
     std::vector<int8_t> nn_output;
     std::vector<int8_t> ref_output;
 
@@ -39,6 +42,9 @@ class Conv2dDeepFilter_ValidTest : public ::testing::TestWithParam<geom::Filter2
     int8_t input_zero_point;
     int8_t output_zero_point;
 
+    /**
+     * Initialize our inputs and parameters with vectors of the appropriate size.
+     */
     virtual void SetUp() override {
       auto geometry = this->GetParam();
 
@@ -60,6 +66,10 @@ class Conv2dDeepFilter_ValidTest : public ::testing::TestWithParam<geom::Filter2
       output_zero_point = 0;
     }
 
+    /**
+     * Get the lib_nn output. 
+     * If it hasn't been computed yet, do so here. Otherwise, just return the previous output.
+     */
     virtual std::vector<int8_t>& GetNNOutput() {
       auto geometry = this->GetParam();
       if(this->nn_output.size() == 0)
@@ -73,6 +83,10 @@ class Conv2dDeepFilter_ValidTest : public ::testing::TestWithParam<geom::Filter2
       return this->nn_output;
     }
 
+    /**
+     * Get the ref output. 
+     * If it hasn't been computed yet, do so here. Otherwise, just return the previous output.
+     */
     virtual std::vector<int8_t>& GetRefOutput() {
       auto geometry = this->GetParam();
       if(this->ref_output.size() == 0)
@@ -86,6 +100,10 @@ class Conv2dDeepFilter_ValidTest : public ::testing::TestWithParam<geom::Filter2
       return this->ref_output;
     }
 
+    /**
+     * Execute the lib_nn and reference implementations for the operator (if they haven't already been executed)
+     * and compare their results.
+     */
     virtual void ExecuteAndCompare() {
       auto geometry = this->GetParam();
       auto nn_out = this->GetNNOutput();
