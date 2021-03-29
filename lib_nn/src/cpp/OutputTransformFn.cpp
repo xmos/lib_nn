@@ -482,7 +482,7 @@ int8_t * OTBinary_int8::output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, i
   return Y;
 }
 
-OTBinary_bin::OTBinary_bin(){
+OTBinary_bin::OTBinary_bin(int16_t * thresholds): thresholds(thresholds){
 
 }
 
@@ -497,7 +497,7 @@ int8_t * OTBinary_bin::output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, in
   xs3_vpu vpu_mem;
   xs3_vpu * vpu = &vpu_mem;
 
-  VSETC(vpu, MODE_S16); //check this
+  VSETC(vpu, MODE_S16); //check this - i dont think it's needed
   
   VLDR(vpu, &A->vD);
   VLDD(vpu, &A->vR);

@@ -52,6 +52,7 @@ class OTBinary_bin : public OutputTransformFn{
 
   int16_t * thresholds;
   public:
-    OTBinary_bin();
+    OTBinary_bin(int16_t * thresholds);
+
     int8_t * output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group);
 };
