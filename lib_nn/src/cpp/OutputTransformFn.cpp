@@ -3,6 +3,8 @@
 #include <cmath>
 #include <tuple>
 #include <cassert>
+#include <string>
+#include <stdio.h>
 
 #include <iostream>
 extern "C" {
@@ -47,86 +49,209 @@ static int clrsb(int x){
   #endif
 }
 
-// This puts upper and lower limits on the range of A
-// A must reduce the vpu accumulator to 16 bit
-// A must not remove all the imformation from the vpu accumulator
-static void get_bounds_on_A(int* min_A, int* max_A, int32_t vpu_min_accu,
-                            int32_t vpu_max_accu) {
-  int32_t max_out = std::max(vpu_min_accu, vpu_max_accu);
-  int32_t min_out = std::min(vpu_min_accu, vpu_max_accu);
-
-  int rsb = std::min(clrsb(max_out), clrsb(min_out));
-
-  *max_A = rsb - 16;
-  *min_A = *max_A - 16 + 1;
-}
-
 // This puts upper and lower limits on the range of Exp
 // Exp will be applied to each of the values
 // Exp must not saturate and of the values
 // Exp must not leave all results as zero
-static void get_bounds_on_Exp(int* min_Exp, int* max_Exp, std::vector<float>& values,
+static void get_bounds_on_Exp(int* min_Exp, int* max_Exp, std::vector<double>& values,
                               int bound_width) 
 {
   assert(values.size() > 0);
-  int max_exponent = std::numeric_limits<int>::min();
-  for (float v : values) {
-    int e;
-    std::frexp(v, &e);
-    max_exponent = std::max(max_exponent, e);
-  }
+
+  auto min_value = *std::min_element( std::begin(values), std::end(values));
+  auto max_value = *std::max_element( std::begin(values), std::end(values));
+  
+  int exp_of_min, exp_of_max;
+  std::frexp(min_value, &exp_of_min);
+  std::frexp(max_value, &exp_of_max);
+
+  int max_exponent = std::max(exp_of_min, exp_of_max);
 
   *min_Exp = -max_exponent - 1;
   *max_Exp = *min_Exp + bound_width;
 }
 
+enum quant_error {
+  Accu = 0,
+  Multiplier = 1,
+  Other = 2
+};
 
-std::tuple<int, int, int> solve_for_constraint(
-    std::vector<float> & vpu_output_transform_multiplier,
-    std::vector<float> & vpu_output_transform_bias, 
+//v *= 2**exp_adjust; //and round like the vpu does
+int16_t quantise_accu(int32_t v, int exp_adjust) throw (quant_error){
 
-    int32_t vpu_min_accu,
-    int32_t vpu_max_accu)
-{
-  int min_A, max_A;
-  int min_B, max_B;
-  int min_M, max_M;
+  if(exp_adjust < -31)
+    return 0;
+  
+  if(exp_adjust < 0){
+    int shr = -exp_adjust;
+    int64_t t = v;
+    t = t + (1 << ((int16_t)(shr-1)));   //Round
+    v = (int32_t) (t >> shr); 
+  } else if(exp_adjust < 16) {
+    // exp_adjust >= 0
+    // shifting left 
 
-  std::cout << "vpu_min_accu: " << vpu_min_accu << " vpu_max_accu: " << vpu_max_accu << std::endl; 
+    v = (unsigned)v << exp_adjust;
+  } else {
+    // std::cout << std::string("quantise_accu: exp_adjust_too_high") << " exp_adjust: "  << exp_adjust << " v:" << v<< std::endl;
+    throw Accu;
+  }
 
-  get_bounds_on_A(&min_A, &max_A, vpu_min_accu, vpu_max_accu);
+  if(clrsb(v) < 16){
+    // std::cout << std::string("quantise_accu :Not enough space for accu") << std::endl;
+    throw Accu;
+  }
 
-  std::cout << "min_A: " << min_A << " max_A: " << max_A << std::endl; 
+  return (int16_t)v;
+}
 
-  get_bounds_on_Exp(&min_M, &max_M, vpu_output_transform_multiplier, 16);
+template<class activationT>
+int16_t quantise_multiplier(activationT v, int exp_adjust) throw (quant_error){
 
-  std::cout << "min_M: " << min_M << " max_M: " << max_M << std::endl; 
+  int32_t v_q = std::round(std::ldexp(static_cast<double>(v), exp_adjust));
 
-  //This is 30 as we cannot make a 32 bit bias with a shr of 14
-  get_bounds_on_Exp(&min_B, &max_B, vpu_output_transform_bias, 16 + 14);
+  if(clrsb(v_q) < 16){
+    // std::cout << std::string("Not enough space for multiplier") <<std::endl;
+    throw Multiplier;
+  }
 
-  std::cout << "min_B: " << min_B << " max_B: " << max_B << std::endl; 
+  return (int16_t)v_q;
+}
 
-  // we also know that A + M = B;
-  // Subtract one to ensure the addition is fine (one from A*M, B is already 30 bit at most)
-  max_B = std::min(max_A + max_M - 1, max_B);
+int32_t quantise_bias(int32_t p, int p_exp_adjust, int exp_adjust) throw (quant_error){
+
+  if(exp_adjust > p_exp_adjust){
+    // std::cout << std::string("exp_adjust is too high") <<std::endl;
+    throw Other;
+  }
+
+  int r = p_exp_adjust - exp_adjust;
+
+  if (r > 31)
+    return 0;
+  
+  if (r < 16){
+    int32_t t = (((int64_t)p + (1<<15))&0xffff0000) >> r;
+
+    if(clrsb(t) < 2){
+      // std::cout << std::string("bias too big") <<std::endl;
+      throw Other;
+    }
+    return t;
+  } else {
+    return  ((int64_t)p + (1<<(r-1)))>> r;
+  }
+}
+
+int32_t compute_product(int16_t a, int16_t m) throw (quant_error){
+  int32_t p = (int16_t)a * (int16_t)m;
+  return (int32_t)p;
+}
+
+int32_t compute_sum(int32_t p, int32_t b) throw (quant_error){
+  int64_t r = (int64_t)p + (int64_t)b;
+  if(__builtin_clrsbll(r) < 32){
+    // std::cout << std::string("Not enough space for result") <<std::endl;
+    throw Other;
+  }
     
-  // printf("min_B:%d max_B:%d\n", min_B, max_B);
+  return (int32_t)r;
+}
 
-  for (int A = max_A; A >= min_A; A--) {
-    for (int M = max_M; M >= min_M; M--) {
-      // We can squeeze a little more out of the arith by modelling
-      // max_Product = max_A * max_M
-      // this way we wouldnt need to subtract 2 from max_B
+template<class activationT>
+int get_max_exponent(std::vector<activationT> & arr){
 
-      int B = A + M; 
+  auto min_arr = *std::min_element( std::begin(arr), std::end(arr));
+  auto max_arr = *std::max_element( std::begin(arr), std::end(arr));
+  
+  int exp_of_min, exp_of_max;
+  std::frexp(min_arr, &exp_of_min);
+  std::frexp(max_arr, &exp_of_max);
 
-      if ((B >= min_B) && (B <= max_B)) {
-        std::cout << "B: "<< B << " A: "<< A << " M: "<< M << std::endl;
-        return std::make_tuple(B, A, M);
+  return std::max(exp_of_min, exp_of_max);
+
+}
+// Select B, A, M such that 
+// ((accu * 2**A) * (mul * 2**M) + bias*2**B) gives the most precision
+template<class activationT>
+std::tuple<int, int, int> solve_for_constraint(
+    std::vector<activationT> & multiplier,
+    std::vector<activationT> & bias, 
+    std::vector<int32_t> & accu_min,
+    std::vector<int32_t> & accu_max)
+{
+
+  int ch_count = accu_min.size();
+
+  assert(multiplier.size() == ch_count);
+  assert(bias.size() == ch_count);
+  assert(accu_max.size() == ch_count);
+
+  //These could)and should) be refined by inspecting accu_min, accu_max
+  int max_A = std::min(15 - get_max_exponent(accu_min), 15 - get_max_exponent(accu_max));
+  int max_multiplier_exponent = get_max_exponent(multiplier);
+  int max_M = 15 - max_multiplier_exponent;
+
+  // printf("max_multiplier_exponent:%d\n", max_multiplier_exponent);
+  //find the largest exponent such that (bias * 2**B) fits in a 32 bit register
+  int max_bias_exponent = get_max_exponent(bias);
+
+  //convert bias to a vector of int32_t such that there is no headroom
+  int32_t q_bias[ch_count];
+  int q_bias_exp_adjust = 31 - max_bias_exponent;
+  for (auto ch = 0; ch < ch_count; ++ch){
+    int64_t q = (int64_t)std::round(std::ldexp(bias[ch], q_bias_exp_adjust));
+    q_bias[ch]  = std::max(std::min(q, (int64_t)INT32_MAX), (int64_t)INT32_MIN);
+  }
+
+  int accu_hr = 0;
+  int mul_hr = 0;
+
+  //TODO need to think about these, i.e. if A is positive then precision should be given to M
+  int A = max_A+1;
+  int M = max_M+1;
+  
+  while(1){
+    int B = A + M; 
+
+    try {
+      for(auto ch = 0; ch < ch_count; ++ch){
+
+        int16_t m = quantise_multiplier(multiplier[ch], M);
+        int32_t b = quantise_bias(q_bias[ch], q_bias_exp_adjust, B);
+
+        //Check the max fits
+        int16_t a_max = quantise_accu(accu_max[ch], A);
+        compute_sum(compute_product(a_max, m), b);
+
+        //Check the min fits
+        int16_t a_min = quantise_accu(accu_min[ch], A);
+        compute_sum(compute_product(a_min, m), b);
+        
+      }
+      
+      return std::make_tuple(B, A, M);
+    } catch (quant_error q){
+
+      //try again but with better numbers
+      switch(q){
+        case Multiplier: --M; mul_hr++; break;
+        case Accu: --A;  accu_hr++;break;
+        case Other:
+          //make a decision based on which one would lose the least data
+          //this will do for now
+          if(mul_hr > accu_hr){
+            --A; accu_hr++;
+          } else {
+            --M; mul_hr++;
+          }
+          break;
       }
     }
   }
+
+  printf("fail\n");
   assert(0);
 }
 
@@ -135,85 +260,42 @@ void pad(std::vector<T> &vec, int pad_boundary, T pad_val){
   vec.resize(vec.size() + (pad_boundary - vec.size() % pad_boundary) % pad_boundary, pad_val);
 }
 
-/*
-  This is intended to handle 
-*/
-QuantisationParams OTBinary_int8::quantise_activation(
-    std::vector<float> & output_transform_multiplier,
-    std::vector<float> & output_transform_bias, 
-    int32_t accu_min,
-    int32_t accu_max)
+template<class T, std::size_t S>
+static void fill_array(T (&arr)[S], T v){
+  std::fill_n(arr, sizeof arr / sizeof (T), v);
+}
+
+QuantisationParams OTBinary_int8::foo(
+    std::vector<double> & output_transform_multiplier,
+    std::vector<double> & output_transform_bias, 
+    std::vector<int32_t> & accu_min,
+    std::vector<int32_t> & accu_max,
+
+
+
+     )
+
+
+
+void OTBinary_int8::xor_popcount_to_vlmaccr1(
+    std::vector<int32_t> & accu_min,
+    std::vector<int32_t> & accu_max,
+    std::vector<int32_t> & accu_overlaps, 
+    int32_t accu_clamp_min,
+    int32_t accu_clamp_max)
 {
 
-  assert (output_transform_multiplier.size() == output_transform_bias.size());
 
+}
 
-  // TODO convert to the vpu space
-
-  int B, A, M;
-  std::tie(B, A, M) = solve_for_constraint(output_transform_multiplier, output_transform_bias, accu_min, accu_max);   
-
-  int min_16_bit_B, max_16_bit_B;
-
-  get_bounds_on_Exp(&min_16_bit_B, &max_16_bit_B, output_transform_bias, 16);
-
-  int16_t bias_multipler = 1 << std::max(0, B - max_16_bit_B);
-  int adjusted_B = std::min(B, max_16_bit_B);
-
-  QuantisationParams q ;
-
-  std::fill_n(q.otv.bias_multipler, sizeof q.otv.bias_multipler / sizeof bias_multipler, bias_multipler);
-
-  // The -8 is here to leave the result in a 16 bit form so that the quantisation to 8 bit 
-  // can deal with the asymertic rounding.
-  int16_t final_shr = B - 8; 
-
-  std::cout << "final_shr: "<< final_shr<<std::endl;
-
-  assert(final_shr >= 0);
-
-  std::fill_n(q.otv.final_shr, sizeof q.otv.final_shr / sizeof final_shr, final_shr);
-
-  for (float f : output_transform_multiplier){
-    int32_t pa_mul = (int32_t)round(ldexp(f, M));
-    assert(clrsb(pa_mul) >= 16); // make sure there is no overflow
-    q.multipliers.push_back((int16_t)pa_mul);
-  }
-
-  for (float f : output_transform_bias){
-    int32_t pa_bias = (int32_t)round(ldexp(f, adjusted_B));
-
-    // assert(clrsb(pa_bias) - 16 >= 0); // make sure there is no overflow
-    pa_bias = std::min(INT16_MAX, pa_bias); //TODO think about this
-    q.biases.push_back((int16_t)pa_bias);
-  }
-
-  //TODO think about who should do this
-  //pad q.biases and  q.multipliers to a multiple of VPU_INT16_EPV
-  int16_t pad_val = 0; //this is arbitrary
-  pad(q.biases, VPU_INT16_EPV, pad_val);
-  pad(q.multipliers, (int)VPU_INT16_EPV, pad_val);
-
-  //todo check that post_activation_bias_q * adjusted_B is ldexp(post_activation_bias, B)
-
-  int accu_shr = -A;
-
-  if (accu_shr > 0){
-    //use a vlsat
-    std::fill_n(q.otv.accu_shr, sizeof q.otv.accu_shr / sizeof accu_shr, accu_shr);
-    q.otv.accu_shl = 0;
-  } else {
-    //use a vashr
-    std::fill_n(q.otv.accu_shr, sizeof q.otv.accu_shr / sizeof accu_shr, 0);
-    q.otv.accu_shl = accu_shr;
-  }
-
-  int16_t no_clamp = 0;
-  std::fill_n(q.otv.clamp_near, sizeof q.otv.clamp_near / sizeof no_clamp, no_clamp);
-  std::fill_n(q.otv.clamp_far_0, sizeof q.otv.clamp_far_0 / sizeof no_clamp, no_clamp);
-  std::fill_n(q.otv.clamp_far_1, sizeof q.otv.clamp_far_1 / sizeof no_clamp, no_clamp);
-
-
+void OTBinary_int8::calc_post_accumulation_clamps(
+    std::vector<int32_t> & accu_min,
+    std::vector<int32_t> & accu_max,
+    std::vector<int32_t> & accu_overlaps, 
+    int32_t accu_clamp_min,
+    int32_t accu_clamp_max,
+    int accu_shr)
+{
   // for (unsigned ch = 0; ch < chans_out; ch++){
   //   if (chan_overlaps){
   //     quantised_accu_modifier[ch] = ashr(chan_overlaps[ch], accu_shr);
@@ -245,7 +327,72 @@ QuantisationParams OTBinary_int8::quantise_activation(
   // *clamp_near = -t_clamp_near;
   // *clamp_far_0 = -t_clamp_far_0;
   // *clamp_far_1 = t_clamp_far_1;
+}
 
+QuantisationParams OTBinary_int8::quantise_activation(
+    std::vector<double> & output_transform_multiplier,
+    std::vector<double> & output_transform_bias, 
+    std::vector<int32_t> & accu_min,
+    std::vector<int32_t> & accu_max )
+{
+
+  assert (output_transform_multiplier.size() == output_transform_bias.size());
+
+  int B, A, M;
+  std::tie(B, A, M) = solve_for_constraint(output_transform_multiplier, output_transform_bias, accu_min, accu_max);   
+
+  int min_16_bit_B, max_16_bit_B;
+
+  get_bounds_on_Exp(&min_16_bit_B, &max_16_bit_B, output_transform_bias, 16);
+
+  int16_t bias_multipler = (int16_t)(1 << std::max(0, B - max_16_bit_B));
+  int adjusted_B = std::min(B, max_16_bit_B);
+
+  QuantisationParams q;
+
+  std::fill_n(q.otv.bias_multipler, sizeof q.otv.bias_multipler / sizeof bias_multipler, bias_multipler);
+
+  // The -8 is here to leave the result in a 16 bit form so that the quantisation to 8 bit 
+  // can deal with the asymertic rounding.
+  int16_t final_shr = B - 8; 
+  assert(final_shr >= 0);
+  fill_array(q.otv.final_shr, final_shr);
+
+  for (auto f : output_transform_multiplier){
+    int32_t pa_mul = (int32_t)round(ldexp(f, M));
+    assert(clrsb(pa_mul) >= 16); // make sure there is no overflow
+    q.multipliers.push_back((int16_t)pa_mul);
+  }
+
+  for (auto f : output_transform_bias){
+    int32_t pa_bias = (int32_t)round(ldexp(f, adjusted_B));
+    pa_bias = std::min(INT16_MAX, pa_bias); //TODO think about this
+    q.biases.push_back((int16_t)pa_bias);
+  }
+
+  //TODO think about what should own this
+  //pad q.biases and  q.multipliers to a multiple of VPU_INT16_EPV
+  int16_t pad_val = 0; //this is arbitrary
+  pad(q.biases, VPU_INT16_EPV, pad_val);
+  pad(q.multipliers, (int)VPU_INT16_EPV, pad_val);
+
+  int16_t accu_shr = -A;
+  if (accu_shr > 0){
+    //use a vlsat
+    fill_array(q.otv.accu_shr, accu_shr);
+    q.otv.accu_shl = 0;
+  } else {
+    //use a vashr
+    fill_array(q.otv.accu_shr, (int16_t)0);
+    q.otv.accu_shl = accu_shr;
+  }
+
+  //TODO put this else where
+  int16_t no_clamp = 0;
+  fill_array(q.otv.clamp_near, no_clamp);
+  fill_array(q.otv.clamp_far_0, no_clamp);
+  fill_array(q.otv.clamp_far_1, no_clamp);
+  
   return q;
 }
 
@@ -270,7 +417,12 @@ int8_t * OTBinary_int8::output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, i
   int16_t* cur_accu_modifier = accu_modifier + output_channel_group * VPU_INT16_EPV;
   int16_t* cur_post_activation_mul = multipliers + output_channel_group * VPU_INT16_EPV;
 
-  VSETC(vpu, MODE_S16);
+  VSETC(vpu, MODE_S16);//check this
+
+  VLDR(vpu, &A->vD);
+  VLDD(vpu, &A->vR);
+
+  // vpu_sim_print(vpu);
 
   vpu_vector_t temp_mem;
   memset(&temp_mem, 0, sizeof(temp_mem));
@@ -279,6 +431,9 @@ int8_t * OTBinary_int8::output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, i
   VLSAT(vpu, otv->accu_shr);
   VSTR(vpu, &temp_mem);
   VLASHR(vpu, &temp_mem, otv->accu_shl);
+
+  // printf("a\n");
+  // vpu_sim_print(vpu);
 
   //Subtract the channel overlap
   VLADD(vpu, cur_accu_modifier);
@@ -300,13 +455,20 @@ int8_t * OTBinary_int8::output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, i
   VLDC(vpu, cur_post_activation_bias);
   VLMACC(vpu, otv->bias_multipler);
 
+  // printf("b\n");
+  // vpu_sim_print(vpu);
+
   //Multiply A by the post_activation_mul and accumulate it to the bias
   VLDC(vpu, &temp_mem);
   VLMACC(vpu, cur_post_activation_mul);
+  // printf("c\n");
+  // vpu_sim_print(vpu);
 
   //Reduce the accumulator to 16 bits
   VLSAT(vpu, otv->final_shr);
 
+  // printf("d\n");
+  // vpu_sim_print(vpu);
   VDEPTH8_FIXED(vpu);
   
   //we need to know how many we are processing
@@ -335,7 +497,10 @@ int8_t * OTBinary_bin::output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, in
   xs3_vpu vpu_mem;
   xs3_vpu * vpu = &vpu_mem;
 
-  VSETC(vpu, MODE_S8);
+  VSETC(vpu, MODE_S16); //check this
+  
+  VLDR(vpu, &A->vD);
+  VLDD(vpu, &A->vR);
   
   VLDR(vpu, &A->vD);
   VLDD(vpu, &A->vR);
