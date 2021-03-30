@@ -18,7 +18,7 @@ struct SimpleFilter {
 };
 
 using namespace nn::test;
-using namespace nn::filt2d::geom;
+using namespace nn;
 
 /**
  */

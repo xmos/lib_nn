@@ -24,7 +24,7 @@ struct RandFilterParams {
 }}
 
 template<>
-nn::filt2d::geom::Filter2dGeometry nn::test::Rand::rand<nn::filt2d::geom::Filter2dGeometry, 
+nn::Filter2dGeometry nn::test::Rand::rand<nn::Filter2dGeometry, 
                                                         nn::test::RandFilterParams>(nn::test::RandFilterParams params)
 {
   // Some of the stuff below should be parameterized in the future
@@ -76,10 +76,10 @@ nn::filt2d::geom::Filter2dGeometry nn::test::Rand::rand<nn::filt2d::geom::Filter
 
   unsigned K_c = params.is_depthwise? params.depthwise_channels_per_output_group : X_c;
 
-  return nn::filt2d::geom::Filter2dGeometry(
-            nn::filt2d::geom::ImageGeometry(X_h, X_w, X_c),
-            nn::filt2d::geom::ImageGeometry(Y_h, Y_w, Y_c),
-            nn::filt2d::geom::WindowGeometry(K_h, K_w, K_c, 
+  return nn::Filter2dGeometry(
+            nn::ImageGeometry(X_h, X_w, X_c),
+            nn::ImageGeometry(Y_h, Y_w, Y_c),
+            nn::WindowGeometry(K_h, K_w, K_c, 
                                              W_start_row, W_start_col, 
                                              W_stride_row, W_stride_col, 
                                              W_dilation_row, W_dilation_col));

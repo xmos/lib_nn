@@ -9,9 +9,8 @@
 #include <cmath>
 #include <iostream>
 
-using namespace nn::filt2d::geom;
-using namespace nn::filt2d::op;
-using namespace nn::filt2d;
+using namespace nn;
+using namespace nn::op;
 
 constexpr bool Conv2dDeepFilter_Valid::IsDepthwise;
 
@@ -48,18 +47,18 @@ bool Conv2dDeepFilter_Valid::SupportsGeometry(
 PredicateFilterGeometryIterator Conv2dDeepFilter_Valid::GetGeometryIterator()
 {
   auto iter = PredicateFilterGeometryIterator(
-                geom::Filter2dGeometry(
-                    geom::ImageGeometry(1, 1, 4),
-                    geom::ImageGeometry(1, 1, 4),
-                    geom::WindowGeometry(1, 1, 4,  0, 0,  1, 1, 0,   1, 1)),
-                geom::Filter2dGeometry(
-                    geom::ImageGeometry(4, 4, 36),
-                    geom::ImageGeometry(4, 4, 32),
-                    geom::WindowGeometry(4, 4, 36,   0, 0,    1, 1, 0,    1, 1)),
-                geom::Filter2dGeometry(
-                    geom::ImageGeometry(1, 1, 12),
-                    geom::ImageGeometry(1, 1, 12),
-                    geom::WindowGeometry(1, 1, 12,    0, 0,    0, 0, 0,    0, 0)),
+                Filter2dGeometry(
+                    ImageGeometry(1, 1, 4),
+                    ImageGeometry(1, 1, 4),
+                    WindowGeometry(1, 1, 4,  0, 0,  1, 1, 0,   1, 1)),
+                Filter2dGeometry(
+                    ImageGeometry(4, 4, 36),
+                    ImageGeometry(4, 4, 32),
+                    WindowGeometry(4, 4, 36,   0, 0,    1, 1, 0,    1, 1)),
+                Filter2dGeometry(
+                    ImageGeometry(1, 1, 12),
+                    ImageGeometry(1, 1, 12),
+                    WindowGeometry(1, 1, 12,    0, 0,    0, 0, 0,    0, 0)),
                 Conv2dDeepFilter_Valid::SupportsGeometry);
   
   return iter;

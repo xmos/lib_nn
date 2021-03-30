@@ -13,7 +13,7 @@ namespace nn {
     namespace ops {
 
 std::vector<int8_t> Conv2dDeepFilter_Valid(
-    nn::filt2d::geom::Filter2dGeometry& filter_geometry,
+    nn::Filter2dGeometry& filter_geometry,
     const int8_t input_img[], 
     const int8_t kernel_weights[],
     const int32_t ref_biases[],

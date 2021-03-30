@@ -1,7 +1,7 @@
 
 #include "AddressCovector.hpp"
 
-using namespace nn::filt2d;
+using namespace nn;
 
 
 int32_t AddressCovectorBase::dot(ImageVect coords) const

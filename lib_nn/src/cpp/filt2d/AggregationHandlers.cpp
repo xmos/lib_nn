@@ -6,7 +6,7 @@
 #include "../src/asm/asm_constants.h"
 
 
-using namespace nn::filt2d;
+using namespace nn;
 
 template<>
 vpu_split_acc32_t Conv2dDeepPatchAggregator<int8_t,int8_t,vpu_split_acc32_t>::aggregate(

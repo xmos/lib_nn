@@ -1,9 +1,9 @@
 
 #include "WindowGeometry.hpp"
 
-using namespace nn::filt2d::geom;
+using namespace nn;
 
-nn::filt2d::AddressCovector<WindowGeometry::T_elm_in> WindowGeometry::getPatchAddressCovector() const
+nn::AddressCovector<WindowGeometry::T_elm_in> WindowGeometry::getPatchAddressCovector() const
 { 
   return AddressCovector<T_elm_in>(shape.width, shape.depth); 
 }

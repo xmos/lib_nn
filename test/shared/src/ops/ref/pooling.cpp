@@ -3,15 +3,14 @@
 
 #include "tensorflow/lite/kernels/internal/reference/integer_ops/pooling.h"
 
-using namespace nn::filt2d;
-using namespace nn::filt2d::geom;
+using namespace nn;
 using namespace nn::test::ops::ref;
 
 
 
 
 std::vector<int8_t> nn::test::ops::ref::MaxPoolReference(
-    const nn::filt2d::geom::Filter2dGeometry& filter_geometry,
+    const nn::Filter2dGeometry& filter_geometry,
     const int8_t input_img[])
 {
 
@@ -51,7 +50,7 @@ std::vector<int8_t> nn::test::ops::ref::MaxPoolReference(
 
 
 std::vector<int8_t> nn::test::ops::ref::AveragePoolReference(
-    const nn::filt2d::geom::Filter2dGeometry& filter_geometry,
+    const nn::Filter2dGeometry& filter_geometry,
     const int8_t input_img[])
 {
 

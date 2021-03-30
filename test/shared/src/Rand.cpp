@@ -10,7 +10,6 @@
 #include "../src/cpp/filt2d/geom/Filter2dGeometry.hpp"
 
 
-using namespace nn::filt2d;
 using namespace nn::test;
 
 
@@ -52,7 +51,7 @@ int8_t Rand::get_rand<int8_t>(Tag<int8_t>)
 }
 
 /**
- * Random float with uniform distribution over [-1.0f, 1.0f)
+ * Random float with uniform distribution over [-1.0f, 1.0f) 
  */
 template<>
 float Rand::get_rand<float>(Tag<float>)

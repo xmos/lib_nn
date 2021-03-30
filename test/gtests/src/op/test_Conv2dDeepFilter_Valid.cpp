@@ -17,13 +17,12 @@
 #include <vector>
 #include <iostream>
 
-using namespace nn::filt2d;
-using namespace nn::filt2d::geom;
-using namespace nn::filt2d::op;
+using namespace nn;
+using namespace nn::op;
 
 
 
-class Conv2dDeepFilter_ValidTest : public ::testing::TestWithParam<geom::Filter2dGeometry> {
+class Conv2dDeepFilter_ValidTest : public ::testing::TestWithParam<Filter2dGeometry> {
   
   private: 
 

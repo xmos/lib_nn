@@ -1,19 +1,19 @@
 
 #include "Filter2dGeometry.hpp"
 
-using namespace nn::filt2d;
+using namespace nn;
 
 
 
-const ImageRegion geom::Filter2dGeometry::GetFullJob() const 
+const ImageRegion Filter2dGeometry::GetFullJob() const 
 { 
   return ImageRegion(0,0,0, output.height, output.width, output.depth); 
 }
 
 
 
-bool geom::Filter2dGeometry::operator==(
-    geom::Filter2dGeometry other) const 
+bool Filter2dGeometry::operator==(
+    Filter2dGeometry other) const 
 {      
   return this->input  == other.input
       && this->output == other.output
@@ -22,15 +22,15 @@ bool geom::Filter2dGeometry::operator==(
 
 
 
-bool geom::Filter2dGeometry::operator!=(
-    geom::Filter2dGeometry other) const 
+bool Filter2dGeometry::operator!=(
+    Filter2dGeometry other) const 
 {      
   return !(*this == other);
 }
 
 
 
-bool geom::Filter2dGeometry::ModelIsDepthwise() const 
+bool Filter2dGeometry::ModelIsDepthwise() const 
 {
   // If the channel stride of the filter is 0, then the first input channel used
   // in aggregation will always be channel 0. 
@@ -42,7 +42,7 @@ bool geom::Filter2dGeometry::ModelIsDepthwise() const
 
 
 
-padding_t geom::Filter2dGeometry::ModelPadding(
+padding_t Filter2dGeometry::ModelPadding(
       bool initial,
       bool signed_padding) const
 {    
@@ -67,13 +67,13 @@ padding_t geom::Filter2dGeometry::ModelPadding(
 
 
 
-bool geom::Filter2dGeometry::ModelRequiresPadding() const {
+bool Filter2dGeometry::ModelRequiresPadding() const {
   return ModelPadding(true, true).HasPadding() || ModelPadding(false,true).HasPadding();
 }
 
 
 
-bool geom::Filter2dGeometry::ModelConvWindowAlwaysIntersectsInput() const {
+bool Filter2dGeometry::ModelConvWindowAlwaysIntersectsInput() const {
   // If the convolution window ever entirely leaves the input image, the padding count for 
   // either the top-left or bottom-right (initial and final padding) will meet or exceed the 
   // window size for one of the dimensions
@@ -92,7 +92,7 @@ bool geom::Filter2dGeometry::ModelConvWindowAlwaysIntersectsInput() const {
 
 
 
-bool geom::Filter2dGeometry::ModelConsumesInput() const
+bool Filter2dGeometry::ModelConsumesInput() const
 {
   // If the filter is depthwise (e.g. window.stride.channel == 1), then the input and output
   // images must have the same number of channels. Otherwise we don't need to worry about channels.
@@ -137,4 +137,3 @@ bool geom::Filter2dGeometry::ModelConsumesInput() const
     return false;
   }
 }
-

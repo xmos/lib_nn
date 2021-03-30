@@ -17,8 +17,7 @@
 #include <cassert>
 
 
-using namespace nn::filt2d;
-using namespace nn::filt2d::geom;
+using namespace nn;
 using namespace nn::test;
 
 static auto rng = Rand(64563);
@@ -179,7 +178,7 @@ TEST_P(Conv2dDenseReferenceTestB, WithPadding)
 {
   auto geom = GetParam();
 
-  auto out_cov = geom.output.getAddressCovector();
+  auto out_cov = geom.output.getAddressCovector<int8_t>();
 
   auto weights  = std::vector<int8_t>( geom.window.windowElements() * geom.output.depth );
   auto bias     = std::vector<int32_t>( geom.output.depth );

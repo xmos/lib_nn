@@ -6,17 +6,16 @@
 #include <functional>
 
 namespace nn {
-namespace filt2d {
 
 class FilterGeometryIterator {
 
   public:
 
-    using FilterGeometry = geom::Filter2dGeometry;
+    using FilterGeometry = Filter2dGeometry;
 
-    static constexpr FilterGeometry END = FilterGeometry(geom::ImageGeometry(0,0,0), 
-                                            geom::ImageGeometry(0,0,0),
-                                            geom::WindowGeometry(0,0,0,0,0,0,0,0,0,0));
+    static constexpr FilterGeometry END = FilterGeometry(ImageGeometry(0,0,0), 
+                                            ImageGeometry(0,0,0),
+                                            WindowGeometry(0,0,0,0,0,0,0,0,0,0));
 
     class iterator: public std::iterator<std::input_iterator_tag, FilterGeometry> {
       private:
@@ -70,4 +69,4 @@ class PredicateFilterGeometryIterator : public FilterGeometryIterator {
 
 
 
-}}
+}

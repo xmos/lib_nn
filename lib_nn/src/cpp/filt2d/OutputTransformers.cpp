@@ -7,7 +7,7 @@
 #include "vpu_sim.h"
 #include "../src/asm/asm_constants.h"
 
-using namespace nn::filt2d;
+using namespace nn;
 
 void Int8OutputTransformHandler::transform(
       int8_t * output,

@@ -4,7 +4,7 @@
 #include <iostream>
 #include <cstring>
 
-using namespace nn::filt2d;
+using namespace nn;
 
 
 UniversalPatchHandler::T const* UniversalPatchHandler::copy_patch(
@@ -13,7 +13,7 @@ UniversalPatchHandler::T const* UniversalPatchHandler::copy_patch(
       unsigned const out_chan_count)
 {
 
-  const auto input_cov = config.input.getAddressCovector();
+  const auto input_cov = config.input.getAddressCovector<int8_t>();
   const auto patch_cov = config.window.getPatchAddressCovector();
 
   for(int row = 0; row < config.window.shape.height; row++){

@@ -8,8 +8,6 @@
 #include <algorithm>
 
 namespace nn {
-namespace filt2d {
-
 
 template <typename T>
 static inline T* advancePointer(T* orig, int32_t offset_bytes)
@@ -45,4 +43,4 @@ C_API typedef struct {
 } padding_t;
 
 
-}}
+}

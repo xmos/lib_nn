@@ -11,7 +11,7 @@ namespace nn {
       namespace ref {
 
 std::vector<int8_t> Conv2dDenseReference(
-    const nn::filt2d::geom::Filter2dGeometry& filter_geometry,
+    const nn::Filter2dGeometry& filter_geometry,
     const int8_t input_img[],
     const int8_t kernel_weights[],
     const int32_t biases[],
@@ -21,7 +21,7 @@ std::vector<int8_t> Conv2dDenseReference(
 
 
 std::vector<int8_t> Conv2dDepthwiseReference(
-    const nn::filt2d::geom::Filter2dGeometry& filter_geometry,
+    const nn::Filter2dGeometry& filter_geometry,
     const int8_t input_img[],
     const int8_t kernel_weights[],
     const int32_t biases[],
@@ -30,11 +30,11 @@ std::vector<int8_t> Conv2dDepthwiseReference(
     const int8_t output_zero_point);
 
 std::vector<int8_t> MaxPoolReference(
-    const nn::filt2d::geom::Filter2dGeometry& filter_geometry,
+    const nn::Filter2dGeometry& filter_geometry,
     const int8_t input_img[]);
 
 std::vector<int8_t> AveragePoolReference(
-    const nn::filt2d::geom::Filter2dGeometry& filter_geometry,
+    const nn::Filter2dGeometry& filter_geometry,
     const int8_t input_img[]);
 
 std::vector<int8_t> FullyConnectedReference(
@@ -56,7 +56,7 @@ struct ElementwiseParams {
 };
 
 std::vector<int8_t> AddElementwiseReference(
-    const nn::filt2d::geom::ImageGeometry& image_geometry,
+    const nn::ImageGeometry& image_geometry,
     const int8_t input_img0[],
     const int8_t input_img1[],
     const ElementwiseParams& params);
