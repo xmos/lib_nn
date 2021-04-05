@@ -14,7 +14,7 @@ UniversalPatchHandler::T const* UniversalPatchHandler::copy_patch(
 {
 
   const auto input_cov = config.input.getAddressCovector<int8_t>();
-  const auto patch_cov = config.window.getPatchAddressCovector();
+  const auto patch_cov = config.window.shape.getAddressCovector<int8_t>();
 
   for(int row = 0; row < config.window.shape.height; row++){
     for(int col = 0; col < config.window.shape.width; col++){

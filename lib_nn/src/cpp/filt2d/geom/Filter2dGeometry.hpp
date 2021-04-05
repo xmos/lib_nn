@@ -16,9 +16,6 @@ namespace nn {
 
     public:
 
-      using T_input = int8_t;
-      using T_output = int8_t;
-
       ImageGeometry input;
       ImageGeometry output;
       WindowGeometry window;
@@ -30,7 +27,6 @@ namespace nn {
         ImageGeometry output_geom,
         WindowGeometry window_geom) noexcept
           : input(input_geom), output(output_geom), window(window_geom) {}
-
 
       const ImageRegion GetFullJob() const;
 
@@ -76,11 +72,11 @@ namespace nn {
       */
       bool ModelConvWindowAlwaysIntersectsInput() const;
 
-      /**
-       * Does the filter's geometry imply that every input element is used to compute some
-      * output element?
-      */
-      bool ModelConsumesInput() const;
+      // /**
+      //  * Does the filter's geometry imply that every input element is used to compute some
+      // * output element?
+      // */
+      // bool ModelConsumesInput() const;
 
   };
 

@@ -37,7 +37,7 @@ std::vector<int8_t> nn::test::ops::Conv2dDeepFilter_Valid(
                                       filter_geometry, ref_eff_out_multiplier, output_zero_point);
 
   auto xcore_output = std::vector<int8_t>(filter_geometry.output.imageElements());
-  auto patch_mem = std::vector<int8_t>(filter_geometry.window.windowBytes() + 32);
+  auto patch_mem = std::vector<int8_t>(filter_geometry.window.shape.imageBytes() + 32);
 
   memset(&xcore_output[0], 0xCC, xcore_output.size());
   memset(&patch_mem[0], 0, patch_mem.size());

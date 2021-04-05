@@ -23,7 +23,6 @@
   do that, we have no need for it.
 */
 
-using namespace nn;
 using namespace nn::test;
 
 
@@ -42,7 +41,7 @@ TEST_P(AveragePoolReferenceTestA, NoPadding)
   auto in_cov = geom.input.getAddressCovector<int8_t>();
   auto out_cov = geom.output.getAddressCovector<int8_t>();
 
-  auto win_pixy = geom.window.windowPixels();
+  auto win_pixy = geom.window.shape.imagePixels();
 
   for(int xan = 0; xan < geom.output.depth; xan++){
     for(int row = 0; row < geom.output.height; row++){

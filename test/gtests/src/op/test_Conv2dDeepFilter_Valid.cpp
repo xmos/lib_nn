@@ -50,7 +50,7 @@ class Conv2dDeepFilter_ValidTest : public ::testing::TestWithParam<Filter2dGeome
       const auto out_chans = geometry.output.depth;
 
       input_image.resize(geometry.input.imageBytes());
-      kernel_tensor.resize(geometry.window.windowBytes() * out_chans);
+      kernel_tensor.resize(geometry.window.shape.imageBytes() * out_chans);
       bias.resize(out_chans);
       output_multiplier.resize(out_chans);
       nn_output.clear();
@@ -126,7 +126,7 @@ TEST_P(Conv2dDeepFilter_ValidTest,RunsWithoutException)
 {
   auto geometry = GetParam();
 
-  auto window_elements = geometry.window.windowElements();
+  auto window_elements = geometry.window.shape.imageElements();
 
   memset(&input_image[0], 0, sizeof(int8_t) * input_image.size());
   memset(&kernel_tensor[0], 0, sizeof(int8_t) * kernel_tensor.size());
@@ -153,7 +153,7 @@ TEST_P(Conv2dDeepFilter_ValidTest,InputAndWeightsAre1)
 {
   auto geometry = GetParam();
 
-  auto window_elements = geometry.window.windowElements();
+  auto window_elements = geometry.window.shape.imageElements();
 
   memset(&input_image[0], 1, sizeof(int8_t) * input_image.size());
   memset(&kernel_tensor[0], 1, sizeof(int8_t) * kernel_tensor.size());

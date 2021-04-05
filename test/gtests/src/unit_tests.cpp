@@ -95,7 +95,7 @@ TEST_P(Test_Im_to_col_valid2, BasicTest)
   // This is just to ensure the seed is different for each set of params (so that data isn't always
   // the same) but still deterministic (so that the data doesn't depend on the order (or subset) of
   // cases which are tested).
-  auto rng = Rand( geom.input.imageBytes() + geom.output.imageBytes() + geom.window.windowBytes()
+  auto rng = Rand( geom.input.imageBytes() + geom.output.imageBytes() + geom.window.shape.imageBytes()
                    * geom.window.stride.row + geom.window.stride.col
                    * geom.window.dilation.col * geom.window.dilation.row);
     

@@ -99,7 +99,7 @@ class ValidDeepPatchHandler : IPatchHandler<int8_t> {
       Config(Filter2dGeometry const filter)
         : Config(filter.input.getAddressCovector<int8_t>(), 
                  filter.window.shape.height,
-                 filter.window.rowBytes(),
+                 filter.window.shape.rowBytes(),
                  filter.input.rowBytes()) {}
     };  
 

@@ -3,42 +3,15 @@
 
 using namespace nn;
 
-nn::AddressCovector<WindowGeometry::T_elm_in> WindowGeometry::getPatchAddressCovector() const
-{ 
-  return AddressCovector<T_elm_in>(shape.width, shape.depth); 
-}
 
 
-unsigned WindowGeometry::pixelElements() const 
+ImageVect WindowGeometry::WindowCoords(const ImageVect& output_coords) const 
 { 
-  return this->shape.depth; 
-}
-unsigned WindowGeometry::rowElements() const 
-{ 
-  return this->shape.width * this->pixelElements(); 
-}
-unsigned WindowGeometry::windowElements() const 
-{ 
-  return this->shape.height * this->rowElements(); 
-}
+  auto out_row = start.row + output_coords.row * stride.row;
+  auto out_col = start.col + output_coords.col * stride.col;
+  auto out_chan = output_coords.channel * stride.channel;
 
-
-unsigned WindowGeometry::pixelBytes() const 
-{ 
-  return this->pixelElements() * sizeof(T_elm_in); 
-}
-unsigned WindowGeometry::rowBytes() const 
-{ 
-  return this->rowElements() * sizeof(T_elm_in); 
-}
-unsigned WindowGeometry::windowBytes() const 
-{ 
-  return this->windowElements() * sizeof(T_elm_in); 
-}
-
-unsigned WindowGeometry::windowPixels() const 
-{ 
-  return this->shape.height * this->shape.width; 
+  return ImageVect(out_row, out_col, out_chan);
 }
 
 bool WindowGeometry::operator==(WindowGeometry other) const {

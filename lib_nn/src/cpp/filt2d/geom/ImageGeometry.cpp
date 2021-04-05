@@ -34,3 +34,18 @@ bool ImageGeometry::operator==(
       && this->depth  == other.depth
       && this->channel_depth == other.channel_depth;
 }
+
+
+bool ImageGeometry::IsWithinImage(const ImageVect& coords) const 
+{
+  return IsWithinImage(coords.row, coords.col, coords.channel);
+}
+
+bool ImageGeometry::IsWithinImage(const int row, 
+                                  const int col, 
+                                  const int channel) const
+{
+  if(row < 0 || col < 0 || channel < 0) return false;
+  if(row >= height || col >= width || channel >= depth) return false;
+  return true;
+}

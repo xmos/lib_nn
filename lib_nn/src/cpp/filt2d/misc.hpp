@@ -42,5 +42,8 @@ C_API typedef struct {
   }
 } padding_t;
 
+inline std::ostream& operator<<(std::ostream &stream, const padding_t &pad){
+  return stream << "(" << pad.top << "," << pad.left << "," << pad.bottom << "," << pad.right << ")";
+}
 
 }

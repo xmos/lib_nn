@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 
 namespace nn {
 
@@ -69,5 +70,10 @@ namespace nn {
         { return ImageVect(start.row + shape.height, start.col + shape.width, start.channel + shape.depth); }
 
   };
+
+
+  inline std::ostream& operator<<(std::ostream &stream, const ImageVect &vect){
+    return stream << "(" << vect.row << "," << vect.col << "," << vect.channel << ")";
+  }
 
 }

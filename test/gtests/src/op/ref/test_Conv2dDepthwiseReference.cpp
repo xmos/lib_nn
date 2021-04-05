@@ -34,7 +34,7 @@ static auto rng = Rand(5684);
 
 //   input_zero_point = rng.rand<int8_t>();
 
-//   for(int k = 0; k < geom.window.windowElements(); k++){
+//   for(int k = 0; k < geom.window.shape.imageElements(); k++){
 //     kernel[k] = rng.rand<int8_t>();
 //   }
 
@@ -115,7 +115,7 @@ TEST_P(Conv2dDepthwiseReferenceTestA, NoPadding)
 {
   auto geom = GetParam();
 
-  auto weights  = std::vector<int8_t>( geom.window.windowElements() * geom.output.depth );
+  auto weights  = std::vector<int8_t>( geom.window.shape.imageElements() * geom.output.depth );
   auto bias     = std::vector<int32_t>( geom.output.depth );
   auto eff_mult = std::vector<float>( geom.output.depth );
   auto input    = std::vector<int8_t>(geom.input.imageElements());
@@ -127,7 +127,7 @@ TEST_P(Conv2dDepthwiseReferenceTestA, NoPadding)
   memset( &weights[0], 1, sizeof(int8_t) * weights.size() );
   memset( &input[0],   1, sizeof(int8_t) * input.size()   );
 
-  int32_t acc32 = geom.window.windowPixels() * ( int32_t( weights[0] ) * ( int32_t( input[0] ) - input_zero ) );
+  int32_t acc32 = geom.window.shape.imagePixels() * ( int32_t( weights[0] ) * ( int32_t( input[0] ) - input_zero ) );
 
   int32_t target_acc32 = 32;
   int8_t target_acc8 = 16;
@@ -180,7 +180,7 @@ TEST_P(Conv2dDepthwiseReferenceTestB, WithPadding)
 
   auto out_cov = geom.output.getAddressCovector<int8_t>();
 
-  auto weights  = std::vector<int8_t>( geom.window.windowElements() * geom.output.depth );
+  auto weights  = std::vector<int8_t>( geom.window.shape.imageElements() * geom.output.depth );
   auto bias     = std::vector<int32_t>( geom.output.depth );
   auto eff_mult = std::vector<float>( geom.output.depth );
   auto input    = std::vector<int8_t>(geom.input.imageElements());
@@ -198,7 +198,7 @@ TEST_P(Conv2dDepthwiseReferenceTestB, WithPadding)
   auto pix_acc =  int32_t(weights[0]) * (int32_t(input[0]) - input_zero);
 
   for(int k = 0; k < geom.output.depth; k++){
-    bias[k] = target_acc32 - geom.window.windowPixels() * pix_acc;
+    bias[k] = target_acc32 - geom.window.shape.imagePixels() * pix_acc;
     eff_mult[k] = float(target_acc8) / float(target_acc32);
   }
 

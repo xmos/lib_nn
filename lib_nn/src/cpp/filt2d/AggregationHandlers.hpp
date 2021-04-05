@@ -79,7 +79,9 @@ namespace nn {
             const T_acc * biases,
             const T_coef * kernel_tensor,
             WindowGeometry const conv_window)
-          : Config(biases, kernel_tensor, conv_window.windowElements(), conv_window.windowBytes()) {}
+          : Config(biases, kernel_tensor, 
+                   conv_window.shape.imageElements(), 
+                   conv_window.shape.imageBytes() ) {}
             
           
       };
