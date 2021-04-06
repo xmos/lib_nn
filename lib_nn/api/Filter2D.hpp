@@ -17,7 +17,6 @@ struct AbstractKernelParams {
   //this execution
   const int32_t output_channel_group_count;
 
-
   //Used for setting the first channels slice, i.e. rather than writing to
   //slice 0-31 by offsetting it we can address slice 32 - 63, etc.
   const int32_t output_channel_slice_offset;
@@ -31,20 +30,42 @@ struct AbstractKernelParams {
   //(offset by output_channel_slice_offset) on the final column of a output 
   //region to the first column of the output region pixel on the next line 
   //down(offset by output_channel_slice_offset).
-  const size_t output_w_mem_stride; //different for all output regions of different widths
+  const int32_t output_w_mem_stride; //different for all output regions of different widths
 
 };
+
+//region
+// h_begin, h_end;
+// w_begin, w_end;
+// c_begin, c_end;
+
+
 
 template <class T>
 class AbstractKernel {
   protected:
   
-    AbstractKernelParams kparams;
+    AbstractKernelParams * kparams;
 
   public:
+  AbstractKernel(AbstractKernelParams *kparams): kparams(kparams){}
     //calc_output_pixel_slice(TOutput *Y, TInput *X, int32_t h, int32_t w);
 
-    void execute (int8_t * Y, int8_t * X) ;
+  // void execute (int8_t * Y, int8_t * X) ;
+
+  void execute (int8_t * Y, int8_t * X) {
+
+    //dereference by h_begin and w_begin
+    Y += kparams->output_channel_slice_offset;
+
+    for(int32_t h = kparams->h_begin; h < kparams->h_end; h++){
+      for(int32_t w = kparams->w_begin; w < kparams->w_end; w++){
+        static_cast<T*>(this)->calc_output_pixel_slice(Y, X, h, w);
+        Y += kparams->output_w_mem_stride;
+      }
+      Y += kparams->output_h_mem_stride;
+    }
+  }
 };
 
 class Filter2D : public AbstractKernel<Filter2D> {
@@ -59,9 +80,14 @@ class Filter2D : public AbstractKernel<Filter2D> {
     int8_t * scratch_mem;
   public:
     Filter2D(AbstractKernelParams * kparams, MemCpyFn * memcpy_handler, 
-      AggregateFn * aggregate_handler, OutputTransformFn * ot_handler, int8_t * scratch_mem);
+      AggregateFn * aggregate_handler, OutputTransformFn * ot_handler, int8_t * scratch_mem=0);
 
-    void inline calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h, int32_t w) ;
+    static AbstractKernelParams make_filter2d_params(ImageParams &Y, ImageRegion& r);
+
+    Filter2D(ImageParams &Y, ImageRegion& r, MemCpyFn * memcpy_handler, 
+      AggregateFn * aggregate_handler, OutputTransformFn * ot_handler, int8_t * scratch_mem=0);
+
+    void calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h, int32_t w) ;
 };
 
 class Filter2D_DW : public AbstractKernel<Filter2D> {
@@ -80,6 +106,6 @@ class Filter2D_DW : public AbstractKernel<Filter2D> {
     Filter2D_DW(AbstractKernelParams * kparams, MemCpyFn * memcpy_handler, 
       AggregateFn * aggregate_handler, OutputTransformFn * ot_handler, int8_t * scratch_mem);
 
-    void inline calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h, int32_t w) ;
+    void calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h, int32_t w) ;
 };
 
