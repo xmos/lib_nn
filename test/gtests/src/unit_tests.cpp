@@ -5,9 +5,7 @@
 #include <iostream>
 #include <algorithm>
 
-#include "MemCpyFn.hpp"
-#include "AggregateFn.hpp"
-#include "OutputTransformFn.hpp"
+#include "Filter2D.hpp"
 #include <tuple>
 #include <list>
 
@@ -793,11 +791,139 @@ namespace {
         }
       }
     }
-
-
-
-
   }
+
+
+
+
+class NullMemCpyFn : public MemCpyFn {
+public:
+  NullMemCpyFn(){}
+  int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c){return T;};
+  size_t get_scratch_bytes(){return 0;}
+  size_t get_overread_bytes(){return 0;}
+};
+class NullAggregateFn : public AggregateFn {
+public:
+  NullAggregateFn(){}
+    void aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group){}
+  
+};
+class BasicOT : public OutputTransformFn {
+  int32_t output_slice_channel_count;
+public:
+  BasicOT(int32_t output_slice_channel_count):output_slice_channel_count(output_slice_channel_count){}
+  int8_t * output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group){
+    
+    int output_count = std::min(output_slice_channel_count - output_channel_group * VPU_INT16_EPV, (int)VPU_INT16_EPV);
+  
+    std::cout << "output_count: "<<output_count << std::endl;
+    for (int ch=0;ch<output_count;++ch)
+    {
+      Y[ch] = 1;
+    }
+    return Y + output_count;
+  }
+};
+
+class Filter2DTest : public Filter2D {
+public:
+  Filter2DTest(AbstractKernelParams * kparams, MemCpyFn * memcpy_handler, 
+    AggregateFn * aggregate_handler, OutputTransformFn * ot_handler):
+    Filter2D(kparams, memcpy_handler, aggregate_handler, ot_handler){}
+};
+
+ class Test_Filter2D: public ::testing::Test {};
+
+  TEST_F(Test_Filter2D, BasicTest) {
+
+    NullAggregateFn agg_fn;
+    NullMemCpyFn mem_fn;
+    
+    for (auto y_height = 1; y_height <= 8; ++y_height){
+      for (auto y_width = 1; y_width <= 8; ++y_width){
+        for (auto y_channels = 1; y_channels <= 8; y_channels += 1){
+
+          for (auto r_height_start = 0; r_height_start < y_height; ++r_height_start){
+            for (auto r_height_end = r_height_start+1; r_height_end <= y_height; ++r_height_end){
+
+              for (auto r_width_start = 0; r_width_start < y_width; ++r_width_start){
+                for (auto r_width_end = r_width_start+1; r_width_end <= y_width; ++r_width_end){
+
+                  for (auto r_channels_start = 0; r_channels_start < y_channels; ++r_channels_start){
+                    for (auto r_channels_end = r_channels_start+1; r_channels_end <= y_channels; ++r_channels_end){
+
+                      std::cout <<
+                      
+                        " y_height: "<<y_height << 
+                        " y_width: "<<y_width << 
+                        " y_channels: "<<y_channels << 
+                        " r_height_start: "<<r_height_start << 
+                        " r_height_end: "<<r_height_end << 
+                        " r_width_start: "<<r_width_start << 
+                        " r_width_end: "<<r_width_end << 
+                        " r_channels_start: "<<r_channels_start << 
+                        " r_channels_end: "<<r_channels_end << std::endl;
+
+                      BasicOT ot_fn(r_channels_end - r_channels_start);
+
+                      ImageRegion ir(r_height_start, r_height_end, r_width_start, 
+                        r_width_end, r_channels_start, r_channels_end);
+
+                      ImageParams ip(y_height, y_width, y_channels, 8);
+
+                      AbstractKernelParams akp = Filter2D::make_filter2d_params(ip, ir);
+
+                      Filter2DTest f(&akp, &mem_fn, &agg_fn, &ot_fn);
+                      int8_t Y[y_height][y_width][y_channels];
+                      std::memset(Y, 0, sizeof Y);
+
+                      f.execute((int8_t*)Y, 0);
+
+                      for(int y_h=0;y_h<y_height;y_h++){
+                        for(int y_w=0;y_w<y_width;y_w++){
+                          for(int y_ch=0;y_ch<y_channels;y_ch++){
+                            //check if the region is in the output space
+                            std::cout << (int)Y[y_h][y_w][y_ch] << " ";
+                          }
+                          std::cout << " * ";
+                        }
+                        std::cout << std::endl;
+                      }
+                      std::cout << std::endl;
+                      
+
+                      //iterate through whohe output tensor
+                      for(int y_h=0;y_h<y_height;y_h++){
+                        for(int y_w=0;y_w<y_width;y_w++){
+                          for(int y_ch=0;y_ch<y_channels;y_ch++){
+                            //check if the region is in the output space
+
+                            if (((y_h >= r_height_start) && (y_h < r_height_end))
+                             && ((y_w >= r_width_start) && (y_w < r_width_end))
+                             && ((y_ch >= r_channels_start) && (y_ch < r_channels_end))){
+                               //expect a one
+                               EXPECT_EQ((int)Y[y_h][y_w][y_ch], 1);
+                             } else{
+                               //expect a zero
+                               EXPECT_EQ((int)Y[y_h][y_w][y_ch], 0);
+                             }
+                          }
+                        }
+                      }
+
+                      std::cout << "yay" << std::endl;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
 
 
   //end

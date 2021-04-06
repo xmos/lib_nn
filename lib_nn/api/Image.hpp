@@ -53,6 +53,25 @@ struct WindowGeometry {
    stride)
 
 
+struct ImageRegion {
+    int height_start, height_end;
+    int width_start, width_end;
+    int channel_start, channel_end;
+
+    ImageRegion(
+        int height_start, int height_end,
+        int width_start, int width_end,
+        int channel_start, int channel_end
+    ) 
+            : height_start(height_start), 
+            height_end(height_end), 
+            width_start(width_start), 
+            width_end(width_end), 
+            channel_start(channel_start), 
+            channel_end(channel_end){}
+
+};
+
 struct ImageParams {
 
     int height;
