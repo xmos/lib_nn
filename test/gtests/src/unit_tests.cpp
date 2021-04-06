@@ -803,12 +803,14 @@ public:
   size_t get_scratch_bytes(){return 0;}
   size_t get_overread_bytes(){return 0;}
 };
+
 class NullAggregateFn : public AggregateFn {
 public:
   NullAggregateFn(){}
     void aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group){}
   
 };
+
 class BasicOT : public OutputTransformFn {
   int32_t output_slice_channel_count;
 public:
@@ -817,11 +819,9 @@ public:
     
     int output_count = std::min(output_slice_channel_count - output_channel_group * VPU_INT16_EPV, (int)VPU_INT16_EPV);
   
-    std::cout << "output_count: "<<output_count << std::endl;
-    for (int ch=0;ch<output_count;++ch)
-    {
+    for (int ch = 0; ch < output_count; ++ch)
       Y[ch] = 1;
-    }
+
     return Y + output_count;
   }
 };
@@ -853,18 +853,6 @@ public:
                   for (auto r_channels_start = 0; r_channels_start < y_channels; ++r_channels_start){
                     for (auto r_channels_end = r_channels_start+1; r_channels_end <= y_channels; ++r_channels_end){
 
-                      std::cout <<
-                      
-                        " y_height: "<<y_height << 
-                        " y_width: "<<y_width << 
-                        " y_channels: "<<y_channels << 
-                        " r_height_start: "<<r_height_start << 
-                        " r_height_end: "<<r_height_end << 
-                        " r_width_start: "<<r_width_start << 
-                        " r_width_end: "<<r_width_end << 
-                        " r_channels_start: "<<r_channels_start << 
-                        " r_channels_end: "<<r_channels_end << std::endl;
-
                       BasicOT ot_fn(r_channels_end - r_channels_start);
 
                       ImageRegion ir(r_height_start, r_height_end, r_width_start, 
@@ -880,19 +868,6 @@ public:
 
                       f.execute((int8_t*)Y, 0);
 
-                      for(int y_h=0;y_h<y_height;y_h++){
-                        for(int y_w=0;y_w<y_width;y_w++){
-                          for(int y_ch=0;y_ch<y_channels;y_ch++){
-                            //check if the region is in the output space
-                            std::cout << (int)Y[y_h][y_w][y_ch] << " ";
-                          }
-                          std::cout << " * ";
-                        }
-                        std::cout << std::endl;
-                      }
-                      std::cout << std::endl;
-                      
-
                       //iterate through whohe output tensor
                       for(int y_h=0;y_h<y_height;y_h++){
                         for(int y_w=0;y_w<y_width;y_w++){
@@ -902,17 +877,13 @@ public:
                             if (((y_h >= r_height_start) && (y_h < r_height_end))
                              && ((y_w >= r_width_start) && (y_w < r_width_end))
                              && ((y_ch >= r_channels_start) && (y_ch < r_channels_end))){
-                               //expect a one
                                EXPECT_EQ((int)Y[y_h][y_w][y_ch], 1);
                              } else{
-                               //expect a zero
                                EXPECT_EQ((int)Y[y_h][y_w][y_ch], 0);
                              }
                           }
                         }
                       }
-
-                      std::cout << "yay" << std::endl;
                     }
                   }
                 }

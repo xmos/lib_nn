@@ -1,23 +1,7 @@
 #include "Filter2D.hpp"
 #include "vpu.hpp"
-
-// Filter2D::Filter2D(){
-
-// }
-// template<class T>
-// void AbstractKernel<T>::execute (int8_t * Y, int8_t * X) {
-
-//   Y += kparams->output_channel_slice_offset;
-
-//   for(int32_t h = kparams->h_begin; h < kparams->h_end; h++){
-//     for(int32_t w = kparams->w_begin; w < kparams->w_end; w++){
-//       static_cast<T*>(this)->calc_output_pixel_slice(Y, X, h, w);
-//       Y += kparams->output_w_mem_stride;
-//     }
-//     Y += kparams->output_h_mem_stride;
-//   }
-// }
 #include <iostream>
+
 AbstractKernelParams Filter2D::make_filter2d_params(ImageParams &Y, ImageRegion& r){
   
   const int channels_per_group = 16; //TODO
@@ -33,7 +17,8 @@ AbstractKernelParams Filter2D::make_filter2d_params(ImageParams &Y, ImageRegion&
   assert((Y.bits_per_element % bits_per_byte) == 0);
 
   //memory to moved down a pixel
-  int output_h_mem_stride = (Y.width - (r.width_end - r.width_start) + r.width_start)*Y.pixelBytes();
+  // int output_h_mem_stride = (Y.width - (r.width_end - r.width_start) + r.width_start)*Y.pixelBytes();
+  int output_h_mem_stride = Y.rowBytes() - (r.width_end - r.width_start) * output_w_mem_stride;
 
   AbstractKernelParams a = {
     .h_begin = r.height_start,
@@ -47,14 +32,14 @@ AbstractKernelParams Filter2D::make_filter2d_params(ImageParams &Y, ImageRegion&
     .output_w_mem_stride = output_w_mem_stride,
   };
 
-  std::cout << " h_begin: " << a.h_begin <<
-   " h_end: " << a.h_end<<
-    " w_begin: " << a.w_begin<<
-     " w_end: " << a.w_end<<
-      " output_channel_slice_offset: " << a.output_channel_slice_offset<<
-       " output_channel_group_count: " << a.output_channel_group_count<<
-        " output_h_mem_stride: " << a.output_h_mem_stride<<
-         " output_w_mem_stride: " << a.output_w_mem_stride<< std::endl;
+  // std::cout << " h_begin: " << a.h_begin <<
+  //  " h_end: " << a.h_end<<
+  //   " w_begin: " << a.w_begin<<
+  //    " w_end: " << a.w_end<<
+  //     " output_channel_slice_offset: " << a.output_channel_slice_offset<<
+  //      " output_channel_group_count: " << a.output_channel_group_count<<
+  //       " output_h_mem_stride: " << a.output_h_mem_stride<<
+  //        " output_w_mem_stride: " << a.output_w_mem_stride<< std::endl;
   return a;
 }
 
@@ -76,7 +61,6 @@ void Filter2D::calc_output_pixel_slice(int8_t * Y, int8_t * X, int32_t h, int32_
       
   int8_t * input_img = memcpy_handler->memcopy_fn(scratch_mem, X, h, w); //copy all input channels, channel start is implicitly 0.
 
-  std::cout << "h: " << h << " w:"<<w <<std::endl;
   for (int32_t chan_group = 0; chan_group < kparams->output_channel_group_count; chan_group++){
     vpu_ring_buffer_t A;
 

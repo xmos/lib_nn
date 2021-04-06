@@ -265,19 +265,19 @@ static void fill_array(T (&arr)[S], T v){
   std::fill_n(arr, sizeof arr / sizeof (T), v);
 }
 
-QuantisationParams OTBinary_int8::foo(
-    std::vector<double> & output_transform_multiplier,
-    std::vector<double> & output_transform_bias, 
-    std::vector<int32_t> & accu_min,
-    std::vector<int32_t> & accu_max,
+// QuantisationParams OTBinary_int8::foo(
+//     std::vector<double> & output_transform_multiplier,
+//     std::vector<double> & output_transform_bias, 
+//     std::vector<int32_t> & accu_min,
+//     std::vector<int32_t> & accu_max,
 
 
 
-     )
+//      )
 
 
 
-void OTBinary_int8::xor_popcount_to_vlmaccr1(
+void xor_popcount_to_vlmaccr1(
     std::vector<int32_t> & accu_min,
     std::vector<int32_t> & accu_max,
     std::vector<int32_t> & accu_overlaps, 
@@ -288,7 +288,7 @@ void OTBinary_int8::xor_popcount_to_vlmaccr1(
 
 }
 
-void OTBinary_int8::calc_post_accumulation_clamps(
+void calc_post_accumulation_clamps(
     std::vector<int32_t> & accu_min,
     std::vector<int32_t> & accu_max,
     std::vector<int32_t> & accu_overlaps, 
