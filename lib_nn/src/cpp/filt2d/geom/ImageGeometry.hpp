@@ -156,8 +156,8 @@ T ImageGeometry::Get(const T* img_base,
 
 
 inline std::ostream& operator<<(std::ostream &stream, const ImageGeometry &image){
-  return stream << image.height << ", " << image.width << ", " 
-                << image.depth << ", " << image.channel_depth;
+  return stream << image.height << "," << image.width << "," 
+                << image.depth << "," << image.channel_depth;
 }
 
 

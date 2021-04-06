@@ -13,9 +13,10 @@ ImageVect WindowLocation::InputStart() const
 
 ImageVect WindowLocation::InputEnd() const
 {
-  return  InputStart().add(filter.window.shape.height - 1,
-                           filter.window.shape.width  - 1,
-                           filter.window.shape.depth  - 1);
+  return  InputStart().add(
+              (filter.window.shape.height - 1) * filter.window.dilation.row,
+              (filter.window.shape.width  - 1) * filter.window.dilation.col,
+              filter.window.shape.depth - 1);
 }
 
 ImageVect WindowLocation::InputCoords(const int filter_row,
@@ -54,22 +55,26 @@ padding_t WindowLocation::Padding() const
     res.left = K_w;
     res.bottom = 0;
     res.right = 0;
+  } else if( !filter.window.UsesDilation() ){
+    // When dilation is 1x1..
+    res.top    = -first_pix.row;
+    res.left   = -first_pix.col;
+    res.bottom = last_pix.row - (X_h - 1);
+    res.right  = last_pix.col - (X_w - 1);
+
   } else {
-    // When dilation is 1x1, the computation is easy..
-    res.top    = std::max<int>( -first_pix.row, 0 );
-    res.left   = std::max<int>( -first_pix.col, 0 );
-    res.bottom = std::max<int>( last_pix.row - (X_h - 1), 0);
-    res.right  = std::max<int>( last_pix.col - (X_w - 1), 0);
-    if( filter.window.UsesDilation() ){
-      //If dilation is used, these need to be modified. To get the correct values in this case, we divide the padding
-      // we get assuming 1x1 dilation by the dilation, always rounding up. (note: the 'padding assuming 1x1 dilation'
-      // isn't *actually* assuming 1x1 dilation because the dilation was used to compute last_pix)
-      res.top    = (res.top    + K_h - 1) / filter.window.dilation.row;
-      res.left   = (res.left   + K_w - 1) / filter.window.dilation.col;
-      res.bottom = (res.bottom + K_h - 1) / filter.window.dilation.row;
-      res.right  = (res.right  + K_w - 1) / filter.window.dilation.col;
-    }
+
+    res.top    = (-first_pix.row + filter.window.dilation.row - 1) / filter.window.dilation.row;
+    res.left   = (-first_pix.col + filter.window.dilation.col - 1) / filter.window.dilation.col;
+    res.bottom = (last_pix.row - (X_h - 1) + filter.window.dilation.row - 1) / filter.window.dilation.row;
+    res.right  = (last_pix.col - (X_w - 1) + filter.window.dilation.col - 1) / filter.window.dilation.col;
+    
   }
+
+  res.top    = std::max<int>(res.top, 0);
+  res.left   = std::max<int>(res.left, 0);
+  res.bottom = std::max<int>(res.bottom, 0);
+  res.right  = std::max<int>(res.right, 0);
 
   return res;
 }

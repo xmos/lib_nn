@@ -65,10 +65,10 @@ namespace nn {
   };
 
   inline std::ostream& operator<<(std::ostream &stream, const WindowGeometry &window){
-    return stream << "shape{" << window.shape.height << ", " << window.shape.width << ", " << window.shape.depth << "}, "
-          << "start{" << window.start.row << ", " << window.start.col << "}, "
-          << "stride{" << window.stride.row << ", " << window.stride.col << ", " << window.stride.channel << "}, "
-          << "dilation{" << window.dilation.row << ", " << window.dilation.col << "}";
+    return stream << "shape{" << window.shape.height << "," << window.shape.width << "," << window.shape.depth << "},"
+          << "start{" << window.start.row << "," << window.start.col << "},"
+          << "stride{" << window.stride.row << "," << window.stride.col << "," << window.stride.channel << "},"
+          << "dilation{" << window.dilation.row << "," << window.dilation.col << "}";
   }
 
 }

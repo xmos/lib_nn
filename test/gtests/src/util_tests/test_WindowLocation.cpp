@@ -284,7 +284,7 @@ TEST_P(WindowLocationTest, GetInput)
     input_img[k] = rand.rand<int8_t>();
   }
 
-  auto zero_point = rand.rand<int8_t>();
+  auto zero_pad = rand.rand<int8_t>();
 
   for(int yr = 0; yr < filter.output.height; yr++){
 
@@ -303,14 +303,15 @@ TEST_P(WindowLocationTest, GetInput)
                          +(in_coords.col * int(filter.input.depth))
                          +(in_coords.channel);
 
-              int8_t expected = loc.IsPadding(kr,kc,kx)? zero_point : input_img[index];
-              int8_t actual = loc.GetInput<int8_t>(&input_img[0], kr, kc, kx);
+              int8_t expected = loc.IsPadding(kr,kc,kx)? zero_pad : input_img[index];
+              int8_t actual = loc.GetInput<int8_t>(&input_img[0], kr, kc, kx, zero_pad);
 
-              EXPECT_EQ(expected, actual) << "Output Coords: " << loc.output_coords 
+              ASSERT_EQ(expected, actual) << "Output Coords: " << loc.output_coords 
                                           << " | Filter Coords: " << ImageVect(kr, kc, kx)
                                           << " | in_coords: " << in_coords
                                           << " | index: " << index
-                                          << " | input_img: " << &input_img[0];
+                                          << " | input_img: " << &input_img[0]
+                                          << " | zero_pad: " << int(zero_pad);
             }
           }
         }
@@ -320,9 +321,13 @@ TEST_P(WindowLocationTest, GetInput)
 }
 
 
-auto simple_filters = ::testing::ValuesIn( nn::test::filt_gen::SimpleFilters() );
+static auto simple_filters = ::testing::ValuesIn( nn::test::filt_gen::SimpleFilters() );
+static auto padded_filters = ::testing::ValuesIn( nn::test::filt_gen::PaddedFilters() );
+static auto dilated_filters = ::testing::ValuesIn( nn::test::filt_gen::DilatedFilters() );
 
 
 INSTANTIATE_TEST_SUITE_P(Simple, WindowLocationTest, simple_filters);
+INSTANTIATE_TEST_SUITE_P(Padded, WindowLocationTest, padded_filters);
+INSTANTIATE_TEST_SUITE_P(Dilated, WindowLocationTest, dilated_filters);
 
 
