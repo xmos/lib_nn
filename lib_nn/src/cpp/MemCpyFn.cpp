@@ -23,15 +23,15 @@ int8_t * DerefInputFn::memcopy_fn(int8_t * T, int8_t * X,
     output_h_coord * bytes_per_pixel + output_c_coord);
 }
 
-size_t Im_to_col_padded::get_scratch_bytes(){
-  return kernel_height * kernel_width * bytes_per_copy_per_channel + XS3_VPU_VREG_WIDTH_BYTES;
+size_t ImToColPadded::get_scratch_bytes(){
+  return params->kernel_height * params->kernel_width * params->bytes_per_copy_per_channel + XS3_VPU_VREG_WIDTH_BYTES;
 }
 
-size_t Im_to_col_padded::get_overread_bytes(){
+size_t ImToColPadded::get_overread_bytes(){
   return XS3_VPU_VREG_WIDTH_BYTES; //TODO this will be defined by the implementation of memcpy
 }
 
-Im_to_col_padded::Im_to_col_padded(ImageParams &X, WindowGeometry &K, padding_t &padding, int input_ch_per_output, int8_t pad_val){
+ImToColPadded::Params::Params(ImageParams &X, WindowGeometry &K, padding_t &padding, int input_ch_per_output, int8_t pad_val){
 
   kernel_height = K.shape.height;
   kernel_width = K.shape.width;
@@ -57,44 +57,44 @@ Im_to_col_padded::Im_to_col_padded(ImageParams &X, WindowGeometry &K, padding_t 
   
 }
 
-int8_t * Im_to_col_padded::memcopy_fn(int8_t * T, int8_t * X, 
+int8_t * ImToColPadded::memcopy_fn(int8_t * T, int8_t * X, 
 int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
 
   xs3_vpu vpu_mem;
   xs3_vpu * vpu = &vpu_mem;
   int8_t * T_in = T;
 
-  for(int32_t k_height = 0; k_height < kernel_height; k_height++){
+  for(int32_t k_height = 0; k_height < params->kernel_height; k_height++){
 
-    int32_t input_v_coord = (output_v_coord * vertical_stride + k_height * vertical_dilation);
+    int32_t input_v_coord = (output_v_coord * params->vertical_stride + k_height * params->vertical_dilation);
 
-    int p = input_v_coord < padding.top;
-    p |= input_v_coord >= padding.top + input_v_length;
+    int p = input_v_coord < params->padding.top;
+    p |= input_v_coord >= params->padding.top + params->input_v_length;
 
-    int32_t input_h_coord = (output_h_coord * horizontal_stride );
-    int8_t * X_cur_p = X + (int)((input_v_coord - padding.top) * bytes_per_h_line + (input_h_coord - padding.left) * bytes_per_pixel + output_c_coord);
+    int32_t input_h_coord = (output_h_coord * params->horizontal_stride );
+    int8_t * X_cur_p = X + (int)((input_v_coord - params->padding.top) * params->bytes_per_h_line + (input_h_coord - params->padding.left) * params->bytes_per_pixel + output_c_coord);
 
-    for(int32_t k_width = 0; k_width < kernel_width; k_width++){
+    for(int32_t k_width = 0; k_width < params->kernel_width; k_width++){
       
       // int32_t input_h_coord = (output_h_coord * horizontal_stride + k_width * horizontal_dilation);
       int q = p;
-      q |= input_h_coord < padding.left;
-      q |= input_h_coord >= padding.left + input_h_length;
+      q |= input_h_coord < params->padding.left;
+      q |= input_h_coord >= params->padding.left + params->input_h_length;
 
       //it might be nice to do a memcopy of the padding rather than a memset(requires more memory though)
       if(q){
-        memset(T, padding_val, bytes_per_copy_per_channel);
+        memset(T, params->padding_val, params->bytes_per_copy_per_channel);
       } else {
         // int8_t * X_cur_p = X + (int)((input_v_coord - padding.top) * bytes_per_h_line + (input_h_coord - padding.left) * bytes_per_pixel + output_c_coord);
-        memcpy(T, X_cur_p, bytes_per_copy_per_channel);
+        memcpy(T, X_cur_p, params->bytes_per_copy_per_channel);
       }
 
-      T += bytes_per_copy_per_channel;
+      T += params->bytes_per_copy_per_channel;
 
       //Advance the X_cur_p to the start of the next horizontal pixel
       // probably w_stride = nput_bytes_per_pixel * horizontal_stride
-      X_cur_p += bytes_per_pixel * horizontal_dilation;
-      input_h_coord += horizontal_dilation;
+      X_cur_p += params->bytes_per_pixel * params->horizontal_dilation;
+      input_h_coord += params->horizontal_dilation;
 
     }
     //There is no vertical mem stride as X_cur_p is recalculated each step of the kernel height
@@ -110,7 +110,7 @@ int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
 /*
 This constructor is used for testing
 */
-Im_to_col_valid::Im_to_col_valid(ImageParams &X, WindowGeometry &K, int input_ch_per_output){
+ImToColValid::Params::Params(ImageParams &X, WindowGeometry &K, int input_ch_per_output){
 
   int bytes_per_copy_per_channel = (input_ch_per_output *  X.bits_per_element) / CHAR_BIT; 
 
@@ -137,29 +137,29 @@ Im_to_col_valid::Im_to_col_valid(ImageParams &X, WindowGeometry &K, int input_ch
 
 }
 
-size_t Im_to_col_valid::get_scratch_bytes(){
-  return input_height * input_width * (input_channel_groups * XS3_VPU_VREG_WIDTH_BYTES - T_rewind) + XS3_VPU_VREG_WIDTH_BYTES;
+size_t ImToColValid::get_scratch_bytes(){
+  return params->input_height * params->input_width * (params->input_channel_groups * XS3_VPU_VREG_WIDTH_BYTES - params->T_rewind) + XS3_VPU_VREG_WIDTH_BYTES;
 }
 
-size_t Im_to_col_valid::get_overread_bytes(){
-  return T_rewind;
+size_t ImToColValid::get_overread_bytes(){
+  return params->T_rewind;
 }
 
-int8_t * Im_to_col_valid::memcopy_fn(int8_t * T, int8_t * X, 
+int8_t * ImToColValid::memcopy_fn(int8_t * T, int8_t * X, 
   int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
 
   xs3_vpu vpu_mem;
   xs3_vpu * vpu = &vpu_mem;
 
-  int8_t * X_cur_p = X + (int)(output_v_coord * bytes_per_h_line + output_h_coord * bytes_per_pixel + output_c_coord);
+  int8_t * X_cur_p = X + (int)(output_v_coord * params->bytes_per_h_line + output_h_coord * params->bytes_per_pixel + output_c_coord);
   
   int8_t * T_in = T;
 
-  for(int32_t i_height = 0; i_height < input_height; i_height++){
-    for(int32_t i_width = 0; i_width < input_width; i_width++){
+  for(int32_t i_height = 0; i_height < params->input_height; i_height++){
+    for(int32_t i_width = 0; i_width < params->input_width; i_width++){
       
       //This loop copies a whole pixel
-      for(int32_t i_ch_group=0; i_ch_group < input_channel_groups; i_ch_group++){
+      for(int32_t i_ch_group=0; i_ch_group < params->input_channel_groups; i_ch_group++){
         VLDD(vpu, X_cur_p);      
         X_cur_p += XS3_VPU_VREG_WIDTH_BYTES;
 
@@ -167,14 +167,14 @@ int8_t * Im_to_col_valid::memcopy_fn(int8_t * T, int8_t * X,
         T += XS3_VPU_VREG_WIDTH_BYTES;
       }
 
-      T -= T_rewind; 
+      T -= params->T_rewind; 
 
       //Advance the X_cur_p to the start of the next horizontal pixel
-      X_cur_p += horizontal_mem_stride;
+      X_cur_p += params->horizontal_mem_stride;
     }
 
     //Advance the X_cur_p to the start of the next vertical pixel
-    X_cur_p += vertical_mem_stride;
+    X_cur_p += params->vertical_mem_stride;
   }
 
   //Write padding to the tail, zeros is fastest

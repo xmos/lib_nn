@@ -30,7 +30,7 @@ struct Conv2dReorderedWeights {
   }
 };
 
-class MatMulFn : public AggregateFn {
+class MatMulInt8 : public AggregateFn {
 
   private:
   void mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
@@ -39,16 +39,35 @@ class MatMulFn : public AggregateFn {
   size_t bytes_per_kernel_channel;
 
   public:
-    MatMulFn(int output_slice_channel_count, size_t bytes_per_kernel_channel, int8_t * weights);
+    MatMulInt8(int output_slice_channel_count, size_t bytes_per_kernel_channel, int8_t * weights);
     void aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
 
-    //return a Conv2dReorderedWeights
-    // static std::tuple<int8_t *, int8_t **, int> reorder_kernel_weights(
     static Conv2dReorderedWeights reorder_kernel_weights(
       int8_t *raw_weights, std::array<int, 4> &shape, int bits_per_element, int8_t pad_value);
+      
     static int get_kernel_size(int input_bytes, int output_channel_count);
     static int get_scratch_size(int input_bytes) ;
 };
+
+
+// class MatMulBinary : public AggregateFn {
+
+//   private:
+//   void mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
+//   int8_t * weights;
+//   int32_t output_slice_channel_count;
+//   size_t bytes_per_kernel_channel;
+
+//   public:
+//     MatMulBinary(int output_slice_channel_count, size_t bytes_per_kernel_channel, int8_t * weights);
+//     void aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
+
+//     static Conv2dReorderedWeights reorder_kernel_weights(
+//       int8_t *raw_weights, std::array<int, 4> &shape, int bits_per_element, int8_t pad_value);
+      
+//     static int get_kernel_size(int input_bytes, int output_channel_count);
+//     static int get_scratch_size(int input_bytes) ;
+// };
 
 class MatMulDirectFn : public AggregateFn {
   private:

@@ -2,49 +2,34 @@
 #include "vpu.hpp"
 #include <iostream>
 
-AbstractKernelParams Filter2D::make_filter2d_params(ImageParams &Y, ImageRegion& r){
+// template<class T>
+// AbstractKernel<T>::Params::Params(ImageParams &Y, ImageRegion& r){
   
-  const int channels_per_group = 16; //TODO
-  int output_channel_group_count = (r.channel_end - r.channel_start + channels_per_group - 1) / channels_per_group;
+//   const int channels_per_group = 16; //TODO
+//   output_channel_group_count = (r.channel_end - r.channel_start + channels_per_group - 1) / channels_per_group;
 
-  // memory to move to the next right pixel after all current channel groups have been saved
-  // i.e. this conv2d might write chs 16-31 of 68 chs, so the stride would have to be 52 channels 
-  // worth of memory(enough to move from the end of the group just processed to the start of the 
-  // next)
-  const int bits_per_byte = 8;
-  // int output_w_mem_stride = ((Y.channels - (r.channel_end - r.channel_start)) * Y.bits_per_element ) / bits_per_byte;
-  int output_w_mem_stride = (Y.channels * Y.bits_per_element ) / bits_per_byte;
-  assert((Y.bits_per_element % bits_per_byte) == 0);
+//   // memory to move to the next right pixel after all current channel groups have been saved
+//   // i.e. this conv2d might write chs 16-31 of 68 chs, so the stride would have to be 52 channels 
+//   // worth of memory(enough to move from the end of the group just processed to the start of the 
+//   // next)
+//   const int bits_per_byte = 8;
+//   // int output_w_mem_stride = ((Y.channels - (r.channel_end - r.channel_start)) * Y.bits_per_element ) / bits_per_byte;
+//   output_w_mem_stride = (Y.channels * Y.bits_per_element ) / bits_per_byte;
+//   assert((Y.bits_per_element % bits_per_byte) == 0);
 
-  //memory to moved down a pixel
-  // int output_h_mem_stride = (Y.width - (r.width_end - r.width_start) + r.width_start)*Y.pixelBytes();
-  int output_h_mem_stride = Y.rowBytes() - (r.width_end - r.width_start) * output_w_mem_stride;
+//   //memory to moved down a pixel
+//   // int output_h_mem_stride = (Y.width - (r.width_end - r.width_start) + r.width_start)*Y.pixelBytes();
+//   output_h_mem_stride = Y.rowBytes() - (r.width_end - r.width_start) * output_w_mem_stride;
 
-  AbstractKernelParams a = {
-    .h_begin = r.height_start,
-    .h_end = r.height_end,
-    .w_begin = r.width_start,
-    .w_end = r.width_end,
-    .output_channel_slice_offset = r.channel_start,
+//   h_begin = r.height_start;
+//   h_end = r.height_end;
+//   w_begin = r.width_start;
+//   w_end = r.width_end;
+//   output_channel_slice_offset = r.channel_start;
 
-    .output_channel_group_count = output_channel_group_count,
-    .output_h_mem_stride = output_h_mem_stride,
-    .output_w_mem_stride = output_w_mem_stride,
-  };
+// }
 
-  // std::cout << " h_begin: " << a.h_begin <<
-  //  " h_end: " << a.h_end<<
-  //   " w_begin: " << a.w_begin<<
-  //    " w_end: " << a.w_end<<
-  //     " output_channel_slice_offset: " << a.output_channel_slice_offset<<
-  //      " output_channel_group_count: " << a.output_channel_group_count<<
-  //       " output_h_mem_stride: " << a.output_h_mem_stride<<
-  //        " output_w_mem_stride: " << a.output_w_mem_stride<< std::endl;
-  return a;
-}
-
-
-Filter2D::Filter2D(AbstractKernelParams * kparams, MemCpyFn * memcpy_handler, 
+Filter2D::Filter2D(AbstractKernel::Params * kparams, MemCpyFn * memcpy_handler, 
       AggregateFn * aggregate_handler, OutputTransformFn * ot_handler, int8_t * scratch_mem):
       AbstractKernel(kparams), memcpy_handler(memcpy_handler), aggregate_handler(aggregate_handler),
       ot_handler(ot_handler), scratch_mem(scratch_mem)

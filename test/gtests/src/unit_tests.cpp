@@ -17,32 +17,31 @@ namespace {
     *seed = (int)((long long)a * *seed + c);
     return *seed;
   }
-#if 0
   //TODO break these up into different files
   
-  class Test_Im_to_col_valid: public ::testing::Test {};
+  class Test_ImToColValid: public ::testing::Test {};
 
-  //TODO binary tests for Im_to_col_valid
-  TEST_F(Test_Im_to_col_valid, BasicTest) {
+  //TODO binary tests for ImToColValid
+  TEST_F(Test_ImToColValid, BasicTest) {
 
     int seed = 42;
 
-    for (auto x_height = 1; x_height <= 8; ++x_height){
-      for (auto x_width = 1; x_width <= 8; ++x_width){
-        for (auto x_channels = 4; x_channels <= 16; x_channels += 4){
+    for (int x_height = 1; x_height <= 8; ++x_height){
+      for (int x_width = 1; x_width <= 8; ++x_width){
+        for (int x_channels = 4; x_channels <= 16; x_channels += 4){
 
-          for (auto k_height = 1; k_height <= x_height; ++k_height){
-            for (auto k_width = 1; k_width <= x_width; ++k_width){
+          for (int k_height = 1; k_height <= x_height; ++k_height){
+            for (int k_width = 1; k_width <= x_width; ++k_width){
 
               //the number of channels the kernel is going to be copying
               //TODO put input_ch_per_output in K.channels i.e. the output channels fo K
               for (int input_ch_per_output = 4; input_ch_per_output <= x_channels; input_ch_per_output += 4){
 
-                for (auto k_h_dilation = 1; k_h_dilation <= 3; ++k_h_dilation){
-                  for (auto k_v_dilation = 1; k_v_dilation <= 3; ++k_v_dilation){
+                for (int k_h_dilation = 1; k_h_dilation <= 3; ++k_h_dilation){
+                  for (int k_v_dilation = 1; k_v_dilation <= 3; ++k_v_dilation){
 
-                    for (auto k_h_stride = 1; k_h_stride <= 3; ++k_h_stride){ 
-                      for (auto k_v_stride = 1; k_v_stride <= 3; ++k_v_stride){
+                    for (int k_h_stride = 1; k_h_stride <= 3; ++k_h_stride){ 
+                      for (int k_v_stride = 1; k_v_stride <= 3; ++k_v_stride){
 
                         int output_height = CONV2D_OUTPUT_LENGTH(x_height, k_height, k_v_dilation, k_v_stride);
                         int output_width = CONV2D_OUTPUT_LENGTH(x_width, k_width, k_h_dilation, k_h_stride);
@@ -53,7 +52,8 @@ namespace {
                         ImageParams X(x_height, x_width, x_channels, 8); //8 bits per elemnet
                         WindowGeometry K (k_height, k_width, k_h_stride, k_v_stride, k_h_dilation, k_v_dilation);
 
-                        Im_to_col_valid cpy(X, K, input_ch_per_output);
+                        ImToColValid::Params p(X, K, input_ch_per_output);
+                        ImToColValid cpy(&p);
 
                         size_t scratch_bytes = cpy.get_scratch_bytes(); //TODO add test that crashes when this is one less
                         int overread_bytes = cpy.get_overread_bytes(); //TODO add test that crashes when this is one less
@@ -68,7 +68,7 @@ namespace {
                           for(int output_w = 0 ; output_w < output_width; ++output_w){
                             for(int output_c = 0; output_c < output_ch_starts; output_c += 4){ //only test from aligned memory addresses
 
-                              for(auto j = 0; j < sizeof X_mem; ++j)
+                              for(int j = 0; j < sizeof X_mem; ++j)
                                 X_mem[j] = (int8_t)pseudo_rand(&seed);
 
                               std::memset(T, 0x55, sizeof T);
@@ -106,9 +106,9 @@ namespace {
     }
   }
 
-  class Test_Im_to_col_padded: public ::testing::Test {};
+  class Test_ImToColPadded: public ::testing::Test {};
 
-  TEST_F(Test_Im_to_col_padded, BasicTest) {
+  TEST_F(Test_ImToColPadded, BasicTest) {
 
     int seed = 42;
 
@@ -144,7 +144,9 @@ namespace {
                                 WindowGeometry K (k_height, k_width, k_h_stride, k_v_stride, k_h_dilation, k_v_dilation);
 
                                 int8_t pad_val = 0x55;
-                                Im_to_col_padded cpy(X, K, padding, input_ch_per_output, pad_val);
+
+                                ImToColPadded::Params p(X, K, padding, input_ch_per_output, pad_val);
+                                ImToColPadded cpy(&p);
 
                                 size_t scratch_bytes = cpy.get_scratch_bytes(); //TODO add test that crashes when this is one less
                                 int overread_bytes = cpy.get_overread_bytes(); //TODO add test that crashes when this is one less
@@ -155,14 +157,14 @@ namespace {
                                 //create an explicitly padded version of X
                                 int8_t X_mem_padded[padded_x_height][padded_x_width][x_channels];
                                 
-                                for (auto i=0;i<sizeof X_mem; ++i)
+                                for (int i=0;i<sizeof X_mem; ++i)
                                   ((int8_t*)X_mem )[i]= (int8_t)pseudo_rand(&seed);
                                 
                                 std::memset(X_mem_padded, pad_val, sizeof X_mem_padded);
 
-                                for(auto h=0;h<x_height;h++){
-                                  for(auto w=0;w<x_width;w++){
-                                    for(auto c=0;c<x_channels;c++){
+                                for(int h=0;h<x_height;h++){
+                                  for(int w=0;w<x_width;w++){
+                                    for(int c=0;c<x_channels;c++){
                                       X_mem_padded[h + padding.top][w + padding.left][c] =  X_mem[h][w][c];
                                     }
                                   }
@@ -171,7 +173,7 @@ namespace {
                                 int8_t X_mem_with_overread[sizeof X_mem + overread_bytes];
 
                                 std::memcpy(X_mem_with_overread, (int8_t*)X_mem, sizeof X_mem);
-                                for(auto j = sizeof X_mem; j < sizeof X_mem_with_overread; ++j)
+                                for(int j = sizeof X_mem; j < sizeof X_mem_with_overread; ++j)
                                   X_mem_with_overread[j] = (int8_t)pseudo_rand(&seed);
 
                                 int output_ch_starts = x_channels / input_ch_per_output;
@@ -249,12 +251,12 @@ namespace {
                   
                   int8_t X_mem[x_height][x_width][x_channels];
 
-                  for(auto j = 0; j < sizeof X_mem; ++j)
+                  for(int j = 0; j < sizeof X_mem; ++j)
                     ((int8_t*)X_mem)[j] = (int8_t)pseudo_rand(&seed);
 
-                  for(auto h = 0; h < output_height; ++h){
-                    for(auto w = 0 ; w < output_width; ++w){
-                      for(auto c = 0 ; c < x_channels; ++c){
+                  for(int h = 0; h < output_height; ++h){
+                    for(int w = 0 ; w < output_width; ++w){
+                      for(int c = 0 ; c < x_channels; ++c){
                         int8_t * p = deref.memcopy_fn(0, (int8_t*)X_mem, h, w, c);
                         int x = (int)X_mem[k_v_stride*h][k_h_stride*w][c];
                         EXPECT_EQ((int)*p, x);
@@ -274,11 +276,11 @@ namespace {
   //////////////////////////////////////////////////////////////////////////////////////////
 
 
-  class Test_SimpleMatMulFn: public ::testing::Test {};
+  class Test_SimpleMatMulInt8: public ::testing::Test {};
   /*
     Simple test to verify memory accesses
   */
-  TEST_F(Test_SimpleMatMulFn, BasicTest) {
+  TEST_F(Test_SimpleMatMulInt8, BasicTest) {
     // const int vpu_bytes = 32;
     const int vpu_ring_buffer_length = 16;
 
@@ -297,22 +299,22 @@ namespace {
         int8_t kernel_fill, scratch_fill;
         std::tie(kernel_fill, scratch_fill) = arg;
 
-        for (auto output_channel_count = 1; output_channel_count < 48; ++output_channel_count){
+        for (int output_channel_count = 1; output_channel_count < 48; ++output_channel_count){
             
-          int scratch_bytes = MatMulFn::get_scratch_size(input_bytes);
-          int kernel_bytes = MatMulFn::get_kernel_size(input_bytes, output_channel_count);
+          int scratch_bytes = MatMulInt8::get_scratch_size(input_bytes);
+          int kernel_bytes = MatMulInt8::get_kernel_size(input_bytes, output_channel_count);
 
           int8_t K[kernel_bytes];
           int8_t T[scratch_bytes];
 
-          MatMulFn mm(output_channel_count, input_bytes, (int8_t *)K);
+          MatMulInt8 mm(output_channel_count, input_bytes, (int8_t *)K);
 
           std::fill_n(K, kernel_bytes, kernel_fill);
           std::fill_n(T, scratch_bytes, scratch_fill);
 
           int ocg_count = (output_channel_count + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
 
-          for (auto ocg = 0; ocg < ocg_count; ++ocg){
+          for (int ocg = 0; ocg < ocg_count; ++ocg){
 
             vpu_ring_buffer_t A;
             mm.aggregate_fn(&A, T, ocg);
@@ -323,7 +325,7 @@ namespace {
             else
               c = output_channel_count % vpu_ring_buffer_length;
 
-            for (auto output_chan = 0; output_chan < c; ++output_chan){
+            for (int output_chan = 0; output_chan < c; ++output_chan){
 
             int32_t v;
             ((int16_t *)&v)[0] = A.vD[output_chan];
@@ -337,19 +339,19 @@ namespace {
     }
   }
 
-  class Test_MatMulFn: public ::testing::Test {};
+  class Test_MatMulInt8: public ::testing::Test {};
   /*
     Simple test to verify memory accesses
   */
-  TEST_F(Test_MatMulFn, BasicTest) {
+  TEST_F(Test_MatMulInt8, BasicTest) {
     const int vpu_bytes = 32;
     const int vpu_ring_buffer_length = 16;
 
     int seed = 69;
 
-    for (auto input_bytes = 1; input_bytes < 128; ++input_bytes){
+    for (int input_bytes = 1; input_bytes < 128; ++input_bytes){
 
-      for (auto output_channel_count = 1; output_channel_count < 48; ++output_channel_count){
+      for (int output_channel_count = 1; output_channel_count < 48; ++output_channel_count){
           
         int k_height = 1;
         int k_width = 1; //to make things easy
@@ -361,7 +363,7 @@ namespace {
         for(auto j = 0; j < sizeof raw_weights; ++j)
           ((int8_t*)raw_weights)[j] = (int8_t)pseudo_rand(&seed);
 
-        int scratch_bytes = MatMulFn::get_scratch_size(input_bytes);
+        int scratch_bytes = MatMulInt8::get_scratch_size(input_bytes);
 
         // int8_t* reordered_weights;
         // int8_t** final_load_locations;
@@ -371,11 +373,11 @@ namespace {
 
         // std::tie(reordered_weights, final_load_locations, kernel_bytes) = 
         Conv2dReorderedWeights rw = 
-          MatMulFn::reorder_kernel_weights( (int8_t* )raw_weights, shape, 8, pad_val) ;
+          MatMulInt8::reorder_kernel_weights( (int8_t* )raw_weights, shape, 8, pad_val) ;
         
         int8_t T[scratch_bytes];
 
-        for(auto j = 0; j < sizeof T; ++j)
+        for(int j = 0; j < sizeof T; ++j)
           T[j] = (int8_t)pseudo_rand(&seed);
 
         int accu_modifier[output_channel_count]; //=0
@@ -399,17 +401,17 @@ namespace {
           accu_modifier[i] = s;
         }
 
-        MatMulFn mm(output_channel_count, input_bytes, rw.weights.data());
+        MatMulInt8 mm(output_channel_count, input_bytes, rw.weights.data());
         int ocg_count = (output_channel_count + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
         
-        for (auto ocg = 0; ocg < ocg_count; ++ocg){
+        for (int ocg = 0; ocg < ocg_count; ++ocg){
 
           vpu_ring_buffer_t A;
           mm.aggregate_fn(&A, T, ocg);
 
           int chs_in_group = std::min(output_channel_count - output_channel_count *ocg , vpu_ring_buffer_length);
 
-          for (auto output_chan = 0; output_chan < chs_in_group; ++output_chan){
+          for (int output_chan = 0; output_chan < chs_in_group; ++output_chan){
 
             int actual_output_channel = output_chan + ocg * vpu_ring_buffer_length;
 
@@ -453,12 +455,12 @@ namespace {
       int8_t kernel_fill, scratch_fill;
       std::tie(kernel_fill, scratch_fill) = arg;
 
-      for (auto x_height = 1; x_height <= 4; ++x_height){
-        for (auto x_width = 1; x_width <= 4; ++x_width){
-          for (auto x_channels = 32; x_channels <= 32*3; x_channels += 32){
-            for (auto k_height = 1; k_height <= x_height; ++k_height){
-              for (auto k_width = 1; k_width <= x_width; ++k_width){
-                for (auto y_channels = 32; y_channels < 32*3; y_channels += 32){
+      for (int x_height = 1; x_height <= 4; ++x_height){
+        for (int x_width = 1; x_width <= 4; ++x_width){
+          for (int x_channels = 32; x_channels <= 32*3; x_channels += 32){
+            for (int k_height = 1; k_height <= x_height; ++k_height){
+              for (int k_width = 1; k_width <= x_width; ++k_width){
+                for (int y_channels = 32; y_channels < 32*3; y_channels += 32){
                   
                   ImageParams X_params(x_height, x_width, x_channels, 8);
                   WindowGeometry K_params(k_height, k_width, 1, 1, 1, 1);
@@ -475,14 +477,14 @@ namespace {
 
                   int ocg_count = (y_channels + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
 
-                  for (auto x = 0; x < x_height - k_height + 1; ++x){
-                    for (auto y = 0; y < x_width - k_width + 1; ++y){
-                      for (auto ocg = 0; ocg < ocg_count; ++ocg){
+                  for (int x = 0; x < x_height - k_height + 1; ++x){
+                    for (int y = 0; y < x_width - k_width + 1; ++y){
+                      for (int ocg = 0; ocg < ocg_count; ++ocg){
 
                         vpu_ring_buffer_t A;
                         mmd.aggregate_fn(&A, (int8_t *)T, ocg);
 
-                        for (auto output_chan = 0; output_chan < vpu_ring_buffer_length; ++output_chan){
+                        for (int output_chan = 0; output_chan < vpu_ring_buffer_length; ++output_chan){
 
                           int32_t v;
                           ((int16_t *)&v)[0] = A.vD[output_chan];
@@ -550,25 +552,25 @@ namespace {
                       std::array<int, 4> shape = {output_channels, k_height, k_width, x_channels};
                       int8_t raw_weights[output_channels][k_height][k_width][x_channels];
 
-                      for(auto j = 0; j < sizeof raw_weights; ++j)
+                      for(int j = 0; j < sizeof raw_weights; ++j)
                         ((int8_t*)raw_weights)[j] = (int8_t)pseudo_rand(&seed);
 
                       int8_t X_mem[x_height][x_width][x_channels];
 
-                      for(auto j = 0; j < sizeof X_mem; ++j)
+                      for(int j = 0; j < sizeof X_mem; ++j)
                         ((int8_t*)X_mem)[j] = (int8_t)pseudo_rand(&seed);
 
 
                       int8_t pad_val = (int8_t)pseudo_rand(&seed); //this should be unused in this case
 
                       Conv2dReorderedWeights rw = 
-                        MatMulFn::reorder_kernel_weights( (int8_t* )raw_weights, shape, 8, pad_val) ;
+                        MatMulInt8::reorder_kernel_weights( (int8_t* )raw_weights, shape, 8, pad_val) ;
 
                       MatMulDirectFn mmd(X, K, input_ch_per_output, rw.weights.data());
                       
                       int ocg_count = (output_channels + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
                       
-                      for (auto ocg = 0; ocg < ocg_count; ++ocg){
+                      for (int ocg = 0; ocg < ocg_count; ++ocg){
 
                         vpu_ring_buffer_t A;
                         // printf("start %p size:%d\n",  (int8_t*)X_mem, sizeof X_mem);
@@ -576,15 +578,15 @@ namespace {
 
                         int chs_in_group = std::min(output_channels - vpu_ring_buffer_length *ocg , vpu_ring_buffer_length);
 
-                        for (auto output_chan = 0; output_chan < chs_in_group; ++output_chan){
+                        for (int output_chan = 0; output_chan < chs_in_group; ++output_chan){
 
                           int actual_output_channel = output_chan + ocg * vpu_ring_buffer_length;
 
                           int expected_sum = 0;
 
-                          for(auto h = 0; h < k_height; ++h){
-                            for(auto w = 0 ; w < k_width; ++w){
-                              for(auto c = 0 ; c < input_ch_per_output; ++c){
+                          for(int h = 0; h < k_height; ++h){
+                            for(int w = 0 ; w < k_width; ++w){
+                              for(int c = 0 ; c < input_ch_per_output; ++c){
                                 // std::cout <<"h: "<<h << " w: "<<w << " c: "<<c<<std::endl;
                                 int x = (int)X_mem[k_v_dilation*h][k_h_dilation*w][c];
                                 int t = raw_weights[actual_output_channel][h][w][c];
@@ -617,10 +619,10 @@ namespace {
 
   TEST_F(Test_Kernel_Reordering, BasicTest) {
 
-    for (auto x_channels = 1; x_channels <= 6; ++x_channels){
-      for (auto k_height = 1; k_height <= 6; ++k_height){
-        for (auto k_width = 1; k_width <= 6; ++k_width){
-          for (auto y_channels = 1; y_channels <= 6; ++y_channels){
+    for (int x_channels = 1; x_channels <= 6; ++x_channels){
+      for (int k_height = 1; k_height <= 6; ++k_height){
+        for (int k_width = 1; k_width <= 6; ++k_width){
+          for (int y_channels = 1; y_channels <= 6; ++y_channels){
 
             int8_t raw_weights[y_channels][k_height][k_width][x_channels];
 
@@ -630,14 +632,13 @@ namespace {
             memset(raw_weights, 0, sizeof raw_weights); 
 
             Conv2dReorderedWeights rw = 
-              MatMulFn::reorder_kernel_weights((int8_t *)raw_weights, shape, bits_per_element, 0);
+              MatMulInt8::reorder_kernel_weights((int8_t *)raw_weights, shape, bits_per_element, 0);
 
           }
         }
       }
     }
   }
-#endif
 
   std::pair<double, double> pick_mul_and_bias(double output_min, double output_max, double accu_min, double accu_max, int * seed){
     double output_overscale = 1.1 + 0.2*(double)pseudo_rand(seed)/(double)INT32_MAX;
@@ -686,7 +687,7 @@ namespace {
     int32_t a = 0;
     while (!a) a = pseudo_rand(seed)>>scale;
 
-    for (unsigned ch = 0; ch < accu_min.size(); ch++){
+    for (int ch = 0; ch < accu_min.size(); ch++){
 
       int32_t b = ((pseudo_rand(seed)%a)>>(scale+2)) - a;
 
@@ -828,7 +829,7 @@ public:
 
 class Filter2DTest : public Filter2D {
 public:
-  Filter2DTest(AbstractKernelParams * kparams, MemCpyFn * memcpy_handler, 
+  Filter2DTest(AbstractKernel::Params * kparams, MemCpyFn * memcpy_handler, 
     AggregateFn * aggregate_handler, OutputTransformFn * ot_handler):
     Filter2D(kparams, memcpy_handler, aggregate_handler, ot_handler){}
 };
@@ -840,18 +841,18 @@ public:
     NullAggregateFn agg_fn;
     NullMemCpyFn mem_fn;
     
-    for (auto y_height = 1; y_height <= 8; ++y_height){
-      for (auto y_width = 1; y_width <= 8; ++y_width){
-        for (auto y_channels = 1; y_channels <= 8; y_channels += 1){
+    for (int y_height = 1; y_height <= 8; ++y_height){
+      for (int y_width = 1; y_width <= 8; ++y_width){
+        for (int y_channels = 1; y_channels <= 8; y_channels += 1){
 
-          for (auto r_height_start = 0; r_height_start < y_height; ++r_height_start){
-            for (auto r_height_end = r_height_start+1; r_height_end <= y_height; ++r_height_end){
+          for (int r_height_start = 0; r_height_start < y_height; ++r_height_start){
+            for (int r_height_end = r_height_start+1; r_height_end <= y_height; ++r_height_end){
 
-              for (auto r_width_start = 0; r_width_start < y_width; ++r_width_start){
-                for (auto r_width_end = r_width_start+1; r_width_end <= y_width; ++r_width_end){
+              for (int r_width_start = 0; r_width_start < y_width; ++r_width_start){
+                for (int r_width_end = r_width_start+1; r_width_end <= y_width; ++r_width_end){
 
-                  for (auto r_channels_start = 0; r_channels_start < y_channels; ++r_channels_start){
-                    for (auto r_channels_end = r_channels_start+1; r_channels_end <= y_channels; ++r_channels_end){
+                  for (int r_channels_start = 0; r_channels_start < y_channels; ++r_channels_start){
+                    for (int r_channels_end = r_channels_start+1; r_channels_end <= y_channels; ++r_channels_end){
 
                       BasicOT ot_fn(r_channels_end - r_channels_start);
 
@@ -860,9 +861,10 @@ public:
 
                       ImageParams ip(y_height, y_width, y_channels, 8);
 
-                      AbstractKernelParams akp = Filter2D::make_filter2d_params(ip, ir);
+                      AbstractKernel<Filter2D>::Params akp(ip, ir);
 
                       Filter2DTest f(&akp, &mem_fn, &agg_fn, &ot_fn);
+
                       int8_t Y[y_height][y_width][y_channels];
                       std::memset(Y, 0, sizeof Y);
 
@@ -894,6 +896,21 @@ public:
       }
     }
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
