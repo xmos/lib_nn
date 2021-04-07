@@ -14,11 +14,21 @@ class MemCpyFn {
 
 class DerefInputFn : public MemCpyFn {
 
-  int32_t bytes_per_h_line; 
-  int32_t bytes_per_pixel; 
+  public:
+  class Params {
+    public:
+    int32_t bytes_per_h_line; 
+    int32_t bytes_per_pixel; 
+    Params(ImageParams &X, WindowGeometry &K){
+      bytes_per_h_line = X.rowBytes() * K.stride.vertical;
+      bytes_per_pixel = X.pixelBytes() * K.stride.horizontal; 
+    }
+  };
+
+  Params * params;
 
   public:
-  DerefInputFn(ImageParams &X, WindowGeometry &K);
+  DerefInputFn(Params * params):params(params){};
   int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
   size_t get_scratch_bytes();
   size_t get_overread_bytes();

@@ -247,7 +247,8 @@ namespace {
                   ImageParams X(x_height, x_width, x_channels, 8); 
                   WindowGeometry K (k_height, k_width, k_h_stride, k_v_stride, k_h_dilation, k_v_dilation);
 
-                  DerefInputFn deref(X, K);
+                  DerefInputFn::Params p(X, K);
+                  DerefInputFn deref(&p);
                   
                   int8_t X_mem[x_height][x_width][x_channels];
 
@@ -307,7 +308,8 @@ namespace {
           int8_t K[kernel_bytes];
           int8_t T[scratch_bytes];
 
-          MatMulInt8 mm(output_channel_count, input_bytes, (int8_t *)K);
+          MatMulInt8::Params p(output_channel_count, input_bytes, (int8_t *)K);
+          MatMulInt8 mm(&p);
 
           std::fill_n(K, kernel_bytes, kernel_fill);
           std::fill_n(T, scratch_bytes, scratch_fill);
@@ -401,7 +403,8 @@ namespace {
           accu_modifier[i] = s;
         }
 
-        MatMulInt8 mm(output_channel_count, input_bytes, rw.weights.data());
+        MatMulInt8::Params p(output_channel_count, input_bytes, rw.weights.data());
+        MatMulInt8 mm(&p);
         int ocg_count = (output_channel_count + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
         
         for (int ocg = 0; ocg < ocg_count; ++ocg){
@@ -470,7 +473,9 @@ namespace {
 
                   int8_t * weights = (int8_t*)K; //todo we will switch to usnig the boggler
 
-                  MatMulDirectFn mmd(X_params, K_params, x_channels, weights);
+
+                  MatMulDirectFn::Params p(X_params, K_params, x_channels, weights);
+                  MatMulDirectFn mmd(&p);
 
                   std::fill_n((int8_t*)K, sizeof K, kernel_fill);
                   std::fill_n((int8_t*)T, x_height * x_width * x_channels, scratch_fill);
@@ -566,7 +571,8 @@ namespace {
                       Conv2dReorderedWeights rw = 
                         MatMulInt8::reorder_kernel_weights( (int8_t* )raw_weights, shape, 8, pad_val) ;
 
-                      MatMulDirectFn mmd(X, K, input_ch_per_output, rw.weights.data());
+                      MatMulDirectFn::Params p(X, K, input_ch_per_output, rw.weights.data());
+                      MatMulDirectFn mmd(&p);
                       
                       int ocg_count = (output_channels + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
                       
@@ -742,8 +748,9 @@ namespace {
 
         QuantisationParams qp = OTBinary_int8::quantise_activation(f_multipliers, f_biases, accu_min, accu_max);
 
-        OTBinary_int8 ot((int32_t)output_ch_count, &qp.otv, qp.biases.data(), 
+        OTBinary_int8::Params p((int32_t)output_ch_count, &qp.otv, qp.biases.data(), 
           qp.multipliers.data(), (int16_t*)accu_modifier);
+        OTBinary_int8 ot(&p);
 
         int8_t Y[output_ch_count];
         memset(Y, 0, sizeof Y); 

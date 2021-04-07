@@ -8,19 +8,14 @@ extern "C" {
   #include "vpu_sim.h"
 }
 
-DerefInputFn::DerefInputFn(ImageParams &X, WindowGeometry &K){
-  bytes_per_h_line = X.rowBytes() * K.stride.vertical;
-  bytes_per_pixel = X.pixelBytes() * K.stride.horizontal; 
-}
-
 size_t DerefInputFn::get_scratch_bytes(){ return 0;}
 size_t DerefInputFn::get_overread_bytes(){ return 0;}
 
 int8_t * DerefInputFn::memcopy_fn(int8_t * T, int8_t * X, 
   int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
 
-  return X + (int)(output_v_coord * bytes_per_h_line + 
-    output_h_coord * bytes_per_pixel + output_c_coord);
+  return X + (int)(output_v_coord * params->bytes_per_h_line + 
+    output_h_coord * params->bytes_per_pixel + output_c_coord);
 }
 
 size_t ImToColPadded::get_scratch_bytes(){

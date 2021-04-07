@@ -32,14 +32,22 @@ struct Conv2dReorderedWeights {
 
 class MatMulInt8 : public AggregateFn {
 
+  public:
+  class Params {
+    public:
+    int8_t * weights;
+    int32_t output_slice_channel_count;
+    size_t bytes_per_kernel_channel;
+
+    Params(int output_slice_channel_count, size_t bytes_per_kernel_channel, int8_t * weights);
+
+  };
+  Params *params;
   private:
   void mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
-  int8_t * weights;
-  int32_t output_slice_channel_count;
-  size_t bytes_per_kernel_channel;
-
+  
   public:
-    MatMulInt8(int output_slice_channel_count, size_t bytes_per_kernel_channel, int8_t * weights);
+    MatMulInt8(Params *params):params(params){};
     void aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
 
     static Conv2dReorderedWeights reorder_kernel_weights(
@@ -70,23 +78,33 @@ class MatMulInt8 : public AggregateFn {
 // };
 
 class MatMulDirectFn : public AggregateFn {
+
+  public:
+  class Params {
+    public:
+
+    int8_t * weights;
+
+    int32_t bytes_per_kernel_channel;
+
+    int32_t k_height_loop_counter;
+    int32_t k_width_loop_counter;
+    int32_t input_channel_loop_counter;
+
+    int32_t inner_x_h_step;
+    int32_t inner_x_v_step;
+
+    Params(ImageParams &X, WindowGeometry &K, int input_ch_per_output, int8_t * weights);  
+  };
+
   private:
 
   void mat_mul_direct_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
 
-  int8_t * weights;
-
-  int32_t bytes_per_kernel_channel;
-
-  int32_t k_height_loop_counter;
-  int32_t k_width_loop_counter;
-  int32_t input_channel_loop_counter;
-
-  int32_t inner_x_h_step;
-  int32_t inner_x_v_step;
+  Params * params;
 
   public:
-    MatMulDirectFn(ImageParams &X, WindowGeometry &K, int input_ch_per_output, int8_t * weights);
+    MatMulDirectFn(Params * params):params(params){};
     void aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
 
 };

@@ -29,16 +29,21 @@ struct QuantisationParams {
 class OT_int8 : public OutputTransformFn 
 {
 
-  int32_t output_slice_channel_count; //TODO push into base class
-  output_transform_values_t * otv;
-  int16_t * biases;//[output_slice_channel_count];
-  int16_t * multipliers;//[output_slice_channel_count];
-  int16_t * accu_modifier;//[output_slice_channel_count];
+  class Params {
+    public:
+      int32_t output_slice_channel_count; //TODO push into base class
+      output_transform_values_t * otv;
+      int16_t * biases;//[output_slice_channel_count];
+      int16_t * multipliers;//[output_slice_channel_count];
+      int16_t * accu_modifier;//[output_slice_channel_count];
 
+      Params(int32_t output_slice_channel_count, output_transform_values_t * otv, 
+        int16_t * biases, int16_t * multipliers, int16_t * accu_modifier);
+  };
+
+  Params * params;
   public:
-    OT_int8(int32_t output_slice_channel_count, output_transform_values_t * otv, 
-      int16_t * biases, int16_t * multipliers, int16_t * accu_modifier);
-
+    OT_int8(Params * params):params(params){};
     
     static QuantisationParams quantise_activation(std::vector<double> & output_transform_multiplier, 
       std::vector<double> & output_transform_bias, 
@@ -47,20 +52,26 @@ class OT_int8 : public OutputTransformFn
 
     int8_t * output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group);
 };
+
 class OTBinary_int8 : public OutputTransformFn 
 {
-
-  int32_t output_slice_channel_count;//TODO push into base class
-  output_transform_values_t * otv;
-  int16_t * biases;//[output_slice_channel_count];
-  int16_t * multipliers;//[output_slice_channel_count];
-  int16_t * accu_modifier;//[output_slice_channel_count];
-
   public:
-    OTBinary_int8(int32_t output_slice_channel_count, output_transform_values_t * otv, 
-      int16_t * biases, int16_t * multipliers, int16_t * accu_modifier);
+  class Params {
+    public:
+      int32_t output_slice_channel_count; //TODO push into base class
+      output_transform_values_t * otv;
+      int16_t * biases;//[output_slice_channel_count];
+      int16_t * multipliers;//[output_slice_channel_count];
+      int16_t * accu_modifier;//[output_slice_channel_count];
 
-    
+      Params(int32_t output_slice_channel_count, output_transform_values_t * otv, 
+        int16_t * biases, int16_t * multipliers, int16_t * accu_modifier);
+  };
+
+  Params * params;
+  public:
+    OTBinary_int8(Params * params):params(params){};
+
     static QuantisationParams quantise_activation(std::vector<double> & output_transform_multiplier, 
       std::vector<double> & output_transform_bias, 
       std::vector<int32_t> & accu_min,
