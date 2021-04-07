@@ -64,10 +64,12 @@ pipeline {
         }
         stage("Build") {
             steps {
-                // below is how we can activate the tools
-                sh """pushd /XMOS/tools/${params.TOOLS_VERSION}/XMOS/xTIMEcomposer/${params.TOOLS_VERSION} && . SetEnv && popd &&
+                // below is how we can activate the tools, NOTE: xTIMEcomposer -> XTC at tools 15.0.5
+                // sh """pushd /XMOS/tools/${params.TOOLS_VERSION}/XMOS/xTIMEcomposer/${params.TOOLS_VERSION} && // 
+                sh """pushd /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION} &&
+                      . SetEnv && popd &&
                       . activate ./lib_nn_venv &&
-                       cd test/unit_test && make all && make all PLATFORM=x86  MEMORY_SAFE=true"""
+                      cd test/unit_test && make all && make all PLATFORM=x86 MEMORY_SAFE=true"""
              }
          }
          stage("Test") {
