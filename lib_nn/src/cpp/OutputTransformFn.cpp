@@ -7,9 +7,9 @@
 #include <stdio.h>
 
 #include <iostream>
-extern "C" {
-  #include "vpu_sim.h"
-}
+
+#include "vpu_sim.h"
+
 
 static int64_t saturate_non_sym(
     const int64_t input,
@@ -18,10 +18,10 @@ static int64_t saturate_non_sym(
     const int64_t max_val = (((int64_t)1)<<(bits-1))-1;
     const int64_t min_val = -max_val - 1;
     
-    return (input > max_val)?  max_val : (input < min_val)? min_val : input;
+    return std::min(max_val, std::max(min_val, input));
 }
 
-// This is an implementation of VDEPTH8 where the rounding is asymetric
+// This is an implementation of VDEPTH8 where the rounding is asymmetric
 // The acutal asm implements the following but in a more convoluted way 
 // in order to work around the rounds issue.
 static void VDEPTH8_FIXED(xs3_vpu* vpu){
@@ -30,8 +30,8 @@ static void VDEPTH8_FIXED(xs3_vpu* vpu){
     memcpy(&vec_tmp, &(vpu->vR), sizeof(vpu_vector_t));
     memset(&(vpu->vR), 0, sizeof(vpu_vector_t));
     
-    for(int i = 0; i < VPU_INT16_EPV; i++){
-        int32_t elm = ((int32_t)vec_tmp.s16[i]) + (1 << 7);
+    for(int i = 0; i < VPU_INT16_ACC_PERIOD; i++){
+        int32_t elm = int32_t(vec_tmp.s16[i]) + (1 << 7);
         vpu->vR.s8[i] = saturate_non_sym(elm >> 8, 8);
     }
 }
@@ -396,18 +396,23 @@ QuantisationParams OTBinary_int8::quantise_activation(
   return q;
 }
 
-OTBinary_int8::OTBinary_int8(int32_t output_slice_channel_count, output_transform_values_t * otv, 
-  int16_t * biases, int16_t * multipliers, int16_t * accu_modifier):
-  output_slice_channel_count(output_slice_channel_count), 
-  otv(otv),
-  biases(biases),
-  multipliers(multipliers),
-  accu_modifier(accu_modifier)
+OTBinary_int8::OTBinary_int8(int32_t output_slice_channel_count, 
+                             output_transform_values_t * otv, 
+                             int16_t * biases, 
+                             int16_t * multipliers, 
+                             int16_t * accu_modifier)
+    : output_slice_channel_count(output_slice_channel_count), 
+      otv(otv),
+      biases(biases),
+      multipliers(multipliers),
+      accu_modifier(accu_modifier)
 {
 
 }
 
-int8_t * OTBinary_int8::output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group)
+int8_t * OTBinary_int8::output_transform_fn(int8_t * Y, 
+                                            vpu_ring_buffer_t * A, 
+                                            int32_t output_channel_group)
 {
 
   xs3_vpu vpu_mem;
@@ -472,7 +477,8 @@ int8_t * OTBinary_int8::output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, i
   VDEPTH8_FIXED(vpu);
   
   //we need to know how many we are processing
-  int output_count = std::min(output_slice_channel_count - output_channel_group * VPU_INT16_EPV, (int)VPU_INT16_EPV);
+  int output_count = std::min<int>(output_slice_channel_count - output_channel_group * VPU_INT16_EPV, 
+                                   (int)VPU_INT16_EPV);
   
   int mask = (1<<output_count)-1;
 
@@ -482,11 +488,15 @@ int8_t * OTBinary_int8::output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, i
   return Y;
 }
 
-OTBinary_bin::OTBinary_bin(int16_t * thresholds): thresholds(thresholds){
+OTBinary_bin::OTBinary_bin(int16_t * thresholds)
+    : thresholds(thresholds)
+{
 
 }
 
-int8_t * OTBinary_bin::output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group)
+int8_t * OTBinary_bin::output_transform_fn(int8_t * Y, 
+                                           vpu_ring_buffer_t * A, 
+                                           int32_t output_channel_group)
 {
   //this is declared on the stack so that the asm can put the memory
   // in the constant pool

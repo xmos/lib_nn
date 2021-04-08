@@ -7,9 +7,7 @@
 #include <limits>
 #include "AggregateFn.hpp"
 
-extern "C" {
-  #include "vpu_sim.h"
-}
+#include "vpu_sim.h"
 
 //TODO: [astew] CHAR_BIT not defined if I build with Cygwin
 #ifndef CHAR_BIT

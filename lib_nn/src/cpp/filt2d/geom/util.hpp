@@ -66,8 +66,10 @@ namespace nn {
 
       ImageVect startVect() const
         { return ImageVect(start.row, start.col, start.channel); }
-      ImageVect endVect() const 
-        { return ImageVect(start.row + shape.height, start.col + shape.width, start.channel + shape.depth); }
+      ImageVect endVect(bool inclusive = false) const 
+        { return ImageVect(start.row + shape.height + (inclusive? -1 : 0), 
+                           start.col + shape.width + (inclusive? -1 : 0), 
+                           start.channel + shape.depth + (inclusive? -1 : 0)); }
 
   };
 

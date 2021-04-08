@@ -1,6 +1,9 @@
 #include "Filter2D.hpp"
 #include "vpu.hpp"
 
+#include <cassert>
+#include <iostream>
+
 // Filter2D::Filter2D(){
 
 // }
@@ -17,7 +20,42 @@
 //     Y += kparams->output_h_mem_stride;
 //   }
 // }
-#include <iostream>
+
+
+
+AbstractKernelParams AbstractKernelParams::Make(
+    const nn::ImageGeometry& output_image,
+    const nn::ImageRegion& output_region,
+    const int output_channels_per_group)
+{
+  auto start = output_region.startVect();
+  auto end = output_region.endVect(true);
+
+  int32_t output_channel_group_count  = (output_region.shape.depth + (output_channels_per_group - 1))
+                                          / output_channels_per_group;
+  
+  // Move one pixel to the right
+  auto w_stride = output_image.getStride(0, 1, 0);
+
+  // Move from the last pixel on one row of the region, to the first pixel on the next row
+  auto h_stride = output_image.getStride( start.add(0, output_region.shape.width - 1, 0), 
+                                          start.add(1, 0, 0) );
+
+  return AbstractKernelParams {
+    .h_begin = start.row,
+    .h_end = end.row,
+    .w_begin = start.col,
+    .w_end = end.col,
+    .output_channel_group_count = output_channel_group_count,
+    .output_channel_slice_offset = start.channel,
+    .output_h_mem_stride = h_stride,
+    .output_w_mem_stride = w_stride,
+  };
+}
+
+
+
+
 AbstractKernelParams Filter2D::make_filter2d_params(ImageParams &Y, ImageRegion& r){
   
   const int channels_per_group = 16; //TODO
@@ -40,9 +78,10 @@ AbstractKernelParams Filter2D::make_filter2d_params(ImageParams &Y, ImageRegion&
     .h_end = r.height_end,
     .w_begin = r.width_start,
     .w_end = r.width_end,
+    .output_channel_group_count = output_channel_group_count,
+
     .output_channel_slice_offset = r.channel_start,
 
-    .output_channel_group_count = output_channel_group_count,
     .output_h_mem_stride = output_h_mem_stride,
     .output_w_mem_stride = output_w_mem_stride,
   };
@@ -72,7 +111,10 @@ Filter2D::Filter2D(AbstractKernelParams * kparams, MemCpyFn * memcpy_handler,
   the output. The pointer is going to be set to the begining on the next output by 
   output_w_mem_stride. This allows it to address sub-channel regions.
 */
-void Filter2D::calc_output_pixel_slice(int8_t * Y, int8_t * X, int32_t h, int32_t w){
+void Filter2D::calc_output_pixel_slice(int8_t * Y, 
+                                       int8_t * X, 
+                                       int32_t h, 
+                                       int32_t w){
       
   int8_t * input_img = memcpy_handler->memcopy_fn(scratch_mem, X, h, w); //copy all input channels, channel start is implicitly 0.
 
@@ -88,7 +130,11 @@ void Filter2D::calc_output_pixel_slice(int8_t * Y, int8_t * X, int32_t h, int32_
 }
 
 //This is an example of a depthwise conv or max pool
-void Filter2D_DW::calc_output_pixel_slice(int8_t * Y, int8_t * X, int32_t h, int32_t w){
+void Filter2D_DW::calc_output_pixel_slice(int8_t * Y, 
+                                          int8_t * X, 
+                                          int32_t h, 
+                                          int32_t w)
+{
       
   for (int32_t chan_group = 0; chan_group < kparams->output_channel_group_count; chan_group++){
 

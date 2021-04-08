@@ -4,9 +4,9 @@
 
 #include "MemCpyFn.hpp"
 
-extern "C" {
-  #include "vpu_sim.h"
-}
+#include "vpu_sim.h"
+
+
 
 DerefInputFn::DerefInputFn(ImageParams &X, WindowGeometry &K){
   bytes_per_h_line = X.rowBytes() * K.stride.vertical;
@@ -22,6 +22,13 @@ int8_t * DerefInputFn::memcopy_fn(int8_t * T, int8_t * X,
   return X + (int)(output_v_coord * bytes_per_h_line + 
     output_h_coord * bytes_per_pixel + output_c_coord);
 }
+
+
+
+
+
+
+
 
 size_t Im_to_col_padded::get_scratch_bytes(){
   return kernel_height * kernel_width * bytes_per_copy_per_channel + XS3_VPU_VREG_WIDTH_BYTES;
@@ -107,6 +114,13 @@ int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
   return T_in;//wrong t_in
 }
 
+
+
+
+
+
+
+
 /*
 This constructor is used for testing
 */
@@ -114,26 +128,26 @@ Im_to_col_valid::Im_to_col_valid(ImageParams &X, WindowGeometry &K, int input_ch
 
   int bytes_per_copy_per_channel = (input_ch_per_output *  X.bits_per_element) / CHAR_BIT; 
 
-  bytes_per_pixel = X.pixelBytes();
-  bytes_per_h_line = X.rowBytes(); 
+  this->bytes_per_pixel = X.pixelBytes();
+  this->bytes_per_h_line = X.rowBytes(); 
 
   assert (X.rowBytes() == X.width * bytes_per_pixel);
 
   //This is the amount to copy in vpu words (round up)
-  input_channel_groups = (bytes_per_copy_per_channel + XS3_VPU_VREG_WIDTH_BYTES-1)/XS3_VPU_VREG_WIDTH_BYTES;
+  this->input_channel_groups = (bytes_per_copy_per_channel + XS3_VPU_VREG_WIDTH_BYTES-1)/XS3_VPU_VREG_WIDTH_BYTES;
 
   int bytes_actually_copied = input_channel_groups * XS3_VPU_VREG_WIDTH_BYTES;
-  T_rewind = bytes_actually_copied - bytes_per_copy_per_channel;
+  this->T_rewind = bytes_actually_copied - bytes_per_copy_per_channel;
 
-  input_height = K.shape.height;
-  input_width  = K.shape.width;
+  this->input_height = K.shape.height;
+  this->input_width  = K.shape.width;
 
-  horizontal_mem_stride = bytes_per_pixel * K.dilation.horizontal - bytes_actually_copied;
-  vertical_mem_stride = bytes_per_h_line * K.dilation.vertical - input_width * bytes_per_pixel * K.dilation.horizontal;
+  this->horizontal_mem_stride = bytes_per_pixel * K.dilation.horizontal - bytes_actually_copied;
+  this->vertical_mem_stride = bytes_per_h_line * K.dilation.vertical - input_width * bytes_per_pixel * K.dilation.horizontal;
 
   //TODO rename these to account for the multiplication of strides
-  bytes_per_h_line *= K.stride.vertical;
-  bytes_per_pixel *= K.stride.horizontal;
+  this->bytes_per_h_line *= K.stride.vertical;
+  this->bytes_per_pixel *= K.stride.horizontal;
 
 }
 
@@ -145,13 +159,17 @@ size_t Im_to_col_valid::get_overread_bytes(){
   return T_rewind;
 }
 
-int8_t * Im_to_col_valid::memcopy_fn(int8_t * T, int8_t * X, 
-  int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
+int8_t * Im_to_col_valid::memcopy_fn(int8_t * T, 
+                                     int8_t * X, 
+                                     int32_t output_v_coord, 
+                                     int32_t output_h_coord, 
+                                     int32_t input_c_coord)
+{
 
   xs3_vpu vpu_mem;
   xs3_vpu * vpu = &vpu_mem;
 
-  int8_t * X_cur_p = X + (int)(output_v_coord * bytes_per_h_line + output_h_coord * bytes_per_pixel + output_c_coord);
+  int8_t * X_cur_p = X + (int)(output_v_coord * bytes_per_h_line + output_h_coord * bytes_per_pixel + input_c_coord);
   
   int8_t * T_in = T;
 

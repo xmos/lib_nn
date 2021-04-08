@@ -3,27 +3,71 @@
 
 #include "Image.hpp"
 
+/**
+ * Interface implemented by all patch handlers.
+ */
 class MemCpyFn {
   public:
 
-    //h, w, c are coordinates in the output space
+    /**
+     * Copy the relevant region of the input image to the patch buffer, and return a pointer
+     * to where the aggregation handler should begin consuming inputs.
+     * 
+     * @TODO: astew: The `c` below is confusing, since `h` and `w` are in the output image's
+     *               coordinate space, one is tempted to thing `c` also is, but `c` is actually
+     *               in the input image's coordinate space. e.g. for non-depthwise mem copies
+     *               `c` will always be zero (because we copy all input channels), and for depthwise
+     *               mem copies while it's the output channel coordinate that is given, that only
+     *               works because in a depthwise op the output and input channel indices are the
+     *               same.
+     *               I suggest that memcpy_fn() should always be given the current output channel
+     *               (first of the current output channel group), and internally any MemCpyFn implementation
+     *               that is supposed to work for both depthwise and non-depthwise ops should just
+     *               keep a 'channel stride' parameter (@see nn::WindowGeometry) that will be either 0
+     *               (for dense convolutions) or 1 (for depthwise convolutions). 
+     *               This approach will also generalize if we ever end up with convolutions in which, for example,
+     *               output channel 0 is a function of both input channels 0 and 1 (but no others), and output
+     *               channel 1 is a function of both input channels 2 and 3 (but no others), etc, by using a
+     *               channel stride value of 2.
+     * 
+     * @param [inout] T   pointer to patch buffer
+     * @param [in] X      pointer to base address of the input image
+     * @param [in] h      row index of the _OUTPUT_ pixel being processed 
+     * @param [in] w      column index of the _OUTPUT_ pixel being processed
+     * @param [in] c      channel index of the _INPUT_ image from which to start copying elements
+     */
     virtual int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c=0) = 0;
+
+    /**
+     * 
+     */
     virtual size_t get_scratch_bytes() = 0;
+
+    /**
+     * 
+     */
     virtual size_t get_overread_bytes() = 0;
 };
 
+
+/**
+ * 
+ */
 class DerefInputFn : public MemCpyFn {
 
   int32_t bytes_per_h_line; 
   int32_t bytes_per_pixel; 
 
   public:
-  DerefInputFn(ImageParams &X, WindowGeometry &K);
-  int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
-  size_t get_scratch_bytes();
-  size_t get_overread_bytes();
+    DerefInputFn(ImageParams &X, WindowGeometry &K);
+    int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
+    size_t get_scratch_bytes();
+    size_t get_overread_bytes();
 };
 
+/**
+ * 
+ */
 class Im_to_col_padded : public MemCpyFn{
   int32_t kernel_height;
   int32_t kernel_width;
@@ -48,23 +92,47 @@ class Im_to_col_padded : public MemCpyFn{
   int bytes_per_copy_per_channel;
 
   public:
-  Im_to_col_padded(ImageParams &X, WindowGeometry &K, padding_t &padding, int input_ch_per_output, int8_t pad_val);
-  int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
-  size_t get_scratch_bytes();
-  size_t get_overread_bytes();
+    Im_to_col_padded(ImageParams &X, WindowGeometry &K, padding_t &padding, int input_ch_per_output, int8_t pad_val);
+    int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
+    size_t get_scratch_bytes();
+    size_t get_overread_bytes();
 };
 
+/**
+ * 
+ */
 class Im_to_col_valid : public MemCpyFn{
 
+  /**
+   * Bytes per row of the input image
+   */
   int32_t bytes_per_h_line; 
+
+  /**
+   * Bytes per pixels of the filter window.
+   */
   int32_t bytes_per_pixel; 
 
-  int32_t input_height; //in pixels
-  int32_t input_width; //in pixels
+  /**
+   * Height of the filter window in pixels.
+   */
+  int32_t input_height;
 
-  //This is the amount to copy in vpu words (round up)
+  /**
+   * Width of the filter window in pixels.
+   */
+  int32_t input_width;
+
+  /**
+   * The number of VPU words (vectors) to copy for the entire filter window.
+   * 
+   * Note that this should be rounded up if the number of words is not integral.
+   */
   int32_t input_channel_groups; 
 
+  /**
+   * The difference between the number of bytes actually copied and the target number of bytes to copy.
+   */
   int32_t T_rewind; 
 
   // The bytes to inc an X pointer by to move by one horizontal stride
@@ -77,12 +145,12 @@ class Im_to_col_valid : public MemCpyFn{
 
   public:
 
-  //input_ch_per_output lets the kernel know how many input channels to copy to scratch
-  Im_to_col_valid(ImageParams &X, WindowGeometry &K, int input_ch_per_output);
-  
-  size_t get_scratch_bytes();
-  size_t get_overread_bytes();
+    //input_ch_per_output lets the kernel know how many input channels to copy to scratch
+    Im_to_col_valid(ImageParams &X, WindowGeometry &K, int input_ch_per_output);
+    
+    size_t get_scratch_bytes();
+    size_t get_overread_bytes();
 
-  int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
+    int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
   
 };

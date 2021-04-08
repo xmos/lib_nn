@@ -4,12 +4,22 @@
 #include "xs3_vpu.h"
 #include "vpu.hpp"
 
+/**
+ * Interface implemented by all output transform handlers.
+ * 
+ * Contains a single function, output_transform_fn() which converts a set of 32-bit accumulators
+ * into a set of 8-bit outputs and writes them to the specified output image.
+ */
 class OutputTransformFn {
   public:
-    virtual int8_t * output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group) = 0;
+    virtual int8_t * output_transform_fn(int8_t * Y, 
+                                         vpu_ring_buffer_t * A, 
+                                         int32_t output_channel_group) = 0;
 };
 
-//these are in a protected order(internally)
+/**
+ * these are in a protected order(internally)
+ */
 typedef struct output_transform_values_t {
     int16_t clamp_near[VPU_INT16_EPV];
     int16_t clamp_far_0[VPU_INT16_EPV];
@@ -20,12 +30,18 @@ typedef struct output_transform_values_t {
     int32_t accu_shl;                //for the vlashr
 } output_transform_values_t;
 
+/**
+ * 
+ */
 struct QuantisationParams {
     output_transform_values_t otv;
     std::vector<int16_t> biases; 
     std::vector<int16_t> multipliers;
 };
 
+/**
+ * 
+ */
 class OT_int8 : public OutputTransformFn 
 {
 
@@ -36,17 +52,34 @@ class OT_int8 : public OutputTransformFn
   int16_t * accu_modifier;//[output_slice_channel_count];
 
   public:
-    OT_int8(int32_t output_slice_channel_count, output_transform_values_t * otv, 
-      int16_t * biases, int16_t * multipliers, int16_t * accu_modifier);
+    /**
+     * @TODO: Not yet implemented
+     */
+    OT_int8(int32_t output_slice_channel_count, 
+            output_transform_values_t * otv, 
+            int16_t * biases, 
+            int16_t * multipliers, 
+            int16_t * accu_modifier);
 
-    
+    /**
+     * @TODO: Not yet implemented
+     */
     static QuantisationParams quantise_activation(std::vector<double> & output_transform_multiplier, 
-      std::vector<double> & output_transform_bias, 
-      std::vector<int32_t> & accu_min,
-      std::vector<int32_t> & accu_max );
+                                                  std::vector<double> & output_transform_bias, 
+                                                  std::vector<int32_t> & accu_min,
+                                                  std::vector<int32_t> & accu_max );
 
-    int8_t * output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group);
+    /**
+     * @TODO: Not yet implemented
+     */
+    int8_t * output_transform_fn(int8_t * Y, 
+                                 vpu_ring_buffer_t * A, 
+                                 int32_t output_channel_group) override;
 };
+
+/**
+ * 
+ */
 class OTBinary_int8 : public OutputTransformFn 
 {
 
@@ -57,23 +90,49 @@ class OTBinary_int8 : public OutputTransformFn
   int16_t * accu_modifier;//[output_slice_channel_count];
 
   public:
-    OTBinary_int8(int32_t output_slice_channel_count, output_transform_values_t * otv, 
-      int16_t * biases, int16_t * multipliers, int16_t * accu_modifier);
 
-    
+    /**
+     * 
+     */
+    OTBinary_int8(int32_t output_slice_channel_count, 
+                  output_transform_values_t * otv, 
+                  int16_t * biases, 
+                  int16_t * multipliers, 
+                  int16_t * accu_modifier);
+
+    /**
+     * 
+     */
     static QuantisationParams quantise_activation(std::vector<double> & output_transform_multiplier, 
-      std::vector<double> & output_transform_bias, 
-      std::vector<int32_t> & accu_min,
-      std::vector<int32_t> & accu_max );
+                                                  std::vector<double> & output_transform_bias, 
+                                                  std::vector<int32_t> & accu_min,
+                                                  std::vector<int32_t> & accu_max );
 
-    int8_t * output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group);
+    /**
+     * 
+     */
+    int8_t * output_transform_fn(int8_t * Y, 
+                                 vpu_ring_buffer_t * A, 
+                                 int32_t output_channel_group) override;
 };
 
+/**
+ * 
+ */
 class OTBinary_bin : public OutputTransformFn{
 
   int16_t * thresholds;
   public:
+
+    /**
+     * 
+     */
     OTBinary_bin(int16_t * thresholds);
 
-    int8_t * output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group);
+    /**
+     * 
+     */
+    int8_t * output_transform_fn(int8_t * Y, 
+                                 vpu_ring_buffer_t * A, 
+                                 int32_t output_channel_group) override;
 };
