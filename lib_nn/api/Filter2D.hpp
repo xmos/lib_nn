@@ -25,11 +25,6 @@ public:
   class Params {
     public:
 
-    
-  static Params Make(const nn::ImageGeometry& output_image, 
-                     const nn::ImageRegion& output_region,
-                     const int output_channels_per_group);
-
 /**
    * The first (`h_begin`; inclusive) and final (`h_end`; exclusive) rows of the output image
    * to be processed when the corresponding filter is executed.
@@ -100,6 +95,25 @@ public:
       // int output_h_mem_stride = (Y.width - (r.width_end - r.width_start) + r.width_start)*Y.pixelBytes();
       output_h_mem_stride = Y.rowBytes() - (r.width_end - r.width_start) * output_w_mem_stride;
 
+    }
+
+    Params(const nn::ImageGeometry& image, 
+           const nn::ImageRegion& region, 
+           const int channels_per_group = VPU_INT8_ACC_PERIOD)
+      : h_begin(region.start.row), h_end(region.endVect().row),
+        w_begin(region.start.col), w_end(region.endVect().col),
+        output_channel_slice_offset(region.start.channel) 
+    {
+      this->output_channel_group_count = (region.shape.depth + channels_per_group - 1) / channels_per_group;
+      
+      // memory to move to the next right pixel after all current channel groups have been saved
+      // i.e. this conv2d might write chs 16-31 of 68 chs, so the stride would have to be 52 channels 
+      // worth of memory(enough to move from the end of the group just processed to the start of the 
+      // next)
+      this->output_w_mem_stride = ( image.depth * image.channel_depth );
+
+      //memory to moved down a pixel
+      this->output_h_mem_stride = image.rowBytes() - region.shape.width * this->output_w_mem_stride;
     }
   };
 

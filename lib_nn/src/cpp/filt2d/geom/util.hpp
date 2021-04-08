@@ -71,6 +71,23 @@ namespace nn {
                            start.col + shape.width + (inclusive? -1 : 0), 
                            start.channel + shape.depth + (inclusive? -1 : 0)); }
 
+      bool Within(int row, int col, int channel) const
+      {
+        if( row < start.row || row >= (start.row + shape.height) ) return false;
+        if( col < start.col || col >= (start.col + shape.width) ) return false;
+        if( channel < start.channel || channel >= (start.channel + shape.depth) ) return false;
+        return true;
+      }
+
+      int PixelCount() const
+      { return shape.height * shape.width; }
+
+      int ElementCount() const
+      { return PixelCount() * shape.depth; }
+
+      int ChannelOutputGroups(int output_channels_per_group) const
+      { return (shape.depth + (output_channels_per_group - 1)) / output_channels_per_group; }
+
   };
 
 
@@ -78,4 +95,11 @@ namespace nn {
     return stream << "(" << vect.row << "," << vect.col << "," << vect.channel << ")";
   }
 
+
+  inline std::ostream& operator<<(std::ostream &stream, const ImageRegion &r){
+    const auto end = r.endVect();
+    return stream << "{ [" << r.start.row << "," << end.row << "), "
+                  <<   "[" << r.start.col << "," << end.col << "), "
+                  <<   "[" << r.start.channel << "," << end.channel << ") }";
+  }
 }

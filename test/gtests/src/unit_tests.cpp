@@ -885,7 +885,7 @@ TYPED_TEST_SUITE(Filter2D_Test, Filter2D_Test_Types);
 TYPED_TEST(Filter2D_Test, BasicTest) {
   
   const auto mult_memcopy = TypeParam::UsesPerGroupMemCopy;
-    
+
   for (int y_height = 1; y_height <= 8; ++y_height){
     for (int y_width = 1; y_width <= 8; ++y_width){
       for (int y_channels = 1; y_channels <= 8; y_channels += 1){
@@ -901,11 +901,12 @@ TYPED_TEST(Filter2D_Test, BasicTest) {
                   
                     int const cog_size = VPU_INT8_ACC_PERIOD;
 
-                    ImageRegion ir(r_height_start, r_height_end, 
-                                   r_width_start, r_width_end, 
-                                   r_channels_start, r_channels_end);
+                    auto ir = nn::ImageRegion(r_height_start, r_width_start, r_channels_start,
+                                              r_height_end - r_height_start,
+                                              r_width_end - r_width_start,
+                                              r_channels_end - r_channels_start);
 
-                    ImageParams ip(y_height, y_width, y_channels, 8);
+                    auto ip = nn::ImageGeometry(y_height, y_width, y_channels);
 
                     const auto region_pixels = ir.PixelCount();
                     const auto cog_count = ir.ChannelOutputGroups(cog_size);
@@ -914,9 +915,9 @@ TYPED_TEST(Filter2D_Test, BasicTest) {
                     MockMemCpyFn mem_fn;
                     MockOutputTransform ot_fn(r_channels_end - r_channels_start);
 
-                    AbstractKernel<Filter2D_DW>::Params akp(ip, ir);
+                    auto akp = typename AbstractKernel<TypeParam>::Params(ip, ir, cog_size);
 
-                    Filter2D_DW f(&akp, &mem_fn, &agg_fn, &ot_fn);
+                    TypeParam f(&akp, &mem_fn, &agg_fn, &ot_fn);
 
                     int8_t Y[y_height][y_width][y_channels];
 
