@@ -1,6 +1,8 @@
 
 #include "Filter2dGeometry.hpp"
 
+#include "WindowLocation.hpp"
+
 using namespace nn;
 
 
@@ -29,15 +31,25 @@ bool Filter2dGeometry::operator!=(
 }
 
 
+WindowLocation Filter2dGeometry::GetWindow(const ImageVect output_coords) const
+{
+  return WindowLocation(*this, output_coords);
+}
+
+WindowLocation Filter2dGeometry::GetWindow(const int row,
+                                           const int col,
+                                           const int channel) const
+{
+  return GetWindow(ImageVect(row, col, channel));
+}
+
 
 bool Filter2dGeometry::ModelIsDepthwise() const 
 {
-  // If the channel stride of the filter is 0, then the first input channel used
-  // in aggregation will always be channel 0. 
-  // If it is 1, then the input channel used in aggregation will always match up with the output
-  // channel, which is depthwise behavior.
-  // Values other than 0 or 1 are not defined.
-  return window.stride.channel == 1;
+  // A model is depthwise if the window channel stride is 1 and its depth is 1.
+  // If stride is 0, then it is 'dense'. If stride is not 0 or 1, or if the 
+  // stride is 1 and the depth is not 0, the behavior is undefined.
+  return window.stride.channel == 1 && window.shape.depth == 1;
 }
 
 
@@ -73,7 +85,7 @@ bool Filter2dGeometry::ModelRequiresPadding() const {
 
 
 
-bool Filter2dGeometry::ModelConvWindowAlwaysIntersectsInput() const {
+bool Filter2dGeometry::ModelFilterWindowAlwaysIntersectsInput() const {
   // If the convolution window ever entirely leaves the input image, the padding count for 
   // either the top-left or bottom-right (initial and final padding) will meet or exceed the 
   // window size for one of the dimensions
@@ -81,11 +93,9 @@ bool Filter2dGeometry::ModelConvWindowAlwaysIntersectsInput() const {
   int K_w = window.shape.width;
 
   auto pad = ModelPadding(true, true);
-  std::cout << "!! " << pad << std::endl;
   if(pad.top  >= K_h || pad.bottom >= K_h) return false;
   if(pad.left >= K_w || pad.right  >= K_w) return false;
   pad = ModelPadding(false, true);
-  std::cout << "@@ " << pad << std::endl;
   if(pad.top  >= K_h || pad.bottom >= K_h) return false;
   if(pad.left >= K_w || pad.right  >= K_w) return false;
 

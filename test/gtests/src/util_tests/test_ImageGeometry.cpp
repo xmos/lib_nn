@@ -207,11 +207,16 @@ TEST_P(ImageGeometryTest_int8, Element)
   for(int row = 0; row < img.height; ++row){
     for(int col = 0; col < img.width; ++col){
       for(int chan = 0; chan < img.depth; ++chan){
+
+#define FAIL_MSG  "v = " << nn::ImageVect(row, col, chan)
+
         T_elm& refA = img.Element<T_elm>(&input[0], row, col, chan);
         T_elm& refB = input[k++];
-        ASSERT_EQ(&(refA), &(refB));
+        ASSERT_EQ(&(refA), &(refB))                   << FAIL_MSG;
         refA = T_elm(13*row + 7*col + chan);
-        ASSERT_EQ(refB, T_elm(13*row + 7*col + chan));
+        ASSERT_EQ(refB, T_elm(13*row + 7*col + chan)) << FAIL_MSG;
+
+#undef FAIL_MSG
       }
     }
   }
@@ -267,21 +272,22 @@ TEST_P(ImageGeometryTest_int8, Get)
     for(int col = -1; col <= img.width; ++col){
       for(int xan = -1; xan <= img.depth; ++xan){
         ImageVect v(row,col,xan);
+#define FAIL_MSG  "v = " << v << " | k = " << k
         if(img.IsWithinImage(v)){
-          T_elm& elm = input[k];
+          T_elm& elm = input[k++];
           elm = -23;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v, -52), -23);
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, -52), -23);
+          ASSERT_EQ(img.Get<T_elm>(&input[0], v, -52), -23)             << FAIL_MSG;
+          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, -52), -23) << FAIL_MSG;
           elm = 77;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v, 99), 77);
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, 99), 77);
+          ASSERT_EQ(img.Get<T_elm>(&input[0], v, 99), 77)               << FAIL_MSG;
+          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, 99), 77)   << FAIL_MSG;
         } else {
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v, -52), -52);
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, -52), -52);
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v,  99),  99);
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan,  99),  99);
+          ASSERT_EQ(img.Get<T_elm>(&input[0], v, -52), -52)             << FAIL_MSG;
+          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, -52), -52) << FAIL_MSG;
+          ASSERT_EQ(img.Get<T_elm>(&input[0], v,  99),  99)             << FAIL_MSG;
+          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan,  99),  99) << FAIL_MSG;
         }
-        k++;
+#undef FAIL_MSG
       }
     }
   }  
@@ -299,21 +305,22 @@ TEST_P(ImageGeometryTest_int16, Get)
     for(int col = -1; col <= img.width; ++col){
       for(int xan = -1; xan <= img.depth; ++xan){
         ImageVect v(row,col,xan);
+#define FAIL_MSG  "v = " << v << " | k = " << k
         if(img.IsWithinImage(v)){
-          T_elm& elm = input[k];
+          T_elm& elm = input[k++];
           elm = -23;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v, -52), -23);
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, -52), -23);
+          ASSERT_EQ(img.Get<T_elm>(&input[0], v, -52), -23) << FAIL_MSG;
+          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, -52), -23) << FAIL_MSG;
           elm = 77;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v, 99), 77);
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, 99), 77);
+          ASSERT_EQ(img.Get<T_elm>(&input[0], v, 99), 77) << FAIL_MSG;
+          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, 99), 77) << FAIL_MSG;
         } else {
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v, -52), -52);
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, -52), -52);
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v,  99),  99);
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan,  99),  99);
+          ASSERT_EQ(img.Get<T_elm>(&input[0], v, -52), -52) << FAIL_MSG;
+          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, -52), -52) << FAIL_MSG;
+          ASSERT_EQ(img.Get<T_elm>(&input[0], v,  99),  99) << FAIL_MSG;
+          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan,  99),  99) << FAIL_MSG;
         }
-        k++;
+#undef FAIL_MSG
       }
     }
   }  
@@ -331,21 +338,22 @@ TEST_P(ImageGeometryTest_int32, Get)
     for(int col = -1; col <= img.width; ++col){
       for(int xan = -1; xan <= img.depth; ++xan){
         ImageVect v(row,col,xan);
+#define FAIL_MSG  "v = " << v << " | k = " << k
         if(img.IsWithinImage(v)){
-          T_elm& elm = input[k];
+          T_elm& elm = input[k++];
           elm = -23;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v, -52), -23);
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, -52), -23);
+          ASSERT_EQ(img.Get<T_elm>(&input[0], v, -52), -23) << FAIL_MSG;
+          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, -52), -23) << FAIL_MSG;
           elm = 77;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v, 99), 77);
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, 99), 77);
+          ASSERT_EQ(img.Get<T_elm>(&input[0], v, 99), 77) << FAIL_MSG;
+          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, 99), 77) << FAIL_MSG;
         } else {
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v, -52), -52);
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, -52), -52);
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v,  99),  99);
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan,  99),  99);
+          ASSERT_EQ(img.Get<T_elm>(&input[0], v, -52), -52) << FAIL_MSG;
+          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, -52), -52) << FAIL_MSG;
+          ASSERT_EQ(img.Get<T_elm>(&input[0], v,  99),  99) << FAIL_MSG;
+          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan,  99),  99) << FAIL_MSG;
         }
-        k++;
+#undef FAIL_MSG
       }
     }
   }  

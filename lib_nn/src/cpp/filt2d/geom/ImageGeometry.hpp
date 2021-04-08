@@ -13,34 +13,34 @@ class ImageGeometry {
 
   public:
 
-    unsigned height;
-    unsigned width;
-    unsigned depth;
-    unsigned channel_depth; //bytes
+    int height;
+    int width;
+    int depth;
+    int channel_depth; //in bytes
 
     constexpr ImageGeometry() : height(0), width(0), depth(0), channel_depth(1) {}
 
     constexpr ImageGeometry(
-      unsigned const rows,
-      unsigned const cols,
-      unsigned const chans,
-      unsigned const channel_depth_bytes = 1) noexcept
+      int const rows,
+      int const cols,
+      int const chans,
+      int const channel_depth_bytes = 1) noexcept
         : height(rows), 
           width(cols), 
           depth(chans), 
           channel_depth(channel_depth_bytes) {}
           
-    unsigned inline const imagePixels()   const { return this->height * this->width;          }
+    int inline const imagePixels()   const { return this->height * this->width;          }
 
-    unsigned inline const pixelElements() const { return this->depth;                         }
-    unsigned inline const rowElements()   const { return this->width * this->pixelElements(); }
-    unsigned inline const colElements()   const { return this->height * this->pixelElements();}
-    unsigned inline const imageElements() const { return this->height * this->rowElements();  }
+    int inline const pixelElements() const { return this->depth;                         }
+    int inline const rowElements()   const { return this->width * this->pixelElements(); }
+    int inline const colElements()   const { return this->height * this->pixelElements();}
+    int inline const imageElements() const { return this->height * this->rowElements();  }
 
-    unsigned inline const pixelBytes() const { return pixelElements() * channel_depth; }
-    unsigned inline const rowBytes()   const { return rowElements()   * channel_depth; }
-    unsigned inline const colBytes()   const { return colElements()   * channel_depth; }
-    unsigned inline const imageBytes() const { return imageElements() * channel_depth; }
+    int inline const pixelBytes() const { return pixelElements() * channel_depth; }
+    int inline const rowBytes()   const { return rowElements()   * channel_depth; }
+    int inline const colBytes()   const { return colElements()   * channel_depth; }
+    int inline const imageBytes() const { return imageElements() * channel_depth; }
 
     /**
      * Get the memory stride (in bytes) required to move by the specified amount within this geometry.

@@ -112,9 +112,9 @@ namespace op {
             const AddressCovector<T_elm_out> covector;
 
             struct {
-              const unsigned height;
-              const unsigned width;
-              const unsigned depth;
+              const int height;
+              const int width;
+              const int depth;
             } shape;
           } output;
 
@@ -286,9 +286,9 @@ namespace op {
             const AddressCovector<T_elm_out> covector;
 
             struct {
-              const unsigned height;
-              const unsigned width;
-              const unsigned depth;
+              const int height;
+              const int width;
+              const int depth;
             } shape;
           } output;
 

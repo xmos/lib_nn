@@ -34,9 +34,9 @@ namespace nn {
     public:
 
       constexpr WindowGeometry(
-        unsigned const height,
-        unsigned const width,
-        unsigned const depth,
+        int const height,
+        int const width,
+        int const depth,
         int const start_row = 0,
         int const start_col = 0,
         int const stride_rows = 1,
@@ -44,7 +44,7 @@ namespace nn {
         int const stride_chans = 0,
         int const dil_rows = 1,
         int const dil_cols = 1,
-        unsigned const channel_depth = 1) noexcept
+        int const channel_depth = 1) noexcept
           : shape(height, width, depth, channel_depth), 
             start{start_row, start_col}, 
             stride{stride_rows, stride_cols, stride_chans}, 

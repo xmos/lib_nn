@@ -3,14 +3,14 @@
 #include "util.hpp"
 #include "ImageGeometry.hpp"
 #include "WindowGeometry.hpp"
+// #include "WindowLocation.hpp"
 
 #include <cstdlib>
 #include <cassert>
 
-
-
-
 namespace nn {
+
+  class WindowLocation;
   
   class Filter2dGeometry {
 
@@ -32,6 +32,9 @@ namespace nn {
 
       bool operator==(Filter2dGeometry other) const;
       bool operator!=(Filter2dGeometry other) const;
+
+      WindowLocation GetWindow(const ImageVect output_coords) const;
+      WindowLocation GetWindow(const int row, const int col, const int channel) const;
 
       bool ModelIsDepthwise() const;
 
@@ -70,7 +73,7 @@ namespace nn {
        * Is it true that, for any given output pixel, the convolution window is guaranteed to have
       * at least one pixel within the input image's bounds?
       */
-      bool ModelConvWindowAlwaysIntersectsInput() const;
+      bool ModelFilterWindowAlwaysIntersectsInput() const;
 
       // /**
       //  * Does the filter's geometry imply that every input element is used to compute some

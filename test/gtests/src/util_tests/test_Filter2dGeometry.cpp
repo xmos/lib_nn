@@ -45,7 +45,7 @@ TEST_P(Filter2dGeometryTest, ModelRequiresPadding)
 }
 
 
-TEST_P(Filter2dGeometryTest, ModelConvWindowAlwaysIntersectsInput)
+TEST_P(Filter2dGeometryTest, ModelFilterWindowAlwaysIntersectsInput)
 {
   auto filter = GetParam();
 
@@ -55,21 +55,17 @@ TEST_P(Filter2dGeometryTest, ModelConvWindowAlwaysIntersectsInput)
   auto last_row_init = filter.window.start.row + (filter.window.shape.height - 1) * filter.window.dilation.row;
   auto last_col_init = filter.window.start.col + (filter.window.shape.width  - 1) * filter.window.dilation.col;
 
-  auto first_row_final = filter.window.start.row + (filter.output.height - 1) * filter.window.stride.row
-                         + (filter.window.shape.height - 1) * filter.window.dilation.row;
-  auto first_col_final = filter.window.start.col + (filter.output.width  - 1) * filter.window.stride.col
-                         + (filter.window.shape.width  - 1) * filter.window.dilation.col;
+  auto first_row_final = filter.window.start.row + (filter.output.height - 1) * filter.window.stride.row;
+  auto first_col_final = filter.window.start.col + (filter.output.width  - 1) * filter.window.stride.col;
 
   auto top = (last_row_init >= 0);
   auto left = (last_col_init >= 0);
   auto bottom = (first_row_final < filter.input.height);
   auto right = (first_col_final < filter.input.width);
 
-  auto val = filter.ModelConvWindowAlwaysIntersectsInput();
+  auto val = filter.ModelFilterWindowAlwaysIntersectsInput();
 
   auto always_intersects = top && left && bottom && right;
-
-  std::cout << last_row_init << ", " << last_col_init << ", " << first_row_final << ", " << first_col_final << std::endl;
 
   ASSERT_EQ(val, always_intersects) << "(" << top << "," << left << "," << bottom << "," << right << ")";
 }
@@ -98,16 +94,21 @@ TEST_P(Filter2dGeometryTest, ModelPadding)
   auto pad_init_signed = filter.ModelPadding(true, true);
   auto pad_init_unsigned = filter.ModelPadding(true, false);
 
-  ASSERT_EQ(pad_init_signed.top, -filter.window.start.row);
-  ASSERT_EQ(pad_init_signed.left, -filter.window.start.col);
-  ASSERT_EQ(pad_init_signed.bottom, (filter.window.start.row + filter.window.shape.height - 1) - filter.input.height);
-  ASSERT_EQ(pad_init_signed.right, (filter.window.start.col + filter.window.shape.width - 1) - filter.input.width);
+#define FAIL_MSG "pad_init_signed: " << pad_init_signed << " | pad_init_unsigned: " << pad_init_unsigned
 
-  ASSERT_EQ(pad_init_unsigned.top, std::max<int>(0, pad_init_signed.top));
-  ASSERT_EQ(pad_init_unsigned.left, std::max<int>(0, pad_init_signed.left));
-  ASSERT_EQ(pad_init_unsigned.bottom, std::max<int>(0, pad_init_signed.bottom));
-  ASSERT_EQ(pad_init_unsigned.right, std::max<int>(0, pad_init_signed.right));
+  int last_row_init = filter.window.start.row + (filter.window.shape.height - 1) * filter.window.dilation.row;
+  int last_col_init = filter.window.start.col + (filter.window.shape.width  - 1) * filter.window.dilation.col;
 
+  ASSERT_EQ(pad_init_signed.top,  -filter.window.start.row) << FAIL_MSG;
+  ASSERT_EQ(pad_init_signed.left, -filter.window.start.col) << FAIL_MSG;
+  ASSERT_EQ(pad_init_signed.bottom, last_row_init - filter.input.height + 1)  << FAIL_MSG;
+  ASSERT_EQ(pad_init_signed.right,  last_col_init - filter.input.width  + 1)  << FAIL_MSG;
+
+  ASSERT_EQ(pad_init_unsigned.top,    std::max<int>(0, pad_init_signed.top))    << FAIL_MSG;
+  ASSERT_EQ(pad_init_unsigned.left,   std::max<int>(0, pad_init_signed.left))   << FAIL_MSG;
+  ASSERT_EQ(pad_init_unsigned.bottom, std::max<int>(0, pad_init_signed.bottom)) << FAIL_MSG;
+  ASSERT_EQ(pad_init_unsigned.right,  std::max<int>(0, pad_init_signed.right))  << FAIL_MSG;
+#undef FAIL_MSG
 }
 
 ParamedRandIter<Filter2dGeometry, SimpleFilter> iter[] = {
