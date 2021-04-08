@@ -19,8 +19,8 @@ int8_t * deref2d(int8_t * p, int p_w, int h, int w){
   return p + h*p_w + w;
 }
 
-// std::tuple<int8_t *, int8_t **, int> MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4> &shape, 
-Conv2dReorderedWeights MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4> &shape, 
+// std::tuple<int8_t *, int8_t **, int> MatMulInt8::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4> &shape, 
+Conv2dReorderedWeights MatMulInt8::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4> &shape, 
   int bits_per_element, int8_t pad_value) 
 {
 
@@ -89,7 +89,7 @@ Conv2dReorderedWeights MatMulFn::reorder_kernel_weights(int8_t *raw_weights, std
   return reordered_weights;
 }
 
-int MatMulFn :: get_scratch_size(int input_bytes) {
+int MatMulInt8 :: get_scratch_size(int input_bytes) {
   const int vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
   return ((input_bytes + vpu_bytes - 1 ) / vpu_bytes ) * vpu_bytes;
 }
@@ -98,7 +98,7 @@ int MatMulFn :: get_scratch_size(int input_bytes) {
 input_bytes is the number of bytes a single output channel of the kernel requires 
 output_channel_count obvs
 */
-int MatMulFn::get_kernel_size(int input_bytes, int output_channel_count) {
+int MatMulInt8::get_kernel_size(int input_bytes, int output_channel_count) {
 
   const int vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
   const int vpu_ring_buffer_length = VPU_INT16_EPV; 
@@ -120,15 +120,15 @@ int MatMulFn::get_kernel_size(int input_bytes, int output_channel_count) {
   return kernel_bytes;
 }
 
-MatMulFn::MatMulFn(int output_slice_channel_count, size_t bytes_per_kernel_channel, int8_t * weights): 
+MatMulInt8::Params::Params(int output_slice_channel_count, size_t bytes_per_kernel_channel, int8_t * weights): 
+  weights(weights),
   output_slice_channel_count(output_slice_channel_count),
-  bytes_per_kernel_channel(bytes_per_kernel_channel),
-  weights(weights) 
+  bytes_per_kernel_channel(bytes_per_kernel_channel)
 {
   //maybe compute k_p_adjust and input_channel_group_count
 }
 
-void MatMulFn::mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group){
+void MatMulInt8::mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group){
   xs3_vpu vpu_mem;
   xs3_vpu * vpu = &vpu_mem;
 
@@ -138,9 +138,9 @@ void MatMulFn::mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_c
   const int vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
   const int vpu_epv = VPU_INT16_EPV;
   
-  int32_t cur_output_channels_in_scope = std::min(output_slice_channel_count - output_channel_group * vpu_epv, vpu_epv);
+  int32_t cur_output_channels_in_scope = std::min(params->output_slice_channel_count - output_channel_group * vpu_epv, vpu_epv);
 
-  int8_t * K_p = weights + bytes_per_kernel_channel * vpu_epv * output_channel_group;//changes
+  int8_t * K_p = params->weights + params->bytes_per_kernel_channel * vpu_epv * output_channel_group;//changes
 
   assert(cur_output_channels_in_scope > 0);
 
@@ -152,26 +152,26 @@ void MatMulFn::mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_c
 
   //these are a funciton of the number of input bytes
   //These are unchanging and could be hoisted into the constructor
-  int32_t k_p_adjust = bytes_per_kernel_channel%vpu_bytes;  //TODO -make this a one liner
+  int32_t k_p_adjust = params->bytes_per_kernel_channel%vpu_bytes;  //TODO -make this a one liner
 
   //The tail loop must execute in order to rotate the ring buffer to leave the results in 
   //0->N-1 of the ring buffer
   if ( k_p_adjust == 0 )
     k_p_adjust = vpu_bytes;
 
-  int input_channel_group_count = (bytes_per_kernel_channel - k_p_adjust) / vpu_bytes; 
+  int input_channel_group_count = (params->bytes_per_kernel_channel - k_p_adjust) / vpu_bytes; 
 
   // std::cout << "k_p_adjust: " << k_p_adjust << std::endl;
   // std::cout << "input_channel_group_count: " << input_channel_group_count << std::endl;
 
   int8_t * D_p = T;
 
-  for (auto p = 0; p < input_channel_group_count; ++p){
+  for (int p = 0; p < input_channel_group_count; ++p){
     VLDC(vpu, D_p);
 
     D_p += XS3_VPU_VREG_WIDTH_BYTES;
 
-    for(auto l = 0; l<VPU_INT16_EPV-1; l++){
+    for(int l = 0; l<VPU_INT16_EPV-1; l++){
       VLMACCR(vpu, K_p);
       K_p += XS3_VPU_VREG_WIDTH_BYTES;
     }
@@ -182,7 +182,7 @@ void MatMulFn::mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_c
   VLDC(vpu, D_p);
 
   //Note: This forces kernels to be padded to word aligned boundaries TODO put an assert on this
-  for(auto l=0; l< tail_loops; l++){
+  for(int l=0; l< tail_loops; l++){
     VLMACCR(vpu, K_p);
     K_p += k_p_adjust;
   }
@@ -191,7 +191,7 @@ void MatMulFn::mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_c
   VSTD(vpu, &A->vR);
 }
 
-MatMulDirectFn::MatMulDirectFn(ImageParams &X, WindowGeometry &K, int input_ch_per_output, int8_t * weights): 
+MatMulDirectFn::Params::Params(ImageParams &X, WindowGeometry &K, int input_ch_per_output, int8_t * weights): 
   weights(weights)
 {
 
@@ -208,15 +208,7 @@ MatMulDirectFn::MatMulDirectFn(ImageParams &X, WindowGeometry &K, int input_ch_p
   int bytes_per_pixel =  (X.channels *  X.bits_per_element) / CHAR_BIT; 
 
   inner_x_h_step = bytes_per_pixel * K.dilation.horizontal - bytes_per_copy_per_channel;
-
-  int k_actual_width = (K.shape.width - 1) * K.dilation.horizontal + 1;
-
-  // inner_x_v_step =
-  //     (bytes_per_pixel * ((X.width*K.dilation.vertical - k_actual_width))) 
-  //       - inner_x_h_step;
-
   inner_x_v_step = bytes_per_pixel* X.width*K.dilation.vertical -  K.shape.width*bytes_per_pixel * K.dilation.horizontal;
-  // vertical_mem_stride = bytes_per_h_line * K.dilation.vertical - input_width * bytes_per_pixel * K.dilation.horizontal;
 }
 
 void MatMulDirectFn::mat_mul_direct_impl(vpu_ring_buffer_t * A , int8_t * X, int32_t output_channel_group)
@@ -229,11 +221,11 @@ void MatMulDirectFn::mat_mul_direct_impl(vpu_ring_buffer_t * A , int8_t * X, int
 
   int8_t * X_cur_p = X;
 
-  int8_t * K_p = weights + bytes_per_kernel_channel * VPU_INT16_EPV * output_channel_group;
-  for (int kh =  k_height_loop_counter; kh >= 0 ; kh-- )  {
-    for (int kw = k_width_loop_counter; kw >= 0 ; kw-- )  {
+  int8_t * K_p = params->weights + params->bytes_per_kernel_channel * VPU_INT16_EPV * output_channel_group;
+  for (int kh =  params->k_height_loop_counter; kh >= 0 ; kh-- )  {
+    for (int kw = params->k_width_loop_counter; kw >= 0 ; kw-- )  {
 
-      for (int ic = input_channel_loop_counter; ic >= 0 ; ic-- ) {
+      for (int ic = params->input_channel_loop_counter; ic >= 0 ; ic-- ) {
         VLDC(vpu, X_cur_p);
 
         X_cur_p += XS3_VPU_VREG_WIDTH_BYTES;
@@ -243,9 +235,9 @@ void MatMulDirectFn::mat_mul_direct_impl(vpu_ring_buffer_t * A , int8_t * X, int
           K_p += XS3_VPU_VREG_WIDTH_BYTES;
         }
       }
-      X_cur_p += inner_x_h_step;
+      X_cur_p += params->inner_x_h_step;
     }
-    X_cur_p += inner_x_v_step;
+    X_cur_p += params->inner_x_v_step;
   }
 
   //save off the accumulator
@@ -262,7 +254,7 @@ void MatMulDirectFn::aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t ou
 #endif // NN_USE_REF
 }
 
-void MatMulFn::aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group)
+void MatMulInt8::aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group)
 {
 #ifdef NN_USE_REF
   mat_mul_impl(A, T, output_channel_group);

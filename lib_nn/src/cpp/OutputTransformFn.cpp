@@ -18,10 +18,10 @@ static int64_t saturate_non_sym(
     const int64_t max_val = (((int64_t)1)<<(bits-1))-1;
     const int64_t min_val = -max_val - 1;
     
-    return std::min(max_val, std::max(min_val, input));
+    return (input > max_val)?  max_val : (input < min_val)? min_val : input;
 }
 
-// This is an implementation of VDEPTH8 where the rounding is asymmetric
+// This is an implementation of VDEPTH8 where the rounding is asymetric
 // The acutal asm implements the following but in a more convoluted way 
 // in order to work around the rounds issue.
 static void VDEPTH8_FIXED(xs3_vpu* vpu){
@@ -30,8 +30,8 @@ static void VDEPTH8_FIXED(xs3_vpu* vpu){
     memcpy(&vec_tmp, &(vpu->vR), sizeof(vpu_vector_t));
     memset(&(vpu->vR), 0, sizeof(vpu_vector_t));
     
-    for(int i = 0; i < VPU_INT16_ACC_PERIOD; i++){
-        int32_t elm = int32_t(vec_tmp.s16[i]) + (1 << 7);
+    for(int i = 0; i < VPU_INT16_EPV; i++){
+        int32_t elm = ((int32_t)vec_tmp.s16[i]) + (1 << 7);
         vpu->vR.s8[i] = saturate_non_sym(elm >> 8, 8);
     }
 }
@@ -277,57 +277,57 @@ static void fill_array(T (&arr)[S], T v){
 
 
 
-// void OTBinary_int8::xor_popcount_to_vlmaccr1(
-//     std::vector<int32_t> & accu_min,
-//     std::vector<int32_t> & accu_max,
-//     std::vector<int32_t> & accu_overlaps, 
-//     int32_t accu_clamp_min,
-//     int32_t accu_clamp_max)
-// {
+void xor_popcount_to_vlmaccr1(
+    std::vector<int32_t> & accu_min,
+    std::vector<int32_t> & accu_max,
+    std::vector<int32_t> & accu_overlaps, 
+    int32_t accu_clamp_min,
+    int32_t accu_clamp_max)
+{
 
 
-// }
+}
 
-// void OTBinary_int8::calc_post_accumulation_clamps(
-//     std::vector<int32_t> & accu_min,
-//     std::vector<int32_t> & accu_max,
-//     std::vector<int32_t> & accu_overlaps, 
-//     int32_t accu_clamp_min,
-//     int32_t accu_clamp_max,
-//     int accu_shr)
-// {
-//   // for (unsigned ch = 0; ch < chans_out; ch++){
-//   //   if (chan_overlaps){
-//   //     quantised_accu_modifier[ch] = ashr(chan_overlaps[ch], accu_shr);
-//   //   } else {
-//   //     quantised_accu_modifier[ch] = 0;
-//   //   }
-//   // }
+void calc_post_accumulation_clamps(
+    std::vector<int32_t> & accu_min,
+    std::vector<int32_t> & accu_max,
+    std::vector<int32_t> & accu_overlaps, 
+    int32_t accu_clamp_min,
+    int32_t accu_clamp_max,
+    int accu_shr)
+{
+  // for (unsigned ch = 0; ch < chans_out; ch++){
+  //   if (chan_overlaps){
+  //     quantised_accu_modifier[ch] = ashr(chan_overlaps[ch], accu_shr);
+  //   } else {
+  //     quantised_accu_modifier[ch] = 0;
+  //   }
+  // }
 
-//   // int32_t vpu_clamp_min; //TODO
-//   // int32_t vpu_clamp_max;
+  // int32_t vpu_clamp_min; //TODO
+  // int32_t vpu_clamp_max;
 
-//   // float min_shifted_accu = ldexp(vpu_clamp_min, - accu_shr);
-//   // float max_shifted_accu = ldexp(vpu_clamp_max, - accu_shr);
+  // float min_shifted_accu = ldexp(vpu_clamp_min, - accu_shr);
+  // float max_shifted_accu = ldexp(vpu_clamp_max, - accu_shr);
 
-//   // int32_t low_clamp_limit = -INT16_MAX * vpu_multipler;
-//   // int32_t high_clamp_limit = INT16_MAX * vpu_multipler;
+  // int32_t low_clamp_limit = -INT16_MAX * vpu_multipler;
+  // int32_t high_clamp_limit = INT16_MAX * vpu_multipler;
 
-//   // int32_t t_low_clamp_offset  = (int32_t)((float)low_clamp_limit - min_shifted_accu); //round?
-//   // int32_t t_high_clamp_offset = (int32_t)((float)high_clamp_limit - max_shifted_accu);
+  // int32_t t_low_clamp_offset  = (int32_t)((float)low_clamp_limit - min_shifted_accu); //round?
+  // int32_t t_high_clamp_offset = (int32_t)((float)high_clamp_limit - max_shifted_accu);
 
-//   // int32_t t_clamp_near = t_low_clamp_offset, t_clamp_far_0 = t_high_clamp_offset;
-//   // if (abs(t_clamp_near) >= abs(t_clamp_far_0)) {
-//   //   t_clamp_near = t_high_clamp_offset;
-//   //   t_clamp_far_0 = t_low_clamp_offset;
-//   // }
-//   // int32_t t_clamp_far_1 = t_clamp_far_0 / 2;
-//   // t_clamp_far_0 -= t_clamp_far_1;
+  // int32_t t_clamp_near = t_low_clamp_offset, t_clamp_far_0 = t_high_clamp_offset;
+  // if (abs(t_clamp_near) >= abs(t_clamp_far_0)) {
+  //   t_clamp_near = t_high_clamp_offset;
+  //   t_clamp_far_0 = t_low_clamp_offset;
+  // }
+  // int32_t t_clamp_far_1 = t_clamp_far_0 / 2;
+  // t_clamp_far_0 -= t_clamp_far_1;
 
-//   // *clamp_near = -t_clamp_near;
-//   // *clamp_far_0 = -t_clamp_far_0;
-//   // *clamp_far_1 = t_clamp_far_1;
-// }
+  // *clamp_near = -t_clamp_near;
+  // *clamp_far_0 = -t_clamp_far_0;
+  // *clamp_far_1 = t_clamp_far_1;
+}
 
 QuantisationParams OTBinary_int8::quantise_activation(
     std::vector<double> & output_transform_multiplier,
@@ -396,31 +396,26 @@ QuantisationParams OTBinary_int8::quantise_activation(
   return q;
 }
 
-OTBinary_int8::OTBinary_int8(int32_t output_slice_channel_count, 
-                             output_transform_values_t * otv, 
-                             int16_t * biases, 
-                             int16_t * multipliers, 
-                             int16_t * accu_modifier)
-    : output_slice_channel_count(output_slice_channel_count), 
-      otv(otv),
-      biases(biases),
-      multipliers(multipliers),
-      accu_modifier(accu_modifier)
+OTBinary_int8::Params::Params(int32_t output_slice_channel_count, output_transform_values_t * otv, 
+  int16_t * biases, int16_t * multipliers, int16_t * accu_modifier):
+  output_slice_channel_count(output_slice_channel_count), 
+  otv(otv),
+  biases(biases),
+  multipliers(multipliers),
+  accu_modifier(accu_modifier)
 {
 
 }
 
-int8_t * OTBinary_int8::output_transform_fn(int8_t * Y, 
-                                            vpu_ring_buffer_t * A, 
-                                            int32_t output_channel_group)
+int8_t * OTBinary_int8::output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group)
 {
 
   xs3_vpu vpu_mem;
   xs3_vpu * vpu = &vpu_mem;
 
-  int16_t* cur_post_activation_bias = biases + output_channel_group * VPU_INT16_EPV;
-  int16_t* cur_accu_modifier = accu_modifier + output_channel_group * VPU_INT16_EPV;
-  int16_t* cur_post_activation_mul = multipliers + output_channel_group * VPU_INT16_EPV;
+  int16_t* cur_post_activation_bias = params->biases + output_channel_group * VPU_INT16_EPV;
+  int16_t* cur_accu_modifier = params->accu_modifier + output_channel_group * VPU_INT16_EPV;
+  int16_t* cur_post_activation_mul = params->multipliers + output_channel_group * VPU_INT16_EPV;
 
   VSETC(vpu, MODE_S16);//check this
 
@@ -433,9 +428,9 @@ int8_t * OTBinary_int8::output_transform_fn(int8_t * Y,
   memset(&temp_mem, 0, sizeof(temp_mem));
 
   //Reduce the accumulator to 16 bits
-  VLSAT(vpu, otv->accu_shr);
+  VLSAT(vpu, params->otv->accu_shr);
   VSTR(vpu, &temp_mem);
-  VLASHR(vpu, &temp_mem, otv->accu_shl);
+  VLASHR(vpu, &temp_mem, params->otv->accu_shl);
 
   // printf("a\n");
   // vpu_sim_print(vpu);
@@ -443,12 +438,12 @@ int8_t * OTBinary_int8::output_transform_fn(int8_t * Y,
   //Subtract the channel overlap
   VLADD(vpu, cur_accu_modifier);
 
-  VLSUB(vpu, otv->clamp_near);
-  VLSUB(vpu, otv->clamp_near);
-  VLSUB(vpu, otv->clamp_far_0);
-  VLSUB(vpu, otv->clamp_far_1);
-  VLSUB(vpu, otv->clamp_far_1);
-  VLSUB(vpu, otv->clamp_far_0);
+  VLSUB(vpu, params->otv->clamp_near);
+  VLSUB(vpu, params->otv->clamp_near);
+  VLSUB(vpu, params->otv->clamp_far_0);
+  VLSUB(vpu, params->otv->clamp_far_1);
+  VLSUB(vpu, params->otv->clamp_far_1);
+  VLSUB(vpu, params->otv->clamp_far_0);
 
   //Save the 16 bit accumulator, A, to scratch
   VSTR(vpu, &temp_mem);
@@ -458,7 +453,7 @@ int8_t * OTBinary_int8::output_transform_fn(int8_t * Y,
 
   //Multiply the channel-wise bias by the bias multiplier to make it 32 bit per channel
   VLDC(vpu, cur_post_activation_bias);
-  VLMACC(vpu, otv->bias_multipler);
+  VLMACC(vpu, params->otv->bias_multipler);
 
   // printf("b\n");
   // vpu_sim_print(vpu);
@@ -470,15 +465,14 @@ int8_t * OTBinary_int8::output_transform_fn(int8_t * Y,
   // vpu_sim_print(vpu);
 
   //Reduce the accumulator to 16 bits
-  VLSAT(vpu, otv->final_shr);
+  VLSAT(vpu, params->otv->final_shr);
 
   // printf("d\n");
   // vpu_sim_print(vpu);
   VDEPTH8_FIXED(vpu);
   
   //we need to know how many we are processing
-  int output_count = std::min<int>(output_slice_channel_count - output_channel_group * VPU_INT16_EPV, 
-                                   (int)VPU_INT16_EPV);
+  int output_count = std::min(params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV, (int)VPU_INT16_EPV);
   
   int mask = (1<<output_count)-1;
 
@@ -488,15 +482,11 @@ int8_t * OTBinary_int8::output_transform_fn(int8_t * Y,
   return Y;
 }
 
-OTBinary_bin::OTBinary_bin(int16_t * thresholds)
-    : thresholds(thresholds)
-{
+OTBinary_bin::OTBinary_bin(int16_t * thresholds): thresholds(thresholds){
 
 }
 
-int8_t * OTBinary_bin::output_transform_fn(int8_t * Y, 
-                                           vpu_ring_buffer_t * A, 
-                                           int32_t output_channel_group)
+int8_t * OTBinary_bin::output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group)
 {
   //this is declared on the stack so that the asm can put the memory
   // in the constant pool

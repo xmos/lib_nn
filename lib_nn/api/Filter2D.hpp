@@ -7,40 +7,47 @@
 
 #include "../src/cpp/filt2d/geom/Filter2dGeometry.hpp"
 
+
 /**
- * Struct indicating a (3D) rectangular sub-region of an image, as well as how to iterate through
- * pixels within that region of the image.
- * 
- * @see AbstractKernel
+ * Class representing an executable filter kernel. A concrete instance of this class processes a
+ * particular region of the output image associated with the filter.
  */
-struct AbstractKernelParams {
-  void calculate_h_mem_stride(ImageParams &image){
-    // this is only used by xformer (ideally)
-    // this->output_h_mem_stride = (0); // TODO:
-  } 
-
-  static AbstractKernelParams Make(const nn::ImageGeometry& output_image, 
-                                   const nn::ImageRegion& output_region,
-                                   const int output_channels_per_group);
-
+template <class T>
+class AbstractKernel {
+  
+public:
   /**
+   * Struct indicating a (3D) rectangular sub-region of an image, as well as how to iterate through
+   * pixels within that region of the image.
+   * 
+   * @see AbstractKernel
+   */
+  class Params {
+    public:
+
+    
+  static Params Make(const nn::ImageGeometry& output_image, 
+                     const nn::ImageRegion& output_region,
+                     const int output_channels_per_group);
+
+/**
    * The first (`h_begin`; inclusive) and final (`h_end`; exclusive) rows of the output image
    * to be processed when the corresponding filter is executed.
    */
-  const int32_t h_begin, h_end;
+    const int32_t h_begin, h_end;
 
   /**
    * The first (`w_begin`; inclusive) and final (`w_end`; exclusive) columns of the output image
    * to be processed when the corresponding filter is executed.
    */
-  const int32_t w_begin, w_end;
+    const int32_t w_begin, w_end;
 
   /**
    * The number of output channel groups that will be processed when this filter is executed.
    */
-  const int32_t output_channel_group_count;
+    int32_t output_channel_group_count;
 
-  //Used for setting the first channels slice, i.e. rather than writing to
+//Used for setting the first channels slice, i.e. rather than writing to
   //slice 0-31 by offsetting it we can address slice 32 - 63, etc.
 
   /**
@@ -51,55 +58,70 @@ struct AbstractKernelParams {
    * 
    * @TODO: astew: Why not just have c_begin and c_end like with the rows and columns handled by this filter?
    */
-  const int32_t output_channel_slice_offset;
+    int32_t output_channel_slice_offset;
 
-  /**
+    /**
    * This is the number of bytes required to move from the start of a pixel 
    * (offset by output_channel_slice_offset) on the final column of a output 
    * region to the first column of the output region pixel on the next line 
    * down(offset by output_channel_slice_offset).
    */
-  const int32_t output_h_mem_stride;
+    int32_t output_h_mem_stride;
 
-  /**
+    /**
    * This is the number of bytes required to move from the start of a pixel 
    * (offset by output_channel_slice_offset) to the adjecent pixel to the 
    * right (offset by output_channel_slice_offset).
    */
-  const int32_t output_w_mem_stride; //different for all output regions of different widths
+    int32_t output_w_mem_stride; //different for all output regions of different widths
 
-};
+    Params(ImageParams &Y, ImageRegion& r):
+      h_begin(r.height_start), 
+      h_end(r.height_end),
+      w_begin(r.width_start),
+      w_end(r.width_end),
+      output_channel_slice_offset(r.channel_start) {
+      
+      
 
-//region
-// h_begin, h_end;
-// w_begin, w_end;
-// c_begin, c_end;
+      const int channels_per_group = 16; //TODO
+      output_channel_group_count = (r.channel_end - r.channel_start + channels_per_group - 1) / channels_per_group;
 
+      // memory to move to the next right pixel after all current channel groups have been saved
+      // i.e. this conv2d might write chs 16-31 of 68 chs, so the stride would have to be 52 channels 
+      // worth of memory(enough to move from the end of the group just processed to the start of the 
+      // next)
+      const int bits_per_byte = 8;
+      // int output_w_mem_stride = ((Y.channels - (r.channel_end - r.channel_start)) * Y.bits_per_element ) / bits_per_byte;
+      output_w_mem_stride = (Y.channels * Y.bits_per_element ) / bits_per_byte;
+      assert((Y.bits_per_element % bits_per_byte) == 0);
 
-/**
- * Class representing an executable filter kernel. A concrete instance of this class processes a
- * particular region of the output image associated with the filter.
- */
-template <class T>
-class AbstractKernel {
+      //memory to moved down a pixel
+      // int output_h_mem_stride = (Y.width - (r.width_end - r.width_start) + r.width_start)*Y.pixelBytes();
+      output_h_mem_stride = Y.rowBytes() - (r.width_end - r.width_start) * output_w_mem_stride;
+
+    }
+  };
+
   protected:
 
     /**
      * Parameters describing the region of the output image to be processed by this filter, 
      * as well as how to iterate over the region.
      */
-    AbstractKernelParams * kparams;
+    Params * kparams;
 
   public:
+
     /**
      * Constructor.
      * 
      * @param [in] kparams  Parameters describing the output region to be processed.
      */
-    AbstractKernel(AbstractKernelParams *kparams): kparams(kparams){}
-      //calc_output_pixel_slice(TOutput *Y, TInput *X, int32_t h, int32_t w);
+  AbstractKernel(Params *kparams): kparams(kparams){}
+    //calc_output_pixel_slice(TOutput *Y, TInput *X, int32_t h, int32_t w);
 
-    // void execute (int8_t * Y, int8_t * X) ;
+  // void execute (int8_t * Y, int8_t * X) ;
 
     /**
      * Execute this kernel using the output image pointed to by `Y` and input image pointed to by `X`.
@@ -117,19 +139,23 @@ class AbstractKernel {
      * @param [in] Y  Pointer to the output image.
      * @param [in] X  Pointer to the input image.
      */
-    void execute (int8_t * Y, int8_t * X) {
+  void execute (int8_t * Y, int8_t * X) {
 
-      //dereference by h_begin and w_begin
-      Y += kparams->output_channel_slice_offset;
+    //dereference by h_begin and w_begin
+    int bytes_per_row = kparams->output_h_mem_stride + (kparams->w_end - kparams->w_begin) * kparams->output_w_mem_stride;
+    
+    Y +=  kparams->h_begin * bytes_per_row + kparams->w_begin * kparams->output_w_mem_stride;
 
-      for(int32_t h = kparams->h_begin; h < kparams->h_end; h++){
-        for(int32_t w = kparams->w_begin; w < kparams->w_end; w++){
-          static_cast<T*>(this)->calc_output_pixel_slice(Y, X, h, w);
-          Y += kparams->output_w_mem_stride;
-        }
-        Y += kparams->output_h_mem_stride;
+    Y += kparams->output_channel_slice_offset;
+
+    for(int32_t h = kparams->h_begin; h < kparams->h_end; h++){
+      for(int32_t w = kparams->w_begin; w < kparams->w_end; w++){
+        static_cast<T*>(this)->calc_output_pixel_slice(Y, X, h, w);
+        Y += kparams->output_w_mem_stride;
       }
+      Y += kparams->output_h_mem_stride;
     }
+  }
 };
 
 /**
@@ -140,6 +166,9 @@ class AbstractKernel {
  * the aggregation handler (instance of `AggregateFn`) and the output transformer (instance of `OutputTransformFn`).
  */
 class Filter2D : public AbstractKernel<Filter2D> {
+  public:
+    static constexpr bool UsesPerGroupMemCopy = false;
+
   private:
 
     /**
@@ -179,13 +208,12 @@ class Filter2D : public AbstractKernel<Filter2D> {
     /**
      * Construct a filter using the provided component handlers.
      */
-    Filter2D(AbstractKernelParams * kparams, 
+    Filter2D(AbstractKernel::Params * kparams, 
              MemCpyFn * memcpy_handler, 
              AggregateFn * aggregate_handler, 
              OutputTransformFn * ot_handler, 
              int8_t * scratch_mem=nullptr);
 
-    static AbstractKernelParams make_filter2d_params(ImageParams &Y, ImageRegion& r);
 
     /**
      * Construct a filter using the provided component handlers.
@@ -212,6 +240,9 @@ class Filter2D : public AbstractKernel<Filter2D> {
  * Base class for depthwise 2D filter kernels.
  */
 class Filter2D_DW : public AbstractKernel<Filter2D_DW> {
+  public:
+    static constexpr bool UsesPerGroupMemCopy = true;
+
   private:
 
     /**
@@ -256,7 +287,7 @@ class Filter2D_DW : public AbstractKernel<Filter2D_DW> {
     /**
      * Construct a filter using the provided component handlers.
      */
-    Filter2D_DW(AbstractKernelParams * kparams, 
+    Filter2D_DW(AbstractKernel::Params * kparams, 
                 MemCpyFn * memcpy_handler, 
                 AggregateFn * aggregate_handler, 
                 OutputTransformFn * ot_handler, 

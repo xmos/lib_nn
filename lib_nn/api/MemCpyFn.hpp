@@ -55,102 +55,129 @@ class MemCpyFn {
  */
 class DerefInputFn : public MemCpyFn {
 
-  int32_t bytes_per_h_line; 
-  int32_t bytes_per_pixel; 
+  public:
+  class Params {
+    public:
+    int32_t bytes_per_h_line; 
+    int32_t bytes_per_pixel; 
+    Params(ImageParams &X, WindowGeometry &K){
+      bytes_per_h_line = X.rowBytes() * K.stride.vertical;
+      bytes_per_pixel = X.pixelBytes() * K.stride.horizontal; 
+    }
+  };
+
+  Params * params;
 
   public:
-    DerefInputFn(ImageParams &X, WindowGeometry &K);
-    int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
-    size_t get_scratch_bytes();
-    size_t get_overread_bytes();
+  DerefInputFn(Params * params):params(params){};
+  int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
+  size_t get_scratch_bytes();
+  size_t get_overread_bytes();
 };
 
 /**
  * 
  */
-class Im_to_col_padded : public MemCpyFn{
-  int32_t kernel_height;
-  int32_t kernel_width;
+class ImToColPadded : public MemCpyFn{
+  public:
+  class Params {
 
-  int32_t vertical_stride;
-  int32_t horizontal_stride;
-  int32_t vertical_dilation;
-  int32_t horizontal_dilation;
+    public:
+      int32_t kernel_height;
+      int32_t kernel_width;
 
-  padding_t padding;
+      int32_t vertical_stride;
+      int32_t horizontal_stride;
+      int32_t vertical_dilation;
+      int32_t horizontal_dilation;
 
-  int32_t input_v_length;
-  int32_t input_h_length;
+      padding_t padding;
 
-  int32_t padding_val;
+      int32_t input_v_length;
+      int32_t input_h_length;
 
-  int32_t bytes_per_h_line; 
-  int32_t bytes_per_pixel;
+      int32_t padding_val;
 
-  size_t horizontal_mem_stride;
+      int32_t bytes_per_h_line; 
+      int32_t bytes_per_pixel;
 
-  int bytes_per_copy_per_channel;
+      int32_t horizontal_mem_stride;
+
+      int32_t bytes_per_copy_per_channel;
+
+    public:
+      Params(ImageParams &X, WindowGeometry &K, padding_t &padding, int input_ch_per_output, int8_t pad_val);
+  };
+
+  Params * params;
 
   public:
-    Im_to_col_padded(ImageParams &X, WindowGeometry &K, padding_t &padding, int input_ch_per_output, int8_t pad_val);
-    int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
-    size_t get_scratch_bytes();
-    size_t get_overread_bytes();
+  ImToColPadded(Params * p):params(p){}
+  int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
+  size_t get_scratch_bytes();
+  size_t get_overread_bytes();
 };
 
 /**
  * 
  */
-class Im_to_col_valid : public MemCpyFn{
-
-  /**
-   * Bytes per row of the input image
-   */
-  int32_t bytes_per_h_line; 
+class ImToColValid : public MemCpyFn{
+  public:
+  struct Params {
+    /**
+     * Bytes per row of the input image
+     */
+    int32_t bytes_per_h_line; 
 
   /**
    * Bytes per pixels of the filter window.
    */
-  int32_t bytes_per_pixel; 
+    int32_t bytes_per_pixel; 
 
   /**
    * Height of the filter window in pixels.
    */
-  int32_t input_height;
+    int32_t input_height;
 
   /**
    * Width of the filter window in pixels.
    */
-  int32_t input_width;
+    int32_t input_width;
 
   /**
    * The number of VPU words (vectors) to copy for the entire filter window.
    * 
    * Note that this should be rounded up if the number of words is not integral.
    */
-  int32_t input_channel_groups; 
+    int32_t input_channel_groups; 
+
 
   /**
    * The difference between the number of bytes actually copied and the target number of bytes to copy.
    */
-  int32_t T_rewind; 
+    int32_t T_rewind; 
 
-  // The bytes to inc an X pointer by to move by one horizontal stride
-  int32_t horizontal_mem_stride;
+    // The bytes to inc an X pointer by to move by one horizontal stride
+    int32_t horizontal_mem_stride;
 
-  // The bytes to inc an X pointer by to move by one vertical stride 
-  // and horizontally bacwards by the kernel width.
-  // i.e. from X[h][w + kernel_width - 1] to X[h+1][w]. 
-  int32_t vertical_mem_stride;
+    // The bytes to inc an X pointer by to move by one vertical stride 
+    // and horizontally bacwards by the kernel width.
+    // i.e. from X[h][w + kernel_width - 1] to X[h+1][w]. 
+    int32_t vertical_mem_stride;
+
+    Params(ImageParams &X, WindowGeometry &K, int input_ch_per_output);
+  };
+
+  Params * params;
 
   public:
 
-    //input_ch_per_output lets the kernel know how many input channels to copy to scratch
-    Im_to_col_valid(ImageParams &X, WindowGeometry &K, int input_ch_per_output);
-    
-    size_t get_scratch_bytes();
-    size_t get_overread_bytes();
+  //input_ch_per_output lets the kernel know how many input channels to copy to scratch
+  ImToColValid(Params * params):params(params){};
+  
+  size_t get_scratch_bytes();
+  size_t get_overread_bytes();
 
-    int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
+  int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
   
 };

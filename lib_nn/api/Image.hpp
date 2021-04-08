@@ -1,6 +1,8 @@
 #include <cstdint>
 #include <cstring>
 
+#include <ostream>
+
 #ifndef IMAGE_HPP_
 #define IMAGE_HPP_
 
@@ -70,6 +72,32 @@ struct ImageRegion {
             channel_start(channel_start), 
             channel_end(channel_end){}
 
+    bool Within(int h, int w, int c) const
+    {
+      if( h < height_start  || h >= height_end  ) return false;
+      if( w < width_start   || w >= width_end   ) return false;
+      if( c < channel_start || c >= channel_end ) return false;
+      return true;
+    }
+
+    int Rows() const
+    { return (height_end - height_start); }
+
+    int Cols() const
+    { return (width_end - width_start); }
+
+    int Channels() const
+    { return (channel_end - channel_start); }
+
+    int PixelCount() const
+    { return Rows() * Cols(); }
+
+    int ElementCount() const
+    { return PixelCount() * Channels(); }
+
+    int ChannelOutputGroups(int output_channels_per_group) const
+    { return (Channels() + (output_channels_per_group - 1)) / output_channels_per_group; }
+
 };
 
 struct ImageParams {
@@ -122,5 +150,16 @@ struct ImageParams {
 
 };
 
+
+inline std::ostream& operator<<(std::ostream &stream, const ImageParams &image){
+  return stream << image.height << "," << image.width << "," 
+                << image.channels << "," << image.bits_per_element;
+}
+
+inline std::ostream& operator<<(std::ostream &stream, const ImageRegion &r){
+  return stream << "{ [" << r.height_start << "," << r.height_end << "), "
+                <<   "[" << r.width_start << "," << r.width_end << "), "
+                <<   "[" << r.channel_start << "," << r.channel_end << ") }";
+}
 
 #endif //IMAGE_HPP_
