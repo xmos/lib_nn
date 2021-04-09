@@ -4,8 +4,12 @@
 #include <vector>
 
 #include "vpu.hpp"
-#include "Image.hpp"
 
+#include "../src/cpp/filt2d/geom/ImageGeometry.hpp"
+#include "../src/cpp/filt2d/geom/WindowGeometry.hpp"
+
+namespace nn {
+namespace filt2d {
 
 // template <class T>
 class AggregateFn {
@@ -94,7 +98,7 @@ class MatMulDirectFn : public AggregateFn {
     int32_t inner_x_h_step;
     int32_t inner_x_v_step;
 
-    Params(ImageParams &X, WindowGeometry &K, int input_ch_per_output, int8_t * weights);  
+    Params(geom::ImageGeometry &X, geom::WindowGeometry &K, int input_ch_per_output, int8_t * weights);  
   };
 
   private:
@@ -108,3 +112,5 @@ class MatMulDirectFn : public AggregateFn {
     void aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
 
 };
+}
+}

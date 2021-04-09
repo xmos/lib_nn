@@ -1,7 +1,11 @@
 #include <cstdint>
 #include <cstring>
 
-#include "Image.hpp"
+#include "../src/cpp/filt2d/geom/ImageGeometry.hpp"
+#include "../src/cpp/filt2d/geom/WindowGeometry.hpp"
+
+namespace nn {
+namespace filt2d {
 
 class MemCpyFn {
   public:
@@ -19,9 +23,9 @@ class DerefInputFn : public MemCpyFn {
     public:
     int32_t bytes_per_h_line; 
     int32_t bytes_per_pixel; 
-    Params(ImageParams &X, WindowGeometry &K){
-      bytes_per_h_line = X.rowBytes() * K.stride.vertical;
-      bytes_per_pixel = X.pixelBytes() * K.stride.horizontal; 
+    Params(geom::ImageGeometry &X, geom::WindowGeometry &K){
+      bytes_per_h_line = X.rowBytes() * K.stride.row;
+      bytes_per_pixel = X.pixelBytes() * K.stride.col; 
     }
   };
 
@@ -64,7 +68,7 @@ class ImToColPadded : public MemCpyFn{
       int32_t bytes_per_copy_per_channel;
 
     public:
-      Params(ImageParams &X, WindowGeometry &K, padding_t &padding, int input_ch_per_output, int8_t pad_val);
+      Params(geom::ImageGeometry &X, geom::WindowGeometry &K, padding_t &padding, int input_ch_per_output, int8_t pad_val);
   };
 
   Params * params;
@@ -99,7 +103,7 @@ class ImToColValid : public MemCpyFn{
     // i.e. from X[h][w + kernel_width - 1] to X[h+1][w]. 
     int32_t vertical_mem_stride;
 
-    Params(ImageParams &X, WindowGeometry &K, int input_ch_per_output);
+    Params(geom::ImageGeometry &X, geom::WindowGeometry &K, int input_ch_per_output);
   };
 
   Params * params;
@@ -115,3 +119,5 @@ class ImToColValid : public MemCpyFn{
   int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
   
 };
+}
+}

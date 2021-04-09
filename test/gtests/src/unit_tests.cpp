@@ -9,7 +9,9 @@
 #include <tuple>
 #include <list>
 
-namespace {
+
+namespace nn {
+namespace filt2d {
 
   int pseudo_rand(int *seed){
     const int a = 1664525;
@@ -49,8 +51,14 @@ namespace {
                         if (output_height <= 0 || output_width <= 0)
                           continue;
                           
-                        ImageParams X(x_height, x_width, x_channels, 8); //8 bits per elemnet
-                        WindowGeometry K (k_height, k_width, k_h_stride, k_v_stride, k_h_dilation, k_v_dilation);
+                        geom::ImageGeometry X(x_height, x_width, x_channels); 
+
+                        unsigned k_depth = 1; //(input_ch_per_output);
+
+                        geom::WindowGeometry K (k_height, k_width, k_depth, 
+                          0, 0, 
+                          k_v_stride, k_h_stride, 1, 
+                          k_v_dilation, k_h_dilation);
 
                         ImToColValid::Params p(X, K, input_ch_per_output);
                         ImToColValid cpy(&p);
@@ -129,7 +137,8 @@ namespace {
                             for (int left_p=0;left_p <= 1;++left_p){
                               for (int right_p=0;right_p <= 1;++right_p){
 
-                                padding_t padding = {top_p, bot_p, left_p, right_p}; 
+//TODO can we make padding_t int types?
+                                padding_t padding = {(int16_t)top_p, (int16_t)bot_p, (int16_t)left_p, (int16_t)right_p}; 
                           
                                 int padded_x_height = padding.top + padding.bottom + x_height;
                                 int padded_x_width = padding.left + padding.right + x_width;
@@ -140,8 +149,9 @@ namespace {
                                 if (output_height <= 0 || output_width <= 0)
                                   continue;
 
-                                ImageParams X(x_height, x_width, x_channels, 8); 
-                                WindowGeometry K (k_height, k_width, k_h_stride, k_v_stride, k_h_dilation, k_v_dilation);
+                                geom::ImageGeometry X(x_height, x_width, x_channels); 
+
+                                geom::WindowGeometry K (k_height, k_width, 0, 0, 0, k_v_stride, k_h_stride, 0, k_v_dilation,  k_h_dilation);
 
                                 int8_t pad_val = 0x55;
 
@@ -244,8 +254,8 @@ namespace {
                   if (output_height <= 0 || output_width <= 0)
                     continue;
                     
-                  ImageParams X(x_height, x_width, x_channels, 8); 
-                  WindowGeometry K (k_height, k_width, k_h_stride, k_v_stride, k_h_dilation, k_v_dilation);
+                  geom::ImageGeometry X(x_height, x_width, x_channels); 
+                  geom::WindowGeometry K (k_height, k_width, 0, 0, 0, k_v_stride, k_h_stride, 0, k_v_dilation, k_h_dilation);
 
                   DerefInputFn::Params p(X, K);
                   DerefInputFn deref(&p);
@@ -465,8 +475,8 @@ namespace {
               for (int k_width = 1; k_width <= x_width; ++k_width){
                 for (int y_channels = 32; y_channels < 32*3; y_channels += 32){
                   
-                  ImageParams X_params(x_height, x_width, x_channels, 8);
-                  WindowGeometry K_params(k_height, k_width, 1, 1, 1, 1);
+                  geom::ImageGeometry X_params(x_height, x_width, x_channels);
+                  geom::WindowGeometry K_params(k_height, k_width, 1, 1, 1, 1);
 
                   int8_t K[y_channels][k_height][k_width][x_channels];
                   int8_t T[x_height][x_width][x_channels];
@@ -550,9 +560,22 @@ namespace {
                       //           << " output_channels: " << output_channels
                       //           << " input_ch_per_output: " << input_ch_per_output 
                       //           << std::endl;
+    // constexpr WindowGeometry(
+    //   unsigned const height,
+    //   unsigned const width,
+    //   unsigned const depth,
+    //   int const start_row = 0,
+    //   int const start_col = 0,
 
-                      ImageParams X(x_height, x_width, x_channels, 8); 
-                      WindowGeometry K (k_height, k_width, k_h_stride, k_v_stride, k_h_dilation, k_v_dilation);
+    //   int const stride_rows = 1,
+    //   int const stride_cols = 1,
+    //   int const stride_chans = 0,
+    //   int const dil_rows = 1,
+    //   int const dil_cols = 1)
+                      geom::ImageGeometry X(x_height, x_width, x_channels); 
+                      geom::WindowGeometry K (k_height, k_width, 0,
+                       0, 0, 
+                       k_v_stride, k_h_stride, 0, k_v_dilation, k_h_dilation);
 
                       std::array<int, 4> shape = {output_channels, k_height, k_width, x_channels};
                       int8_t raw_weights[output_channels][k_height][k_width][x_channels];
@@ -863,10 +886,12 @@ public:
 
                       BasicOT ot_fn(r_channels_end - r_channels_start);
 
-                      ImageRegion ir(r_height_start, r_height_end, r_width_start, 
-                        r_width_end, r_channels_start, r_channels_end);
+                      // ImageRegion ir(r_height_start, r_height_end, r_width_start, 
+                      //   r_width_end, r_channels_start, r_channels_end);
+                      ImageRegion ir(r_height_start, r_width_start, r_channels_start, 
+                      r_height_end-r_height_start, r_width_end-r_width_start, r_channels_end-r_channels_start);
 
-                      ImageParams ip(y_height, y_width, y_channels, 8);
+                      geom::ImageGeometry ip(y_height, y_width, y_channels);
 
                       AbstractKernel<Filter2D>::Params akp(ip, ir);
 
@@ -920,7 +945,7 @@ public:
 
 
 
-
+}
   //end
 }
 

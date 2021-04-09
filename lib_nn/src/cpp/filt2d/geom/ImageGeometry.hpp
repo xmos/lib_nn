@@ -3,6 +3,7 @@
 #include "nn_types.h"
 #include "util.hpp"
 #include "../util/AddressCovector.hpp"
+#include "WindowGeometry.hpp"
 
 #include <ostream>
 
@@ -28,6 +29,15 @@ class ImageGeometry {
       unsigned const chans) noexcept
         : height(rows), width(cols), depth(chans){}
 
+    constexpr ImageGeometry(
+      ImageGeometry &X,
+       WindowGeometry &K) noexcept : height(0), width(0), depth(0){
+
+        // height = CONV2D_OUTPUT_LENGTH(X.height, K.shape.height, K.dilation.row, K.stride.row);
+        // width = CONV2D_OUTPUT_LENGTH(X.width, K.shape.width, K.dilation.col, K.stride.col);
+        // depth = X.depth; //TODO eek?
+        }
+
     unsigned const pixelElements() const { return this->depth;                         }
     unsigned const rowElements()   const { return this->width * this->pixelElements(); }
     unsigned const imageElements() const { return this->height * this->rowElements();  }
@@ -35,6 +45,8 @@ class ImageGeometry {
     unsigned const pixelBytes() const { return sizeof(T_elm) * this->depth;  }
     unsigned const rowBytes()   const { return pixelBytes()  * this->width;  }
     unsigned const imageBytes() const { return rowBytes()    * this->height; }
+
+    // unsigned const bitsPerElement() const { return rowBytes()    * this->height; }
 
     
     mem_stride_t getStride(const int rows, 
@@ -47,6 +59,7 @@ class ImageGeometry {
                            const ImageVect& to) const;
 
     AddressCovector<T_elm> getAddressCovector() const;
+
 
       
 

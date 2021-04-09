@@ -2,6 +2,10 @@
 #include "vpu.hpp"
 #include <iostream>
 
+
+using namespace nn::filt2d::geom;
+using namespace nn::filt2d;
+
 // template<class T>
 // AbstractKernel<T>::Params::Params(ImageParams &Y, ImageRegion& r){
   

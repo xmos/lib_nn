@@ -4,6 +4,10 @@
 #include "MemCpyFn.hpp"
 #include "AggregateFn.hpp"
 #include "OutputTransformFn.hpp"
+#include "../src/cpp/filt2d/geom/util.hpp"
+
+namespace nn {
+namespace filt2d {
 
 template <class T>
 class AbstractKernel {
@@ -32,30 +36,29 @@ public:
     //...
     int32_t output_w_mem_stride; //different for all output regions of different widths
 
-    Params(ImageParams &Y, ImageRegion& r):
-      h_begin(r.height_start), 
-      h_end(r.height_end),
-      w_begin(r.width_start),
-      w_end(r.width_end),
-      output_channel_slice_offset(r.channel_start) {
+    Params(geom::ImageGeometry &Y, ImageRegion& r):
+      h_begin(r.start.row), 
+      h_end(r.start.row + r.shape.height),
+      w_begin(r.start.col),
+      w_end(r.start.col + r.shape.width),
+      output_channel_slice_offset(r.start.channel) {
       
       
 
       const int channels_per_group = 16; //TODO
-      output_channel_group_count = (r.channel_end - r.channel_start + channels_per_group - 1) / channels_per_group;
+      // output_channel_group_count = (r.channel_end - r.start.channel + channels_per_group - 1) / channels_per_group;
+      output_channel_group_count = (r.shape.depth + channels_per_group - 1) / channels_per_group;
 
       // memory to move to the next right pixel after all current channel groups have been saved
       // i.e. this conv2d might write chs 16-31 of 68 chs, so the stride would have to be 52 channels 
       // worth of memory(enough to move from the end of the group just processed to the start of the 
       // next)
-      const int bits_per_byte = 8;
       // int output_w_mem_stride = ((Y.channels - (r.channel_end - r.channel_start)) * Y.bits_per_element ) / bits_per_byte;
-      output_w_mem_stride = (Y.channels * Y.bits_per_element ) / bits_per_byte;
-      assert((Y.bits_per_element % bits_per_byte) == 0);
+      output_w_mem_stride = Y.pixelBytes();
 
       //memory to moved down a pixel
       // int output_h_mem_stride = (Y.width - (r.width_end - r.width_start) + r.width_start)*Y.pixelBytes();
-      output_h_mem_stride = Y.rowBytes() - (r.width_end - r.width_start) * output_w_mem_stride;
+      output_h_mem_stride = Y.rowBytes() - r.shape.width * output_w_mem_stride;
 
 
 
@@ -106,7 +109,7 @@ class Filter2D : public AbstractKernel<Filter2D> {
     Filter2D(AbstractKernel::Params * kparams, MemCpyFn * memcpy_handler, 
       AggregateFn * aggregate_handler, OutputTransformFn * ot_handler, int8_t * scratch_mem=0);
 
-    Filter2D(ImageParams &Y, ImageRegion& r, MemCpyFn * memcpy_handler, 
+    Filter2D(geom::ImageGeometry &Y, ImageRegion& r, MemCpyFn * memcpy_handler, 
       AggregateFn * aggregate_handler, OutputTransformFn * ot_handler, int8_t * scratch_mem=0);
 
     void calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h, int32_t w) ;
@@ -131,3 +134,5 @@ class Filter2D_DW : public AbstractKernel<Filter2D> {
     void calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h, int32_t w) ;
 };
 
+}
+}
