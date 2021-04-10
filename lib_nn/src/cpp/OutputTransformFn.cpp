@@ -7,9 +7,9 @@
 #include <stdio.h>
 
 #include <iostream>
-extern "C" {
-  #include "vpu_sim.h"
-}
+
+#include "vpu_sim.h"
+
 
 static int64_t saturate_non_sym(
     const int64_t input,

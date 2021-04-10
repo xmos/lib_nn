@@ -8,7 +8,7 @@
 #include "../src/cpp/filt2d/geom/util.hpp"
 #include "Rand.hpp"
 
-using namespace nn::filt2d;
+using namespace nn;
 using namespace nn::test;
 
 class ImageVect_1Vect_Test : public ::testing::TestWithParam<std::tuple<int,int,int>> {};

@@ -4,11 +4,9 @@
 
 #include "MemCpyFn.hpp"
 
-extern "C" {
-  #include "vpu_sim.h"
-}
+#include "vpu_sim.h"
 
-using namespace nn::filt2d::geom;
+// using namespace nn::filt2d::geom;
 using namespace nn::filt2d;
 
 size_t DerefInputFn::get_scratch_bytes(){ return 0;}

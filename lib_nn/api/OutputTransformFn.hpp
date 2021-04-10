@@ -4,12 +4,22 @@
 #include "xs3_vpu.h"
 #include "vpu.hpp"
 
+/**
+ * Interface implemented by all output transform handlers.
+ * 
+ * Contains a single function, output_transform_fn() which converts a set of 32-bit accumulators
+ * into a set of 8-bit outputs and writes them to the specified output image.
+ */
 class OutputTransformFn {
   public:
-    virtual int8_t * output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group) = 0;
+    virtual int8_t * output_transform_fn(int8_t * Y, 
+                                         vpu_ring_buffer_t * A, 
+                                         int32_t output_channel_group) = 0;
 };
 
-//these are in a protected order(internally)
+/**
+ * these are in a protected order(internally)
+ */
 typedef struct output_transform_values_t {
     int16_t clamp_near[VPU_INT16_EPV];
     int16_t clamp_far_0[VPU_INT16_EPV];
@@ -20,12 +30,18 @@ typedef struct output_transform_values_t {
     int32_t accu_shl;                //for the vlashr
 } output_transform_values_t;
 
+/**
+ * 
+ */
 struct QuantisationParams {
     output_transform_values_t otv;
     std::vector<int16_t> biases; 
     std::vector<int16_t> multipliers;
 };
 
+/**
+ * 
+ */
 class OT_int8 : public OutputTransformFn 
 {
 

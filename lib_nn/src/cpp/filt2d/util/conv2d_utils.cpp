@@ -10,7 +10,7 @@
 #include <algorithm>
 #include <cassert>
 
-using namespace nn::filt2d;
+using namespace nn;
 
 struct Conv2dChannelParams {
   int16_t shift1;
@@ -84,12 +84,12 @@ static Conv2dChannelParams computeConv2dChannelParams(
 
 
 static int64_t sumConv2dWeights_Deep(
-        const geom::Filter2dGeometry& filter,
+        const Filter2dGeometry& filter,
         const int8_t* kernel_weights,
         const unsigned output_channel)
 {
   // Each output channel has a full convolution window's worth of elements
-  const unsigned weight_count = filter.window.windowElements();
+  const unsigned weight_count = filter.window.shape.imageElements();
 
   // Channel cout's weights start cout windows into the array
   const int8_t* cout_weights = kernel_weights + weight_count * output_channel;
@@ -104,13 +104,13 @@ static int64_t sumConv2dWeights_Deep(
 }
 
 static int64_t sumConv2dWeights_Depthwise(
-        const geom::Filter2dGeometry& filter,
+        const Filter2dGeometry& filter,
         const int8_t* kernel_weights,
         const unsigned output_channel)
 {
   // Each output channel has a full convolution window's worth of pixels (not elements, because channels don't
   // interact with a depthwise convolution)
-  const unsigned weight_count = filter.window.windowPixels();
+  const unsigned weight_count = filter.window.shape.imagePixels();
 
   // In a depthwise convolution, the output channel corresponds to the last axis of the weight vector, not the first
   
@@ -131,7 +131,7 @@ static int64_t sumConv2dWeights_Depthwise(
 }
 
 static int64_t sumConv2dWeights(
-        const geom::Filter2dGeometry& filter,
+        const Filter2dGeometry& filter,
         const int8_t* kernel_weights,
         const unsigned output_channel,
         const bool is_depthwise)
@@ -150,7 +150,7 @@ static int64_t sumConv2dWeights(
  * TODO: Having an assertion in here if we saturate our numerical limits doesn't seem ideal. Not sure what else to do.
  */
 static int32_t computeConv2dBias(
-        const geom::Filter2dGeometry& filter,
+        const Filter2dGeometry& filter,
         const int32_t bias_in[],
         const int8_t* kernel_weights,
         const int32_t input_zero_point,
@@ -159,7 +159,7 @@ static int32_t computeConv2dBias(
 {
 
   // Each output channel has a full convolution window's worth of elements
-  const unsigned weight_count = filter.window.windowElements();
+  const unsigned weight_count = filter.window.shape.imageElements();
 
   // Sum of weights
   int64_t acc = sumConv2dWeights(filter, kernel_weights, output_channel, is_depthwise);
@@ -179,7 +179,7 @@ static int32_t computeConv2dBias(
 
 
 std::vector<vpu_split_acc32_t> conv2d::util::TfLiteConverter::ConvertBiases(
-        const geom::Filter2dGeometry& filter,
+        const Filter2dGeometry& filter,
         const int8_t kernel_weights[],
         const int32_t biases_in[],
         const int32_t input_zero_point,
@@ -208,7 +208,7 @@ std::vector<vpu_split_acc32_t> conv2d::util::TfLiteConverter::ConvertBiases(
 }
         
 std::vector<nn_acc32_to_int8_params_t> conv2d::util::TfLiteConverter::ConvertOutputParams(
-    const geom::Filter2dGeometry& filter,
+    const Filter2dGeometry& filter,
     const float effective_output_multiplier[],
     const int32_t output_zero_point)
 {

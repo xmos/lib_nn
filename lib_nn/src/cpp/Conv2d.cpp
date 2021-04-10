@@ -5,7 +5,7 @@
 // Conv2dVaildDirect::foo(ImageParams &X, WindowGeometry &K, ImageRegion &ir, int8_t * weights , std::vector<int32_t> bias )
 // {
 
-//   ImageParams Y(X, K);
+//   ImageParams Y(X, K, 8);
 
 //   int input_ch_per_output; //?
 

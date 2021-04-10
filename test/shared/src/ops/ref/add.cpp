@@ -3,8 +3,7 @@
 
 #include "tensorflow/lite/kernels/internal/reference/integer_ops/add.h"
 
-using namespace nn::filt2d;
-using namespace nn::filt2d::geom;
+using namespace nn;
 using namespace nn::test::ops::ref;
 
 
@@ -30,7 +29,7 @@ static inline void Quantize(
 }
 
 std::vector<int8_t> nn::test::ops::ref::AddElementwiseReference(
-    const nn::filt2d::geom::ImageGeometry& image_geometry,
+    const nn::ImageGeometry& image_geometry,
     const int8_t input_img0[],
     const int8_t input_img1[],
     const ElementwiseParams& params)

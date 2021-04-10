@@ -1,10 +1,14 @@
 #include "Filter2D.hpp"
 #include "vpu.hpp"
 #include <iostream>
+#include <list>
 
-
-using namespace nn::filt2d::geom;
+// using namespace nn::filt2d::geom;
 using namespace nn::filt2d;
+
+constexpr bool Filter2D::UsesPerGroupMemCopy;
+constexpr bool Filter2D_DW::UsesPerGroupMemCopy;
+
 
 // template<class T>
 // AbstractKernel<T>::Params::Params(ImageParams &Y, ImageRegion& r){
@@ -38,7 +42,6 @@ Filter2D::Filter2D(AbstractKernel::Params * kparams, MemCpyFn * memcpy_handler,
       AbstractKernel(kparams), memcpy_handler(memcpy_handler), aggregate_handler(aggregate_handler),
       ot_handler(ot_handler), scratch_mem(scratch_mem)
 {
-
 }
 
 /*
@@ -60,24 +63,41 @@ void Filter2D::calc_output_pixel_slice(int8_t * Y, int8_t * X, int32_t h, int32_
   }
 }
 
+
+
+
+Filter2D_DW::Filter2D_DW(AbstractKernel::Params * kparams, 
+                         MemCpyFn * memcpy_handler, 
+                         AggregateFn * aggregate_handler, 
+                         OutputTransformFn * ot_handler, 
+                         int8_t * scratch_mem) 
+    : AbstractKernel(kparams), memcpy_handler(memcpy_handler), aggregate_handler(aggregate_handler),
+      ot_handler(ot_handler), output_channels_per_group(VPU_INT8_ACC_PERIOD), scratch_mem(scratch_mem)
+{
+
+}
+
 //This is an example of a depthwise conv or max pool
 void Filter2D_DW::calc_output_pixel_slice(int8_t * Y, int8_t * X, int32_t h, int32_t w){
-      
-  for (int32_t chan_group = 0; chan_group < kparams->output_channel_group_count; chan_group++){
+
+  const auto output_groups = this->kparams->output_channel_group_count;    
+  
+  for (int32_t chan_group = 0; chan_group < output_groups; chan_group++){
 
     vpu_ring_buffer_t A;
 
-    int c = kparams->output_channel_slice_offset + chan_group * output_channels_per_group;
+    int c = this->kparams->output_channel_slice_offset + chan_group * this->output_channels_per_group;
 
-    int8_t * input_img = memcpy_handler->memcopy_fn(scratch_mem, X, h, w, c); //will know how many channels it is copying
+    // This will know how many channels it is copying
+    int8_t * input_img = this->memcpy_handler->memcopy_fn(this->scratch_mem, X, h, w, c); 
 
-    aggregate_handler->aggregate_fn(&A, input_img, chan_group);
+    this->aggregate_handler->aggregate_fn(&A, input_img, chan_group);
 
     //must calc size of current channel group
     //offset from Y in order to write out result
     //number of bytes to write to result
     //offset into transform specific arrays
-    Y = ot_handler->output_transform_fn(Y, &A, chan_group);
+    Y = this->ot_handler->output_transform_fn(Y, &A, chan_group);
     
   }
 }

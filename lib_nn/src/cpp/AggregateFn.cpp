@@ -7,13 +7,14 @@
 #include <limits>
 #include "AggregateFn.hpp"
 
-extern "C" {
-  #include "vpu_sim.h"
-}
+#include "vpu_sim.h"
 
-
-using namespace nn::filt2d::geom;
+// using namespace nn::filt2d::geom;
 using namespace nn::filt2d;
+//TODO: [astew] CHAR_BIT not defined if I build with Cygwin
+#ifndef CHAR_BIT
+  #define CHAR_BIT (sizeof(char) * 8)
+#endif
 
 
 int8_t * deref2d(int8_t * p, int p_w, int h, int w){

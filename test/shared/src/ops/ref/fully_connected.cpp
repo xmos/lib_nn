@@ -5,8 +5,7 @@
 
 #include "../src/cpp/filt2d/util/conv2d_utils.hpp"
 
-using namespace nn::filt2d;
-using namespace nn::filt2d::geom;
+using namespace nn;
 using namespace nn::test::ops::ref;
 
 
@@ -31,7 +30,7 @@ std::vector<int8_t> nn::test::ops::ref::FullyConnectedReference(
   params.quantized_activation_max = std::numeric_limits<int8_t>::max();
 
   int32_t shift;
-  nn::filt2d::conv2d::util::TfLiteConverter::QuantizeEffectiveOutputMultiplier(
+  nn::conv2d::util::TfLiteConverter::QuantizeEffectiveOutputMultiplier(
                                                 params.output_multiplier, shift,
                                                 output_multiplier);
   params.output_shift = shift;

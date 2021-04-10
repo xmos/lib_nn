@@ -23,8 +23,7 @@
   do that, we have no need for it.
 */
 
-using namespace nn::filt2d;
-using namespace nn::filt2d::geom;
+using namespace nn;
 using namespace nn::test;
 
 

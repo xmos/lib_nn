@@ -2,9 +2,9 @@
 #include "FilterGeometryIterator.hpp"
 
 
-using namespace nn::filt2d;
+using namespace nn;
 
-using FilterGeometry = geom::Filter2dGeometry;
+using FilterGeometry = Filter2dGeometry;
 using iterator = FilterGeometryIterator::iterator;
 
 

@@ -98,7 +98,7 @@ class MatMulDirectFn : public AggregateFn {
     int32_t inner_x_h_step;
     int32_t inner_x_v_step;
 
-    Params(geom::ImageGeometry &X, geom::WindowGeometry &K, int input_ch_per_output, int8_t * weights);  
+    Params(ImageGeometry &X, WindowGeometry &K, int input_ch_per_output, int8_t * weights);  
   };
 
   private:

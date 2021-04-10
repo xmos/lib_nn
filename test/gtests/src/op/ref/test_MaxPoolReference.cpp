@@ -22,8 +22,7 @@
   do that, we have no need for it.
 */
 
-using namespace nn::filt2d;
-using namespace nn::filt2d::geom;
+using namespace nn;
 using namespace nn::test;
 
 static auto rng = Rand();
@@ -37,8 +36,8 @@ TEST_P(MaxPoolReferenceTestA, NoPadding)
   auto input = std::vector<int8_t>(geom.input.imageElements());
   auto expected = std::vector<int8_t>(geom.output.imageElements());
 
-  auto in_cov = geom.input.getAddressCovector();
-  auto out_cov = geom.output.getAddressCovector();
+  auto in_cov = geom.input.getAddressCovector<int8_t>();
+  auto out_cov = geom.output.getAddressCovector<int8_t>();
 
   for(int xan = 0; xan < geom.output.depth; xan++){
     for(int row = 0; row < geom.output.height; row++){
@@ -86,8 +85,8 @@ TEST_P(MaxPoolReferenceTestB, WithPadding)
   auto input = std::vector<int8_t>(geom.input.imageElements());
   auto expected = std::vector<int8_t>(geom.output.imageElements());
 
-  auto in_cov = geom.input.getAddressCovector();
-  auto out_cov = geom.output.getAddressCovector();
+  auto in_cov = geom.input.getAddressCovector<int8_t>();
+  auto out_cov = geom.output.getAddressCovector<int8_t>();
 
   for(int xan = 0; xan < geom.output.depth; xan++){
     for(int row = 0; row < geom.output.height; row++){

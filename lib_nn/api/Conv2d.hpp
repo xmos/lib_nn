@@ -7,10 +7,10 @@
 // class Conv2dVaildDirect : public Filter2D {
 
 //   struct Params {
-//     AbstractKernel::Params kparams;
-//     ImToColValid::Params memcpy;
-//     MatMulDirectFn::Params aggregator;
-//     OT_int8::Params output_transform;
+//     AbstractKernel::Params * kparams;
+//     ImToColValid::Params * memcpy;
+//     MatMulDirectFn::Params * aggregator;
+//     // OT_int8::Params * output_transform;
 //   };
 
 

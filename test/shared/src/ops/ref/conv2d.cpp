@@ -6,8 +6,8 @@
 
 #include "../src/cpp/filt2d/util/conv2d_utils.hpp"
 
-using namespace nn::filt2d;
-using namespace nn::filt2d::geom;
+using namespace nn;
+using namespace nn;
 using namespace nn::test::ops::ref;
 
 std::vector<int8_t> nn::test::ops::ref::Conv2dDenseReference(
@@ -43,7 +43,7 @@ std::vector<int8_t> nn::test::ops::ref::Conv2dDenseReference(
   auto output_shift = std::vector<int32_t>(filter_geometry.output.depth);
 
   for(int i = 0; i < filter_geometry.output.depth; ++i){
-    nn::filt2d::conv2d::util::TfLiteConverter::QuantizeEffectiveOutputMultiplier(
+    nn::conv2d::util::TfLiteConverter::QuantizeEffectiveOutputMultiplier(
                                                   output_mult[i], output_shift[i],
                                                   effective_output_multiplier[i]);
   }
@@ -115,7 +115,7 @@ std::vector<int8_t> nn::test::ops::ref::Conv2dDepthwiseReference(
   auto output_shift = std::vector<int32_t>(filter_geometry.output.depth);
 
   for(int i = 0; i < filter_geometry.output.depth; ++i){
-    nn::filt2d::conv2d::util::TfLiteConverter::QuantizeEffectiveOutputMultiplier(
+    nn::conv2d::util::TfLiteConverter::QuantizeEffectiveOutputMultiplier(
                                                   output_mult[i], output_shift[i],
                                                   effective_output_multiplier[i]);
   }

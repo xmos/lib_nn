@@ -10,8 +10,6 @@
 #include <cstddef>
 
 namespace nn {
-namespace filt2d {
-
 
 struct SliceType {
   struct Channel {};
@@ -70,4 +68,4 @@ struct SliceIterator
 };
 
 
-}}
+}

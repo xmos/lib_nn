@@ -8,7 +8,6 @@
 
 
 namespace nn {
-namespace filt2d {
 
 ////////////////////////////////////////////////////////
 /////
@@ -39,13 +38,13 @@ class UniversalPatchHandler : IPatchHandler<int8_t> {
 
     struct Config {
 
-        const geom::ImageGeometry input;
-        const geom::WindowGeometry window;
+        const ImageGeometry input;
+        const WindowGeometry window;
 
         const T padding_value;
 
-        Config(const geom::ImageGeometry input,
-               const geom::WindowGeometry window,
+        Config(const ImageGeometry input,
+               const WindowGeometry window,
                const T padding_value)
           : input(input), window(window), padding_value(padding_value) {}
     };
@@ -97,10 +96,10 @@ class ValidDeepPatchHandler : IPatchHandler<int8_t> {
             window_row_bytes(window_row_bytes),
             img_row_bytes(img_row_bytes) {}
 
-      Config(geom::Filter2dGeometry const filter)
-        : Config(filter.input.getAddressCovector(), 
+      Config(Filter2dGeometry const filter)
+        : Config(filter.input.getAddressCovector<int8_t>(), 
                  filter.window.shape.height,
-                 filter.window.rowBytes(),
+                 filter.window.shape.rowBytes(),
                  filter.input.rowBytes()) {}
     };  
 
@@ -127,4 +126,4 @@ class ValidDeepPatchHandler : IPatchHandler<int8_t> {
 };
 
 
-}}
+}

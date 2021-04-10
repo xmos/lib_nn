@@ -7,7 +7,7 @@
 
 #include "../src/cpp/filt2d/util/AddressCovector.hpp"
 
-using namespace nn::filt2d;
+using namespace nn;
 
 class AddressCovectorBaseTest : public ::testing::TestWithParam<std::tuple<int,int,int>> {};
 
