@@ -144,7 +144,7 @@ void fully_connected_16_ref(
     const channel_count_t out_chan_start,
     const channel_count_t out_chan_count)
 {
-    xs3_vpu vpu;
+    // xs3_vpu vpu;
     const unsigned ACCS = VPU_INT8_ACC_PERIOD;
 
 
@@ -204,7 +204,7 @@ void fully_connected_8_ref(
     const channel_count_t out_chan_start,
     const channel_count_t out_chan_count)
 {
-    xs3_vpu vpu;
+    // xs3_vpu vpu;
     const unsigned ACCS = VPU_INT8_ACC_PERIOD;
 
 

@@ -26,8 +26,6 @@ std::vector<int8_t> nn::test::ops::Conv2dDeepFilter_Valid(
   // Need ref_params.input.zero_point to compute biases
   assert(FilterClass::SupportsGeometry(filter_geometry));
 
-  const auto cog_count = FilterClass::CogCount(filter_geometry.output.depth);
-
   auto xcore_biases = nn::conv2d::util::TfLiteConverter::ConvertBiases(
                                       filter_geometry, &kernel_weights[0],
                                       &ref_biases[0], input_zero_point,

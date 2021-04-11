@@ -49,9 +49,6 @@ TEST_P(Filter2dGeometryTest, ModelFilterWindowAlwaysIntersectsInput)
 {
   auto filter = GetParam();
 
-  auto pad_init = filter.ModelPadding(true, false);
-  auto pad_fina = filter.ModelPadding(false, false);
-
   auto last_row_init = filter.window.start.row + (filter.window.shape.height - 1) * filter.window.dilation.row;
   auto last_col_init = filter.window.start.col + (filter.window.shape.width  - 1) * filter.window.dilation.col;
 

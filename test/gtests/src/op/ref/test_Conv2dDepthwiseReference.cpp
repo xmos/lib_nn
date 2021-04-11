@@ -20,7 +20,7 @@
 using namespace nn;
 using namespace nn::test;
 
-static auto rng = Rand(5684);
+// static auto rng = Rand(5684);
 
 // static void GenerateParams(Filter2dGeometry& geom,
 //                            int8_t kernel[],

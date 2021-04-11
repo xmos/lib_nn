@@ -40,7 +40,7 @@ namespace nn {
     public:
 
       TensorWrap(T* tensor, std::initializer_list<int> dims)
-        : dims(dims), tensor(tensor), strides(dims.size())
+        : dims(dims), strides(dims.size()), tensor(tensor)
       {
         int acc = 1;
         for(int d = dims.size()-1; d >= 0; --d){

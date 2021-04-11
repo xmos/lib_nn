@@ -14,7 +14,6 @@ class AddressCovectorBaseTest : public ::testing::TestWithParam<std::tuple<int,i
 
 TEST_P(AddressCovectorBaseTest, Constructor)
 {
-  const auto height = std::get<0>(GetParam());
   const auto width  = std::get<1>(GetParam());
   const auto depth  = std::get<2>(GetParam());
   

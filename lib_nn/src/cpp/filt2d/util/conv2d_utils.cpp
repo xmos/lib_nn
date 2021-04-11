@@ -51,7 +51,7 @@ static Conv2dChannelParams computeConv2dChannelParams(
       const float multiplier,
       const int32_t output_zero_point)
 {
-  Conv2dChannelParams params;
+  // Conv2dChannelParams params;
   
   int16_t rshift, scale;
   compute_rshift_scale(rshift, scale, multiplier);
@@ -110,7 +110,7 @@ static int64_t sumConv2dWeights_Depthwise(
 {
   // Each output channel has a full convolution window's worth of pixels (not elements, because channels don't
   // interact with a depthwise convolution)
-  const unsigned weight_count = filter.window.shape.imagePixels();
+  // const unsigned weight_count = filter.window.shape.imagePixels();
 
   // In a depthwise convolution, the output channel corresponds to the last axis of the weight vector, not the first
   
@@ -159,7 +159,7 @@ static int32_t computeConv2dBias(
 {
 
   // Each output channel has a full convolution window's worth of elements
-  const unsigned weight_count = filter.window.shape.imageElements();
+  // const unsigned weight_count = filter.window.shape.imageElements();
 
   // Sum of weights
   int64_t acc = sumConv2dWeights(filter, kernel_weights, output_channel, is_depthwise);

@@ -9,6 +9,7 @@
 #include <list>
 #include <vector>
 
+#include "Rand.hpp"
 #include "Filter2D.hpp"
 #include "../src/cpp/filt2d/geom/Filter2dGeometry.hpp"
 
@@ -16,20 +17,14 @@
 namespace nn {
 namespace filt2d {
 
-  int pseudo_rand(int *seed){
-    const int a = 1664525;
-    const int c = 1013904223;
-    *seed = (int)((long long)a * *seed + c);
-    return *seed;
-  }
+  static auto rng = test::Rand(42);
+
   //TODO break these up into different files
   
   class Test_ImToColValid: public ::testing::Test {};
 
   //TODO binary tests for ImToColValid
   TEST_F(Test_ImToColValid, BasicTest) {
-
-    int seed = 42;
 
     for (int x_height = 1; x_height <= 8; ++x_height){
       for (int x_width = 1; x_width <= 8; ++x_width){
@@ -80,7 +75,7 @@ namespace filt2d {
                             for(int output_c = 0; output_c < output_ch_starts; output_c += 4){ //only test from aligned memory addresses
 
                               for(int j = 0; j < sizeof X_mem; ++j)
-                                X_mem[j] = (int8_t)pseudo_rand(&seed);
+                                X_mem[j] = rng.rand<int8_t>();
 
                               std::memset(T, 0x55, sizeof T);
                               
@@ -120,8 +115,6 @@ namespace filt2d {
   class Test_ImToColPadded: public ::testing::Test {};
 
   TEST_F(Test_ImToColPadded, BasicTest) {
-
-    int seed = 42;
 
     //TODO use above generator class
 
@@ -171,7 +164,7 @@ namespace filt2d {
                                 int8_t X_mem_padded[padded_x_height][padded_x_width][x_channels];
                                 
                                 for (int i=0;i<sizeof X_mem; ++i)
-                                  ((int8_t*)X_mem )[i]= (int8_t)pseudo_rand(&seed);
+                                  ((int8_t*)X_mem )[i]= rng.rand<int8_t>();
                                 
                                 std::memset(X_mem_padded, pad_val, sizeof X_mem_padded);
 
@@ -187,7 +180,7 @@ namespace filt2d {
 
                                 std::memcpy(X_mem_with_overread, (int8_t*)X_mem, sizeof X_mem);
                                 for(int j = sizeof X_mem; j < sizeof X_mem_with_overread; ++j)
-                                  X_mem_with_overread[j] = (int8_t)pseudo_rand(&seed);
+                                  X_mem_with_overread[j] = rng.rand<int8_t>();
 
                                 int output_ch_starts = x_channels / input_ch_per_output;
 
@@ -237,8 +230,6 @@ namespace filt2d {
   class Test_DerefInputFn: public ::testing::Test {};
 
   TEST_F(Test_DerefInputFn, BasicTest) {
-
-    int seed = 69;
     
     int k_h_dilation = 1;
     int k_v_dilation = 1;
@@ -266,7 +257,7 @@ namespace filt2d {
                   int8_t X_mem[x_height][x_width][x_channels];
 
                   for(int j = 0; j < sizeof X_mem; ++j)
-                    ((int8_t*)X_mem)[j] = (int8_t)pseudo_rand(&seed);
+                    ((int8_t*)X_mem)[j] = rng.rand<int8_t>();
 
                   for(int h = 0; h < output_height; ++h){
                     for(int w = 0 ; w < output_width; ++w){
@@ -295,7 +286,7 @@ namespace filt2d {
     Simple test to verify memory accesses
   */
   TEST_F(Test_SimpleMatMulInt8, BasicTest) {
-    // const int vpu_bytes = 32;
+    
     const int vpu_ring_buffer_length = 16;
 
     for (auto input_bytes = 1; input_bytes < 48; ++input_bytes){
@@ -362,8 +353,6 @@ namespace filt2d {
     const int vpu_bytes = 32;
     const int vpu_ring_buffer_length = 16;
 
-    int seed = 69;
-
     for (int input_bytes = 1; input_bytes < 128; ++input_bytes){
 
       for (int output_channel_count = 1; output_channel_count < 48; ++output_channel_count){
@@ -376,15 +365,11 @@ namespace filt2d {
         assert(sizeof raw_weights == input_bytes*output_channel_count);
 
         for(auto j = 0; j < sizeof raw_weights; ++j)
-          ((int8_t*)raw_weights)[j] = (int8_t)pseudo_rand(&seed);
+          ((int8_t*)raw_weights)[j] = rng.rand<int8_t>();
 
         int scratch_bytes = MatMulInt8::get_scratch_size(input_bytes);
 
-        // int8_t* reordered_weights;
-        // int8_t** final_load_locations;
-        // int kernel_bytes;
-
-        int8_t pad_val = (int8_t)pseudo_rand(&seed);
+        int8_t pad_val = rng.rand<int8_t>();
 
         // std::tie(reordered_weights, final_load_locations, kernel_bytes) = 
         Conv2dReorderedWeights rw = 
@@ -393,14 +378,13 @@ namespace filt2d {
         int8_t T[scratch_bytes];
 
         for(int j = 0; j < sizeof T; ++j)
-          T[j] = (int8_t)pseudo_rand(&seed);
+          T[j] = rng.rand<int8_t>();
 
         int accu_modifier[output_channel_count]; //=0
 
         //TODO make this into an int8 specific function
         for (int i=0;i<output_channel_count;i++){
           int idx = rw.final_vpu_load_addresses[i];
-          // int8_t * final_load_location = final_load_locations[i];
           
           int s = 0;
           int channel_overlap_start = input_bytes%vpu_bytes;
@@ -408,7 +392,6 @@ namespace filt2d {
           if (channel_overlap_start){
 
             for(int j=channel_overlap_start;j<vpu_bytes;j++){
-              // s += (int)(final_load_location[j]) * T[scratch_bytes - vpu_bytes + j]; 
               s += (int)(rw.weights[idx+j]) * T[scratch_bytes - vpu_bytes + j]; 
             }
             
@@ -442,11 +425,7 @@ namespace filt2d {
             EXPECT_EQ( v - accu_modifier[actual_output_channel], expected_sum);
           }
         }
-
-        // delete reordered_weights;
-        // delete final_load_locations;
       }
-
     }
   }
 
@@ -485,7 +464,6 @@ namespace filt2d {
                   int8_t T[x_height][x_width][x_channels];
 
                   int8_t * weights = (int8_t*)K; //todo we will switch to usnig the boggler
-
 
                   MatMulDirectFn::Params p(X_params, K_params, x_channels, weights);
                   MatMulDirectFn mmd(&p);
@@ -528,10 +506,7 @@ namespace filt2d {
     Simple test to verify memory accesses. 
   */
   TEST_F(Test_MatMulDirectFn, BasicTest) {
-    // const int vpu_bytes = 32;
     const int vpu_ring_buffer_length = 16;
-
-    int seed = 69;
     
     int k_h_stride = 1;
     int k_v_stride = 1;
@@ -563,18 +538,6 @@ namespace filt2d {
                       //           << " output_channels: " << output_channels
                       //           << " input_ch_per_output: " << input_ch_per_output 
                       //           << std::endl;
-    // constexpr WindowGeometry(
-    //   unsigned const height,
-    //   unsigned const width,
-    //   unsigned const depth,
-    //   int const start_row = 0,
-    //   int const start_col = 0,
-
-    //   int const stride_rows = 1,
-    //   int const stride_cols = 1,
-    //   int const stride_chans = 0,
-    //   int const dil_rows = 1,
-    //   int const dil_cols = 1)
                       ImageGeometry X(x_height, x_width, x_channels); 
                       WindowGeometry K (k_height, k_width, 0,
                        0, 0, 
@@ -584,15 +547,15 @@ namespace filt2d {
                       int8_t raw_weights[output_channels][k_height][k_width][x_channels];
 
                       for(int j = 0; j < sizeof raw_weights; ++j)
-                        ((int8_t*)raw_weights)[j] = (int8_t)pseudo_rand(&seed);
+                        ((int8_t*)raw_weights)[j] = rng.rand<int8_t>();
 
                       int8_t X_mem[x_height][x_width][x_channels];
 
                       for(int j = 0; j < sizeof X_mem; ++j)
-                        ((int8_t*)X_mem)[j] = (int8_t)pseudo_rand(&seed);
+                        ((int8_t*)X_mem)[j] = rng.rand<int8_t>();
 
 
-                      int8_t pad_val = (int8_t)pseudo_rand(&seed); //this should be unused in this case
+                      int8_t pad_val = rng.rand<int8_t>(); //this should be unused in this case
 
                       Conv2dReorderedWeights rw = 
                         MatMulInt8::reorder_kernel_weights( (int8_t* )raw_weights, shape, 8, pad_val) ;
@@ -605,7 +568,6 @@ namespace filt2d {
                       for (int ocg = 0; ocg < ocg_count; ++ocg){
 
                         vpu_ring_buffer_t A;
-                        // printf("start %p size:%d\n",  (int8_t*)X_mem, sizeof X_mem);
                         mmd.aggregate_fn(&A, (int8_t*)X_mem, ocg);
 
                         int chs_in_group = std::min(output_channels - vpu_ring_buffer_length *ocg , vpu_ring_buffer_length);
@@ -619,7 +581,6 @@ namespace filt2d {
                           for(int h = 0; h < k_height; ++h){
                             for(int w = 0 ; w < k_width; ++w){
                               for(int c = 0 ; c < input_ch_per_output; ++c){
-                                // std::cout <<"h: "<<h << " w: "<<w << " c: "<<c<<std::endl;
                                 int x = (int)X_mem[k_v_dilation*h][k_h_dilation*w][c];
                                 int t = raw_weights[actual_output_channel][h][w][c];
                                 expected_sum += x*t;
@@ -630,7 +591,6 @@ namespace filt2d {
                           int32_t v;
                           ((int16_t *)&v)[0] = A.vD[output_chan];
                           ((int16_t *)&v)[1] = A.vR[output_chan];
-                          // std::cout << actual_output_channel<< " " << v << " " << expected_sum << std::endl;
                           EXPECT_EQ(v, expected_sum);
                         }
                       }
@@ -673,7 +633,7 @@ namespace filt2d {
   }
 
   std::pair<double, double> pick_mul_and_bias(double output_min, double output_max, double accu_min, double accu_max, int * seed){
-    double output_overscale = 1.1 + 0.2*(double)pseudo_rand(seed)/(double)INT32_MAX;
+    double output_overscale = 1.1 + 0.2*(double)rng.rand<int32_t>()/(double)INT32_MAX;
     double output_range = (output_max - output_min)*output_overscale;
     double mul = output_range / (double)(accu_max - (double)accu_min);
     double bias = output_min * output_overscale - accu_min * mul;
@@ -711,17 +671,17 @@ namespace filt2d {
   void pick_accu_range(std::vector<int32_t> &accu_min, std::vector<int32_t> &accu_max, int * seed){
     
     //It's reasonable to assume all accumulators are approximatly of the same order
-    int scale =  pseudo_rand(seed)%24;
+    int scale = rng.rand<int32_t>()%24;
     if(scale < 0)
       scale = -scale;
     scale += 1;
 
     int32_t a = 0;
-    while (!a) a = pseudo_rand(seed)>>scale;
+    while (!a) a = rng.rand<int32_t>()>>scale;
 
     for (int ch = 0; ch < accu_min.size(); ch++){
 
-      int32_t b = ((pseudo_rand(seed)%a)>>(scale+2)) - a;
+      int32_t b = ((rng.rand<int32_t>()%a)>>(scale+2)) - a;
 
       accu_max[ch] = std::max(a, b);
       accu_min[ch] = std::min(a, b);
@@ -748,86 +708,84 @@ namespace filt2d {
 
  class Test_OT_int8: public ::testing::Test {};
 
-  TEST_F(Test_OT_int8, BasicTest) {
+TEST_F(Test_OT_int8, BasicTest) {
+  
+  const int vpu_ring_buffer_length = VPU_INT16_EPV;
+
+  int seed = 69;
+
+  for(int output_ch_count = 2; output_ch_count <= 64; ++output_ch_count){
     
-    const int vpu_ring_buffer_length = VPU_INT16_EPV;
+    for (int itt=0;itt<1<<8;itt++){
 
-    int seed = 69;
+      std::vector<double> f_biases(output_ch_count, 0);
+      std::vector<double> f_multipliers(output_ch_count, 0);
+      std::vector<int32_t> accu_min(output_ch_count, 0);
+      std::vector<int32_t> accu_max(output_ch_count, 0);
 
-    for(int output_ch_count = 2; output_ch_count <= 64; ++output_ch_count){
-      
-      for (int itt=0;itt<1<<8;itt++){
+      pick_accu_range(accu_min, accu_max, &seed);
 
-        std::vector<double> f_biases(output_ch_count, 0);
-        std::vector<double> f_multipliers(output_ch_count, 0);
-        std::vector<int32_t> accu_min(output_ch_count, 0);
-        std::vector<int32_t> accu_max(output_ch_count, 0);
+      pick_activation_params(f_multipliers, f_biases, accu_max, accu_min, &seed);
 
-        pick_accu_range(accu_min, accu_max, &seed);
+      int t = ((output_ch_count + vpu_ring_buffer_length-1)/vpu_ring_buffer_length)*vpu_ring_buffer_length;
 
-        pick_activation_params(f_multipliers, f_biases, accu_max, accu_min, &seed);
+      int16_t accu_modifier[t]; //this comes from the aggregate fn
+      memset(accu_modifier, 0, sizeof accu_modifier); 
 
-        int t = ((output_ch_count + vpu_ring_buffer_length-1)/vpu_ring_buffer_length)*vpu_ring_buffer_length;
+      QuantisationParams qp = OTBinary_int8::quantise_activation(f_multipliers, f_biases, accu_min, accu_max);
 
-        int16_t accu_modifier[t]; //this comes from the aggregate fn
-        memset(accu_modifier, 0, sizeof accu_modifier); 
+      OTBinary_int8::Params p((int32_t)output_ch_count, &qp.otv, qp.biases.data(), 
+        qp.multipliers.data(), (int16_t*)accu_modifier);
+      OTBinary_int8 ot(&p);
 
-        QuantisationParams qp = OTBinary_int8::quantise_activation(f_multipliers, f_biases, accu_min, accu_max);
+      int8_t Y[output_ch_count];
+      memset(Y, 0, sizeof Y); 
 
-        OTBinary_int8::Params p((int32_t)output_ch_count, &qp.otv, qp.biases.data(), 
-          qp.multipliers.data(), (int16_t*)accu_modifier);
-        OTBinary_int8 ot(&p);
+      int ocg_count = (output_ch_count + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
 
-        int8_t Y[output_ch_count];
-        memset(Y, 0, sizeof Y); 
+      int8_t *y = (int8_t*)Y;
 
-        int ocg_count = (output_ch_count + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
+      for (int ocg = 0; ocg < ocg_count; ++ocg){
 
-        int8_t *y = (int8_t*)Y;
+        int chs_in_group = std::min(output_ch_count - vpu_ring_buffer_length * ocg , vpu_ring_buffer_length);
 
-        for (int ocg = 0; ocg < ocg_count; ++ocg){
+        vpu_ring_buffer_t A;
 
-          int chs_in_group = std::min(output_ch_count - vpu_ring_buffer_length * ocg , vpu_ring_buffer_length);
+        int8_t * next_y;
+        for (int t=0;t<1<<8;t++){
 
-          vpu_ring_buffer_t A;
+          memset(&A, 0, sizeof A); 
 
-          int8_t * next_y;
-          for (int t=0;t<1<<8;t++){
+          int32_t accu_values[chs_in_group];
+          //fill A with random value between accu_max and accu_min
+          for (int output_chan = 0; output_chan < chs_in_group; ++output_chan){
 
-            memset(&A, 0, sizeof A); 
-
-            int32_t accu_values[chs_in_group];
-            //fill A with random value between accu_max and accu_min
-            for (int output_chan = 0; output_chan < chs_in_group; ++output_chan){
-
-              int64_t range = (int64_t)accu_max[output_chan] - (int64_t)accu_min[output_chan];
-              int32_t v = (int64_t)accu_min[output_chan] + ((unsigned)pseudo_rand(&seed))%range;
-              
-              accu_values[output_chan] = v;
-              A.vR[output_chan] = ((int16_t *)&v)[1];
-              A.vD[output_chan] = ((int16_t *)&v)[0];
-            }
-
-            next_y = ot.output_transform_fn(y, &A, ocg);
-
-            for (int output_chan = 0; output_chan < chs_in_group; ++output_chan){
-
-              int actual_output_channel = output_chan + ocg * vpu_ring_buffer_length;
-
-              int32_t v = accu_values[output_chan];
-              double expected = (float)v * f_multipliers[actual_output_channel] + f_biases[actual_output_channel];
-              expected = std::round(std::min(std::max(expected, (double)INT8_MIN), (double)INT8_MAX));
-              EXPECT_NEAR((int)expected, (int)Y[actual_output_channel], 1);
-
-            }
+            int64_t range = (int64_t)accu_max[output_chan] - (int64_t)accu_min[output_chan];
+            int32_t v = (int64_t)accu_min[output_chan] + (rng.rand<unsigned>())%range;
+            
+            accu_values[output_chan] = v;
+            A.vR[output_chan] = ((int16_t *)&v)[1];
+            A.vD[output_chan] = ((int16_t *)&v)[0];
           }
-          y = next_y;
+
+          next_y = ot.output_transform_fn(y, &A, ocg);
+
+          for (int output_chan = 0; output_chan < chs_in_group; ++output_chan){
+
+            int actual_output_channel = output_chan + ocg * vpu_ring_buffer_length;
+
+            int32_t v = accu_values[output_chan];
+            double expected = (float)v * f_multipliers[actual_output_channel] + f_biases[actual_output_channel];
+            expected = std::round(std::min(std::max(expected, (double)INT8_MIN), (double)INT8_MAX));
+            EXPECT_NEAR((int)expected, (int)Y[actual_output_channel], 1);
+
+          }
         }
+        y = next_y;
       }
     }
   }
-
-
+}
 
 class MockMemCpyFn : public MemCpyFn {
   public:
@@ -989,25 +947,10 @@ TYPED_TEST(Filter2D_Test, BasicTest) {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 }
-  //end
 }
 
 int main(int argc, char **argv) {
-
-
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

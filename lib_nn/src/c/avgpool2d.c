@@ -185,7 +185,7 @@ static void avgpool2d_prepare(
     const int32_t x_row_bytes = x_params->width * x_params->channels;
     const int32_t y_row_bytes = y_params->width * y_params->channels;
 
-    const int32_t win_start_pix = pooling_window->start.row * x_params->width + pooling_window->start.column;
+    // const int32_t win_start_pix = pooling_window->start.row * x_params->width + pooling_window->start.column;
 
     const mem_stride_t win_hstride_from_prev_start = pooling_window->stride.horizontal * x_params->channels;
     const mem_stride_t win_vstride_from_prev_start = pooling_window->stride.vertical * x_row_bytes;

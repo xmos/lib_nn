@@ -140,7 +140,7 @@ void conv2d_im2col(
 
     // TODO couldn't get the asm constants versions recognized
     const int16_t vec_0x007F[16] = {0x007f};
-    const int8_t vec_0x80[30] = {0x80};
+    // const int8_t vec_0x80[30] = {0x80};
 
     VSETC(&vpu, MODE_S8);
 

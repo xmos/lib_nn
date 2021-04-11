@@ -234,22 +234,6 @@ class Filter2D : public AbstractKernel<Filter2D> {
              OutputTransformFn * ot_handler, 
              int8_t * scratch_mem=nullptr);
 
-
-    /**
-     * Construct a filter using the provided component handlers.
-     * 
-     * The `ImageParams` `Y` and `ImageRegion` `r` are used to compute the appropriate
-     * `AbstractKernelParams` for this filter. 
-     * 
-     * @TODO: Not currently defined.
-     */
-    // Filter2D(ImageParams &Y, 
-    //          ImageRegion& r, 
-    //          MemCpyFn * memcpy_handler, 
-    //          AggregateFn * aggregate_handler, 
-    //          OutputTransformFn * ot_handler, 
-    //          int8_t * scratch_mem=nullptr);
-
     // Because AbstractKernel calls calc_output_pixel_slice(), which is protected (and not a virtual function
     // of AbstractKernel), AbstractKernel<Filter2D> must be declared a friend class.
     friend class AbstractKernel<Filter2D>;
