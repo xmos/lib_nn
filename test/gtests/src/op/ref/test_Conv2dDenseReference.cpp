@@ -21,6 +21,84 @@ using namespace nn::test;
 
 // static auto rng = Rand(64563);
 
+class Conv2dDenseReferenceRegression : public ::testing::TestWithParam<Filter2dGeometry> {};
+
+TEST_P(Conv2dDenseReferenceRegression, NoPadding)
+{
+  auto geom = GetParam();
+
+  int imageElements = geom.window.shape.imageElements();
+  
+  auto weights  = std::vector<int8_t>( imageElements* geom.output.depth );
+  auto bias     = std::vector<int32_t>( geom.output.depth );
+  auto eff_mult = std::vector<float>( geom.output.depth );
+  auto input    = std::vector<int8_t>(imageElements);
+  auto expected = std::vector<int8_t>(imageElements);
+
+  int8_t input_zero  = -5;
+  int8_t output_zero =  5;
+
+  // for (int output_ch = 0; output_ch < geom.output.depth; ++output_ch){
+  //   bias[output_ch] = 0;
+  //   eff_mult[output_ch] = 0;
+    
+  //   for(int e=0;e<imageElements;++e){
+  //     weights[output_ch*imageElements + e] = 0;
+  //     input[output_ch*imageElements + e] = 0;
+  //     expected[output_ch*imageElements + e] = 0;
+  //   }
+  // }
+
+
+  memset( &weights[0], 1, sizeof(int8_t) * weights.size() );
+
+  memset( &input[0],   1, sizeof(int8_t) * input.size()   );
+
+  int32_t acc32 = geom.window.shape.imageElements() 
+                  * ( int32_t( weights[0] ) * ( int32_t( input[0] ) - input_zero ) );
+
+  int32_t target_acc32 = 32;
+  int8_t target_acc8 = 16;
+
+  for(int k = 0; k < geom.output.depth; k++){
+    bias[k] = target_acc32 - acc32;
+    eff_mult[k] = float(target_acc8) / float(target_acc32);
+  }
+
+  memset( &expected[0], int8_t(target_acc8 + output_zero), sizeof(int8_t) * expected.size() );
+
+  auto output = nn::test::ops::ref::Conv2dDenseReference(geom, &input[0], &weights[0], &bias[0], &eff_mult[0],
+                                                         input_zero, output_zero);
+
+  // auto output = nn::test::ops::ref::Conv2dDenseImpl(geom, &input[0], &weights[0], &bias[0], &eff_mult[0],
+  //                                                        input_zero, output_zero);
+
+
+
+
+  // for (auto i : output){
+  //   std::cout << (int)i << std::endl;
+  // }
+  ASSERT_EQ(output, expected);
+}
+
+INSTANTIATE_TEST_SUITE_P(Basic, Conv2dDenseReferenceRegression, ::testing::Values( Filter2dGeometry(
+                                                                            ImageGeometry(1,1,2),
+                                                                            ImageGeometry(1,1,2),
+                                                                            WindowGeometry(1,1,2)),
+                                                                         Filter2dGeometry(
+                                                                            ImageGeometry(2,2,2),
+                                                                            ImageGeometry(2,2,2),
+                                                                            WindowGeometry(1,1,2)),
+                                                                         Filter2dGeometry(
+                                                                            ImageGeometry(2,2,2),
+                                                                            ImageGeometry(1,1,2),
+                                                                            WindowGeometry(2,2,2)) 
+));
+
+
+
+
 // static void GenerateParams(Filter2dGeometry& geom,
 //                            int8_t kernel[],
 //                            int32_t bias[],

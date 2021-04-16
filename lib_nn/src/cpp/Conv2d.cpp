@@ -2,6 +2,37 @@
 #include "Conv2d.hpp"
 #include <cmath>
 
+using namespace nn;
+using namespace nn::filt2d;
+
+// std::tuple<ImToColValid::Params, MatMulDirectFn::Params> Conv2dVaildDirect::make(
+  
+//     const nn::Filter2dGeometry& filter_geometry,
+//     const ImageRegion &ir,
+//     const int8_t input_img[],
+
+//     const int8_t kernel_weights[],
+//     const int32_t biases[],
+//     const float effective_output_multiplier[],
+//     const int8_t input_zero_point,
+//     const int8_t output_zero_point)
+// {
+//   const ImageGeometry &X = filter_geometry.input;
+//   const WindowGeometry &K = filter_geometry.window;
+//   const ImageGeometry &Y =  filter_geometry.output;
+
+//   ImToColValid::Params imtocol_params(X, K, X.depth);
+//   MatMulDirectFn::Params mmd_params(X, K, X.depth, (int8_t *)kernel_weights);
+
+//   int output_ch_count = 4;
+//   int elements_per_channel = 4;
+//   OT_int8::Params ot_params(output_ch_count, elements_per_channel, kernel_weights, biases, effective_output_multiplier, input_zero_point, output_zero_point);
+//   AbstractKernel::Params akp(Y, ir);
+
+
+//   // return std::tuple<ImToColValid::Params>(imtocol_params, mmd_params);
+// }
+
 // Conv2dVaildDirect::foo(ImageParams &X, WindowGeometry &K, ImageRegion &ir, int8_t * weights , std::vector<int32_t> bias )
 // {
 

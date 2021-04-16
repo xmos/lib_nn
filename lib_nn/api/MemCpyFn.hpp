@@ -169,7 +169,7 @@ class ImToColValid : public MemCpyFn{
     // i.e. from X[h][w + kernel_width - 1] to X[h+1][w]. 
     int32_t vertical_mem_stride;
 
-    Params(ImageGeometry &X, WindowGeometry &K, int input_ch_per_output);
+    Params(const ImageGeometry &X, const WindowGeometry &K, const int input_ch_per_output);
   };
 
   Params * params;

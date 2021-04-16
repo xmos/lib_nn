@@ -108,7 +108,7 @@ int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
 /*
 This constructor is used for testing
 */
-ImToColValid::Params::Params(ImageGeometry &X, WindowGeometry &K, int input_ch_per_output){
+ImToColValid::Params::Params(const ImageGeometry &X, const WindowGeometry &K, const int input_ch_per_output){
 
   //TODO
   // int bytes_per_copy_per_channel = (input_ch_per_output *  X.bits_per_element) / CHAR_BIT; 
