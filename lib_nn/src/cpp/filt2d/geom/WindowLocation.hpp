@@ -66,8 +66,35 @@ namespace nn {
                  const int filter_chan,
                  const T pad_value = 0) const;
 
-      // TODO: It would probably be good to add an iterator that iterates over the window elements.
-      //       It would also be nice to have that for the kernel tensor, 
+      /**
+       * Apply a fold operation across the window elements.
+       * 
+       * The supplied callback will be called for each element within this window. The signature and meaning 
+       * of the callback function's arguments are as indicated:
+       * 
+       * T_acc CallbackFunc(const ImageVect& filter_coords,
+       *                    const ImageVect& input_coords,
+       *                    const T_acc prev_accumulator,
+       *                    const T input_element,
+       *                    const bool is_padding);
+       * 
+       * filter_coords - row, column and channel indices of the window element (e.g. (0,0,0) will always be first.)
+       * input_coords - The input image coordinates corresponding to filter_coords
+       * prev_accumulator - The accumulator returned from the previous call of the callback function
+       *                    (on the first call initial_acc is passed in)
+       * input_element - The value of the input image element corresponding to the current filter location.
+       *                 If the input_coords are in padding, this will be pad_value.
+       * is_padding - Whether the current input element is in the input's padding (i.e. outside the input image)
+       */
+      template <typename T_acc, typename T_elm>
+      T_acc Fold(const T_elm* input_image_base,
+                 std::function<T_acc(const ImageVect&, 
+                                     const ImageVect&, 
+                                     const T_acc, 
+                                     const T_elm, 
+                                     const bool)> op,
+                 const T_acc initial_acc,
+                 const T_elm pad_value = 0);
   };
 
 
@@ -98,5 +125,35 @@ namespace nn {
     return InputElement<T>( const_cast<T*>(input_image_base), filter_row, filter_col, filter_chan );
   }
 
+
+  template <typename T_acc, typename T_elm>
+  T_acc WindowLocation::Fold(const T_elm* input_image_base,
+                             std::function<T_acc(const ImageVect&, 
+                                                 const ImageVect&, 
+                                                 const T_acc,
+                                                 const T_elm, 
+                                                 const bool)> op,
+                             const T_acc initial_acc,
+                             const T_elm pad_value)
+  {
+
+    T_acc acc = initial_acc;
+
+    for(int f_row = 0; f_row < this->filter.window.shape.height; ++f_row){
+      for(int f_col = 0; f_col < this->filter.window.shape.width; ++f_col){
+        for(int f_chan = 0; f_chan < this->filter.window.shape.depth; ++f_chan){
+          ImageVect filter_coords(f_row, f_col, f_chan);
+          ImageVect input_coords = this->InputCoords(f_row, f_col, f_chan);
+
+          bool is_padding = this->IsPadding(f_row, f_col, f_chan);
+          T_elm val = this->GetInput<T_elm>(input_image_base, f_row, f_col, f_chan, pad_value);
+
+          acc = op(filter_coords, input_coords, acc, val, is_padding);
+        }
+      }
+    }
+
+    return acc;
+  }
 
 }

@@ -3,8 +3,7 @@
 #include <iostream>
 #include <list>
 
-// using namespace nn::filt2d::geom;
-using namespace nn::filt2d;
+using namespace nn;
 
 constexpr bool Filter2D::UsesPerGroupMemCopy;
 constexpr bool Filter2D_DW::UsesPerGroupMemCopy;

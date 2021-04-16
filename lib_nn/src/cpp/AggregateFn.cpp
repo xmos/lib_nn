@@ -9,8 +9,7 @@
 
 #include "vpu_sim.h"
 
-// using namespace nn::filt2d::geom;
-using namespace nn::filt2d;
+using namespace nn;
 //TODO: [astew] CHAR_BIT not defined if I build with Cygwin
 #ifndef CHAR_BIT
   #define CHAR_BIT (sizeof(char) * 8)
@@ -266,3 +265,5 @@ void MatMulInt8::aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output
   mat_mul_impl_asm(A, T, output_channel_group);
 #endif // NN_USE_REF
 }
+
+

@@ -3,7 +3,6 @@
 #include <cmath>
 
 using namespace nn;
-using namespace nn::filt2d;
 
 // std::tuple<ImToColValid::Params, MatMulDirectFn::Params> Conv2dVaildDirect::make(
   

@@ -10,6 +10,8 @@
 namespace nn {
   namespace test {
 
+/// @TODO: Add a "choose()" (or "pick()"?) method to Rand, which randomly chooses one of
+///        a list of options.
 
 class Rand {
 
@@ -50,8 +52,8 @@ class Rand {
                                std::tuple<Ts...> max);
 
     template<typename ... Ts>
-    std::tuple<Ts...> get_rand(Tag<std::tuple<Ts...>>, 
-                               std::tuple<Ts,Ts>... min_max_inclusive);
+    std::tuple<Ts...> get_rand_tuple(Tag<std::tuple<Ts...>>, 
+                                     std::tuple<Ts,Ts>... min_max_inclusive);
 
   protected:
 
@@ -108,6 +110,8 @@ class Rand {
     template <typename T, typename T_params>
     T rand(T_params params);
 
+    void rand_bytes(void* dst, size_t size);
+
 };
 
 
@@ -163,7 +167,7 @@ std::tuple<Ts...> Rand::get_rand(Tag<std::tuple<Ts...>>,
 
 
 template<typename ... Ts>
-std::tuple<Ts...> Rand::get_rand(Tag<std::tuple<Ts...>>, 
+std::tuple<Ts...> Rand::get_rand_tuple(Tag<std::tuple<Ts...>>, 
                                  std::tuple<Ts,Ts>... min_max_inclusive)
 {
   return std::make_tuple<Ts...>( (this->rand<Ts>(std::get<0>(min_max_inclusive),
@@ -191,7 +195,7 @@ T Rand::rand(T min_inclusive, T max_inclusive)
 template <typename ... Ts>
 std::tuple<Ts...> Rand::rand(std::tuple<Ts,Ts>... min_max_inclusive)
 {
-  return get_rand(Tag<std::tuple<Ts...>>(), min_max_inclusive...);
+  return get_rand_tuple(Tag<std::tuple<Ts...>>(), min_max_inclusive...);
 }
 
 // Specializations of get_rand() defined in Rand.cpp need to be declared here or the compiler will choose
@@ -199,6 +203,8 @@ std::tuple<Ts...> Rand::rand(std::tuple<Ts,Ts>... min_max_inclusive)
 
 template <> int8_t Rand::get_rand<int8_t>(Tag<int8_t>);
 
+// 50/50 true/false
+template <> bool Rand::get_rand<bool>(Tag<bool>);
 // Uniform distribution over the range [-1.0f, 1.0f)
 template <> float Rand::get_rand<float>(Tag<float>);
 // Uniform distribution over the range [-1.0, 1.0)

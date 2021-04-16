@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <cassert>
+#include <functional>
 
 namespace nn {
 
@@ -111,6 +112,18 @@ class ImageGeometry {
           const T pad_value = 0) const;
 
     /**
+     * Apply an operation per element of an image.
+     * 
+     * void PerPixelOp(const int row, 
+     *                 const int col,
+     *                 const int channel,
+     *                 T& value);
+     */
+    template <typename T>
+    void ApplyOperation(T* image_base,
+                        std::function<void(int, int, int, T&)> func) const;
+
+    /**
      * Get an AddressCovector representing the geometry of this image.
      */
     template <typename T>
@@ -163,6 +176,15 @@ T ImageGeometry::Get(const T* img_base,
 }
 
 
+template <typename T>
+void ImageGeometry::ApplyOperation(T* image_base,
+                                   std::function<void(int, int, int, T&)> op) const
+{
+  for(int row = 0; row < this->height; ++row)
+    for(int col = 0; col < this->width; ++col)
+      for(int channel = 0; channel < this->depth; ++channel)
+        op(row, col, channel, this->Element<T>(image_base, row, col, channel));
+}
 
 
 inline std::ostream& operator<<(std::ostream &stream, const ImageGeometry &image){

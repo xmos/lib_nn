@@ -44,10 +44,24 @@ Rand::Rand()
   this->state = static_cast<int>(t);
 }
 
+void Rand::rand_bytes(void* dst, size_t size)
+{
+  this->pseudo_rand_bytes(dst, size);
+}
+
 template<>
 int8_t Rand::get_rand<int8_t>(Tag<int8_t>)
 {
   return int8_t(pseudo_rand());
+}
+
+/**
+ * 50/50 true/false 
+ */
+template<>
+bool Rand::get_rand<bool>(Tag<bool>)
+{
+  return this->rand<int>(0, 1);
 }
 
 /**

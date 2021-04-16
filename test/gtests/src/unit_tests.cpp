@@ -15,7 +15,6 @@
 
 
 namespace nn {
-namespace filt2d {
 
   static auto rng = test::Rand(42);
 
@@ -947,7 +946,6 @@ TYPED_TEST(Filter2D_Test, BasicTest) {
 }
 
 
-}
 }
 
 int main(int argc, char **argv) {

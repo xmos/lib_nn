@@ -5,12 +5,15 @@
 #include "../src/cpp/filt2d/geom/Filter2dGeometry.hpp"
 
 namespace nn {
-namespace filt2d {
 
-class Conv2dVaildDirect : public Filter2D {
+  // class Conv2dVaildDirect : public Filter2D {
 
-
-  public:
+  //   struct Params {
+  //     AbstractKernel::Params * kparams;
+  //     ImToColValid::Params * memcpy;
+  //     MatMulDirectFn::Params * aggregator;
+  //     // OT_int8::Params * output_transform;
+  //   };
 
   // void make(
   //   const nn::Filter2dGeometry& filter_geometry,
@@ -41,22 +44,33 @@ class Conv2dVaildDirect : public Filter2D {
     //          OutputTransformFn * ot_handler, 
     //          int8_t * scratch_mem=nullptr);
 
-};
 
 
 
-// class Conv2dVaildIndirect : public Filter2D {
-//   public:
-//     Conv2dVaildIndirect(AbstractKernelParams * kparams, ImToColValid * memcpy_handler, 
-//       MatMulInt8 * aggregate_handler, OT_int8 * ot_handler);
-// };
+  // class Conv2dVaildIndirect : public Filter2D {
+  //   public:
+  //     Conv2dVaildIndirect(AbstractKernelParams * kparams, ImToColValid * memcpy_handler, 
+  //       MatMulInt8 * aggregate_handler, OT_int8 * ot_handler);
+  // };
 
 
 
-// class Conv2dPaddedIndirect : public Filter2D {
-//   public:
-//     Conv2dPaddedIndirect(AbstractKernelParams * kparams, ImToColPadded * memcpy_handler, 
-//       MatMulInt8 * aggregate_handler, OT_int8 * ot_handler);
-// };
-}
+  // class Conv2dPaddedIndirect : public Filter2D {
+  //   public:
+  //     Conv2dPaddedIndirect(AbstractKernelParams * kparams, ImToColPadded * memcpy_handler, 
+  //       MatMulInt8 * aggregate_handler, OT_int8 * ot_handler);
+  // };
+
+
+  class Conv2dPadded : public Filter2D {
+
+    struct Params {
+      AbstractKernel::Params* kparams;
+      ImToColPadded::Params* memcopy;
+      MatMulInt8::Params* aggregator;
+      OT_int8::Params* output;
+    };
+
+  };
+
 }

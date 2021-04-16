@@ -6,8 +6,7 @@
 
 #include "vpu_sim.h"
 
-// using namespace nn::filt2d::geom;
-using namespace nn::filt2d;
+using namespace nn;
 
 size_t DerefInputFn::get_scratch_bytes(){ return 0;}
 size_t DerefInputFn::get_overread_bytes(){ return 0;}
