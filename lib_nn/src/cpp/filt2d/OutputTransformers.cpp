@@ -93,7 +93,7 @@ EXTERN_C void conv2d_output_transform_asymmetric_int8(
     vpu.vstr(&vec_tmp);
     vpu.vladd(vpu_vects.vec_0x007F);
     vpu.vdepth1();
-    uint32_t mask = chan_out_mask & (~vpu.vR().s32[0]);
+    uint32_t mask = chan_out_mask & (~vpu.vR.s32[0]);
 
     vpu.vlashr(&vec_tmp, -8);
     vpu.vdepth8();

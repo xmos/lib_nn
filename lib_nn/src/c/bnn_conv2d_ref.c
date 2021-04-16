@@ -14,6 +14,7 @@
 
 #include <stdio.h>
 
+
 static inline int min(int a, int b) { return (a < b) ? a : b; }
 static inline int max(int a, int b) { return (a > b) ? a : b; }
 
@@ -87,29 +88,29 @@ int8_t bnn_post_activation_reference(
 }
 
 static int clrsb(int x){
-  #if defined(__XS3A__)
+#if __has_builtin(__builtin_clrsb)
+  return __builtin_clrsb(x);
+#else
   for (unsigned i=0;i<32;i++){
     int y = (x<<i)>>i;
     if (y != x)
       return (i-1);
   }
   return 32;
-  #else
-  return __builtin_clrsb(x);
-  #endif
+#endif
 }
 
 static int clrsbll(long long x){
-  #if defined(__XS3A__)
+#if __has_builtin(__builtin_clrsbll)
+  __builtin_clrsbll(x);
+#else
   for (unsigned i=0;i<64;i++){
     int y = (x<<i)>>i;
     if (y != x)
       return (i-1);
   }
   return 64;
-  #else
-  return __builtin_clrsbll(x);
-  #endif
+#endif
 }
 
 // This puts upper and lower limits on the range of A

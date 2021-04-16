@@ -262,3 +262,5 @@ void MatMulInt8::aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output
   mat_mul_impl_asm(A, T, output_channel_group);
 #endif // NN_USE_REF
 }
+
+

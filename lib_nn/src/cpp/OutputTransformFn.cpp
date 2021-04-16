@@ -8,7 +8,9 @@
 
 #include <iostream>
 
+#include "xs3_vpu.h"
 #include "vpu_sim.h"
+#include "../src/asm/asm_constants.h"
 
 
 static int64_t saturate_non_sym(
@@ -37,16 +39,29 @@ static void VDEPTH8_FIXED(xs3_vpu* vpu){
 }
 
 static int clrsb(int x){
-  #if defined(__XS3A__)
+#if __has_builtin(__builtin_clrsb)
+    return __builtin_clrsb(x);
+#else
   for (unsigned i=0;i<32;i++){
     int y = (x<<i)>>i;
     if (y != x)
       return (i-1);
   }
   return 32;
-  #else
-  return __builtin_clrsb(x);
-  #endif
+#endif
+}
+
+static int clrsbll(long long x){
+#if __has_builtin(__builtin_clrsbll)
+  __builtin_clrsbll(x);
+#else
+  for (unsigned i=0;i<64;i++){
+    int y = (x<<i)>>i;
+    if (y != x)
+      return (i-1);
+  }
+  return 64;
+#endif
 }
 
 // This puts upper and lower limits on the range of Exp
@@ -151,7 +166,7 @@ int32_t compute_product(int16_t a, int16_t m) throw (quant_error){
 
 int32_t compute_sum(int32_t p, int32_t b) throw (quant_error){
   int64_t r = (int64_t)p + (int64_t)b;
-  if(__builtin_clrsbll(r) < 32){
+  if(clrsbll(r) < 32){
     // std::cout << std::string("Not enough space for result") <<std::endl;
     throw Other;
   }
@@ -515,4 +530,149 @@ int8_t * OTBinary_bin::output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, in
   Y16 += 1;
 
   return (int8_t*)Y16;
+}
+
+
+
+/******************************
+ * DirectWriteOutputTransform
+ *****************************/
+
+constexpr int DirectWriteOutputTransform::ChannelsPerOutputGroup;
+
+
+////////// DirectWriteOutputTransform::Params //////////////
+DirectWriteOutputTransform::Params::Params(const int image_channels) 
+    : output_img_channels(image_channels)
+{
+}
+
+DirectWriteOutputTransform::Params::Params(const nn::ImageGeometry& output_image) 
+    : output_img_channels(output_image.depth)
+{
+}
+
+DirectWriteOutputTransform::Params::Params(std::istream& stream)
+{
+  stream.read(reinterpret_cast<char*>(&this->output_img_channels), sizeof(int32_t));
+}
+
+void DirectWriteOutputTransform::Params::Serialize(std::ostream& stream) const
+{
+  stream.write(reinterpret_cast<const char*>(&this->output_img_channels), sizeof(this->output_img_channels));
+}
+
+
+
+////////// DirectWriteOutputTransform //////////////
+DirectWriteOutputTransform::DirectWriteOutputTransform(const Params* params)
+    : params(params)
+{
+}
+
+
+int8_t * DirectWriteOutputTransform::output_transform_fn(int8_t * Y,
+                                                         vpu_ring_buffer_t * acc,
+                                                         int32_t output_channel_group)
+{
+
+  const int32_t first_channel = DirectWriteOutputTransform::ChannelsPerOutputGroup * output_channel_group;
+  const int32_t count = std::min<int32_t>(DirectWriteOutputTransform::ChannelsPerOutputGroup, 
+                                    this->params->output_img_channels - first_channel);
+
+#ifdef NN_USE_REF
+  std::memcpy(Y, &acc->vR[0], count);
+#else
+  volatile asm("mkmsk %0, %0" : "=r"(count));
+  volatile asm("vldr %0[0]" : "r"(%acc->vR[0]));
+  volatile asm("vstrpv %0[0], %1" : "r"(Y, count));
+#endif // NN_USE_REF
+
+return &Y[count];
+}
+
+/******************************
+ * ShiftInt8OutputTransform
+ *****************************/
+
+constexpr int ShiftInt8OutputTransform::ChannelsPerOutputGroup;
+
+////////// ShiftInt8OutputTransform::Params //////////////
+ShiftInt8OutputTransform::Params::Params(const int image_channels, const int16_t* shifts) 
+    : output_img_channels(image_channels), shifts(shifts)
+{
+}
+
+ShiftInt8OutputTransform::Params::Params(const nn::ImageGeometry& output_image, const int16_t* shifts) 
+    : output_img_channels(output_image.depth), shifts(shifts)
+{
+}
+
+ShiftInt8OutputTransform::Params::Params(std::istream& stream, const int16_t* shifts)
+    : shifts(shifts)
+{
+  stream.read(reinterpret_cast<char*>(&this->output_img_channels), sizeof(int32_t));
+}
+
+void ShiftInt8OutputTransform::Params::Serialize(std::ostream& stream) const
+{
+  stream.write(reinterpret_cast<const char*>(&this->output_img_channels), sizeof(this->output_img_channels));
+}
+
+
+
+////////// ShiftInt8OutputTransform //////////////
+ShiftInt8OutputTransform::ShiftInt8OutputTransform(const Params* params)
+    : params(params)
+{
+}
+
+
+C_API void shift_int8_output_transform_ref(
+    int8_t* output,
+    const vpu_ring_buffer_t* acc,
+    const int16_t* right_shifts,
+    const int channel_count)
+{
+  uint32_t write_mask = uint32_t((1LL << channel_count) - 1);
+
+  auto vpu = nn::VPU();
+  vpu_vector_t vec_tmp;
+  uint32_t tmp;
+
+  vpu.vldr( vpu_vect_0x80 );
+  vpu.vstrpv( output, write_mask );
+
+  vpu.vldd(acc->vD);
+  vpu.vldr(acc->vR);
+  vpu.vsetc(MODE_S16);
+  vpu.vlsat(right_shifts);
+  vpu.vstr( &vec_tmp );
+  vpu.vladd( vpu_vect_0x007F );
+  vpu.vdepth1();
+  vpu.vstrpv( &tmp, 0x0000000F );
+  write_mask = write_mask & ~tmp;
+  vpu.vlashr( &vec_tmp, -8 );
+  vpu.vdepth8();
+  vpu.vstrpv( output, write_mask );
+
+}
+
+int8_t * ShiftInt8OutputTransform::output_transform_fn(int8_t * Y,
+                                                       vpu_ring_buffer_t * acc,
+                                                       int32_t output_channel_group)
+{
+  const int32_t first_channel = ShiftInt8OutputTransform::ChannelsPerOutputGroup * output_channel_group;
+  const int32_t count = std::min<int32_t>(ShiftInt8OutputTransform::ChannelsPerOutputGroup, 
+                                    this->params->output_img_channels - first_channel);
+
+  const int16_t* shifts = &this->params->shifts[first_channel];
+
+#ifdef NN_USE_REF
+  shift_int8_output_transform_ref(Y, acc, shifts, count);
+#else
+  shift_int8_output_transform_asm(Y, acc, shifts, count);
+#endif // NN_USE_REF
+
+return &Y[count];
 }

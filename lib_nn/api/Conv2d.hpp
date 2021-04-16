@@ -33,3 +33,16 @@
 //     Conv2dPaddedIndirect(AbstractKernelParams * kparams, ImToColPadded * memcpy_handler, 
 //       MatMulInt8 * aggregate_handler, OT_int8 * ot_handler);
 // };
+
+
+class Conv2dPadded : public Filter2D {
+
+  struct Params {
+    AbstractKernel::Params* kparams;
+    ImToColPadded::Params* memcopy;
+    MatMulInt8::Params* aggregator;
+    OT_int8::Params* output;
+  };
+
+};
+

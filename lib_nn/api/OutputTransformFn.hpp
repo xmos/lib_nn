@@ -4,6 +4,8 @@
 #include "xs3_vpu.h"
 #include "vpu.hpp"
 
+#include "../src/cpp/filt2d/geom/ImageGeometry.hpp"
+
 /**
  * Interface implemented by all output transform handlers.
  * 
@@ -44,9 +46,9 @@ struct QuantisationParams {
  */
 class OT_int8 : public OutputTransformFn 
 {
-
-  class Params {
-    public:
+  public:
+  
+  struct Params {
       int32_t output_slice_channel_count; //TODO push into base class
       output_transform_values_t * otv;
       int16_t * biases;//[output_slice_channel_count];
@@ -104,3 +106,169 @@ class OTBinary_bin : public OutputTransformFn{
 
     int8_t * output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group);
 };
+
+
+/**
+ * This output transform assumes the int8_t channel data is in vR[] of the accumulator.
+ */
+class DirectWriteOutputTransform : public OutputTransformFn 
+{
+  public:
+    /**
+     * The maximum number of channels that a DirectWriteOutputTransform can process in a single
+     * call to output_transform_fn().
+     */
+    static constexpr int ChannelsPerOutputGroup = VPU_INT8_EPV;
+
+    /**
+     * Configuration parameters for DirectWriteOutputTransform
+     */
+    struct Params {
+      /**
+       * The number of channels in the filter's output image.
+       * 
+       * This is required to determine the number of channels to write when
+       * output_transform_fn() is called.
+       */
+      int32_t output_img_channels;
+
+      /**
+       * Create a DirectWriteOutputTransform::Params for an output image with the specified
+       * number of channels.
+       */
+      Params(const int image_channels);
+
+      /**
+       * Create a DirectWriteOutputTransform::Params corresponding to a particular output image geometry.
+       */
+      Params(const nn::ImageGeometry& output_geometry);
+
+      /**
+       * Deserialize a DirectWriteOutputTransform::Params from a stream.
+       * 
+       * The data to be deserialized should come from a previous call to 
+       * DirectWriteOutputTransform::Params::Serialize(). The serialized data format
+       * is considered to be opaque.
+       */
+      Params(std::istream& stream);
+
+      /**
+       * Serialize a DirectWriteOutputTransform::Params into a stream.
+       * 
+       * The serialized object can be recovered later using the appropriate stream constructor.
+       */
+      void Serialize(std::ostream& stream) const;
+    };
+
+    /**
+     * Parameters required by this output transform handler.
+     */
+    const Params* params;
+
+    /**
+     * Construct a DirectWriteOutputTransform using the specified params.
+     */
+    DirectWriteOutputTransform(const Params* params);
+
+    /**
+     * Apply this output transform to the provided accumulators and write them to
+     * the provided output image.
+     */
+    virtual int8_t * output_transform_fn(int8_t * Y, 
+                                         vpu_ring_buffer_t * acc, 
+                                         int32_t output_channel_group) override;
+};
+
+
+/**
+ * This output transform applies a per-channel, rounding, saturating right-shift to the 32-bit
+ * accumulators to get 8-bit results.
+ */
+class ShiftInt8OutputTransform : public OutputTransformFn 
+{
+  public:
+
+    /**
+     * The maximum number of channels that a ShiftInt8OutputTransform can process in a single
+     * call to output_transform_fn().
+     */
+    static constexpr int ChannelsPerOutputGroup = VPU_INT8_ACC_PERIOD;
+
+    /**
+     * Configuration parameters for ShiftInt8OutputTransform
+     */
+    struct Params {
+      /**
+       * The number of channels in the filter's output image.
+       * 
+       * This is required to determine the number of channels to write when
+       * output_transform_fn() is called.
+       */
+      int32_t output_img_channels;
+
+      /**
+       * The per-output-channel arithmetic right-shifts to be applied to the accumulators.
+       */
+      const int16_t* shifts;
+
+      /**
+       * Create a ShiftInt8OutputTransform::Params
+       */
+      Params(const int image_channels, const int16_t* shifts);
+
+      /**
+       * Create a ShiftInt8OutputTransform::Params
+       */
+      Params(const nn::ImageGeometry& output_image, const int16_t* shifts);
+
+      /**
+       * Deseriaized a ShiftInt8OutputTransform::Params from a byte stream.
+       * 
+       * The data in the stream should come from a prior call to ShiftInt8OutputTransform::Params::Serialize().
+       */
+      Params(std::istream& stream, const int16_t* shifts);
+
+      /**
+       * Serialize this ShiftInt8OutputTransform::Params into a byte stream.
+       * 
+       * Note: This does not serialize the shift values.
+       */
+      void Serialize(std::ostream& stream) const;
+    };
+
+    /**
+     * Parameters required by this output transform handler.
+     */
+    const Params* params;
+
+    /**
+     * Construct a ShiftInt8OutputTransform using the specified params.
+     */
+    ShiftInt8OutputTransform(const Params* params); 
+
+    /**
+     * Apply this output transform to the provided accumulators and write them to
+     * the provided output image.
+     */
+    virtual int8_t * output_transform_fn(int8_t * Y, 
+                                         vpu_ring_buffer_t * acc, 
+                                         int32_t output_channel_group) override;
+};
+
+/**
+ *  xcore implementation of shift_int8_output_transform_ref()
+ */
+C_API void shift_int8_output_transform_xcore(
+    int8_t* output,
+    const vpu_ring_buffer_t* acc,
+    const int16_t* right_shifts,
+    const int channel_count);
+
+/**
+ *  Portable implementation of shift_int8_output_transform_xcore()
+ */
+C_API void shift_int8_output_transform_ref(
+    int8_t* output,
+    const vpu_ring_buffer_t* acc,
+    const int16_t* right_shifts,
+    const int channel_count);
