@@ -10,6 +10,8 @@
 #include "vpu_sim.h"
 
 
+using namespace nn;
+
 /******************************
  * AvgPoolPatchFn
  *****************************/

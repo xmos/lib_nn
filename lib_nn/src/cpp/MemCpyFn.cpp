@@ -6,6 +6,8 @@
 
 #include "vpu_sim.h"
 
+using namespace nn;
+
 size_t DerefInputFn::get_scratch_bytes(){ return 0;}
 size_t DerefInputFn::get_overread_bytes(){ return 0;}
 
@@ -24,15 +26,15 @@ size_t ImToColPadded::get_overread_bytes(){
   return XS3_VPU_VREG_WIDTH_BYTES; //TODO this will be defined by the implementation of memcpy
 }
 
-ImToColPadded::Params::Params(ImageParams &X, WindowGeometry &K, padding_t &padding, int input_ch_per_output, int8_t pad_val){
+ImToColPadded::Params::Params(ImageGeometry &X, WindowGeometry &K, padding_t &padding, int input_ch_per_output, int8_t pad_val){
 
   kernel_height = K.shape.height;
   kernel_width = K.shape.width;
 
-  vertical_stride = K.stride.vertical;
-  horizontal_stride = K.stride.horizontal;
-  vertical_dilation = K.dilation.vertical;
-  horizontal_dilation = K.dilation.horizontal;
+  vertical_stride = K.stride.row;
+  horizontal_stride = K.stride.col;
+  vertical_dilation = K.dilation.row;
+  horizontal_dilation = K.dilation.col;
 
   this->padding = padding;
 
@@ -46,7 +48,9 @@ ImToColPadded::Params::Params(ImageParams &X, WindowGeometry &K, padding_t &padd
 
   horizontal_mem_stride = X.rowBytes();
 
-  bytes_per_copy_per_channel = (input_ch_per_output *  X.bits_per_element) / CHAR_BIT; 
+  //TODO 
+  // bytes_per_copy_per_channel = (input_ch_per_output *  X.bits_per_element) / CHAR_BIT; 
+  bytes_per_copy_per_channel = (input_ch_per_output *  CHAR_BIT) / CHAR_BIT; 
   
 }
 
@@ -103,9 +107,11 @@ int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
 /*
 This constructor is used for testing
 */
-ImToColValid::Params::Params(ImageParams &X, WindowGeometry &K, int input_ch_per_output){
+ImToColValid::Params::Params(ImageGeometry &X, WindowGeometry &K, int input_ch_per_output){
 
-  int bytes_per_copy_per_channel = (input_ch_per_output *  X.bits_per_element) / CHAR_BIT; 
+  //TODO
+  // int bytes_per_copy_per_channel = (input_ch_per_output *  X.bits_per_element) / CHAR_BIT; 
+  int bytes_per_copy_per_channel = (input_ch_per_output * CHAR_BIT) / CHAR_BIT; 
 
   bytes_per_pixel = X.pixelBytes();
   bytes_per_h_line = X.rowBytes(); 
@@ -121,12 +127,12 @@ ImToColValid::Params::Params(ImageParams &X, WindowGeometry &K, int input_ch_per
   input_height = K.shape.height;
   input_width  = K.shape.width;
 
-  horizontal_mem_stride = bytes_per_pixel * K.dilation.horizontal - bytes_actually_copied;
-  vertical_mem_stride = bytes_per_h_line * K.dilation.vertical - input_width * bytes_per_pixel * K.dilation.horizontal;
+  horizontal_mem_stride = bytes_per_pixel * K.dilation.col - bytes_actually_copied;
+  vertical_mem_stride = bytes_per_h_line * K.dilation.row - input_width * bytes_per_pixel * K.dilation.col;
 
   //TODO rename these to account for the multiplication of strides
-  bytes_per_h_line *= K.stride.vertical;
-  bytes_per_pixel *= K.stride.horizontal;
+  bytes_per_h_line *= K.stride.row;
+  bytes_per_pixel *= K.stride.col;
 
 }
 

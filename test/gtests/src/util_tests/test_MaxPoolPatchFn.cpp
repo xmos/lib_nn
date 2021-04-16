@@ -13,7 +13,7 @@
 #include "VpuHelpers.hpp"
 
 
-
+using namespace nn;
 
 class MaxPoolPatchFnParamsTest : public ::testing::TestWithParam<std::tuple<int,int>> {};
 class MaxPoolPatchFnTest : public ::testing::TestWithParam<std::tuple<int,int>> {};

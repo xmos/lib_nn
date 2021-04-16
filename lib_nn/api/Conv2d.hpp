@@ -3,46 +3,48 @@
 
 #include <cmath>
 
+namespace nn {
 
-// class Conv2dVaildDirect : public Filter2D {
+  // class Conv2dVaildDirect : public Filter2D {
 
-//   struct Params {
-//     AbstractKernel::Params kparams;
-//     ImToColValid::Params memcpy;
-//     MatMulDirectFn::Params aggregator;
-//     OT_int8::Params output_transform;
-//   };
-
-
-//   public:
-//     Conv2dVaildDirect(Params * params);
-// };
+  //   struct Params {
+  //     AbstractKernel::Params * kparams;
+  //     ImToColValid::Params * memcpy;
+  //     MatMulDirectFn::Params * aggregator;
+  //     // OT_int8::Params * output_transform;
+  //   };
 
 
-
-// class Conv2dVaildIndirect : public Filter2D {
-//   public:
-//     Conv2dVaildIndirect(AbstractKernelParams * kparams, ImToColValid * memcpy_handler, 
-//       MatMulInt8 * aggregate_handler, OT_int8 * ot_handler);
-// };
+  //   public:
+  //     Conv2dVaildDirect(Params * params);
+  // };
 
 
 
-// class Conv2dPaddedIndirect : public Filter2D {
-//   public:
-//     Conv2dPaddedIndirect(AbstractKernelParams * kparams, ImToColPadded * memcpy_handler, 
-//       MatMulInt8 * aggregate_handler, OT_int8 * ot_handler);
-// };
+  // class Conv2dVaildIndirect : public Filter2D {
+  //   public:
+  //     Conv2dVaildIndirect(AbstractKernelParams * kparams, ImToColValid * memcpy_handler, 
+  //       MatMulInt8 * aggregate_handler, OT_int8 * ot_handler);
+  // };
 
 
-class Conv2dPadded : public Filter2D {
 
-  struct Params {
-    AbstractKernel::Params* kparams;
-    ImToColPadded::Params* memcopy;
-    MatMulInt8::Params* aggregator;
-    OT_int8::Params* output;
+  // class Conv2dPaddedIndirect : public Filter2D {
+  //   public:
+  //     Conv2dPaddedIndirect(AbstractKernelParams * kparams, ImToColPadded * memcpy_handler, 
+  //       MatMulInt8 * aggregate_handler, OT_int8 * ot_handler);
+  // };
+
+
+  class Conv2dPadded : public Filter2D {
+
+    struct Params {
+      AbstractKernel::Params* kparams;
+      ImToColPadded::Params* memcopy;
+      MatMulInt8::Params* aggregator;
+      OT_int8::Params* output;
+    };
+
   };
 
-};
-
+}

@@ -15,7 +15,7 @@
 #include "../src/cpp/filt2d/geom/WindowLocation.hpp"
 
 
-
+using namespace nn;
 
 class AvgPoolDirectValidFnTest : public ::testing::TestWithParam<nn::Filter2dGeometry> {};
 

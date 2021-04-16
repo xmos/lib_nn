@@ -15,7 +15,7 @@
 #include "../src/cpp/filt2d/geom/WindowLocation.hpp"
 
 
-
+using namespace nn;
 
 class MaxPoolDirectValidFnParamsTest : public ::testing::TestWithParam<nn::Filter2dGeometry> {};
 class MaxPoolDirectValidFnTest : public ::testing::TestWithParam<nn::Filter2dGeometry> {};

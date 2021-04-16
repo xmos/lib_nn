@@ -12,6 +12,7 @@
 #include "Rand.hpp"
 #include "VpuHelpers.hpp"
 
+using namespace nn;
 
 class AvgPoolPatchFnTest : public ::testing::TestWithParam<nn::Filter2dGeometry> {};
 

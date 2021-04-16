@@ -19,7 +19,6 @@ class WindowLocationTest : public ::testing::TestWithParam<Filter2dGeometry> {};
 
 TEST_P(WindowLocationTest, InputStart)
 {
-  auto rand = nn::test::Rand(446347);
 
   auto filter = GetParam();
 
@@ -54,7 +53,6 @@ TEST_P(WindowLocationTest, InputStart)
 
 TEST_P(WindowLocationTest, InputEnd)
 {
-  auto rand = nn::test::Rand(56472);
 
   auto filter = GetParam();
 
@@ -90,7 +88,6 @@ TEST_P(WindowLocationTest, InputEnd)
 
 TEST_P(WindowLocationTest, InputCoords)
 {
-  auto rand = nn::test::Rand(768946);
 
   auto filter = GetParam();
 
@@ -145,7 +142,6 @@ TEST_P(WindowLocationTest, InputCoords)
 
 TEST_P(WindowLocationTest, Padding)
 {
-  auto rand = nn::test::Rand(797684);
 
   auto filter = GetParam();
 
@@ -192,8 +188,6 @@ TEST_P(WindowLocationTest, IsPadding)
   for(int k = 0; k < input_img.size(); k++){
     input_img[k] = rand.rand<int8_t>();
   }
-
-  auto zero_point = rand.rand<int8_t>();
 
   for(int yr = 0; yr < filter.output.height; yr++){
 

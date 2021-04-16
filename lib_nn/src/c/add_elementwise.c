@@ -50,7 +50,7 @@ void add_elementwise_ref(
 
         int64_t acc = params->output.bias;
 
-        const int16_t tmp0 = ASHR16(X0[i], params->input[0].shr);
+        // const int16_t tmp0 = ASHR16(X0[i], params->input[0].shr);
         acc += ((int32_t)ASHR16(X0[i], params->input[0].shr)) * params->input[0].multiplier;
         acc += ((int32_t)ASHR16(X1[i], params->input[1].shr)) * params->input[1].multiplier;
 

@@ -21,6 +21,16 @@ class ImageGeometry {
 
     constexpr ImageGeometry() : height(0), width(0), depth(0), channel_depth(1) {}
 
+  //  constexpr ImageGeometry(
+  //     ImageGeometry &X,
+  //      WindowGeometry &K) noexcept : height(0), width(0), depth(0){
+
+  //       // height = CONV2D_OUTPUT_LENGTH(X.height, K.shape.height, K.dilation.row, K.stride.row);
+  //       // width = CONV2D_OUTPUT_LENGTH(X.width, K.shape.width, K.dilation.col, K.stride.col);
+  //       // depth = X.depth; //TODO eek?
+  //       }
+
+
     constexpr ImageGeometry(
       int const rows,
       int const cols,

@@ -6,6 +6,11 @@ namespace nn {
 
   class ImageVect {
 
+#define CONV2D_OUTPUT_LENGTH(input_length, filter_size, dilation, stride)     \
+  (((input_length - (filter_size + (filter_size - 1) * (dilation - 1)) + 1) + \
+    stride - 1) /                                                             \
+   stride)
+   
     public:
 
       int row;

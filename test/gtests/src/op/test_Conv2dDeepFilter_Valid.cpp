@@ -126,8 +126,6 @@ TEST_P(Conv2dDeepFilter_ValidTest,RunsWithoutException)
 {
   auto geometry = GetParam();
 
-  auto window_elements = geometry.window.shape.imageElements();
-
   memset(&input_image[0], 0, sizeof(int8_t) * input_image.size());
   memset(&kernel_tensor[0], 0, sizeof(int8_t) * kernel_tensor.size());
 

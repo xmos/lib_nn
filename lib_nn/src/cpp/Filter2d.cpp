@@ -3,8 +3,11 @@
 #include <iostream>
 #include <list>
 
+using namespace nn;
+
 constexpr bool Filter2D::UsesPerGroupMemCopy;
 constexpr bool Filter2D_DW::UsesPerGroupMemCopy;
+
 
 // template<class T>
 // AbstractKernel<T>::Params::Params(ImageParams &Y, ImageRegion& r){

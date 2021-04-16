@@ -31,8 +31,6 @@ std::vector<int8_t> nn::test::ops::ref::MaxPoolReference(
   params.filter_width = filter_geometry.window.shape.width;
   params.quantized_activation_min = std::numeric_limits<int8_t>::min();
   params.quantized_activation_max = std::numeric_limits<int8_t>::max();
-  params.float_activation_min;
-  params.float_activation_max;
 
   tflite::RuntimeShape input_shape = 
       { 1, (int) filter_geometry.input.height, (int) filter_geometry.input.width, (int) filter_geometry.input.depth };
@@ -46,8 +44,6 @@ std::vector<int8_t> nn::test::ops::ref::MaxPoolReference(
 
   return result;
 }
-
-
 
 std::vector<int8_t> nn::test::ops::ref::AveragePoolReference(
     const nn::Filter2dGeometry& filter_geometry,
@@ -71,8 +67,6 @@ std::vector<int8_t> nn::test::ops::ref::AveragePoolReference(
   params.filter_width = filter_geometry.window.shape.width;
   params.quantized_activation_min = std::numeric_limits<int8_t>::min();
   params.quantized_activation_max = std::numeric_limits<int8_t>::max();
-  params.float_activation_min;
-  params.float_activation_max;
 
   tflite::RuntimeShape input_shape = 
       { 1, (int) filter_geometry.input.height, (int) filter_geometry.input.width, (int) filter_geometry.input.depth };

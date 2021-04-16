@@ -14,7 +14,6 @@
 
 #include <stdio.h>
 
-
 static inline int min(int a, int b) { return (a < b) ? a : b; }
 static inline int max(int a, int b) { return (a > b) ? a : b; }
 
@@ -100,18 +99,18 @@ static int clrsb(int x){
 #endif
 }
 
-static int clrsbll(long long x){
-#if __has_builtin(__builtin_clrsbll)
-  __builtin_clrsbll(x);
-#else
-  for (unsigned i=0;i<64;i++){
-    int y = (x<<i)>>i;
-    if (y != x)
-      return (i-1);
-  }
-  return 64;
-#endif
-}
+// static int clrsbll(long long x){
+// #if __has_builtin(__builtin_clrsbll)
+//   __builtin_clrsbll(x);
+// #else
+//   for (unsigned i=0;i<64;i++){
+//     int y = (x<<i)>>i;
+//     if (y != x)
+//       return (i-1);
+//   }
+//   return 64;
+// #endif
+// }
 
 // This puts upper and lower limits on the range of A
 // A must reduce the vpu accumulator to 16 bit

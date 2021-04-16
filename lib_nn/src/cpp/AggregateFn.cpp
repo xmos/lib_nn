@@ -9,6 +9,7 @@
 
 #include "vpu_sim.h"
 
+using namespace nn;
 //TODO: [astew] CHAR_BIT not defined if I build with Cygwin
 #ifndef CHAR_BIT
   #define CHAR_BIT (sizeof(char) * 8)
@@ -191,11 +192,13 @@ void MatMulInt8::mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output
   VSTD(vpu, &A->vR);
 }
 
-MatMulDirectFn::Params::Params(ImageParams &X, WindowGeometry &K, int input_ch_per_output, int8_t * weights): 
+MatMulDirectFn::Params::Params(ImageGeometry &X, WindowGeometry &K, int input_ch_per_output, int8_t * weights): 
   weights(weights)
 {
 
-  int bytes_per_copy_per_channel = (input_ch_per_output *  X.bits_per_element) / CHAR_BIT; 
+//TODO X.bits_per_element
+  // int bytes_per_copy_per_channel = (input_ch_per_output *  X.bits_per_element) / CHAR_BIT; 
+  int bytes_per_copy_per_channel = (input_ch_per_output *  CHAR_BIT) / CHAR_BIT; 
 
   k_height_loop_counter = K.shape.height - 1;
   k_width_loop_counter = K.shape.width - 1;
@@ -203,12 +206,12 @@ MatMulDirectFn::Params::Params(ImageParams &X, WindowGeometry &K, int input_ch_p
   input_channel_loop_counter =
       (bytes_per_copy_per_channel / XS3_VPU_VREG_WIDTH_BYTES) - 1;
   
-  bytes_per_kernel_channel = K.shape.height * K.shape.width * X.channels;
+  bytes_per_kernel_channel = K.shape.height * K.shape.width * X.depth;
 
-  int bytes_per_pixel =  (X.channels *  X.bits_per_element) / CHAR_BIT; 
+  int bytes_per_pixel =  X.pixelBytes();
 
-  inner_x_h_step = bytes_per_pixel * K.dilation.horizontal - bytes_per_copy_per_channel;
-  inner_x_v_step = bytes_per_pixel* X.width*K.dilation.vertical -  K.shape.width*bytes_per_pixel * K.dilation.horizontal;
+  inner_x_h_step = bytes_per_pixel * K.dilation.col - bytes_per_copy_per_channel;
+  inner_x_v_step = bytes_per_pixel* (int)X.width * (int)K.dilation.row -  (int)K.shape.width*bytes_per_pixel * (int)K.dilation.col;
 }
 
 void MatMulDirectFn::mat_mul_direct_impl(vpu_ring_buffer_t * A , int8_t * X, int32_t output_channel_group)
