@@ -293,7 +293,8 @@ namespace nn {
                   MemCpyFn * memcpy_handler, 
                   AggregateFn * aggregate_handler, 
                   OutputTransformFn * ot_handler, 
-                  int8_t * scratch_mem = nullptr);
+                  int8_t * scratch_mem = nullptr,
+                  int output_channels_per_group = VPU_INT8_ACC_PERIOD);
 
         
       // Because AbstractKernel calls calc_output_pixel_slice(), which is protected (and not a virtual function
@@ -301,6 +302,5 @@ namespace nn {
       friend class AbstractKernel<Filter2D_DW>;
 
   };
-
 
 }

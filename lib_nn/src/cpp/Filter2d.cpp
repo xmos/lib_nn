@@ -69,9 +69,10 @@ Filter2D_DW::Filter2D_DW(AbstractKernel::Params * kparams,
                          MemCpyFn * memcpy_handler, 
                          AggregateFn * aggregate_handler, 
                          OutputTransformFn * ot_handler, 
-                         int8_t * scratch_mem) 
+                         int8_t * scratch_mem,
+                         int output_channels_per_group) 
     : AbstractKernel(kparams), memcpy_handler(memcpy_handler), aggregate_handler(aggregate_handler),
-      ot_handler(ot_handler), output_channels_per_group(VPU_INT8_ACC_PERIOD), scratch_mem(scratch_mem)
+      ot_handler(ot_handler), output_channels_per_group(output_channels_per_group), scratch_mem(scratch_mem)
 {
 
 }
@@ -100,3 +101,5 @@ void Filter2D_DW::calc_output_pixel_slice(int8_t * Y, int8_t * X, int32_t h, int
     
   }
 }
+
+
