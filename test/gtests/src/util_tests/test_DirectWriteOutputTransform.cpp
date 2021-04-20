@@ -9,6 +9,8 @@
 #include "OutputTransformFn.hpp"
 #include "Rand.hpp"
 
+using namespace nn;
+
 class DirectWriteOutputTransformParamsTest : public ::testing::TestWithParam<int> {};
 class DirectWriteOutputTransformTest : public ::testing::TestWithParam<int> {};
 

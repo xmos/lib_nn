@@ -4,7 +4,9 @@
 #include "xs3_vpu.h"
 #include "vpu.hpp"
 
+
 #include "../src/cpp/filt2d/geom/ImageGeometry.hpp"
+namespace nn {
 
 /**
  * Interface implemented by all output transform handlers.
@@ -41,10 +43,19 @@ struct QuantisationParams {
     std::vector<int16_t> multipliers;
 };
 
+class OutputTransformFnInt8 : public OutputTransformFn {
+  public:
+
+    static QuantisationParams quantise_activation(std::vector<double> & output_transform_multiplier, 
+      std::vector<double> & output_transform_bias, 
+      std::vector<int32_t> & accu_min,
+      std::vector<int32_t> & accu_max );
+};
+
 /**
  * 
  */
-class OT_int8 : public OutputTransformFn 
+class OT_int8 : public OutputTransformFnInt8 
 {
   public:
   
@@ -56,22 +67,38 @@ class OT_int8 : public OutputTransformFn
       int16_t * accu_modifier;//[output_slice_channel_count];
 
       Params(int32_t output_slice_channel_count, output_transform_values_t * otv, 
-        int16_t * biases, int16_t * multipliers, int16_t * accu_modifier);
+        int16_t * biases, int16_t * multipliers, int16_t * accu_modifier):
+        output_slice_channel_count(output_slice_channel_count),
+        otv(otv),
+        biases(biases),
+        multipliers(multipliers),
+        accu_modifier(accu_modifier){}
+
+
+      // void foo(
+      //   const int output_ch_count,
+      //   const int elements_per_channel,
+      //   const int8_t kernel_weights[],
+      //   const int32_t biases[],
+      //   const float effective_output_multiplier[],
+      //   const int8_t input_zero_point,
+      //   const int8_t output_zero_point,
+      //   std::vector<int8_t> & boggled_kernel_weights,
+      //   std::vector<int8_t> & boggled_biases,
+      //   std::vector<int8_t> & boggled_effective_output_multiplier,
+      //   output_transform_values_t & boggled_otv);
   };
 
+  private:
   Params * params;
   public:
     OT_int8(Params * params):params(params){};
     
-    static QuantisationParams quantise_activation(std::vector<double> & output_transform_multiplier, 
-      std::vector<double> & output_transform_bias, 
-      std::vector<int32_t> & accu_min,
-      std::vector<int32_t> & accu_max );
 
     int8_t * output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group);
 };
 
-class OTBinary_int8 : public OutputTransformFn 
+class OTBinary_int8 : public OutputTransformFnInt8 
 {
   public:
   class Params {
@@ -106,7 +133,6 @@ class OTBinary_bin : public OutputTransformFn{
 
     int8_t * output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group);
 };
-
 
 /**
  * This output transform assumes the int8_t channel data is in vR[] of the accumulator.
@@ -275,3 +301,5 @@ C_API void shift_int8_output_transform_ref(
     const vpu_ring_buffer_t* acc,
     const int16_t* right_shifts,
     const int channel_count);
+
+}

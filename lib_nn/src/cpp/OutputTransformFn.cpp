@@ -13,6 +13,8 @@
 #include "../src/asm/asm_constants.h"
 
 
+using namespace nn;
+
 static int64_t saturate_non_sym(
     const int64_t input,
     const unsigned bits)
@@ -73,8 +75,8 @@ static void get_bounds_on_Exp(int* min_Exp, int* max_Exp, std::vector<double>& v
 {
   assert(values.size() > 0);
 
-  auto min_value = *std::min_element( std::begin(values), std::end(values));
-  auto max_value = *std::max_element( std::begin(values), std::end(values));
+  int min_value = *std::min_element( std::begin(values), std::end(values));
+  int max_value = *std::max_element( std::begin(values), std::end(values));
   
   int exp_of_min, exp_of_max;
   std::frexp(min_value, &exp_of_min);
@@ -227,7 +229,7 @@ std::tuple<int, int, int> solve_for_constraint(
   int A = max_A+1;
   int M = max_M+1;
   
-  while(1){
+  while (1){
     int B = A + M; 
 
     try {
@@ -252,7 +254,7 @@ std::tuple<int, int, int> solve_for_constraint(
       //try again but with better numbers
       switch(q){
         case Multiplier: --M; mul_hr++; break;
-        case Accu: --A;  accu_hr++;break;
+        case Accu: --A; accu_hr++; break;
         case Other:
           //make a decision based on which one would lose the least data
           //this will do for now
@@ -279,18 +281,6 @@ template<class T, std::size_t S>
 static void fill_array(T (&arr)[S], T v){
   std::fill_n(arr, sizeof arr / sizeof (T), v);
 }
-
-// QuantisationParams OTBinary_int8::foo(
-//     std::vector<double> & output_transform_multiplier,
-//     std::vector<double> & output_transform_bias, 
-//     std::vector<int32_t> & accu_min,
-//     std::vector<int32_t> & accu_max,
-
-
-
-//      )
-
-
 
 void xor_popcount_to_vlmaccr1(
     std::vector<int32_t> & accu_min,
@@ -344,7 +334,7 @@ void calc_post_accumulation_clamps(
   // *clamp_far_1 = t_clamp_far_1;
 }
 
-QuantisationParams OTBinary_int8::quantise_activation(
+QuantisationParams OutputTransformFnInt8::quantise_activation(
     std::vector<double> & output_transform_multiplier,
     std::vector<double> & output_transform_bias, 
     std::vector<int32_t> & accu_min,
@@ -410,6 +400,47 @@ QuantisationParams OTBinary_int8::quantise_activation(
   
   return q;
 }
+
+// OT_int8::Params::Params(
+//   const int output_ch_count,
+//   const int elements_per_channel,
+//   const int8_t kernel_weights[],
+//   const int32_t biases[],
+//   const float effective_output_multiplier[],
+//   const int8_t input_zero_point,
+//   const int8_t output_zero_point): 
+//     output_slice_channel_count(output_ch_count)
+// {
+//   /*
+//       output_transform_values_t * otv;
+//       int16_t * biases;//[output_slice_channel_count];
+//       int16_t * multipliers;//[output_slice_channel_count];
+//       int16_t * accu_modifier;//[output_slice_channel_count];
+//   */
+
+//   std::vector<double> output_transform_multiplier(output_ch_count);
+//   std::vector<double> output_transform_bias(output_ch_count);
+//   std::vector<int32_t> accu_min(output_ch_count);
+//   std::vector<int32_t> accu_max(output_ch_count);
+
+
+//   for (int output_ch = 0; output_ch < output_ch_count; output_ch++){
+//     for(int element = 0; element < elements_per_channel; element++){
+//       int32_t v = (int32_t)kernel_weights[element + output_ch * elements_per_channel];
+//       accu_min[output_ch] += v * (v > 0 ? INT8_MIN:INT8_MAX);
+//       accu_max[output_ch] += v * (v > 0 ? INT8_MAX:INT8_MIN);
+//     }
+//     output_transform_multiplier[output_ch] = effective_output_multiplier[output_ch];
+
+//     output_transform_bias[output_ch] = biases[output_ch] + (double)input_zero_point * elements_per_channel - output_zero_point;
+//   }
+
+//   QuantisationParams qp = quantise_activation( output_transform_multiplier, output_transform_bias, accu_min, accu_max );
+
+//   output_transform_values_t o;
+  
+//   // biases
+// }
 
 OTBinary_int8::Params::Params(int32_t output_slice_channel_count, output_transform_values_t * otv, 
   int16_t * biases, int16_t * multipliers, int16_t * accu_modifier):

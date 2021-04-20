@@ -38,11 +38,11 @@ namespace nn {
     public:
     class Params {
       public:
-      int8_t * weights;
-      int32_t output_slice_channel_count;
-      size_t bytes_per_kernel_channel;
+      const int8_t * weights;
+      const int32_t output_slice_channel_count;
+      const size_t bytes_per_kernel_channel;
 
-      Params(int output_slice_channel_count, size_t bytes_per_kernel_channel, int8_t * weights);
+      Params(const int output_slice_channel_count, const size_t bytes_per_kernel_channel, const int8_t * weights);
 
     };
     Params *params;
@@ -86,7 +86,7 @@ namespace nn {
     class Params {
       public:
 
-      int8_t * weights;
+      const int8_t * weights;
 
       int32_t bytes_per_kernel_channel;
 
@@ -97,7 +97,7 @@ namespace nn {
       int32_t inner_x_h_step;
       int32_t inner_x_v_step;
 
-      Params(ImageGeometry &X, WindowGeometry &K, int input_ch_per_output, int8_t * weights);  
+      Params(const ImageGeometry &X, const WindowGeometry &K, const int input_ch_per_output, const int8_t * weights);  
     };
 
     private:
@@ -111,11 +111,6 @@ namespace nn {
       void aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
 
   };
-
-
-
-
-
 
   /**
    * Aggregator for performing maxpool on a contiguous sequence of 32-channel pixels.

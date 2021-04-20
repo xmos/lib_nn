@@ -121,7 +121,7 @@ int MatMulInt8::get_kernel_size(int input_bytes, int output_channel_count) {
   return kernel_bytes;
 }
 
-MatMulInt8::Params::Params(int output_slice_channel_count, size_t bytes_per_kernel_channel, int8_t * weights): 
+MatMulInt8::Params::Params(const int output_slice_channel_count, const size_t bytes_per_kernel_channel, const int8_t * weights): 
   weights(weights),
   output_slice_channel_count(output_slice_channel_count),
   bytes_per_kernel_channel(bytes_per_kernel_channel)
@@ -141,7 +141,7 @@ void MatMulInt8::mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output
   
   int32_t cur_output_channels_in_scope = std::min(params->output_slice_channel_count - output_channel_group * vpu_epv, vpu_epv);
 
-  int8_t * K_p = params->weights + params->bytes_per_kernel_channel * vpu_epv * output_channel_group;//changes
+  int8_t * K_p = (int8_t *)params->weights + params->bytes_per_kernel_channel * vpu_epv * output_channel_group;//changes
 
   assert(cur_output_channels_in_scope > 0);
 
@@ -192,7 +192,7 @@ void MatMulInt8::mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output
   VSTD(vpu, &A->vR);
 }
 
-MatMulDirectFn::Params::Params(ImageGeometry &X, WindowGeometry &K, int input_ch_per_output, int8_t * weights): 
+MatMulDirectFn::Params::Params(const ImageGeometry &X, const WindowGeometry &K, const int input_ch_per_output, const int8_t * weights): 
   weights(weights)
 {
 
@@ -224,7 +224,7 @@ void MatMulDirectFn::mat_mul_direct_impl(vpu_ring_buffer_t * A , int8_t * X, int
 
   int8_t * X_cur_p = X;
 
-  int8_t * K_p = params->weights + params->bytes_per_kernel_channel * VPU_INT16_EPV * output_channel_group;
+  int8_t * K_p = (int8_t *)params->weights + params->bytes_per_kernel_channel * VPU_INT16_EPV * output_channel_group;
   for (int kh =  params->k_height_loop_counter; kh >= 0 ; kh-- )  {
     for (int kw = params->k_width_loop_counter; kw >= 0 ; kw-- )  {
 

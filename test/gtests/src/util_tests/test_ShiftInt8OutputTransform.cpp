@@ -13,6 +13,7 @@
 
 #include "VpuHelpers.hpp"
 
+using namespace nn;
 
 class ShiftInt8OutputTransformParamsTest : public ::testing::TestWithParam<int> {};
 class ShiftInt8OutputTransformTest : public ::testing::TestWithParam<int> {};
