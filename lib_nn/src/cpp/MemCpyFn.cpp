@@ -8,11 +8,55 @@
 
 using namespace nn;
 
+DerefInputFn::Params::Params(const int32_t bytes_per_h_line,
+                             const int32_t bytes_per_pixel)
+    : bytes_per_h_line(bytes_per_h_line), bytes_per_pixel(bytes_per_pixel)
+{
+
+}
+
+DerefInputFn::Params::Params(const ImageGeometry& input, const WindowGeometry& window)
+    : bytes_per_h_line(input.rowBytes() * window.stride.row), 
+      bytes_per_pixel(input.pixelBytes() * window.stride.col)
+{
+
+}
+
+DerefInputFn::Params::Params(const Filter2dGeometry& filter)
+    : Params(filter.input, filter.window)
+{
+
+}
+
+DerefInputFn::Params::Params(std::istream& stream)
+{
+#define READ_MEMBER(MEMBER)   stream.read(reinterpret_cast<char*>(&this->MEMBER), sizeof(this->MEMBER) )
+
+  READ_MEMBER(bytes_per_h_line);
+  READ_MEMBER(bytes_per_pixel);
+
+#undef READ_MEMBER
+}
+
+
+void DerefInputFn::Params::Serialize(std::ostream& stream) const
+{
+#define WRITE_MEMBER(MEMBER)    stream.write(reinterpret_cast<const char*>(&this->MEMBER), sizeof(this->MEMBER) )
+
+  WRITE_MEMBER(bytes_per_h_line);
+  WRITE_MEMBER(bytes_per_pixel);
+
+#undef WRITE_MEMBER
+}
+
 size_t DerefInputFn::get_scratch_bytes(){ return 0;}
 size_t DerefInputFn::get_overread_bytes(){ return 0;}
 
-int8_t * DerefInputFn::memcopy_fn(int8_t * T, int8_t * X, 
-  int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
+int8_t * DerefInputFn::memcopy_fn(int8_t * T, 
+                                  int8_t * X, 
+                                  int32_t output_v_coord, 
+                                  int32_t output_h_coord, 
+                                  int32_t output_c_coord){
 
   return X + (int)(output_v_coord * params->bytes_per_h_line + 
     output_h_coord * params->bytes_per_pixel + output_c_coord);
@@ -26,7 +70,11 @@ size_t ImToColPadded::get_overread_bytes(){
   return XS3_VPU_VREG_WIDTH_BYTES; //TODO this will be defined by the implementation of memcpy
 }
 
-ImToColPadded::Params::Params(ImageGeometry &X, WindowGeometry &K, padding_t &padding, int input_ch_per_output, int8_t pad_val){
+ImToColPadded::Params::Params(const ImageGeometry &X, 
+                              const WindowGeometry &K, 
+                              const padding_t &padding, 
+                              const int input_ch_per_output, 
+                              const int8_t pad_val){
 
   kernel_height = K.shape.height;
   kernel_width = K.shape.width;
@@ -52,6 +100,50 @@ ImToColPadded::Params::Params(ImageGeometry &X, WindowGeometry &K, padding_t &pa
   // bytes_per_copy_per_channel = (input_ch_per_output *  X.bits_per_element) / CHAR_BIT; 
   bytes_per_copy_per_channel = (input_ch_per_output *  CHAR_BIT) / CHAR_BIT; 
   
+}
+
+ImToColPadded::Params::Params(std::istream& stream)
+{
+#define READ_MEMBER(MEMBER)   stream.read(reinterpret_cast<char*>(&this->MEMBER), sizeof(this->MEMBER) )
+
+  READ_MEMBER(kernel_height);
+  READ_MEMBER(kernel_width);
+  READ_MEMBER(vertical_stride);
+  READ_MEMBER(horizontal_stride);
+  READ_MEMBER(vertical_dilation);
+  READ_MEMBER(horizontal_dilation);
+  READ_MEMBER(padding);
+  READ_MEMBER(input_v_length);
+  READ_MEMBER(input_h_length);
+  READ_MEMBER(padding_val);
+  READ_MEMBER(bytes_per_h_line);
+  READ_MEMBER(bytes_per_pixel);
+  READ_MEMBER(horizontal_mem_stride);
+  READ_MEMBER(bytes_per_copy_per_channel);
+
+#undef READ_MEMBER
+}
+
+void ImToColPadded::Params::Serialize(std::ostream& stream) const
+{
+#define WRITE_MEMBER(MEMBER)    stream.write(reinterpret_cast<const char*>(&this->MEMBER), sizeof(this->MEMBER) )
+
+  WRITE_MEMBER(kernel_height);
+  WRITE_MEMBER(kernel_width);
+  WRITE_MEMBER(vertical_stride);
+  WRITE_MEMBER(horizontal_stride);
+  WRITE_MEMBER(vertical_dilation);
+  WRITE_MEMBER(horizontal_dilation);
+  WRITE_MEMBER(padding);
+  WRITE_MEMBER(input_v_length);
+  WRITE_MEMBER(input_h_length);
+  WRITE_MEMBER(padding_val);
+  WRITE_MEMBER(bytes_per_h_line);
+  WRITE_MEMBER(bytes_per_pixel);
+  WRITE_MEMBER(horizontal_mem_stride);
+  WRITE_MEMBER(bytes_per_copy_per_channel);
+
+#undef WRITE_MEMBER
 }
 
 int8_t * ImToColPadded::memcopy_fn(int8_t * T, int8_t * X, 

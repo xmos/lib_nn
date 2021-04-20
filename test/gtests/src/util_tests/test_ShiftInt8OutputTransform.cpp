@@ -25,10 +25,11 @@ TEST_P(ShiftInt8OutputTransformParamsTest, ConstructorA)
   auto rand = nn::test::Rand(img_channels * 34563);
 
   for(int k = 0; k < 10; k++){
-    int16_t* shifts_address = reinterpret_cast<int16_t*>( rand.rand<uint32_t>() );
-    auto params = ShiftInt8OutputTransform::Params(img_channels, shifts_address);
+    int16_t shift = rand.rand<int16_t>();
+    auto params = ShiftInt8OutputTransform::Params(img_channels, shift);
     ASSERT_EQ(img_channels, params.output_img_channels);
-    ASSERT_EQ(shifts_address, params.shifts);
+    for(int i = 0; i < VPU_INT8_ACC_PERIOD; i++)
+      ASSERT_EQ(shift, params.shifts[i]);
   }
 
 }
@@ -38,33 +39,18 @@ TEST_P(ShiftInt8OutputTransformParamsTest, ConstructorB)
   const int img_channels = GetParam();
   auto rand = nn::test::Rand(img_channels * 43);
 
-  for(int i = 0; i < 10; i++){
-    auto geom = nn::ImageGeometry(rand.rand(1, 100), rand.rand(1, 100), img_channels);
-    int16_t* shifts_address = reinterpret_cast<int16_t*>( rand.rand<uint32_t>() );
-    auto params = ShiftInt8OutputTransform::Params(geom, shifts_address);
-    ASSERT_EQ(img_channels, params.output_img_channels) << "nn::ImageGeometry: " << geom;
-    ASSERT_EQ(shifts_address, params.shifts);
-  }
-}
-
-TEST_P(ShiftInt8OutputTransformParamsTest, ConstructorC)
-{
-  int32_t img_channels = GetParam();
-  auto rand = nn::test::Rand(img_channels * 443);
-
-  auto stream = std::stringstream();
-
   for(int k = 0; k < 10; k++){
-    stream.write(reinterpret_cast<char*>(&img_channels), sizeof(img_channels));
-    int16_t* shifts_address = reinterpret_cast<int16_t*>( rand.rand<uint32_t>() );
-    auto params = ShiftInt8OutputTransform::Params(stream, shifts_address);
-    ASSERT_EQ(img_channels, params.output_img_channels);
-    ASSERT_EQ(shifts_address, params.shifts);
+    auto geom = nn::ImageGeometry(rand.rand(1, 100), rand.rand(1, 100), img_channels);
+    int16_t shift = rand.rand<int16_t>();
+    auto params = ShiftInt8OutputTransform::Params(geom, shift);
+    ASSERT_EQ(img_channels, params.output_img_channels) << "nn::ImageGeometry: " << geom;
+    for(int i = 0; i < VPU_INT8_ACC_PERIOD; i++)
+      ASSERT_EQ(shift, params.shifts[i]);
   }
 }
 
 
-TEST_P(ShiftInt8OutputTransformParamsTest, Serialize)
+TEST_P(ShiftInt8OutputTransformParamsTest, Serialization)
 {
   /// @TODO: astew: This doesn't currently make any considerations for endianness.
 
@@ -74,12 +60,15 @@ TEST_P(ShiftInt8OutputTransformParamsTest, Serialize)
   auto stream = std::stringstream();
 
   for(int k = 0; k < 10; k++){
-    int16_t* shifts_address = reinterpret_cast<int16_t*>( rand.rand<uint32_t>() );
-    auto params = ShiftInt8OutputTransform::Params(img_channels, shifts_address);
+    int16_t shift = rand.rand<int16_t>(0, 20);
+    auto params = ShiftInt8OutputTransform::Params(img_channels, shift);
     params.Serialize(stream);
-    int32_t v;
-    stream.read(reinterpret_cast<char*>(&v), sizeof(v));
-    ASSERT_EQ(img_channels, v);
+
+    params = ShiftInt8OutputTransform::Params(stream);
+    ASSERT_EQ(img_channels, params.output_img_channels);
+    
+    for(int i = 0; i < VPU_INT8_ACC_PERIOD; i++)
+      ASSERT_EQ(shift, params.shifts[i]);
   }
 }
 
@@ -90,15 +79,16 @@ TEST_P(ShiftInt8OutputTransformParamsTest, Serialize)
 TEST_P(ShiftInt8OutputTransformTest, ConstructorA)
 {
   auto rand = nn::test::Rand(GetParam() * 5656);
-  int16_t* shifts_address = reinterpret_cast<int16_t*>( rand.rand<uint32_t>() );
+  int16_t shift = rand.rand<int16_t>();
 
-  auto params = ShiftInt8OutputTransform::Params(GetParam(), shifts_address);
+  auto params = ShiftInt8OutputTransform::Params(GetParam(), shift);
 
   auto ot = ShiftInt8OutputTransform(&params);
 
   ASSERT_EQ(ot.params->output_img_channels, GetParam());
-  ASSERT_EQ(ot.params->shifts, shifts_address);
   ASSERT_EQ(ot.params, &params);
+  for(int i = 0; i < VPU_INT8_ACC_PERIOD; i++)
+    ASSERT_EQ(shift, params.shifts[i]);
 }
 
 
@@ -106,13 +96,9 @@ TEST_P(ShiftInt8OutputTransformTest, output_transform_fn)
 {
   auto rand = nn::test::Rand(GetParam() * 6422);
 
-  auto shifts = std::vector<int16_t>(GetParam());
+  auto shift = rand.rand<int16_t>(0, 10);
 
-  for(int k = 0; k < shifts.size(); k++){
-    shifts[k] = rand.rand<int16_t>(0, 10);
-  }
-
-  auto params = ShiftInt8OutputTransform::Params(GetParam(), &shifts[0]);
+  auto params = ShiftInt8OutputTransform::Params(GetParam(), shift);
   auto ot = ShiftInt8OutputTransform(&params);
 
   auto out = std::vector<int8_t>( ShiftInt8OutputTransform::ChannelsPerOutputGroup + 32);
@@ -141,19 +127,17 @@ TEST_P(ShiftInt8OutputTransformTest, output_transform_fn)
     // Fill accumulator with random data
     for(int i = 0; i < VPU_INT16_ACC_PERIOD; i++){
 
-      const int16_t chan_shift = shifts[first_chan+i];
-
       // Easiest if we work backwards. Choose the value we'd like to end up with. We'll actually go a little
       // beyond the int8 range so that we can test saturation, too
       const int res = rand.rand<int>(INT8_MIN - 5, INT8_MAX + 5);
 
       // Now left-shift to figure out what the accumulator should have been
-      acc32[i] = res << chan_shift;
+      acc32[i] = res << shift;
 
       // To test the rounding behavior we'll also give it a nudge
-      if(shifts[first_chan+i] > 0){
-        int32_t max_nudge = (1 << (chan_shift-1))-1;
-        int32_t min_nudge = -(1 << (chan_shift-1));
+      if(shift > 0){
+        int32_t max_nudge = (1 << (shift-1))-1;
+        int32_t min_nudge = -(1 << (shift-1));
         
         acc32[i] = acc32[i] + (rand.rand<bool>()? max_nudge : min_nudge);
       }
@@ -198,7 +182,7 @@ TEST_P(ShiftInt8OutputTransformTest, output_transform_fn)
           << "\t(32-bit accumulator value prior to shift)\n"
         << "  acc.vD[" << i << "] = 0x" << std::hex << uint16_t(acc.vD[i]) << std::dec << " (" << acc.vD[i] << ")\n"
         << "  acc.vR[" << i << "] = 0x" << std::hex << uint16_t(acc.vR[i]) << std::dec << " (" << acc.vR[i] << ")\n"
-        << "  shifts[first_chan+i] = shifts[" << (first_chan+i) << "] = " << shifts[first_chan+i] << "\n";
+        << "  shifts[first_chan+i] = shifts[" << (first_chan+i) << "] = " << shift << "\n";
 
 #undef EXTRA_OUT
   }
@@ -231,9 +215,12 @@ TEST(shift_int8_output_transform_ref,shift_int8_output_transform_ref)
       std::memset(&out[0], 0, sizeof(int8_t) * out.size());
       vpu_ring_buffer_t acc;
 
+      auto shift = rand.rand<int16_t>(0, 10);
+
       for(int i = 0; i < VPU_INT16_ACC_PERIOD; i++){
         const int res = rand.rand<int>(INT8_MIN - 5, INT8_MAX + 5);
-        shifts[i] = rand.rand<int16_t>(0, 10);
+
+        shifts[i] = shift;
         acc32[i] = res << shifts[i];
         if(shifts[i] > 0){
           int32_t max_nudge = (1 << (shifts[i]-1))-1;

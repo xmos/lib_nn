@@ -196,6 +196,7 @@ class DirectWriteOutputTransform : public OutputTransformFn
 };
 
 
+
 /**
  * This output transform applies a per-channel, rounding, saturating right-shift to the 32-bit
  * accumulators to get 8-bit results.
@@ -225,24 +226,26 @@ class ShiftInt8OutputTransform : public OutputTransformFn
       /**
        * The per-output-channel arithmetic right-shifts to be applied to the accumulators.
        */
-      const int16_t* shifts;
+      int16_t shifts[VPU_INT8_ACC_PERIOD];
 
       /**
        * Create a ShiftInt8OutputTransform::Params
        */
-      Params(const int image_channels, const int16_t* shifts);
+      Params(const int output_image_channels, 
+             const int16_t shift);
 
       /**
        * Create a ShiftInt8OutputTransform::Params
        */
-      Params(const nn::ImageGeometry& output_image, const int16_t* shifts);
+      Params(const nn::ImageGeometry& output_image, 
+             const int16_t shift);
 
       /**
        * Deseriaized a ShiftInt8OutputTransform::Params from a byte stream.
        * 
        * The data in the stream should come from a prior call to ShiftInt8OutputTransform::Params::Serialize().
        */
-      Params(std::istream& stream, const int16_t* shifts);
+      Params(std::istream& stream);
 
       /**
        * Serialize this ShiftInt8OutputTransform::Params into a byte stream.
@@ -251,7 +254,7 @@ class ShiftInt8OutputTransform : public OutputTransformFn
        */
       void Serialize(std::ostream& stream) const;
     };
-
+    
     /**
      * Parameters required by this output transform handler.
      */

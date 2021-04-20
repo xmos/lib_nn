@@ -511,7 +511,7 @@ namespace nn
    * xcore implementation of avgpool_patch_ref()
    */
   C_API
-  void avgpool_patch_asm(
+  void avgpool_patch_xcore(
       vpu_ring_buffer_t *A,
       const int8_t patch[],
       const avgpool_patch_params *params);
@@ -520,7 +520,7 @@ namespace nn
    * xcore implementation of avgpool_direct_valid_ref()
    */
   C_API
-  void avgpool_direct_valid_asm(
+  void avgpool_direct_valid_xcore(
       vpu_ring_buffer_t *acc,
       const int8_t X[],
       const avgpool_direct_valid_params *params);

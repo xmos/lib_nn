@@ -1,8 +1,7 @@
 #include <cstdint>
 #include <cstring>
 
-#include "../src/cpp/filt2d/geom/ImageGeometry.hpp"
-#include "../src/cpp/filt2d/geom/WindowGeometry.hpp"
+#include "../src/cpp/filt2d/geom/Filter2dGeometry.hpp"
 
 namespace nn
 {
@@ -60,16 +59,23 @@ namespace nn
   {
 
   public:
+  public:
     class Params
     {
+
     public:
       int32_t bytes_per_h_line;
       int32_t bytes_per_pixel;
-      Params(ImageGeometry &X, WindowGeometry &K)
-      {
-        bytes_per_h_line = X.rowBytes() * K.stride.row;
-        bytes_per_pixel = X.pixelBytes() * K.stride.col;
-      }
+
+      Params(int32_t bytes_per_h_line, int32_t bytes_per_pixel);
+
+      Params(const ImageGeometry &X, const WindowGeometry &K);
+
+      Params(const Filter2dGeometry &filter_geometry);
+
+      Params(std::istream &stream);
+
+      void Serialize(std::ostream &stream) const;
     };
 
     Params *params;
@@ -114,7 +120,15 @@ namespace nn
       int32_t bytes_per_copy_per_channel;
 
     public:
-      Params(ImageGeometry &X, WindowGeometry &K, padding_t &padding, int input_ch_per_output, int8_t pad_val);
+      Params(const ImageGeometry &X,
+             const WindowGeometry &K,
+             const padding_t &padding,
+             const int input_ch_per_output,
+             const int8_t pad_val);
+
+      Params(std::istream &stream);
+
+      void Serialize(std::ostream &stream) const;
     };
 
     Params *params;
