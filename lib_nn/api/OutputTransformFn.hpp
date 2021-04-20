@@ -24,21 +24,24 @@ class OutputTransformFn {
 /**
  * these are in a protected order(internally)
  */
-typedef struct output_transform_values_t {
-    int16_t clamp_near[VPU_INT16_EPV];
-    int16_t clamp_far_0[VPU_INT16_EPV];
-    int16_t clamp_far_1[VPU_INT16_EPV];
+struct OutputTransformValues {
     int16_t bias_multipler[VPU_INT16_EPV];
     int16_t final_shr[VPU_INT16_EPV];
     int16_t accu_shr[VPU_INT16_EPV]; //for the vlsat
     int32_t accu_shl;                //for the vlashr
-} output_transform_values_t;
+};
+
+struct OutputTransformValuesClamping : OutputTransformValues{
+    int16_t clamp_near[VPU_INT16_EPV];
+    int16_t clamp_far_0[VPU_INT16_EPV];
+    int16_t clamp_far_1[VPU_INT16_EPV];
+};
 
 /**
  * 
  */
 struct QuantisationParams {
-    output_transform_values_t otv;
+    OutputTransformValues otv;
     std::vector<int16_t> biases; 
     std::vector<int16_t> multipliers;
 };
@@ -61,12 +64,12 @@ class OT_int8 : public OutputTransformFnInt8
   
   struct Params {
       int32_t output_slice_channel_count; //TODO push into base class
-      output_transform_values_t * otv;
+      OutputTransformValues * otv;
       int16_t * biases;//[output_slice_channel_count];
       int16_t * multipliers;//[output_slice_channel_count];
       int16_t * accu_modifier;//[output_slice_channel_count];
 
-      Params(int32_t output_slice_channel_count, output_transform_values_t * otv, 
+      Params(int32_t output_slice_channel_count, OutputTransformValues * otv, 
         int16_t * biases, int16_t * multipliers, int16_t * accu_modifier):
         output_slice_channel_count(output_slice_channel_count),
         otv(otv),
@@ -74,19 +77,6 @@ class OT_int8 : public OutputTransformFnInt8
         multipliers(multipliers),
         accu_modifier(accu_modifier){}
 
-
-      // void foo(
-      //   const int output_ch_count,
-      //   const int elements_per_channel,
-      //   const int8_t kernel_weights[],
-      //   const int32_t biases[],
-      //   const float effective_output_multiplier[],
-      //   const int8_t input_zero_point,
-      //   const int8_t output_zero_point,
-      //   std::vector<int8_t> & boggled_kernel_weights,
-      //   std::vector<int8_t> & boggled_biases,
-      //   std::vector<int8_t> & boggled_effective_output_multiplier,
-      //   output_transform_values_t & boggled_otv);
   };
 
   private:
@@ -104,12 +94,12 @@ class OTBinary_int8 : public OutputTransformFnInt8
   class Params {
     public:
       int32_t output_slice_channel_count; //TODO push into base class
-      output_transform_values_t * otv;
+      OutputTransformValuesClamping * otv;
       int16_t * biases;//[output_slice_channel_count];
       int16_t * multipliers;//[output_slice_channel_count];
       int16_t * accu_modifier;//[output_slice_channel_count];
 
-      Params(int32_t output_slice_channel_count, output_transform_values_t * otv, 
+      Params(int32_t output_slice_channel_count, OutputTransformValuesClamping * otv, 
         int16_t * biases, int16_t * multipliers, int16_t * accu_modifier);
   };
 

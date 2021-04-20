@@ -184,7 +184,7 @@ namespace nn {
     public:
       static constexpr bool UsesPerGroupMemCopy = false;
 
-    private:
+    protected:
 
       /**
        * The patch handler used by this class. This determines how (and whether) a region of the input image is 

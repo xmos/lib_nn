@@ -55,7 +55,7 @@ static int clrsb(int x){
 
 static int clrsbll(long long x){
 #if __has_builtin(__builtin_clrsbll)
-  __builtin_clrsbll(x);
+  return __builtin_clrsbll(x);
 #else
   for (unsigned i=0;i<64;i++){
     int y = (x<<i)>>i;
@@ -393,12 +393,80 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
   }
 
   //TODO put this else where
-  int16_t no_clamp = 0;
-  fill_array(q.otv.clamp_near, no_clamp);
-  fill_array(q.otv.clamp_far_0, no_clamp);
-  fill_array(q.otv.clamp_far_1, no_clamp);
+  // int16_t no_clamp = 0;
+  // fill_array(q.otv.clamp_near, no_clamp);
+  // fill_array(q.otv.clamp_far_0, no_clamp);
+  // fill_array(q.otv.clamp_far_1, no_clamp);
   
   return q;
+}
+
+int8_t * OT_int8::output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group)
+{
+
+  xs3_vpu vpu_mem;
+  xs3_vpu * vpu = &vpu_mem;
+
+  int16_t* cur_post_activation_bias = params->biases + output_channel_group * VPU_INT16_EPV;
+  int16_t* cur_accu_modifier = params->accu_modifier + output_channel_group * VPU_INT16_EPV;
+  int16_t* cur_post_activation_mul = params->multipliers + output_channel_group * VPU_INT16_EPV;
+
+  VSETC(vpu, MODE_S16);//check this
+
+  VLDR(vpu, &A->vD);
+  VLDD(vpu, &A->vR);
+
+  // vpu_sim_print(vpu);
+
+  vpu_vector_t temp_mem;
+  memset(&temp_mem, 0, sizeof(temp_mem));
+
+  //Reduce the accumulator to 16 bits
+  VLSAT(vpu, params->otv->accu_shr);
+  VSTR(vpu, &temp_mem);
+  VLASHR(vpu, &temp_mem, params->otv->accu_shl);
+
+  // printf("a\n");
+  // vpu_sim_print(vpu);
+
+  //Subtract the channel overlap
+  VLADD(vpu, cur_accu_modifier);
+  
+  //Save the 16 bit accumulator, A, to scratch
+  VSTR(vpu, &temp_mem);
+
+  //Clear the ring buffer
+  VCLRDR(vpu);
+
+  //Multiply the channel-wise bias by the bias multiplier to make it 32 bit per channel
+  VLDC(vpu, cur_post_activation_bias);
+  VLMACC(vpu, params->otv->bias_multipler);
+
+  // printf("b\n");
+  // vpu_sim_print(vpu);
+
+  //Multiply A by the post_activation_mul and accumulate it to the bias
+  VLDC(vpu, &temp_mem);
+  VLMACC(vpu, cur_post_activation_mul);
+  // printf("c\n");
+  // vpu_sim_print(vpu);
+
+  //Reduce the accumulator to 16 bits
+  VLSAT(vpu, params->otv->final_shr);
+
+  // printf("d\n");
+  // vpu_sim_print(vpu);
+  VDEPTH8_FIXED(vpu);
+  
+  //we need to know how many we are processing
+  int output_count = std::min(params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV, (int)VPU_INT16_EPV);
+  
+  int mask = (1<<output_count)-1;
+
+  VSTRPV(vpu, Y, mask);
+  Y += output_count;
+
+  return Y;
 }
 
 // OT_int8::Params::Params(
@@ -442,7 +510,7 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
 //   // biases
 // }
 
-OTBinary_int8::Params::Params(int32_t output_slice_channel_count, output_transform_values_t * otv, 
+OTBinary_int8::Params::Params(int32_t output_slice_channel_count, OutputTransformValuesClamping * otv, 
   int16_t * biases, int16_t * multipliers, int16_t * accu_modifier):
   output_slice_channel_count(output_slice_channel_count), 
   otv(otv),
