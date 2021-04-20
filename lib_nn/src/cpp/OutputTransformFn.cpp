@@ -580,13 +580,13 @@ int8_t * DirectWriteOutputTransform::output_transform_fn(int8_t * Y,
   const int32_t count = std::min<int32_t>(DirectWriteOutputTransform::ChannelsPerOutputGroup, 
                                     this->params->output_img_channels - first_channel);
 
-#ifdef NN_USE_REF
+// #ifdef NN_USE_REF
   std::memcpy(Y, &acc->vR[0], count);
-#else
-  volatile asm("mkmsk %0, %0" : "=r"(count));
-  volatile asm("vldr %0[0]" : "r"(%acc->vR[0]));
-  volatile asm("vstrpv %0[0], %1" : "r"(Y, count));
-#endif // NN_USE_REF
+// #else
+//   volatile asm("mkmsk %0, %0" : "=r"(count));
+//   volatile asm("vldr %0[0]" : "r"(%acc->vR[0]));
+//   volatile asm("vstrpv %0[0], %1" : "r"(Y, count));
+// #endif // NN_USE_REF
 
 return &Y[count];
 }
@@ -598,25 +598,41 @@ return &Y[count];
 constexpr int ShiftInt8OutputTransform::ChannelsPerOutputGroup;
 
 ////////// ShiftInt8OutputTransform::Params //////////////
-ShiftInt8OutputTransform::Params::Params(const int image_channels, const int16_t* shifts) 
-    : output_img_channels(image_channels), shifts(shifts)
+ShiftInt8OutputTransform::Params::Params(const int image_channels, 
+                                         const int16_t shift) 
+    : output_img_channels(image_channels)
 {
+  for(int k = 0; k < VPU_INT8_ACC_PERIOD; ++k)
+    shifts[k] = shift;
 }
 
-ShiftInt8OutputTransform::Params::Params(const nn::ImageGeometry& output_image, const int16_t* shifts) 
-    : output_img_channels(output_image.depth), shifts(shifts)
+ShiftInt8OutputTransform::Params::Params(const nn::ImageGeometry& output_image, 
+                                         const int16_t shift) 
+    : output_img_channels(output_image.depth)
 {
+  for(int k = 0; k < VPU_INT8_ACC_PERIOD; ++k)
+    shifts[k] = shift;
 }
 
-ShiftInt8OutputTransform::Params::Params(std::istream& stream, const int16_t* shifts)
-    : shifts(shifts)
+ShiftInt8OutputTransform::Params::Params(std::istream& stream)
 {
-  stream.read(reinterpret_cast<char*>(&this->output_img_channels), sizeof(int32_t));
+  int16_t shift;
+#define READ(X)   stream.read(reinterpret_cast<char*>(&X), sizeof(X))
+  READ(this->output_img_channels);
+  READ(shift);
+#undef READ
+
+  for(int k = 0; k < VPU_INT8_ACC_PERIOD; ++k)
+    shifts[k] = shift;
 }
 
 void ShiftInt8OutputTransform::Params::Serialize(std::ostream& stream) const
 {
-  stream.write(reinterpret_cast<const char*>(&this->output_img_channels), sizeof(this->output_img_channels));
+  auto shift = this->shifts[0];
+#define WRITE(X)  stream.write(reinterpret_cast<const char*>(&X), sizeof(X));
+  WRITE(this->output_img_channels);
+  WRITE(shift);
+#undef WRITE
 }
 
 
@@ -666,13 +682,13 @@ int8_t * ShiftInt8OutputTransform::output_transform_fn(int8_t * Y,
   const int32_t count = std::min<int32_t>(ShiftInt8OutputTransform::ChannelsPerOutputGroup, 
                                     this->params->output_img_channels - first_channel);
 
-  const int16_t* shifts = &this->params->shifts[first_channel];
+  // const int16_t* shifts = &this->params->shifts[first_channel];
 
 #ifdef NN_USE_REF
-  shift_int8_output_transform_ref(Y, acc, shifts, count);
+  shift_int8_output_transform_ref(Y, acc, this->params->shifts, count);
 #else
-  shift_int8_output_transform_asm(Y, acc, shifts, count);
+  shift_int8_output_transform_xcore(Y, acc, this->params->shifts, count);
 #endif // NN_USE_REF
 
-return &Y[count];
+  return &Y[count];
 }

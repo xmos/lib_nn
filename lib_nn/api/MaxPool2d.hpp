@@ -29,11 +29,11 @@ namespace nn {
 
     public:
 
-      MaxPool2d_Generic( Params* params,
-                         ImToColPadded* memcopy,
-                         MaxPoolPatchFn* agg,
-                         DirectWriteOutputTransform* ot,
-                         int8_t* scratch_mem);
+      MaxPool2d_Generic(AbstractKernel::Params* params,
+                        ImToColPadded* memcopy,
+                        MaxPoolPatchFn* agg,
+                        DirectWriteOutputTransform* ot,
+                        int8_t* scratch_mem);
   };
 
   /**
@@ -55,11 +55,10 @@ namespace nn {
 
     public:
 
-      static MaxPool2d_Valid Make(const Params* params,
-                                  int8_t* scratch_mem);
-
-      MaxPool2d_Valid(const Params* params,
-                      int8_t* scratch_mem);
+      MaxPool2d_Valid(AbstractKernel::Params* params,
+                      DerefInputFn* memcopy_handler,
+                      MaxPoolDirectValidFn* aggregate_handler,
+                      DirectWriteOutputTransform* ot_handler);
   };
 
 }
