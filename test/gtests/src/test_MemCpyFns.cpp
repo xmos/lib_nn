@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "Rand.hpp"
-#include "Filter2D.hpp"
+#include "MemCpyFn.hpp"
 
 namespace nn
 {

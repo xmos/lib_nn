@@ -4,7 +4,7 @@
 #include <list>
 
 #include "Rand.hpp"
-#include "Filter2D.hpp"
+#include "AggregateFn.hpp"
 
 namespace nn
 {

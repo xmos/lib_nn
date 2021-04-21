@@ -2,7 +2,7 @@
 
 #include <cmath>
 #include "Rand.hpp"
-#include "Filter2D.hpp"
+#include "OutputTransformFn.hpp"
 
 namespace nn
 {
