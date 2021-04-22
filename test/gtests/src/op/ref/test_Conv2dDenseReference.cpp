@@ -6,7 +6,7 @@
 #include "RefOps.hpp"
 #include "Rand.hpp"
 #include "ref_tests.hpp"
-
+#include "Filter2D.hpp"
 #include "gtest/gtest.h"
 
 #include <cstdint>
@@ -16,11 +16,11 @@
 #include <iostream>
 #include <cassert>
 
-
+using namespace nn;
 using namespace nn::test;
 
 // static auto rng = Rand(64563);
-
+#if 0
 class Conv2dDenseReferenceRegression : public ::testing::TestWithParam<Filter2dGeometry> {};
 
 TEST_P(Conv2dDenseReferenceRegression, NoPadding)
@@ -70,10 +70,35 @@ TEST_P(Conv2dDenseReferenceRegression, NoPadding)
   auto output = nn::test::ops::ref::Conv2dDenseReference(geom, &input[0], &weights[0], &bias[0], &eff_mult[0],
                                                          input_zero, output_zero);
 
-  // auto output = nn::test::ops::ref::Conv2dDenseImpl(geom, &input[0], &weights[0], &bias[0], &eff_mult[0],
-  //                                                        input_zero, output_zero);
+                   
+  ImageGeometry &X = geom.input;
+
+  WindowGeometry &K = geom.window;
+  int input_ch_per_output = 1;
+
+  
+  int8_t pad_val = 0x55;
+  padding_t padding = {(int16_t)1, (int16_t)1, (int16_t)1, (int16_t)1}; 
+
+  ImToColPadded::Params im2col_params(X, K, padding, input_ch_per_output, pad_val);
+  ImToColPadded im2col(&im2col_params);
+
+  // nn::Conv2dPaddedInDirect conv2d(&p, &i, &mm, &o);
+
+  int output_channel_count = geom.output.depth;
+
+  int input_bytes = X.pixelBytes();
+
+  std::array<int, 4> shape = {output_channel_count, K.shape.height, K.shape.width, input_bytes};
+
+  Conv2dReorderedWeights rw = 
+    MatMulInt8::reorder_kernel_weights( (int8_t* )&weights[0], shape, 8, pad_val) ;
+        
+  MatMulInt8::Params p(output_channel_count, input_bytes, rw.weights.data());
+  MatMulInt8 mm(&p);
 
 
+  // conv2d.execute(&input[0] );
 
 
   // for (auto i : output){
@@ -96,8 +121,7 @@ INSTANTIATE_TEST_SUITE_P(Basic, Conv2dDenseReferenceRegression, ::testing::Value
                                                                             WindowGeometry(2,2,2)) 
 ));
 
-
-
+#endif
 
 // static void GenerateParams(Filter2dGeometry& geom,
 //                            int8_t kernel[],
@@ -115,7 +139,7 @@ INSTANTIATE_TEST_SUITE_P(Basic, Conv2dDenseReferenceRegression, ::testing::Value
 //     kernel[k] = rng.rand<int8_t>();
 //   }
 
-//   auto win_cov = AddressCovector<int8_t>(geom.window.shape.width * geom.window.shape.depth, 
+//   auto win_cov = AddressCovector<int8_t>(geom.window.shape.width * geom.window.shape.depth,
 //                                          geom.window.shape.depth, 1);
 
 //   int32_t min_out_zero = std::numeric_limits<int32_t>::max();
@@ -130,7 +154,7 @@ INSTANTIATE_TEST_SUITE_P(Basic, Conv2dDenseReferenceRegression, ::testing::Value
 //       for(int col = 0; col < geom.window.shape.width; col++){
 //         for(int xan = 0; xan < geom.input.depth; xan++){
 
-//           int32_t w = win_cov.resolve(kernel, row, col, xan)[0]; 
+//           int32_t w = win_cov.resolve(kernel, row, col, xan)[0];
 
 //           int32_t min_in = std::numeric_limits<int8_t>::min();
 //           int32_t max_in = std::numeric_limits<int8_t>::max();
@@ -180,42 +204,43 @@ INSTANTIATE_TEST_SUITE_P(Basic, Conv2dDenseReferenceRegression, ::testing::Value
 
 // }
 
-
 /**
  * 
  * 
  * 
  */
-class Conv2dDenseReferenceTestA : public ::testing::TestWithParam<Filter2dGeometry> {};
+class Conv2dDenseReferenceTestA : public ::testing::TestWithParam<Filter2dGeometry>
+{
+};
 
 TEST_P(Conv2dDenseReferenceTestA, NoPadding)
 {
   auto geom = GetParam();
 
-  auto weights  = std::vector<int8_t>( geom.window.shape.imageElements() * geom.output.depth );
-  auto bias     = std::vector<int32_t>( geom.output.depth );
-  auto eff_mult = std::vector<float>( geom.output.depth );
-  auto input    = std::vector<int8_t>(geom.input.imageElements());
+  auto weights = std::vector<int8_t>(geom.window.shape.imageElements() * geom.output.depth);
+  auto bias = std::vector<int32_t>(geom.output.depth);
+  auto eff_mult = std::vector<float>(geom.output.depth);
+  auto input = std::vector<int8_t>(geom.input.imageElements());
   auto expected = std::vector<int8_t>(geom.output.imageElements());
 
-  int8_t input_zero  = -5;
-  int8_t output_zero =  5;
+  int8_t input_zero = -5;
+  int8_t output_zero = 5;
 
-  memset( &weights[0], 1, sizeof(int8_t) * weights.size() );
-  memset( &input[0],   1, sizeof(int8_t) * input.size()   );
+  memset(&weights[0], 1, sizeof(int8_t) * weights.size());
+  memset(&input[0], 1, sizeof(int8_t) * input.size());
 
-  int32_t acc32 = geom.window.shape.imageElements() 
-                  * ( int32_t( weights[0] ) * ( int32_t( input[0] ) - input_zero ) );
+  int32_t acc32 = geom.window.shape.imageElements() * (int32_t(weights[0]) * (int32_t(input[0]) - input_zero));
 
   int32_t target_acc32 = 32;
   int8_t target_acc8 = 16;
 
-  for(int k = 0; k < geom.output.depth; k++){
+  for (int k = 0; k < geom.output.depth; k++)
+  {
     bias[k] = target_acc32 - acc32;
     eff_mult[k] = float(target_acc8) / float(target_acc32);
   }
 
-  memset( &expected[0], int8_t(target_acc8 + output_zero), sizeof(int8_t) * expected.size() );
+  memset(&expected[0], int8_t(target_acc8 + output_zero), sizeof(int8_t) * expected.size());
 
   auto output = nn::test::ops::ref::Conv2dDenseReference(geom, &input[0], &weights[0], &bias[0], &eff_mult[0],
                                                          input_zero, output_zero);
@@ -223,26 +248,10 @@ TEST_P(Conv2dDenseReferenceTestA, NoPadding)
   ASSERT_EQ(output, expected);
 }
 
-INSTANTIATE_TEST_SUITE_P(Basic, Conv2dDenseReferenceTestA, ::testing::Values( Filter2dGeometry(
-                                                                            ImageGeometry(1,1,2),
-                                                                            ImageGeometry(1,1,2),
-                                                                            WindowGeometry(1,1,2)),
-                                                                         Filter2dGeometry(
-                                                                            ImageGeometry(2,2,2),
-                                                                            ImageGeometry(2,2,2),
-                                                                            WindowGeometry(1,1,2)),
-                                                                         Filter2dGeometry(
-                                                                            ImageGeometry(2,2,2),
-                                                                            ImageGeometry(1,1,2),
-                                                                            WindowGeometry(2,2,2)) 
-));
-
-
+INSTANTIATE_TEST_SUITE_P(Basic, Conv2dDenseReferenceTestA, ::testing::Values(Filter2dGeometry(ImageGeometry(1, 1, 2), ImageGeometry(1, 1, 2), WindowGeometry(1, 1, 2)), Filter2dGeometry(ImageGeometry(2, 2, 2), ImageGeometry(2, 2, 2), WindowGeometry(1, 1, 2)), Filter2dGeometry(ImageGeometry(2, 2, 2), ImageGeometry(1, 1, 2), WindowGeometry(2, 2, 2))));
 
 static auto iterA = nn::test::ParamedRandIter<Filter2dGeometry, SimpleFilter>(100, SimpleFilter(false, false));
 INSTANTIATE_TEST_SUITE_P(Random, Conv2dDenseReferenceTestA, ::testing::ValuesIn(iterA.begin(), iterA.end()));
-
-
 
 /**
  * 
@@ -250,7 +259,9 @@ INSTANTIATE_TEST_SUITE_P(Random, Conv2dDenseReferenceTestA, ::testing::ValuesIn(
  * 
  */
 
-class Conv2dDenseReferenceTestB : public ::testing::TestWithParam<Filter2dGeometry> {};
+class Conv2dDenseReferenceTestB : public ::testing::TestWithParam<Filter2dGeometry>
+{
+};
 
 TEST_P(Conv2dDenseReferenceTestB, WithPadding)
 {
@@ -258,63 +269,64 @@ TEST_P(Conv2dDenseReferenceTestB, WithPadding)
 
   auto out_cov = geom.output.getAddressCovector<int8_t>();
 
-  auto weights  = std::vector<int8_t>( geom.window.shape.imageElements() * geom.output.depth );
-  auto bias     = std::vector<int32_t>( geom.output.depth );
-  auto eff_mult = std::vector<float>( geom.output.depth );
-  auto input    = std::vector<int8_t>(geom.input.imageElements());
+  auto weights = std::vector<int8_t>(geom.window.shape.imageElements() * geom.output.depth);
+  auto bias = std::vector<int32_t>(geom.output.depth);
+  auto eff_mult = std::vector<float>(geom.output.depth);
+  auto input = std::vector<int8_t>(geom.input.imageElements());
   auto expected = std::vector<int8_t>(geom.output.imageElements());
 
-  int8_t input_zero  = -5;
-  int8_t output_zero =  5;
+  int8_t input_zero = -5;
+  int8_t output_zero = 5;
 
-  memset( &weights[0], 1, sizeof(int8_t) * weights.size() );
-  memset( &input[0],   1, sizeof(int8_t) * input.size()   );
-  
+  memset(&weights[0], 1, sizeof(int8_t) * weights.size());
+  memset(&input[0], 1, sizeof(int8_t) * input.size());
+
   int32_t target_acc32 = 32;
-  int8_t target_acc8   = 16;
+  int8_t target_acc8 = 16;
 
   auto pix_acc = geom.input.depth * int32_t(weights[0]) * (int32_t(input[0]) - input_zero);
 
-  for(int k = 0; k < geom.output.depth; k++){
+  for (int k = 0; k < geom.output.depth; k++)
+  {
     bias[k] = target_acc32 - geom.window.shape.imagePixels() * pix_acc;
     eff_mult[k] = float(target_acc8) / float(target_acc32);
   }
 
   auto init_pad = geom.ModelPadding();
-  for(int row = 0; row < geom.output.height; row++){
-    for(int col = 0; col < geom.output.width; col++){
+  for (int row = 0; row < geom.output.height; row++)
+  {
+    for (int col = 0; col < geom.output.width; col++)
+    {
 
       auto Y = out_cov.resolve(&expected[0], row, col, 0);
 
       // The behavior here depends on how many pixels are outside the input image.
       auto pad = init_pad;
-      pad.top    -= row * geom.window.stride.row;
-      pad.left   -= col * geom.window.stride.col;
+      pad.top -= row * geom.window.stride.row;
+      pad.left -= col * geom.window.stride.col;
       pad.bottom += row * geom.window.stride.row;
-      pad.right  += col * geom.window.stride.col;
+      pad.right += col * geom.window.stride.col;
       pad.MakeUnsigned();
 
-      auto patch_rows = int(geom.window.shape.height) - pad.top  - pad.bottom;
-      auto patch_cols = int(geom.window.shape.width ) - pad.left - pad.right;
+      auto patch_rows = int(geom.window.shape.height) - pad.top - pad.bottom;
+      auto patch_cols = int(geom.window.shape.width) - pad.left - pad.right;
 
       auto patch_pix = patch_rows * patch_cols;
 
       int32_t acc32 = patch_pix * pix_acc;
-      
-      for(int cout = 0; cout < geom.output.depth; cout++){
+
+      for (int cout = 0; cout < geom.output.depth; cout++)
+      {
         auto r = (((acc32 + bias[cout]) * eff_mult[cout]) + output_zero);
-        Y[cout] = round_int8( r );
+        Y[cout] = round_int8(r);
       }
     }
   }
-
-
 
   auto output = nn::test::ops::ref::Conv2dDenseReference(geom, &input[0], &weights[0], &bias[0], &eff_mult[0],
                                                          input_zero, output_zero);
 
   ASSERT_EQ(output, expected);
-
 }
 
 static auto iterB = nn::test::ParamedRandIter<Filter2dGeometry, SimpleFilter>(100, SimpleFilter(false, true), 763577);

@@ -6,71 +6,40 @@
 
 namespace nn {
 
-  // class Conv2dVaildDirect : public Filter2D {
+  class Conv2dVaildDirect : public Filter2D {
+    
+    //Valid only
+    //Multiple of 32 input and 16 output channels
+    Conv2dVaildDirect( 
+        AbstractKernel<Filter2D>::Params * akp, 
+        DerefInputFn * memcpy,
+        MatMulDirectFn * aggregator, 
+        OT_int8 * ot):
+      Filter2D(akp, memcpy, aggregator, ot) {}
+  };
 
-  //   struct Params {
-  //     AbstractKernel::Params * kparams;
-  //     ImToColValid::Params * memcpy;
-  //     MatMulDirectFn::Params * aggregator;
-  //     // OT_int8::Params * output_transform;
-  //   };
+  class Conv2dVaildIndirect : public Filter2D {
 
-  // void make(
-  //   const nn::Filter2dGeometry& filter_geometry,
-  //   const ImageRegion &ir,
-  //   const int8_t input_img[],
-  //   const int8_t kernel_weights[],
-  //   const int32_t biases[],
-  //   const float effective_output_multiplier[],
-  //   const int8_t input_zero_point,
-  //   const int8_t output_zero_point,
+    //Valid only
+    //Arbitrary input + output channel count
+    Conv2dVaildIndirect( 
+        AbstractKernel<Filter2D>::Params * akp, 
+        ImToColValid * memcpy,
+        MatMulInt8 * aggregator, 
+        OT_int8 * ot):
+      Filter2D(akp, memcpy, aggregator, ot) {}
+  };
 
-  //    AbstractKernel::Params &akp, 
-  //    ImToColValid::Params &memcpy,
-  //     MatMulDirectFn::Params & aggregator, 
-  //     OT_int8 &ot ,
-  //     std::vector<int16_t> boggled_biases, 
+  class Conv2dPaddedInDirect : public Filter2D {
 
-  //   );
-
-    // Conv2dVaildDirect( AbstractKernel::Params * akp, ImToColValid::Params * memcpy,
-    //   MatMulDirectFn::Params * aggregator, OT_int8 * ot): Filter2D(akp, memcpy, aggregator, ot){};
-
-
-
-    // Filter2D(AbstractKernel::Params * kparams, 
-    //          MemCpyFn * memcpy_handler, 
-    //          AggregateFn * aggregate_handler, 
-    //          OutputTransformFn * ot_handler, 
-    //          int8_t * scratch_mem=nullptr);
-
-
-
-
-  // class Conv2dVaildIndirect : public Filter2D {
-  //   public:
-  //     Conv2dVaildIndirect(AbstractKernelParams * kparams, ImToColValid * memcpy_handler, 
-  //       MatMulInt8 * aggregate_handler, OT_int8 * ot_handler);
-  // };
-
-
-
-  // class Conv2dPaddedIndirect : public Filter2D {
-  //   public:
-  //     Conv2dPaddedIndirect(AbstractKernelParams * kparams, ImToColPadded * memcpy_handler, 
-  //       MatMulInt8 * aggregate_handler, OT_int8 * ot_handler);
-  // };
-
-
-  class Conv2dPadded : public Filter2D {
-
-    struct Params {
-      AbstractKernel::Params* kparams;
-      ImToColPadded::Params* memcopy;
-      MatMulInt8::Params* aggregator;
-      OT_int8::Params* output;
-    };
-
+    //Padded
+    //Arbitrary input + output channel count
+    Conv2dPaddedInDirect(
+        AbstractKernel<Filter2D>::Params * akp, 
+        ImToColPadded * memcpy,
+        MatMulInt8 * aggregator, 
+        OT_int8 * ot):
+      Filter2D(akp, memcpy, aggregator, ot) {}
   };
 
 }

@@ -3,15 +3,16 @@
 
 #include "../src/cpp/filt2d/geom/Filter2dGeometry.hpp"
 
-namespace nn {
+namespace nn
+{
 
   /**
    * Interface implemented by all patch handlers.
    */
-  class MemCpyFn {
-    public:
-
-      /**
+  class MemCpyFn
+  {
+  public:
+    /**
        * Copy the relevant region of the input image to the patch buffer, and return a pointer
        * to where the aggregation handler should begin consuming inputs.
        * 
@@ -38,49 +39,49 @@ namespace nn {
        * @param [in] w      column index of the _OUTPUT_ pixel being processed
        * @param [in] c      channel index of the _INPUT_ image from which to start copying elements
        */
-      virtual int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c=0) = 0;
+    virtual int8_t *memcopy_fn(int8_t *T, int8_t *X, int32_t h, int32_t w, int32_t c = 0) = 0;
 
       /**
        * 
        */
-      virtual size_t get_scratch_bytes() = 0;
+    virtual size_t get_scratch_bytes() = 0;
 
       /**
        * 
        */
-      virtual size_t get_overread_bytes() = 0;
+    virtual size_t get_overread_bytes() = 0;
   };
-
 
   /**
    * 
    */
-  class DerefInputFn : public MemCpyFn {
+  class DerefInputFn : public MemCpyFn
+  {
+
+  public:
+    class Params
+    {
 
     public:
-    class Params {
+      int32_t bytes_per_h_line;
+      int32_t bytes_per_pixel;
 
-      public:
+      Params(int32_t bytes_per_h_line, int32_t bytes_per_pixel);
 
-        int32_t bytes_per_h_line; 
-        int32_t bytes_per_pixel; 
+      Params(const ImageGeometry &X, const WindowGeometry &K);
 
-        Params(int32_t bytes_per_h_line, int32_t bytes_per_pixel);
+      Params(const Filter2dGeometry &filter_geometry);
 
-        Params(const ImageGeometry &X, const WindowGeometry &K);
+      Params(std::istream &stream);
 
-        Params(const Filter2dGeometry& filter_geometry);
-
-        Params(std::istream& stream);
-
-        void Serialize(std::ostream& stream) const;
+      void Serialize(std::ostream &stream) const;
     };
 
-    Params * params;
+    Params *params;
 
-    public:
-    DerefInputFn(Params * params):params(params){};
-    int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
+  public:
+    DerefInputFn(Params *params) : params(params){};
+    int8_t *memcopy_fn(int8_t *T, int8_t *X, int32_t h, int32_t w, int32_t c);
     size_t get_scratch_bytes();
     size_t get_overread_bytes();
   };
@@ -88,54 +89,56 @@ namespace nn {
   /**
    * 
    */
-  class ImToColPadded : public MemCpyFn{
+  class ImToColPadded : public MemCpyFn
+  {
+  public:
+    class Params
+    {
+
     public:
-    class Params {
+      int32_t kernel_height;
+      int32_t kernel_width;
 
-      public:
-        int32_t kernel_height;
-        int32_t kernel_width;
+      int32_t vertical_stride;
+      int32_t horizontal_stride;
+      int32_t vertical_dilation;
+      int32_t horizontal_dilation;
 
-        int32_t vertical_stride;
-        int32_t horizontal_stride;
-        int32_t vertical_dilation;
-        int32_t horizontal_dilation;
+      padding_t padding;
 
-        padding_t padding;
+      int32_t input_v_length;
+      int32_t input_h_length;
 
-        int32_t input_v_length;
-        int32_t input_h_length;
+      int32_t padding_val;
 
-        int32_t padding_val;
+      int32_t bytes_per_h_line;
+      int32_t bytes_per_pixel;
 
-        int32_t bytes_per_h_line; 
-        int32_t bytes_per_pixel;
+      int32_t horizontal_mem_stride;
 
-        int32_t horizontal_mem_stride;
+      int32_t bytes_per_copy_per_channel;
 
-        int32_t bytes_per_copy_per_channel;
-
-      public:
-        Params(const ImageGeometry &X, 
-               const WindowGeometry &K, 
-               const padding_t &padding, 
-               const int input_ch_per_output, 
-               const int8_t pad_val);
+    public:
+      Params(const ImageGeometry &X,
+             const WindowGeometry &K,
+             const padding_t &padding,
+             const int input_ch_per_output,
+             const int8_t pad_val);
 
         Params(const Filter2dGeometry& filter_geometry,
                const int8_t padding_value,
                const int channels_per_output);
 
-        Params(std::istream& stream);
+      Params(std::istream &stream);
 
-        void Serialize(std::ostream& stream) const;
+      void Serialize(std::ostream &stream) const;
     };
 
-    Params * params;
+    Params *params;
 
-    public:
-    ImToColPadded(Params * p):params(p){}
-    int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
+  public:
+    ImToColPadded(Params *p) : params(p) {}
+    int8_t *memcopy_fn(int8_t *T, int8_t *X, int32_t h, int32_t w, int32_t c);
     size_t get_scratch_bytes();
     size_t get_overread_bytes();
   };
@@ -143,9 +146,11 @@ namespace nn {
   /**
    * 
    */
-  class ImToColValid : public MemCpyFn{
-    public:
-    struct Params {
+  class ImToColValid : public MemCpyFn
+  {
+  public:
+    struct Params
+    {
       /**
        * Bytes per row of the input image
        */
@@ -177,30 +182,28 @@ namespace nn {
     /**
      * The difference between the number of bytes actually copied and the target number of bytes to copy.
      */
-      int32_t T_rewind; 
+      int32_t T_rewind;
 
       // The bytes to inc an X pointer by to move by one horizontal stride
       int32_t horizontal_mem_stride;
 
-      // The bytes to inc an X pointer by to move by one vertical stride 
+      // The bytes to inc an X pointer by to move by one vertical stride
       // and horizontally bacwards by the kernel width.
-      // i.e. from X[h][w + kernel_width - 1] to X[h+1][w]. 
+      // i.e. from X[h][w + kernel_width - 1] to X[h+1][w].
       int32_t vertical_mem_stride;
 
-    Params(const ImageGeometry &X, const WindowGeometry &K, const int input_ch_per_output);
-  };
+      Params(const ImageGeometry &X, const WindowGeometry &K, const int input_ch_per_output);
+    };
 
-    Params * params;
+    Params *params;
 
-    public:
-
+  public:
     //input_ch_per_output lets the kernel know how many input channels to copy to scratch
-    ImToColValid(Params * params):params(params){};
-    
+    ImToColValid(Params *params) : params(params){};
+
     size_t get_scratch_bytes();
     size_t get_overread_bytes();
 
-    int8_t * memcopy_fn(int8_t * T, int8_t * X, int32_t h, int32_t w, int32_t c);
-    
+    int8_t *memcopy_fn(int8_t *T, int8_t *X, int32_t h, int32_t w, int32_t c);
   };
 }
