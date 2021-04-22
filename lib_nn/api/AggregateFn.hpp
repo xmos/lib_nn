@@ -5,6 +5,7 @@
 #include <array>
 #include <vector>
 
+#include "Utils.hpp"
 #include "xs3_vpu.h"
 #include "vpu.hpp"
 
@@ -120,15 +121,9 @@ namespace nn
    * 
    * @see DirectWriteOutputTransform
    */
-  class MaxPoolPatchFn : public AggregateFn
+  class MaxPoolPatchFn : public AggregateFn, 
+                         public ChannelParallelComponent<VPU_INT8_EPV_LOG2> 
   {
-
-  public:
-    /**
-       * The maximum number of output channels that can be processed in parallel with a call to
-       * aggregate_fn().
-       */
-    static constexpr int ChannelsPerOutputGroup = VPU_INT8_EPV;
 
   public:
     /**
@@ -216,15 +211,9 @@ namespace nn
    * 
    * @see DirectWriteOutputTransform
    */
-  class MaxPoolDirectValidFn : public AggregateFn
+  class MaxPoolDirectValidFn : public AggregateFn, 
+                               public ChannelParallelComponent<VPU_INT8_EPV_LOG2> 
   {
-
-  public:
-    /**
-       * The maximum number of output channels that can be processed in parallel with a call to
-       * aggregate_fn().
-       */
-    static constexpr int ChannelsPerOutputGroup = VPU_INT8_EPV;
 
   public:
     /**
@@ -339,15 +328,9 @@ namespace nn
    * 
    * @see 
    */
-  class AvgPoolPatchFn : public AggregateFn
+  class AvgPoolPatchFn : public AggregateFn, 
+                         public ChannelParallelComponent<VPU_INT8_ACC_PERIOD_LOG2> 
   {
-
-  public:
-    /**
-       * The maximum number of output channels that can be processed in parallel with a call to
-       * aggregate_fn().
-       */
-    static constexpr int ChannelsPerOutputGroup = VPU_INT8_ACC_PERIOD;
 
   public:
     /**
@@ -360,6 +343,10 @@ namespace nn
          * Parameter struct required by the low-level implementation.
          */
       avgpool_patch_params ap_params;
+
+      /**
+        */
+      Params(){}
 
       /**
          * Construct an AvgPoolPatchFn::Params using the supplied params struct.
@@ -445,15 +432,9 @@ namespace nn
    * 
    * @see ShiftInt8OutputTransform
    */
-  class AvgPoolDirectValidFn : public AggregateFn
+  class AvgPoolDirectValidFn : public AggregateFn, 
+                               public ChannelParallelComponent<VPU_INT8_ACC_PERIOD_LOG2>
   {
-
-  public:
-    /**
-       * The maximum number of output channels that can be processed in parallel with a call to
-       * aggregate_fn().
-       */
-    static constexpr int ChannelsPerOutputGroup = VPU_INT8_ACC_PERIOD;
 
   public:
     /**
@@ -466,6 +447,11 @@ namespace nn
          * Parameters to be passed to the kernel function.
          */
       avgpool_direct_valid_params ap_params;
+
+      /**
+         * 
+         */
+      Params(){}
 
       /**
          * Construct a AvgPoolDirectValidFn::Params

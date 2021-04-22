@@ -6,7 +6,7 @@
 
 namespace nn {
 
-  class MaxPool2d : public ChannelParallelOperator<VPU_INT8_EPV_LOG2> { };
+  class MaxPool2d : public ChannelParallelComponent<VPU_INT8_EPV_LOG2> { };
 
 
 

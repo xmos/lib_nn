@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <cstring>
 
+#include "Utils.hpp"
 #include "MemCpyFn.hpp"
 #include "AggregateFn.hpp"
 #include "OutputTransformFn.hpp"
@@ -167,39 +168,6 @@ namespace nn {
       }
     }
   };
-
-  /**
-   * AbstractKernel objects inheriting this class are capable of processing multiple output channels
-   * simultaneously. The static members and methods are intended to be helpful where the degree of 
-   * parallelism is relevant.
-   * 
-   * Note: Ops inheriting this should also inherit from nn::Filter2D or nn::Filter2D_DW.
-   */
-  template <int N_channels_per_cog_log2>
-  class ChannelParallelOperator {
-    public:
-
-      /**
-       * log2() of the number of channels processed in parallel.
-       */
-      static constexpr int ChannelsPerOutputGroupLog2 = N_channels_per_cog_log2;
-      /**
-       * The number of channels processed in parallel.
-       */
-      static constexpr int ChannelsPerOutputGroup = (1 << ChannelsPerOutputGroupLog2);
-
-      /**
-       * Get the number of output channel groups associated with an output image.
-       */
-      static int OutputGroups( const int output_channels ) {
-        return (output_channels + ChannelsPerOutputGroup - 1) >> ChannelsPerOutputGroupLog2;
-      }
-  };
-
-  template <int N_channels_per_cog_log2>
-  constexpr int ChannelParallelOperator<N_channels_per_cog_log2>::ChannelsPerOutputGroupLog2;
-  template <int N_channels_per_cog_log2>
-  constexpr int ChannelParallelOperator<N_channels_per_cog_log2>::ChannelsPerOutputGroup;
 
 
 

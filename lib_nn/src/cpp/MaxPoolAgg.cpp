@@ -15,8 +15,6 @@ using namespace nn;
  * MaxPoolPatchFn
  *****************************/
 
-constexpr int MaxPoolPatchFn::ChannelsPerOutputGroup;
-
 
 MaxPoolPatchFn::Params::Params(const int32_t pixel_count)
     : pixel_count(pixel_count)
@@ -90,8 +88,6 @@ void MaxPoolPatchFn::aggregate_fn(vpu_ring_buffer_t * acc,
 /******************************
  * MaxPoolDirectValidFn
  *****************************/
-
-constexpr int MaxPoolDirectValidFn::ChannelsPerOutputGroup;
 
 MaxPoolDirectValidFn::Params::Params(const maxpool_direct_valid_params& mp_params)
     : mp_params(mp_params)
