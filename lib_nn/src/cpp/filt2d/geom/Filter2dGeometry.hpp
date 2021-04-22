@@ -3,7 +3,6 @@
 #include "util.hpp"
 #include "ImageGeometry.hpp"
 #include "WindowGeometry.hpp"
-// #include "WindowLocation.hpp"
 
 #include <cstdlib>
 #include <cassert>
@@ -39,50 +38,20 @@ namespace nn {
       bool ModelIsDepthwise() const;
 
       /**
-       * Get the (signed or unsigned) spatial padding required by the filter corresponding to the
-      * first (top-left) or last (bottom-right) output pixel.
-      * 
-      * Unsigned padding is signed padding with std::max(0,_) applied to each of its values. With
-      * unsigned padding, a value of 0 indicates padding is not required, and a positive value 
-      * indicates the number of pixels of padding that are required along the border 
-      * (top/left/bottom/right).
-      * 
-      * Signed padding is useful, for example, in calculations where the padding requirement of a 
-      * particular output pixel is required. In this case, negative values indicate the distance to the
-      * corresponding border of the input image. A signed padding value of 0 indicates the convolution 
-      * window is already at the edge of the image, whereas -1 indicates there is one pixel between that
-      * edge and the current convolution window.
-      * 
-      * Using `initial = true` will retrieve the padding for the top-left output pixel, and `false` 
-      * for the bottom-right output pixel. The maximum value (per each padding direction) between the
-      * initial and final output pixels is the maximum amount of padding needed (for that direction), as
-      * all other output pixels are guaranteed to need equal to or less than that amount.
-      * 
-      * TODO: This doesn't currently handle dilation correctly!!
+       * Get the total implied padding around each edge of the input image.
+       * 
+       * Note: This is the unsigned padding
+       */
+      padding_t Padding() const;
+
+      /**
+       * @Deprecated
+       * @TODO: Get rid of this when possible. There are a couple test cases that still use it.
       */
       padding_t ModelPadding(bool initial = true, 
                             bool signed_padding = true) const;
 
-      /**
-       * Does every output pixel have the convolution window entirely within the bounds of 
-      * the input image?
-      */
-      bool ModelRequiresPadding() const;
-
-      /**
-       * Is it true that, for any given output pixel, the convolution window is guaranteed to have
-      * at least one pixel within the input image's bounds?
-      */
-      bool ModelFilterWindowAlwaysIntersectsInput() const;
-
-      // /**
-      //  * Does the filter's geometry imply that every input element is used to compute some
-      // * output element?
-      // */
-      // bool ModelConsumesInput() const;
-
   };
-
 
 
   inline std::ostream& operator<<(std::ostream &stream, const Filter2dGeometry &filt){
@@ -90,3 +59,5 @@ namespace nn {
   }
 
 }
+
+#include "WindowLocation.hpp"

@@ -21,14 +21,13 @@ std::vector<int8_t> nn::test::ops::ref::Conv2dDenseReference(
 {
   tflite::ConvParams op_params;
 
-  auto pad_initial = filter_geometry.ModelPadding(true);
-  auto pad_final   = filter_geometry.ModelPadding(false);
+  auto padding = filter_geometry.Padding();
 
   op_params.padding_type = tflite::PaddingType::kSame;
-  op_params.padding_values.height = pad_initial.top;
-  op_params.padding_values.width = pad_initial.left;
-  op_params.padding_values.height_offset = pad_final.bottom;
-  op_params.padding_values.width_offset = pad_final.right;
+  op_params.padding_values.height = padding.top;
+  op_params.padding_values.width = padding.left;
+  op_params.padding_values.height_offset = padding.bottom;
+  op_params.padding_values.width_offset = padding.right;
 
   op_params.stride_height = filter_geometry.window.stride.row;
   op_params.stride_width  = filter_geometry.window.stride.col;
@@ -91,14 +90,13 @@ std::vector<int8_t> nn::test::ops::ref::Conv2dDepthwiseReference(
 {
   tflite::DepthwiseParams op_params;
 
-  auto pad_initial = filter_geometry.ModelPadding(true);
-  auto pad_final   = filter_geometry.ModelPadding(false);
+  auto padding = filter_geometry.Padding();
 
   op_params.padding_type = tflite::PaddingType::kSame;
-  op_params.padding_values.height = pad_initial.top;
-  op_params.padding_values.width = pad_initial.left;
-  op_params.padding_values.height_offset = pad_final.bottom;
-  op_params.padding_values.width_offset = pad_final.right;
+  op_params.padding_values.height = padding.top;
+  op_params.padding_values.width = padding.left;
+  op_params.padding_values.height_offset = padding.bottom;
+  op_params.padding_values.width_offset = padding.right;
 
   op_params.depth_multiplier = 1;
 

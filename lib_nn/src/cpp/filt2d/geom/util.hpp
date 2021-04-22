@@ -53,9 +53,9 @@ namespace nn {
       } start;
 
       struct {
-        const unsigned height;
-        const unsigned width;
-        const unsigned depth;
+        const int height;
+        const int width;
+        const int depth;
       } shape;
 
     public:
@@ -64,9 +64,9 @@ namespace nn {
         int const row,
         int const col,
         int const chan,
-        unsigned const height,
-        unsigned const width,
-        unsigned const depth)
+        int const height,
+        int const width,
+        int const depth)
           : start{row,col,chan}, shape{height,width,depth} {}
 
       ImageVect startVect() const

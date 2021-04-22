@@ -619,7 +619,7 @@ int8_t * DirectWriteOutputTransform::output_transform_fn(int8_t * Y,
 //   volatile asm("vstrpv %0[0], %1" : "r"(Y, count));
 // #endif // NN_USE_REF
 
-return &Y[count];
+  return &Y[count];
 }
 
 /******************************

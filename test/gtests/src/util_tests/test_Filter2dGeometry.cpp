@@ -27,62 +27,6 @@ TEST_P(Filter2dGeometryTest, ModelIsDepthwise)
   ASSERT_EQ(filter.ModelIsDepthwise(), filter.window.stride.channel == 1);
 }
 
-TEST_P(Filter2dGeometryTest, ModelRequiresPadding)
-{
-  auto filter = GetParam();
-
-  auto padded = false;
-  padded = padded || filter.window.start.row < 0;
-  padded = padded || filter.window.start.col < 0;
-  padded = padded || (filter.window.start.row 
-                      + filter.window.stride.row * (filter.output.height-1)
-                      + filter.window.dilation.row * (filter.window.shape.height-1)) >= filter.input.height;
-  padded = padded || (filter.window.start.col 
-                      + filter.window.stride.col * (filter.output.width-1)
-                      + filter.window.dilation.col * (filter.window.shape.width-1)) >= filter.input.width;
-
-  ASSERT_EQ(filter.ModelRequiresPadding(), padded);
-}
-
-
-TEST_P(Filter2dGeometryTest, ModelFilterWindowAlwaysIntersectsInput)
-{
-  auto filter = GetParam();
-
-  auto last_row_init = filter.window.start.row + (filter.window.shape.height - 1) * filter.window.dilation.row;
-  auto last_col_init = filter.window.start.col + (filter.window.shape.width  - 1) * filter.window.dilation.col;
-
-  auto first_row_final = filter.window.start.row + (filter.output.height - 1) * filter.window.stride.row;
-  auto first_col_final = filter.window.start.col + (filter.output.width  - 1) * filter.window.stride.col;
-
-  auto top = (last_row_init >= 0);
-  auto left = (last_col_init >= 0);
-  auto bottom = (first_row_final < filter.input.height);
-  auto right = (first_col_final < filter.input.width);
-
-  auto val = filter.ModelFilterWindowAlwaysIntersectsInput();
-
-  auto always_intersects = top && left && bottom && right;
-
-  ASSERT_EQ(val, always_intersects) << "(" << top << "," << left << "," << bottom << "," << right << ")";
-}
-
-// TEST_P(Filter2dGeometryTest, ModelConsumesInput)
-// {
-//   auto filter = GetParam();
-
-//   auto consumes_input = true;
-
-//   consumes_input = consumes_input && filter.window.start.row <= 0;
-//   consumes_input = consumes_input && filter.window.start.col <= 0;
-
-//   auto pad_final = filter.ModelPadding(false, true);
-
-//   consumes_input = consumes_input && pad_final.right >= 0;
-//   consumes_input = consumes_input && pad_final.bottom >= 0;
-
-//   ASSERT_EQ(filter.ModelConsumesInput(), consumes_input);
-// }
 
 TEST_P(Filter2dGeometryTest, ModelPadding)
 {

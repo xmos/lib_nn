@@ -2,12 +2,18 @@
 
 #include "../misc.hpp"
 #include "../geom/Filter2dGeometry.hpp"
-#include "../OutputTransformers.hpp"
 
 #include <cstdint>
 #include <vector>
 
 
+EXTERN_C typedef struct {
+    uint16_t shift1[ 16 ];
+    int16_t  scale[ 16 ];
+    int16_t  offset_scale[ 16 ];
+    int16_t  offset[ 16 ];
+    uint16_t shift2[ 16 ];
+} nn_acc32_to_int8_params_t;
 
 namespace nn {
     namespace conv2d {

@@ -80,7 +80,7 @@ Filter2D_DW::Filter2D_DW(AbstractKernel::Params * kparams,
 //This is an example of a depthwise conv or max pool
 void Filter2D_DW::calc_output_pixel_slice(int8_t * Y, int8_t * X, int32_t h, int32_t w){
 
-  const auto output_groups = this->kparams->output_channel_group_count;    
+  const auto output_groups = this->kparams->output_channel_group_count;
   
   for (int32_t chan_group = 0; chan_group < output_groups; chan_group++){
 

@@ -173,9 +173,6 @@ void MaxPoolDirectValidFn::aggregate_fn(vpu_ring_buffer_t * acc,
                                         int8_t * input_img, 
                                         int32_t output_channel_group)
 {
-  // Does this need to happen? Or does te direct memcopy thing also offset the channel?
-  input_img = &input_img[output_channel_group * VPU_INT8_EPV];
-
 #ifdef NN_USE_REF
   maxpool_direct_valid_ref(acc, input_img, &this->params->mp_params);
 #else

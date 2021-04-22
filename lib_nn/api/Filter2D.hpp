@@ -98,24 +98,15 @@ namespace nn {
 
       }
 
-      Params(const ImageGeometry& image, 
-            const ImageRegion& region, 
-            const int channels_per_group = VPU_INT8_ACC_PERIOD)
-        : h_begin(region.start.row), h_end(region.endVect().row),
-          w_begin(region.start.col), w_end(region.endVect().col),
-          output_channel_slice_offset(region.start.channel) 
-      {
-        this->output_channel_group_count = (region.shape.depth + channels_per_group - 1) / channels_per_group;
-        
-        // memory to move to the next right pixel after all current channel groups have been saved
-        // i.e. this conv2d might write chs 16-31 of 68 chs, so the stride would have to be 52 channels 
-        // worth of memory(enough to move from the end of the group just processed to the start of the 
-        // next)
-        this->output_w_mem_stride = ( image.depth * image.channel_depth );
-
-        //memory to moved down a pixel
-        this->output_h_mem_stride = image.rowBytes() - region.shape.width * this->output_w_mem_stride;
-      }
+      Params(const ImageGeometry& output_image, 
+             const ImageRegion& output_region, 
+             const int channels_per_group = VPU_INT8_ACC_PERIOD)
+        : h_begin(output_region.start.row), h_end(output_region.endVect().row),
+          w_begin(output_region.start.col), w_end(output_region.endVect().col),
+          output_channel_slice_offset(output_region.start.channel),
+          output_channel_group_count( (output_region.shape.depth + channels_per_group - 1) / channels_per_group ),
+          output_w_mem_stride( output_image.getStride(0,1,0) ),
+          output_h_mem_stride( output_image.getStride(1, -output_region.shape.width, 0) ) { }
     };
 
     protected:
@@ -172,6 +163,41 @@ namespace nn {
       }
     }
   };
+
+  /**
+   * AbstractKernel objects inheriting this class are capable of processing multiple output channels
+   * simultaneously. The static members and methods are intended to be helpful where the degree of 
+   * parallelism is relevant.
+   * 
+   * Note: Ops inheriting this should also inherit from nn::Filter2D or nn::Filter2D_DW.
+   */
+  template <int N_channels_per_cog_log2>
+  class ChannelParallelOperator {
+    public:
+
+      /**
+       * log2() of the number of channels processed in parallel.
+       */
+      static constexpr int ChannelsPerOutputGroupLog2 = N_channels_per_cog_log2;
+      /**
+       * The number of channels processed in parallel.
+       */
+      static constexpr int ChannelsPerOutputGroup = (1 << ChannelsPerOutputGroupLog2);
+
+      /**
+       * Get the number of output channel groups associated with an output image.
+       */
+      static int OutputGroups( const int output_channels ) {
+        return (output_channels + ChannelsPerOutputGroup - 1) >> ChannelsPerOutputGroupLog2;
+      }
+  };
+
+  template <int N_channels_per_cog_log2>
+  constexpr int ChannelParallelOperator<N_channels_per_cog_log2>::ChannelsPerOutputGroupLog2;
+  template <int N_channels_per_cog_log2>
+  constexpr int ChannelParallelOperator<N_channels_per_cog_log2>::ChannelsPerOutputGroup;
+
+
 
   /**
    * Base class for non-depthwise 2D filter kernels.

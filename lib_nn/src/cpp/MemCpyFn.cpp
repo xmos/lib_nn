@@ -16,8 +16,8 @@ DerefInputFn::Params::Params(const int32_t bytes_per_h_line,
 }
 
 DerefInputFn::Params::Params(const ImageGeometry& input, const WindowGeometry& window)
-    : bytes_per_h_line(input.rowBytes() * window.stride.row), 
-      bytes_per_pixel(input.pixelBytes() * window.stride.col)
+    : bytes_per_h_line(input.getStride(window.stride.row, 0, 0)), 
+      bytes_per_pixel(input.getStride(0, window.stride.col, 0))
 {
 
 }
@@ -102,6 +102,54 @@ ImToColPadded::Params::Params(const ImageGeometry &X,
   
 }
 
+ImToColPadded::Params::Params(const Filter2dGeometry& filter,
+                              const int8_t pad_val,
+                              const int channels_per_output_group)
+{
+  // This constructor is only intended to be used with a depthwise filter.
+  // See the note below.
+  assert( filter.window.shape.depth == 1 );
+  
+  kernel_height = filter.window.shape.height;
+  kernel_width = filter.window.shape.width;
+
+  vertical_stride = filter.window.stride.row;
+  horizontal_stride = filter.window.stride.col;
+  vertical_dilation = filter.window.dilation.row;
+  horizontal_dilation = filter.window.dilation.col;
+
+  this->padding = filter.Padding();
+
+  input_v_length = filter.input.height;
+  input_h_length = filter.input.width;
+
+  padding_val = pad_val;
+
+  bytes_per_pixel = filter.input.pixelBytes();
+  bytes_per_h_line = filter.input.rowBytes();
+
+  horizontal_mem_stride = filter.input.rowBytes();
+
+  /// NOTE: In a dense (non-depthwise) filter, the entirety of each input pixel goes into the
+  ///       patch buffer, because the same input channels (all of them) are needed to compute
+  ///       every output channel. So in that case, bytes_per_copy_per_channel is basically just
+  ///       the size of an input pixel. But the key point is that the range of channels we're
+  ///       copying into the patch DOES NOT DEPEND on how many output channels we compute in
+  ///       parallel (if any at all).
+  ///       In a depthwise filter each output channel relies only on exactly 1 input channel.
+  ///       So we're doing something that looks similar but is conceptually very different. In 
+  ///       the depthwise case, we're putting more than 1 channel in the patch buffer because 
+  ///       the range of chanels we're copying into the patch DOES DEPEND on how many output 
+  ///       channels we compute in parallel. The 'depth' parameter of the window shape describes
+  ///       how many input channels are needed to compute an output. It is UNRELATED to the
+  ///       number of channels we compute in parallel. So we need to multiply by the degree
+  ///       of parallelism of the operator.
+  bytes_per_copy_per_channel = channels_per_output_group 
+                                * filter.window.shape.depth 
+                                * filter.window.shape.channel_depth; 
+  
+}
+
 ImToColPadded::Params::Params(std::istream& stream)
 {
 #define READ_MEMBER(MEMBER)   stream.read(reinterpret_cast<char*>(&this->MEMBER), sizeof(this->MEMBER) )
@@ -161,7 +209,10 @@ int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord){
     p |= input_v_coord >= params->padding.top + params->input_v_length;
 
     int32_t input_h_coord = (output_h_coord * params->horizontal_stride );
-    int8_t * X_cur_p = X + (int)((input_v_coord - params->padding.top) * params->bytes_per_h_line + (input_h_coord - params->padding.left) * params->bytes_per_pixel + output_c_coord);
+
+    int8_t * X_cur_p = X + (int)((input_v_coord - params->padding.top) * params->bytes_per_h_line 
+                         + (input_h_coord - params->padding.left) * params->bytes_per_pixel 
+                         + output_c_coord);
 
     for(int32_t k_width = 0; k_width < params->kernel_width; k_width++){
       
