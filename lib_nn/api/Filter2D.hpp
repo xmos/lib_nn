@@ -14,7 +14,6 @@ namespace nn {
    * Class representing an executable filter kernel. A concrete instance of this class processes a
    * particular region of the output image associated with the filter.
    */
-  template <class T>
   class AbstractKernel {
     
   public:
@@ -117,6 +116,11 @@ namespace nn {
        */
       Params * kparams;
 
+      virtual void calc_output_pixel_slice(int8_t *output_image, 
+                                           int8_t *input_image, 
+                                           int32_t output_row, 
+                                           int32_t output_col) = 0;
+
     public:
 
       /**
@@ -156,7 +160,7 @@ namespace nn {
 
       for(int32_t h = kparams->h_begin; h < kparams->h_end; h++){
         for(int32_t w = kparams->w_begin; w < kparams->w_end; w++){
-          static_cast<T*>(this)->calc_output_pixel_slice(Y, X, h, w);
+          this->calc_output_pixel_slice(Y, X, h, w);
           Y += kparams->output_w_mem_stride;
         }
         Y += kparams->output_h_mem_stride;
@@ -206,7 +210,7 @@ namespace nn {
    * ultimately determined by 3 component objects supplied to it, the patch handler (instance of `MemCpyFn`),
    * the aggregation handler (instance of `AggregateFn`) and the output transformer (instance of `OutputTransformFn`).
    */
-  class Filter2D : public AbstractKernel<Filter2D> {
+  class Filter2D : public AbstractKernel {
     public:
       static constexpr bool UsesPerGroupMemCopy = false;
 
@@ -242,7 +246,7 @@ namespace nn {
       /**
        * Process a single output pixel (subject to the region constraints given by `kparams`
        */
-      void calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h, int32_t w) ;
+      virtual void calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h, int32_t w) override;
 
     public:
 
@@ -253,21 +257,17 @@ namespace nn {
        * Construct a filter using the provided component handlers.
        */
       Filter2D(AbstractKernel::Params * kparams, 
-              MemCpyFn * memcpy_handler, 
-              AggregateFn * aggregate_handler, 
-              OutputTransformFn * ot_handler, 
-              int8_t * scratch_mem=nullptr);
-
-      // Because AbstractKernel calls calc_output_pixel_slice(), which is protected (and not a virtual function
-      // of AbstractKernel), AbstractKernel<Filter2D> must be declared a friend class.
-      friend class AbstractKernel<Filter2D>;
+               MemCpyFn * memcpy_handler, 
+               AggregateFn * aggregate_handler, 
+               OutputTransformFn * ot_handler, 
+               int8_t * scratch_mem=nullptr);
 
   };
 
   /**
    * Base class for depthwise 2D filter kernels.
    */
-  class Filter2D_DW : public AbstractKernel<Filter2D_DW> {
+  class Filter2D_DW : public AbstractKernel {
     public:
       static constexpr bool UsesPerGroupMemCopy = true;
 
@@ -305,10 +305,10 @@ namespace nn {
       /**
        * Process a single output pixel (subject to the region constraints given by `kparams`
        */
-      void calc_output_pixel_slice(int8_t *Y, 
-                                  int8_t *X, 
-                                  int32_t h, 
-                                  int32_t w) ;
+      virtual void calc_output_pixel_slice(int8_t *output_image, 
+                                           int8_t *input_image, 
+                                           int32_t output_row, 
+                                           int32_t output_col) override;
 
     public:
 
@@ -321,11 +321,6 @@ namespace nn {
                   OutputTransformFn * ot_handler, 
                   int8_t * scratch_mem = nullptr,
                   int output_channels_per_group = VPU_INT8_ACC_PERIOD);
-
-        
-      // Because AbstractKernel calls calc_output_pixel_slice(), which is protected (and not a virtual function
-      // of AbstractKernel), AbstractKernel<Filter2D> must be declared a friend class.
-      friend class AbstractKernel<Filter2D_DW>;
 
   };
 
