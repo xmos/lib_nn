@@ -151,7 +151,9 @@ namespace nn
             for (int output_chan = 0; output_chan < chs_in_group; ++output_chan)
             {
 
+
               int64_t range = (int64_t)accu_max[output_chan] - (int64_t)accu_min[output_chan];
+              ASSERT_NE(0, range) << "Test case attempted division by zero.";
               int32_t v = (int64_t)accu_min[output_chan] + (rng.rand<unsigned>()) % range;
 
               accu_values[output_chan] = v;

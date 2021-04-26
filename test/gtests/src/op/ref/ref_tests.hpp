@@ -3,6 +3,7 @@
 #include "Rand.hpp"
 
 #include <cmath>
+#include <limits>
 
 #include "geom/Filter2dGeometry.hpp"
 

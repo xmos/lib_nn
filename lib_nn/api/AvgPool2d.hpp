@@ -3,6 +3,7 @@
 #include "Filter2D.hpp"
 
 #include <cmath>
+#include <limits>
 
 namespace nn {
 

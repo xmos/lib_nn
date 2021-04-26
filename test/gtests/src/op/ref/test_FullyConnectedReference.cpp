@@ -1,7 +1,7 @@
 
 
 #include "nn_types.h"
-#include "../src/cpp/filt2d/misc.hpp"
+#include "geom/util.hpp"
 #include "geom/Filter2dGeometry.hpp"
 #include "RefOps.hpp"
 #include "Rand.hpp"
@@ -112,7 +112,12 @@ TEST_P(FullyConnectedReferenceTest, SimpleTest)
   auto output = nn::test::ops::ref::FullyConnectedReference(N_chans_in, N_chans_out, &input[0], &weights[0], 
                                                             &bias[0], output_mult, input_zero, output_zero);
 
-  ASSERT_EQ(output, expected);
+  for(int k = 0; k < expected.size(); k++){
+    // Very difficult to avoid conditions where slight differences round to different values
+    ASSERT_NEAR(expected[k], output[k], 1);
+  }
+
+  // ASSERT_EQ(output, expected);
 }
 
 INSTANTIATE_TEST_SUITE_P(Targeted, FullyConnectedReferenceTest, ::testing::Values( std::make_tuple(2, 3) ));

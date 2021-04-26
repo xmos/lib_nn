@@ -1,13 +1,17 @@
 #pragma once
 
-#include "../src/cpp/filt2d/misc.hpp"
+#include "geom/util.hpp"
 #include "geom/Filter2dGeometry.hpp"
 
 #include <cstdint>
 #include <vector>
 
+C_API typedef struct {
+  int16_t  high[16];
+  uint16_t low[16];
+} vpu_split_acc32_t;
 
-EXTERN_C typedef struct {
+C_API typedef struct {
     uint16_t shift1[ 16 ];
     int16_t  scale[ 16 ];
     int16_t  offset_scale[ 16 ];

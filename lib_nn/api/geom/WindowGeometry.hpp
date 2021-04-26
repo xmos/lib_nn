@@ -1,7 +1,7 @@
 #pragma once
 
 #include "nn_types.h"
-#include "../src/cpp/filt2d/misc.hpp"
+#include "geom/util.hpp"
 #include "ImageGeometry.hpp"
 
 #include <cstdint>

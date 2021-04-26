@@ -1,15 +1,43 @@
 #pragma once
 
+#include "nn_api.h"
+
 #include <iostream>
 
-namespace nn {
 
-  class ImageVect {
 
 #define CONV2D_OUTPUT_LENGTH(input_length, filter_size, dilation, stride)     \
   (((input_length - (filter_size + (filter_size - 1) * (dilation - 1)) + 1) + \
     stride - 1) /                                                             \
    stride)
+
+
+
+namespace nn {
+  
+
+  C_API typedef struct {
+    int16_t top;
+    int16_t left;
+    int16_t bottom;
+    int16_t right;
+
+    void MakeUnsigned(){
+      top = std::max<int16_t>(0, top);
+      left = std::max<int16_t>(0, left);
+      bottom = std::max<int16_t>(0, bottom);
+      right = std::max<int16_t>(0, right);
+    }
+
+    bool HasPadding() const {
+      return top > 0 || left > 0 || bottom > 0 || right > 0;
+    }
+  } padding_t;
+
+
+
+  class ImageVect {
+
    
     public:
 
@@ -95,6 +123,10 @@ namespace nn {
 
   };
 
+
+  inline std::ostream& operator<<(std::ostream &stream, const padding_t &pad){
+    return stream << "(" << pad.top << "," << pad.left << "," << pad.bottom << "," << pad.right << ")";
+  }
 
   inline std::ostream& operator<<(std::ostream &stream, const ImageVect &vect){
     return stream << "(" << vect.row << "," << vect.col << "," << vect.channel << ")";
