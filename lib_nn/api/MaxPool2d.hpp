@@ -6,7 +6,23 @@
 
 namespace nn {
 
-  class MaxPool2d : public ChannelParallelComponent<VPU_INT8_EPV_LOG2> { };
+  class MaxPool2d : public ChannelParallelComponent<VPU_INT8_EPV_LOG2> { 
+  public:
+    /**
+     * Function can be used with WindowLocation::Fold() to apply the MaxPool2d for a
+     * particular output.
+     */
+    template<typename T>
+    static T FoldFunc(const ImageVect& filter_coords,
+                      const ImageVect& input_coords,
+                      const T prev_max,
+                      const T new_elm,
+                      const bool is_padding) 
+    { 
+      return std::max<T>(prev_max, new_elm); 
+    }
+
+  };
 
 
 

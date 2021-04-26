@@ -385,87 +385,6 @@ INSTANTIATE_TEST_SUITE_P(Basic, Conv2dDenseReferenceRegression, ::testing::Value
 
 #endif
 
-// static void GenerateParams(Filter2dGeometry& geom,
-//                            int8_t kernel[],
-//                            int32_t bias[],
-//                            float eff_out_mult[],
-//                            int8_t& input_zero_point,
-//                            int8_t& output_zero_point)
-// {
-
-//   // kernel coefficients and input zero_point can just be whatever
-
-//   input_zero_point = rng.rand<int8_t>();
-
-//   for(int k = 0; k < geom.window.windowElements(); k++){
-//     kernel[k] = rng.rand<int8_t>();
-//   }
-
-//   auto win_cov = AddressCovector<int8_t>(geom.window.shape.width * geom.window.shape.depth,
-//                                          geom.window.shape.depth, 1);
-
-//   int32_t min_out_zero = std::numeric_limits<int32_t>::max();
-//   int32_t max_out_zero = std::numeric_limits<int32_t>::min();
-
-//   for(int cout = 0; cout << geom.output.depth; cout++) {
-
-//     int64_t filt_min = 0;
-//     int64_t filt_max = 0;
-
-//     for(int row = 0; row < geom.window.shape.height; row++){
-//       for(int col = 0; col < geom.window.shape.width; col++){
-//         for(int xan = 0; xan < geom.input.depth; xan++){
-
-//           int32_t w = win_cov.resolve(kernel, row, col, xan)[0];
-
-//           int32_t min_in = std::numeric_limits<int8_t>::min();
-//           int32_t max_in = std::numeric_limits<int8_t>::max();
-
-//           if(w < 0){
-//             auto tmp = min_in;
-//             min_in = max_in;
-//             max_in = tmp;
-//           }
-
-//           min_in -= input_zero_point;
-//           max_in -= input_zero_point;
-
-//           filt_min += w * min_in;
-//           filt_max += w * max_in;
-//         }
-//       }
-//     }
-
-//     // The filt_min and filt_max values imply our bounds of allowable biases.
-//     int64_t bias_min = std::numeric_limits<int32_t>::min() - filt_min;
-//     int64_t bias_max = std::numeric_limits<int32_t>::max() - filt_max;
-
-//     assert(bias_min >= int64_t( std::numeric_limits<int32_t>::min() ) );
-//     assert(bias_max <= int64_t( std::numeric_limits<int32_t>::max() ) );
-
-//     bias[cout] = rng.rand<int32_t>(int32_t(bias_min), int32_t(bias_max));
-
-//     filt_min += bias[cout];
-//     filt_max += bias[cout];
-
-//     int32_t filt_span = filt_max - filt_min;
-
-//     eff_out_mult[cout] = ldexpf(1, 8) / filt_span;
-
-//     int32_t out_zero = std::numeric_limits<int8_t>::min() - (filt_min * eff_out_mult[cout]);
-
-//     min_out_zero = std::min<int32_t>(min_out_zero, out_zero);
-//     max_out_zero = std::max<int32_t>(max_out_zero, out_zero);
-
-//   }
-
-//   assert(min_out_zero >= std::numeric_limits<int8_t>::min());
-//   assert(max_out_zero >= std::numeric_limits<int8_t>::max());
-
-//   output_zero_point = rng.rand<int8_t>(min_out_zero, max_out_zero);
-
-// }
-
 /**
  * 
  * 
@@ -529,8 +448,6 @@ TEST_P(Conv2dDenseReferenceTestB, WithPadding)
 {
   auto geom = GetParam();
 
-  auto out_cov = geom.output.getAddressCovector<int8_t>();
-
   auto weights = std::vector<int8_t>(geom.window.shape.imageElements() * geom.output.depth);
   auto bias = std::vector<int32_t>(geom.output.depth);
   auto eff_mult = std::vector<float>(geom.output.depth);
@@ -560,8 +477,6 @@ TEST_P(Conv2dDenseReferenceTestB, WithPadding)
     for (int col = 0; col < geom.output.width; col++)
     {
 
-      auto Y = out_cov.resolve(&expected[0], row, col, 0);
-
       // The behavior here depends on how many pixels are outside the input image.
       auto pad = init_pad;
       pad.top -= row * geom.window.stride.row;
@@ -579,8 +494,9 @@ TEST_P(Conv2dDenseReferenceTestB, WithPadding)
 
       for (int cout = 0; cout < geom.output.depth; cout++)
       {
+        const auto output_index = geom.output.Index(row, col, cout);
         auto r = (((acc32 + bias[cout]) * eff_mult[cout]) + output_zero);
-        Y[cout] = round_int8(r);
+        expected[output_index] = round_int8(r);
       }
     }
   }

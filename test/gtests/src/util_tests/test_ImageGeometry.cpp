@@ -142,24 +142,6 @@ TEST_P(ImageGeometryTest, getStride)
   }
 }
 
-TEST_P(ImageGeometryTest, getAddressCovector)
-{
-  auto img = GetParam();
-
-  // imageBytes() so it is deterministic but not the same for every case
-  // auto rng = nn::test::Rand(img.imageBytes()+1);
-
-  auto cov = img.getAddressCovector<int8_t>();
-
-  for(int k = 0; k < 10; ++k){
-
-    ASSERT_EQ(cov.chan_bytes, img.channel_depth);
-    ASSERT_EQ(cov.col_bytes, img.depth * img.channel_depth);
-    ASSERT_EQ(cov.row_bytes, img.depth * img.width * img.channel_depth);
-
-  }
-}
-
 
 
 

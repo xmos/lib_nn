@@ -2,7 +2,6 @@
 
 #include "nn_types.h"
 #include "util.hpp"
-#include "../src/cpp/filt2d/util/AddressCovector.hpp"
 
 #include <iostream>
 #include <cassert>
@@ -137,16 +136,6 @@ namespace nn
     template <typename T>
     void ApplyOperation(T *image_base,
                         std::function<void(int, int, int, T &)> func) const;
-
-    /**
-     * Get an AddressCovector representing the geometry of this image.
-     */
-    template <typename T>
-    AddressCovector<T> getAddressCovector() const
-    {
-      //TODO: Should assert here that channel_depth == sizeof(T) ?
-      return AddressCovector<T>(rowBytes(), pixelBytes(), channel_depth);
-    }
 
     /**
      * Determine whether this ImageGeometry is equal to another.

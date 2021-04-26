@@ -42,12 +42,13 @@ inline Filter2dGeometry Rand::rand<Filter2dGeometry, SimpleFilter>(SimpleFilter 
 
     const int X_c = this->rand<int>(1,10) * 4;
     const int Y_c = p.depthwise? X_c : (this->rand<int>(1,10) * 4);
-    const int W_c = p.depthwise? p.cog_size : X_c;
+    const int W_c = p.depthwise? 1 : X_c;
+    const int W_stride_chan = p.depthwise? 1 : 0;
 
     return Filter2dGeometry(
               ImageGeometry(X_h, X_w, X_c),
               ImageGeometry(Y_h, Y_w, Y_c),
-              WindowGeometry(K_h, K_w, W_c, -pad_t, -pad_l, K_h, K_w));
+              WindowGeometry(K_h, K_w, W_c, -pad_t, -pad_l, K_h, K_w, W_stride_chan));
 
   } else {
 
@@ -62,12 +63,13 @@ inline Filter2dGeometry Rand::rand<Filter2dGeometry, SimpleFilter>(SimpleFilter 
 
     const int X_c = this->rand<int>(1,10) * 4;
     const int Y_c = p.depthwise? X_c : (this->rand<int>(1,10) * 4);
-    const int W_c = p.depthwise? p.cog_size : X_c;
+    const int W_c = p.depthwise? 1 : X_c;
+    const int W_stride_chan = p.depthwise? 1 : 0;
 
     return Filter2dGeometry(
               ImageGeometry(X_h, X_w, X_c),
               ImageGeometry(Y_h, Y_w, Y_c),
-              WindowGeometry(K_h, K_w, W_c, 0, 0, K_h, K_w));
+              WindowGeometry(K_h, K_w, W_c, 0, 0, K_h, K_w, W_stride_chan));
   }
 
 }
