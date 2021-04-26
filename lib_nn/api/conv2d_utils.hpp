@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../misc.hpp"
+#include "../src/cpp/filt2d/misc.hpp"
 #include "geom/Filter2dGeometry.hpp"
 
 #include <cstdint>
