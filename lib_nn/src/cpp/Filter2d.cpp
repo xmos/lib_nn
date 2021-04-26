@@ -8,16 +8,15 @@ using namespace nn;
 constexpr bool Filter2D::UsesPerGroupMemCopy;
 constexpr bool Filter2D_DW::UsesPerGroupMemCopy;
 
-
 // template<class T>
 // AbstractKernel<T>::Params::Params(ImageParams &Y, ImageRegion& r){
-  
+
 //   const int channels_per_group = 16; //TODO
 //   output_channel_group_count = (r.channel_end - r.channel_start + channels_per_group - 1) / channels_per_group;
 
 //   // memory to move to the next right pixel after all current channel groups have been saved
-//   // i.e. this conv2d might write chs 16-31 of 68 chs, so the stride would have to be 52 channels 
-//   // worth of memory(enough to move from the end of the group just processed to the start of the 
+//   // i.e. this conv2d might write chs 16-31 of 68 chs, so the stride would have to be 52 channels
+//   // worth of memory(enough to move from the end of the group just processed to the start of the
 //   // next)
 //   const int bits_per_byte = 8;
 //   // int output_w_mem_stride = ((Y.channels - (r.channel_end - r.channel_start)) * Y.bits_per_element ) / bits_per_byte;
@@ -36,10 +35,9 @@ constexpr bool Filter2D_DW::UsesPerGroupMemCopy;
 
 // }
 
-Filter2D::Filter2D(AbstractKernel::Params * kparams, MemCpyFn * memcpy_handler, 
-      AggregateFn * aggregate_handler, OutputTransformFn * ot_handler, int8_t * scratch_mem):
-      AbstractKernel(kparams), memcpy_handler(memcpy_handler), aggregate_handler(aggregate_handler),
-      ot_handler(ot_handler), scratch_mem(scratch_mem)
+Filter2D::Filter2D(AbstractKernel::Params *kparams, MemCpyFn *memcpy_handler,
+                   AggregateFn *aggregate_handler, OutputTransformFn *ot_handler, int8_t *scratch_mem) : AbstractKernel(kparams), memcpy_handler(memcpy_handler), aggregate_handler(aggregate_handler),
+                                                                                                         ot_handler(ot_handler), scratch_mem(scratch_mem)
 {
 }
 
@@ -48,48 +46,56 @@ Filter2D::Filter2D(AbstractKernel::Params * kparams, MemCpyFn * memcpy_handler,
   the output. The pointer is going to be set to the begining on the next output by 
   output_w_mem_stride. This allows it to address sub-channel regions.
 */
-void Filter2D::calc_output_pixel_slice(int8_t * Y, int8_t * X, int32_t h, int32_t w){
-      
-  int8_t * input_img = memcpy_handler->memcopy_fn(scratch_mem, X, h, w); //copy all input channels, channel start is implicitly 0.
+void Filter2D::calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h, int32_t w)
+{
 
-  for (int32_t chan_group = 0; chan_group < kparams->output_channel_group_count; chan_group++){
+  int8_t *input_img = memcpy_handler->memcopy_fn(scratch_mem, X, h, w); //copy all input channels, channel start is implicitly 0.
+
+  for (int32_t chan_group = 0; chan_group < kparams->output_channel_group_count; chan_group++)
+  {
     vpu_ring_buffer_t A;
 
     aggregate_handler->aggregate_fn(&A, input_img, chan_group);
 
+    // for (int i = 0; i < 16; i++)
+    // {
+
+    //   int32_t v;
+    //   ((int16_t *)&v)[0] = A.vD[i];
+    //   ((int16_t *)&v)[1] = A.vR[i];
+    //   std::cout << "accu: " << i << " " << v << std::endl;
+    // }
+
     Y = ot_handler->output_transform_fn(Y, &A, chan_group);
-    
   }
 }
 
-
-
-
-Filter2D_DW::Filter2D_DW(AbstractKernel::Params * kparams, 
-                         MemCpyFn * memcpy_handler, 
-                         AggregateFn * aggregate_handler, 
-                         OutputTransformFn * ot_handler, 
-                         int8_t * scratch_mem,
-                         int output_channels_per_group) 
+Filter2D_DW::Filter2D_DW(AbstractKernel::Params *kparams,
+                         MemCpyFn *memcpy_handler,
+                         AggregateFn *aggregate_handler,
+                         OutputTransformFn *ot_handler,
+                         int8_t *scratch_mem,
+                         int output_channels_per_group)
     : AbstractKernel(kparams), memcpy_handler(memcpy_handler), aggregate_handler(aggregate_handler),
       ot_handler(ot_handler), output_channels_per_group(output_channels_per_group), scratch_mem(scratch_mem)
 {
-
 }
 
 //This is an example of a depthwise conv or max pool
-void Filter2D_DW::calc_output_pixel_slice(int8_t * Y, int8_t * X, int32_t h, int32_t w){
+void Filter2D_DW::calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h, int32_t w)
+{
 
   const auto output_groups = this->kparams->output_channel_group_count;
-  
-  for (int32_t chan_group = 0; chan_group < output_groups; chan_group++){
+
+  for (int32_t chan_group = 0; chan_group < output_groups; chan_group++)
+  {
 
     vpu_ring_buffer_t A;
 
     int c = this->kparams->output_channel_slice_offset + chan_group * this->output_channels_per_group;
 
     // This will know how many channels it is copying
-    int8_t * input_img = this->memcpy_handler->memcopy_fn(this->scratch_mem, X, h, w, c); 
+    int8_t *input_img = this->memcpy_handler->memcopy_fn(this->scratch_mem, X, h, w, c);
 
     this->aggregate_handler->aggregate_fn(&A, input_img, chan_group);
 
@@ -98,8 +104,5 @@ void Filter2D_DW::calc_output_pixel_slice(int8_t * Y, int8_t * X, int32_t h, int
     //number of bytes to write to result
     //offset into transform specific arrays
     Y = this->ot_handler->output_transform_fn(Y, &A, chan_group);
-    
   }
 }
-
-
