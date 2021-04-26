@@ -4,7 +4,7 @@
 #include "tensorflow/lite/kernels/internal/reference/integer_ops/conv.h"
 #include "tensorflow/lite/kernels/internal/reference/integer_ops/depthwise_conv.h"
 
-#include "../src/cpp/filt2d/util/conv2d_utils.hpp"
+#include "conv2d_utils.hpp"
 
 using namespace nn;
 using namespace nn;
