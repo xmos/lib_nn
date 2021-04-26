@@ -8,37 +8,44 @@
 #include <cstdlib>
 #include <cassert>
 
-namespace nn {
+namespace nn
+{
 
   class WindowLocation;
-  
-  class Filter2dGeometry {
 
-    public:
+  class Filter2dGeometry
+  {
 
-      ImageGeometry input;
-      ImageGeometry output;
-      WindowGeometry window;
+  public:
+    ImageGeometry input;
+    ImageGeometry output;
+    WindowGeometry window;
 
-    public:
-
-      constexpr Filter2dGeometry(
+  public:
+    constexpr Filter2dGeometry(
         ImageGeometry input_geom,
         ImageGeometry output_geom,
         WindowGeometry window_geom) noexcept
-          : input(input_geom), output(output_geom), window(window_geom) {}
+        : input(input_geom),
+          output(output_geom),
+          window(window_geom) {}
 
-      const ImageRegion GetFullJob() const;
+    const ImageRegion GetFullJob() const;
 
-      bool operator==(Filter2dGeometry other) const;
-      bool operator!=(Filter2dGeometry other) const;
+    bool operator==(Filter2dGeometry other) const;
+    bool operator!=(Filter2dGeometry other) const;
 
-      WindowLocation GetWindow(const ImageVect output_coords) const;
-      WindowLocation GetWindow(const int row, const int col, const int channel) const;
+    WindowLocation GetWindow(const ImageVect output_coords) const;
+    WindowLocation GetWindow(const int row, const int col, const int channel) const;
 
-      bool ModelIsDepthwise() const;
+    bool ModelIsDepthwise() const;
 
-      /**
+    //TODO
+    int getReceptiveVolumeElements() const { return window.shape.height * window.shape.width * input.pixelElements(); }
+
+    int getReceptiveVolumeBytes() const { return window.shape.height * window.shape.width * input.pixelBytes(); }
+
+    /**
        * Get the (signed or unsigned) spatial padding required by the filter corresponding to the
       * first (top-left) or last (bottom-right) output pixel.
       * 
@@ -60,32 +67,30 @@ namespace nn {
       * 
       * TODO: This doesn't currently handle dilation correctly!!
       */
-      padding_t ModelPadding(bool initial = true, 
-                            bool signed_padding = true) const;
+    padding_t ModelPadding(bool initial = true,
+                           bool signed_padding = true) const;
 
-      /**
+    /**
        * Does every output pixel have the convolution window entirely within the bounds of 
       * the input image?
       */
-      bool ModelRequiresPadding() const;
+    bool ModelRequiresPadding() const;
 
-      /**
+    /**
        * Is it true that, for any given output pixel, the convolution window is guaranteed to have
       * at least one pixel within the input image's bounds?
       */
-      bool ModelFilterWindowAlwaysIntersectsInput() const;
+    bool ModelFilterWindowAlwaysIntersectsInput() const;
 
-      // /**
-      //  * Does the filter's geometry imply that every input element is used to compute some
-      // * output element?
-      // */
-      // bool ModelConsumesInput() const;
-
+    // /**
+    //  * Does the filter's geometry imply that every input element is used to compute some
+    // * output element?
+    // */
+    // bool ModelConsumesInput() const;
   };
 
-
-
-  inline std::ostream& operator<<(std::ostream &stream, const Filter2dGeometry &filt){
+  inline std::ostream &operator<<(std::ostream &stream, const Filter2dGeometry &filt)
+  {
     return stream << "input{" << filt.input << "}, output{" << filt.output << "}, window{" << filt.window << "}";
   }
 

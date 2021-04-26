@@ -1,134 +1,142 @@
+#pragma once
+
 #include <cstdint>
 #include <cstring>
 #include <vector>
 #include "xs3_vpu.h"
 #include "vpu.hpp"
 
-
 #include "../src/cpp/filt2d/geom/ImageGeometry.hpp"
-namespace nn {
+namespace nn
+{
 
-/**
+  /**
  * Interface implemented by all output transform handlers.
  * 
  * Contains a single function, output_transform_fn() which converts a set of 32-bit accumulators
  * into a set of 8-bit outputs and writes them to the specified output image.
  */
-class OutputTransformFn {
+  class OutputTransformFn
+  {
   public:
-    virtual int8_t * output_transform_fn(int8_t * Y, 
-                                         vpu_ring_buffer_t * A, 
-                                         int32_t output_channel_group) = 0;
-};
+    virtual int8_t *output_transform_fn(int8_t *Y,
+                                        vpu_ring_buffer_t *A,
+                                        int32_t output_channel_group) = 0;
+  };
 
-/**
+  /**
  * these are in a protected order(internally)
  */
-struct OutputTransformValues {
+  struct OutputTransformValues
+  {
     int16_t bias_multipler[VPU_INT16_EPV];
     int16_t final_shr[VPU_INT16_EPV];
     int16_t accu_shr[VPU_INT16_EPV]; //for the vlsat
     int32_t accu_shl;                //for the vlashr
-};
+  };
 
-struct OutputTransformValuesClamping : OutputTransformValues{
+  struct OutputTransformValuesClamping : OutputTransformValues
+  {
     int16_t clamp_near[VPU_INT16_EPV];
     int16_t clamp_far_0[VPU_INT16_EPV];
     int16_t clamp_far_1[VPU_INT16_EPV];
-};
-
-/**
- * 
- */
-struct QuantisationParams {
-    OutputTransformValues otv;
-    std::vector<int16_t> biases; 
-    std::vector<int16_t> multipliers;
-};
-
-class OutputTransformFnInt8 : public OutputTransformFn {
-  public:
-
-    static QuantisationParams quantise_activation(std::vector<double> & output_transform_multiplier, 
-      std::vector<double> & output_transform_bias, 
-      std::vector<int32_t> & accu_min,
-      std::vector<int32_t> & accu_max );
-};
-
-/**
- * 
- */
-class OT_int8 : public OutputTransformFnInt8 
-{
-  public:
-  
-  struct Params {
-      int32_t output_slice_channel_count; //TODO push into base class
-      OutputTransformValues * otv;
-      int16_t * biases;//[output_slice_channel_count];
-      int16_t * multipliers;//[output_slice_channel_count];
-      int16_t * accu_modifier;//[output_slice_channel_count];
-
-      Params(int32_t output_slice_channel_count, OutputTransformValues * otv, 
-        int16_t * biases, int16_t * multipliers, int16_t * accu_modifier):
-        output_slice_channel_count(output_slice_channel_count),
-        otv(otv),
-        biases(biases),
-        multipliers(multipliers),
-        accu_modifier(accu_modifier){}
-
   };
+
+  /**
+ * 
+ */
+  struct QuantisationParams
+  {
+    OutputTransformValues otv;
+    std::vector<int16_t> biases;
+    std::vector<int16_t> multipliers;
+  };
+
+  class OutputTransformFnInt8 : public OutputTransformFn
+  {
+  public:
+    static QuantisationParams quantise_activation(std::vector<double> &output_transform_multiplier,
+                                                  std::vector<double> &output_transform_bias,
+                                                  std::vector<int32_t> &accu_min,
+                                                  std::vector<int32_t> &accu_max);
+  };
+
+  /**
+ * 
+ */
+  class OT_int8 : public OutputTransformFnInt8
+  {
+  public:
+    struct Params
+    {
+      int32_t output_slice_channel_count; //TODO push into base class
+      OutputTransformValues *otv;
+      int16_t *biases;        //[output_slice_channel_count];
+      int16_t *multipliers;   //[output_slice_channel_count];
+      int16_t *accu_modifier; //[output_slice_channel_count];
+
+      Params(int32_t output_slice_channel_count, OutputTransformValues *otv,
+             int16_t *biases, int16_t *multipliers, int16_t *accu_modifier) : output_slice_channel_count(output_slice_channel_count),
+                                                                              otv(otv),
+                                                                              biases(biases),
+                                                                              multipliers(multipliers),
+                                                                              accu_modifier(accu_modifier) {}
+    };
 
   private:
-  Params * params;
+    Params *params;
+
   public:
-    OT_int8(Params * params):params(params){};
-    
+    OT_int8(Params *params) : params(params){};
 
-    int8_t * output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group);
-};
-
-class OTBinary_int8 : public OutputTransformFnInt8 
-{
-  public:
-  class Params {
-    public:
-      int32_t output_slice_channel_count; //TODO push into base class
-      OutputTransformValuesClamping * otv;
-      int16_t * biases;//[output_slice_channel_count];
-      int16_t * multipliers;//[output_slice_channel_count];
-      int16_t * accu_modifier;//[output_slice_channel_count];
-
-      Params(int32_t output_slice_channel_count, OutputTransformValuesClamping * otv, 
-        int16_t * biases, int16_t * multipliers, int16_t * accu_modifier);
+    int8_t *output_transform_fn(int8_t *Y, vpu_ring_buffer_t *A, int32_t output_channel_group);
   };
 
-  Params * params;
+  class OTBinary_int8 : public OutputTransformFnInt8
+  {
   public:
-    OTBinary_int8(Params * params):params(params){};
+    class Params
+    {
+    public:
+      int32_t output_slice_channel_count; //TODO push into base class
+      OutputTransformValuesClamping *otv;
+      int16_t *biases;        //[output_slice_channel_count];
+      int16_t *multipliers;   //[output_slice_channel_count];
+      int16_t *accu_modifier; //[output_slice_channel_count];
 
-    static QuantisationParams quantise_activation(std::vector<double> & output_transform_multiplier, 
-      std::vector<double> & output_transform_bias, 
-      std::vector<int32_t> & accu_min,
-      std::vector<int32_t> & accu_max );
+      Params(int32_t output_slice_channel_count, OutputTransformValuesClamping *otv,
+             int16_t *biases, int16_t *multipliers, int16_t *accu_modifier);
+    };
 
-    int8_t * output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group);
-};
+    Params *params;
 
-class OTBinary_bin : public OutputTransformFn{
-
-  int16_t * thresholds;
   public:
-    OTBinary_bin(int16_t * thresholds);
+    OTBinary_int8(Params *params) : params(params){};
 
-    int8_t * output_transform_fn(int8_t * Y, vpu_ring_buffer_t * A, int32_t output_channel_group);
-};
+    static QuantisationParams quantise_activation(std::vector<double> &output_transform_multiplier,
+                                                  std::vector<double> &output_transform_bias,
+                                                  std::vector<int32_t> &accu_min,
+                                                  std::vector<int32_t> &accu_max);
 
-/**
+    int8_t *output_transform_fn(int8_t *Y, vpu_ring_buffer_t *A, int32_t output_channel_group);
+  };
+
+  class OTBinary_bin : public OutputTransformFn
+  {
+
+    int16_t *thresholds;
+
+  public:
+    OTBinary_bin(int16_t *thresholds);
+
+    int8_t *output_transform_fn(int8_t *Y, vpu_ring_buffer_t *A, int32_t output_channel_group);
+  };
+
+  /**
  * This output transform assumes the int8_t channel data is in vR[] of the accumulator.
  */
-class DirectWriteOutputTransform : public OutputTransformFn 
-{
+  class DirectWriteOutputTransform : public OutputTransformFn
+  {
   public:
     /**
      * The maximum number of channels that a DirectWriteOutputTransform can process in a single
@@ -139,7 +147,8 @@ class DirectWriteOutputTransform : public OutputTransformFn
     /**
      * Configuration parameters for DirectWriteOutputTransform
      */
-    struct Params {
+    struct Params
+    {
       /**
        * The number of channels in the filter's output image.
        * 
@@ -157,7 +166,7 @@ class DirectWriteOutputTransform : public OutputTransformFn
       /**
        * Create a DirectWriteOutputTransform::Params corresponding to a particular output image geometry.
        */
-      Params(const nn::ImageGeometry& output_geometry);
+      Params(const nn::ImageGeometry &output_geometry);
 
       /**
        * Deserialize a DirectWriteOutputTransform::Params from a stream.
@@ -166,45 +175,42 @@ class DirectWriteOutputTransform : public OutputTransformFn
        * DirectWriteOutputTransform::Params::Serialize(). The serialized data format
        * is considered to be opaque.
        */
-      Params(std::istream& stream);
+      Params(std::istream &stream);
 
       /**
        * Serialize a DirectWriteOutputTransform::Params into a stream.
        * 
        * The serialized object can be recovered later using the appropriate stream constructor.
        */
-      void Serialize(std::ostream& stream) const;
+      void Serialize(std::ostream &stream) const;
     };
 
     /**
      * Parameters required by this output transform handler.
      */
-    const Params* params;
+    const Params *params;
 
     /**
      * Construct a DirectWriteOutputTransform using the specified params.
      */
-    DirectWriteOutputTransform(const Params* params);
+    DirectWriteOutputTransform(const Params *params);
 
     /**
      * Apply this output transform to the provided accumulators and write them to
      * the provided output image.
      */
-    virtual int8_t * output_transform_fn(int8_t * Y, 
-                                         vpu_ring_buffer_t * acc, 
-                                         int32_t output_channel_group) override;
-};
+    virtual int8_t *output_transform_fn(int8_t *Y,
+                                        vpu_ring_buffer_t *acc,
+                                        int32_t output_channel_group) override;
+  };
 
-
-
-/**
+  /**
  * This output transform applies a per-channel, rounding, saturating right-shift to the 32-bit
  * accumulators to get 8-bit results.
  */
-class ShiftInt8OutputTransform : public OutputTransformFn 
-{
+  class ShiftInt8OutputTransform : public OutputTransformFn
+  {
   public:
-
     /**
      * The maximum number of channels that a ShiftInt8OutputTransform can process in a single
      * call to output_transform_fn().
@@ -214,7 +220,8 @@ class ShiftInt8OutputTransform : public OutputTransformFn
     /**
      * Configuration parameters for ShiftInt8OutputTransform
      */
-    struct Params {
+    struct Params
+    {
       /**
        * The number of channels in the filter's output image.
        * 
@@ -231,13 +238,13 @@ class ShiftInt8OutputTransform : public OutputTransformFn
       /**
        * Create a ShiftInt8OutputTransform::Params
        */
-      Params(const int output_image_channels, 
+      Params(const int output_image_channels,
              const int16_t shift);
 
       /**
        * Create a ShiftInt8OutputTransform::Params
        */
-      Params(const nn::ImageGeometry& output_image, 
+      Params(const nn::ImageGeometry &output_image,
              const int16_t shift);
 
       /**
@@ -245,51 +252,51 @@ class ShiftInt8OutputTransform : public OutputTransformFn
        * 
        * The data in the stream should come from a prior call to ShiftInt8OutputTransform::Params::Serialize().
        */
-      Params(std::istream& stream);
+      Params(std::istream &stream);
 
       /**
        * Serialize this ShiftInt8OutputTransform::Params into a byte stream.
        * 
        * Note: This does not serialize the shift values.
        */
-      void Serialize(std::ostream& stream) const;
+      void Serialize(std::ostream &stream) const;
     };
-    
+
     /**
      * Parameters required by this output transform handler.
      */
-    const Params* params;
+    const Params *params;
 
     /**
      * Construct a ShiftInt8OutputTransform using the specified params.
      */
-    ShiftInt8OutputTransform(const Params* params); 
+    ShiftInt8OutputTransform(const Params *params);
 
     /**
      * Apply this output transform to the provided accumulators and write them to
      * the provided output image.
      */
-    virtual int8_t * output_transform_fn(int8_t * Y, 
-                                         vpu_ring_buffer_t * acc, 
-                                         int32_t output_channel_group) override;
-};
+    virtual int8_t *output_transform_fn(int8_t *Y,
+                                        vpu_ring_buffer_t *acc,
+                                        int32_t output_channel_group) override;
+  };
 
-/**
+  /**
  *  xcore implementation of shift_int8_output_transform_ref()
  */
-C_API void shift_int8_output_transform_xcore(
-    int8_t* output,
-    const vpu_ring_buffer_t* acc,
-    const int16_t* right_shifts,
-    const int channel_count);
+  C_API void shift_int8_output_transform_xcore(
+      int8_t *output,
+      const vpu_ring_buffer_t *acc,
+      const int16_t *right_shifts,
+      const int channel_count);
 
-/**
+  /**
  *  Portable implementation of shift_int8_output_transform_xcore()
  */
-C_API void shift_int8_output_transform_ref(
-    int8_t* output,
-    const vpu_ring_buffer_t* acc,
-    const int16_t* right_shifts,
-    const int channel_count);
+  C_API void shift_int8_output_transform_ref(
+      int8_t *output,
+      const vpu_ring_buffer_t *acc,
+      const int16_t *right_shifts,
+      const int channel_count);
 
 }
