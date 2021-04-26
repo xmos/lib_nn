@@ -5,7 +5,6 @@
 #include "geom/Filter2dGeometry.hpp"
 #include "RefOps.hpp"
 #include "Rand.hpp"
-#include "../src/cpp/filt2d/util/TensorWrap.hpp"
 #include "ref_tests.hpp"
 
 #include "gtest/gtest.h"

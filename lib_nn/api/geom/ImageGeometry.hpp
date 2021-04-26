@@ -53,6 +53,21 @@ namespace nn
     int inline const colBytes() const { return colElements() * channel_depth; }
     int inline const imageBytes() const { return imageElements() * channel_depth; }
 
+      /**
+       * Get the flattened index of the specified image element.
+       * 
+       * The "flattened" index of an element is the index of the element when the image is stored in a 1 dimensional
+       * array. This is ideal, for example, when the image image is backed by a `std::vector` object.
+       * 
+       * This function returns -1 if the specified coordinates refer to an element in padding 
+       * (i.e. beyond the bounds of the image).
+       */
+    int Index(const int row,
+              const int col,
+              const int channel) const;
+
+    int Index(const ImageVect& input_coords) const;
+
     /**
      * Get the memory stride (in bytes) required to move by the specified amount within this geometry.
      */
