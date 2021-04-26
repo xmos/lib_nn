@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../misc.hpp"
-#include "../geom/Filter2dGeometry.hpp"
+#include "geom/Filter2dGeometry.hpp"
 
 #include <cstdint>
 #include <vector>

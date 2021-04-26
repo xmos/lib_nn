@@ -8,7 +8,7 @@
 #include "xs3_vpu.h"
 #include "vpu.hpp"
 
-#include "../src/cpp/filt2d/geom/ImageGeometry.hpp"
+#include "geom/ImageGeometry.hpp"
 namespace nn
 {
 

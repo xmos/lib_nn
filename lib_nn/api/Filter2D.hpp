@@ -5,9 +5,9 @@
 #include "MemCpyFn.hpp"
 #include "AggregateFn.hpp"
 #include "OutputTransformFn.hpp"
-#include "../src/cpp/filt2d/geom/util.hpp"
+#include "geom/util.hpp"
 
-#include "../src/cpp/filt2d/geom/Filter2dGeometry.hpp"
+#include "geom/Filter2dGeometry.hpp"
 
 namespace nn {
 

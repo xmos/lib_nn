@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../geom/Filter2dGeometry.hpp"
+#include "geom/Filter2dGeometry.hpp"
 
 #include <iostream>
 #include <functional>

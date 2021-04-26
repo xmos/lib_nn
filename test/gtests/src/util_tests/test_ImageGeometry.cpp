@@ -5,7 +5,7 @@
 
 #include "gtest/gtest.h"
 
-#include "../src/cpp/filt2d/geom/ImageGeometry.hpp"
+#include "geom/ImageGeometry.hpp"
 #include "Rand.hpp"
 
 using namespace nn;

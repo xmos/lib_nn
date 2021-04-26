@@ -2,7 +2,7 @@
 #include <cmath>
 
 #include "Filter2D.hpp"
-#include "../src/cpp/filt2d/geom/Filter2dGeometry.hpp"
+#include "geom/Filter2dGeometry.hpp"
 
 namespace nn
 {

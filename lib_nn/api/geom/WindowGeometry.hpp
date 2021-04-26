@@ -1,8 +1,8 @@
 #pragma once
 
 #include "nn_types.h"
-#include "../misc.hpp"
-#include "../util/AddressCovector.hpp"
+#include "../src/cpp/filt2d/misc.hpp"
+#include "../src/cpp/filt2d/util/AddressCovector.hpp"
 #include "ImageGeometry.hpp"
 
 #include <cstdint>

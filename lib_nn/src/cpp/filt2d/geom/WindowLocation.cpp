@@ -1,5 +1,5 @@
 
-#include "WindowLocation.hpp"
+#include "geom/WindowLocation.hpp"
 
 #include <cassert>
 

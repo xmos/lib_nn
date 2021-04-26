@@ -1,10 +1,7 @@
 
-#include "Filter2dGeometry.hpp"
-
-#include "WindowLocation.hpp"
+#include "geom/Filter2dGeometry.hpp"
 
 using namespace nn;
-
 
 
 const ImageRegion Filter2dGeometry::GetFullJob() const 

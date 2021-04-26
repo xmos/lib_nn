@@ -1,5 +1,5 @@
 
-#include "ImageGeometry.hpp"
+#include "geom/ImageGeometry.hpp"
 
 using namespace nn;
 

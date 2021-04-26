@@ -5,7 +5,7 @@
 
 #include "gtest/gtest.h"
 
-#include "../src/cpp/filt2d/geom/WindowLocation.hpp"
+#include "geom/WindowLocation.hpp"
 #include "Rand.hpp"
 #include "FilterGen.hpp"
 

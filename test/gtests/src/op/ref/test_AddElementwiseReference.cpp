@@ -2,7 +2,7 @@
 
 #include "nn_types.h"
 #include "../src/cpp/filt2d/misc.hpp"
-#include "../src/cpp/filt2d/geom/Filter2dGeometry.hpp"
+#include "geom/Filter2dGeometry.hpp"
 #include "RefOps.hpp"
 #include "Rand.hpp"
 #include "../src/cpp/filt2d/util/TensorWrap.hpp"

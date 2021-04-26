@@ -2,8 +2,7 @@
 
 #include "nn_types.h"
 #include "util.hpp"
-#include "../util/AddressCovector.hpp"
-// #include "WindowGeometry.hpp"
+#include "../src/cpp/filt2d/util/AddressCovector.hpp"
 
 #include <iostream>
 #include <cassert>
