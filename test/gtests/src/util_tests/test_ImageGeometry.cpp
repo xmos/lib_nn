@@ -5,7 +5,7 @@
 
 #include "gtest/gtest.h"
 
-#include "../src/cpp/filt2d/geom/ImageGeometry.hpp"
+#include "geom/ImageGeometry.hpp"
 #include "Rand.hpp"
 
 using namespace nn;
@@ -139,24 +139,6 @@ TEST_P(ImageGeometryTest, getStride)
     auto delta = vect2 - vect1;
 
     ASSERT_EQ(stride, (delta.channel + delta.col * img.depth + delta.row * img.depth * img.width) * img.channel_depth);
-  }
-}
-
-TEST_P(ImageGeometryTest, getAddressCovector)
-{
-  auto img = GetParam();
-
-  // imageBytes() so it is deterministic but not the same for every case
-  // auto rng = nn::test::Rand(img.imageBytes()+1);
-
-  auto cov = img.getAddressCovector<int8_t>();
-
-  for(int k = 0; k < 10; ++k){
-
-    ASSERT_EQ(cov.chan_bytes, img.channel_depth);
-    ASSERT_EQ(cov.col_bytes, img.depth * img.channel_depth);
-    ASSERT_EQ(cov.row_bytes, img.depth * img.width * img.channel_depth);
-
   }
 }
 

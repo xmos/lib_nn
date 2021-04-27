@@ -16,15 +16,14 @@ std::vector<int8_t> nn::test::ops::ref::MaxPoolReference(
 
   tflite::PoolParams params;
 
-  auto pad_initial = filter_geometry.ModelPadding(true);
-  auto pad_final   = filter_geometry.ModelPadding(false);
+  auto padding = filter_geometry.Padding();
 
   params.activation = tflite::FusedActivationFunctionType::kNone;
   params.padding_type = tflite::PaddingType::kNone;
-  params.padding_values.height = pad_initial.top;
-  params.padding_values.width = pad_initial.left;
-  params.padding_values.height_offset = pad_final.bottom;
-  params.padding_values.width_offset = pad_final.right;
+  params.padding_values.height = padding.top;
+  params.padding_values.width = padding.left;
+  params.padding_values.height_offset = padding.bottom;
+  params.padding_values.width_offset = padding.right;
   params.stride_height = filter_geometry.window.stride.row;
   params.stride_width = filter_geometry.window.stride.col;
   params.filter_height = filter_geometry.window.shape.height;
@@ -52,15 +51,14 @@ std::vector<int8_t> nn::test::ops::ref::AveragePoolReference(
 
   tflite::PoolParams params;
 
-  auto pad_initial = filter_geometry.ModelPadding(true);
-  auto pad_final   = filter_geometry.ModelPadding(false);
+  auto padding = filter_geometry.Padding();
 
   params.activation = tflite::FusedActivationFunctionType::kNone;
   params.padding_type = tflite::PaddingType::kNone;
-  params.padding_values.height = pad_initial.top;
-  params.padding_values.width = pad_initial.left;
-  params.padding_values.height_offset = pad_final.bottom;
-  params.padding_values.width_offset = pad_final.right;
+  params.padding_values.height = padding.top;
+  params.padding_values.width = padding.left;
+  params.padding_values.height_offset = padding.bottom;
+  params.padding_values.width_offset = padding.right;
   params.stride_height = filter_geometry.window.stride.row;
   params.stride_width = filter_geometry.window.stride.col;
   params.filter_height = filter_geometry.window.shape.height;

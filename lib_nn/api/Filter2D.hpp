@@ -1,12 +1,13 @@
 #include <cstdint>
 #include <cstring>
 
+#include "Utils.hpp"
 #include "MemCpyFn.hpp"
 #include "AggregateFn.hpp"
 #include "OutputTransformFn.hpp"
-#include "../src/cpp/filt2d/geom/util.hpp"
+#include "geom/util.hpp"
 
-#include "../src/cpp/filt2d/geom/Filter2dGeometry.hpp"
+#include "geom/Filter2dGeometry.hpp"
 
 namespace nn {
 
@@ -14,7 +15,6 @@ namespace nn {
    * Class representing an executable filter kernel. A concrete instance of this class processes a
    * particular region of the output image associated with the filter.
    */
-  template <class T>
   class AbstractKernel {
     
   public:
@@ -98,24 +98,15 @@ namespace nn {
 
       }
 
-      Params(const ImageGeometry& image, 
-            const ImageRegion& region, 
-            const int channels_per_group = VPU_INT8_ACC_PERIOD)
-        : h_begin(region.start.row), h_end(region.endVect().row),
-          w_begin(region.start.col), w_end(region.endVect().col),
-          output_channel_slice_offset(region.start.channel) 
-      {
-        this->output_channel_group_count = (region.shape.depth + channels_per_group - 1) / channels_per_group;
-        
-        // memory to move to the next right pixel after all current channel groups have been saved
-        // i.e. this conv2d might write chs 16-31 of 68 chs, so the stride would have to be 52 channels 
-        // worth of memory(enough to move from the end of the group just processed to the start of the 
-        // next)
-        this->output_w_mem_stride = ( image.depth * image.channel_depth );
-
-        //memory to moved down a pixel
-        this->output_h_mem_stride = image.rowBytes() - region.shape.width * this->output_w_mem_stride;
-      }
+      Params(const ImageGeometry& output_image, 
+             const ImageRegion& output_region, 
+             const int channels_per_group = VPU_INT8_ACC_PERIOD)
+        : h_begin(output_region.start.row), h_end(output_region.endVect().row),
+          w_begin(output_region.start.col), w_end(output_region.endVect().col),
+          output_channel_slice_offset(output_region.start.channel),
+          output_channel_group_count( (output_region.shape.depth + channels_per_group - 1) / channels_per_group ),
+          output_w_mem_stride( output_image.getStride(0,1,0) ),
+          output_h_mem_stride( output_image.getStride(1, -output_region.shape.width, 0) ) { }
     };
 
     protected:
@@ -125,6 +116,11 @@ namespace nn {
        * as well as how to iterate over the region.
        */
       Params * kparams;
+
+      virtual void calc_output_pixel_slice(int8_t *output_image, 
+                                           int8_t *input_image, 
+                                           int32_t output_row, 
+                                           int32_t output_col) = 0;
 
     public:
 
@@ -165,13 +161,15 @@ namespace nn {
 
       for(int32_t h = kparams->h_begin; h < kparams->h_end; h++){
         for(int32_t w = kparams->w_begin; w < kparams->w_end; w++){
-          static_cast<T*>(this)->calc_output_pixel_slice(Y, X, h, w);
+          this->calc_output_pixel_slice(Y, X, h, w);
           Y += kparams->output_w_mem_stride;
         }
         Y += kparams->output_h_mem_stride;
       }
     }
   };
+
+
 
   /**
    * Base class for non-depthwise 2D filter kernels.
@@ -180,7 +178,7 @@ namespace nn {
    * ultimately determined by 3 component objects supplied to it, the patch handler (instance of `MemCpyFn`),
    * the aggregation handler (instance of `AggregateFn`) and the output transformer (instance of `OutputTransformFn`).
    */
-  class Filter2D : public AbstractKernel<Filter2D> {
+  class Filter2D : public AbstractKernel {
     public:
       static constexpr bool UsesPerGroupMemCopy = false;
 
@@ -216,7 +214,7 @@ namespace nn {
       /**
        * Process a single output pixel (subject to the region constraints given by `kparams`
        */
-      void calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h, int32_t w) ;
+      virtual void calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h, int32_t w) override;
 
     public:
 
@@ -227,21 +225,17 @@ namespace nn {
        * Construct a filter using the provided component handlers.
        */
       Filter2D(AbstractKernel::Params * kparams, 
-              MemCpyFn * memcpy_handler, 
-              AggregateFn * aggregate_handler, 
-              OutputTransformFn * ot_handler, 
-              int8_t * scratch_mem=nullptr);
-
-      // Because AbstractKernel calls calc_output_pixel_slice(), which is protected (and not a virtual function
-      // of AbstractKernel), AbstractKernel<Filter2D> must be declared a friend class.
-      friend class AbstractKernel<Filter2D>;
+               MemCpyFn * memcpy_handler, 
+               AggregateFn * aggregate_handler, 
+               OutputTransformFn * ot_handler, 
+               int8_t * scratch_mem=nullptr);
 
   };
 
   /**
    * Base class for depthwise 2D filter kernels.
    */
-  class Filter2D_DW : public AbstractKernel<Filter2D_DW> {
+  class Filter2D_DW : public AbstractKernel {
     public:
       static constexpr bool UsesPerGroupMemCopy = true;
 
@@ -279,10 +273,10 @@ namespace nn {
       /**
        * Process a single output pixel (subject to the region constraints given by `kparams`
        */
-      void calc_output_pixel_slice(int8_t *Y, 
-                                  int8_t *X, 
-                                  int32_t h, 
-                                  int32_t w) ;
+      virtual void calc_output_pixel_slice(int8_t *output_image, 
+                                           int8_t *input_image, 
+                                           int32_t output_row, 
+                                           int32_t output_col) override;
 
     public:
 
@@ -295,11 +289,6 @@ namespace nn {
                   OutputTransformFn * ot_handler, 
                   int8_t * scratch_mem = nullptr,
                   int output_channels_per_group = VPU_INT8_ACC_PERIOD);
-
-        
-      // Because AbstractKernel calls calc_output_pixel_slice(), which is protected (and not a virtual function
-      // of AbstractKernel), AbstractKernel<Filter2D> must be declared a friend class.
-      friend class AbstractKernel<Filter2D_DW>;
 
   };
 

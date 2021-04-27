@@ -3,10 +3,12 @@
 #include <cstdint>
 #include <cstring>
 #include <vector>
+
+#include "Utils.hpp"
 #include "xs3_vpu.h"
 #include "vpu.hpp"
 
-#include "../src/cpp/filt2d/geom/ImageGeometry.hpp"
+#include "geom/ImageGeometry.hpp"
 namespace nn
 {
 
@@ -135,14 +137,10 @@ namespace nn
   /**
  * This output transform assumes the int8_t channel data is in vR[] of the accumulator.
  */
-  class DirectWriteOutputTransform : public OutputTransformFn
+  class DirectWriteOutputTransform : public OutputTransformFn,
+                                     public ChannelParallelComponent<VPU_INT8_EPV_LOG2> 
   {
   public:
-    /**
-     * The maximum number of channels that a DirectWriteOutputTransform can process in a single
-     * call to output_transform_fn().
-     */
-    static constexpr int ChannelsPerOutputGroup = VPU_INT8_EPV;
 
     /**
      * Configuration parameters for DirectWriteOutputTransform
@@ -208,14 +206,10 @@ namespace nn
  * This output transform applies a per-channel, rounding, saturating right-shift to the 32-bit
  * accumulators to get 8-bit results.
  */
-  class ShiftInt8OutputTransform : public OutputTransformFn
-  {
+class ShiftInt8OutputTransform : public OutputTransformFn, 
+                                 public ChannelParallelComponent<VPU_INT8_ACC_PERIOD_LOG2> 
+{
   public:
-    /**
-     * The maximum number of channels that a ShiftInt8OutputTransform can process in a single
-     * call to output_transform_fn().
-     */
-    static constexpr int ChannelsPerOutputGroup = VPU_INT8_ACC_PERIOD;
 
     /**
      * Configuration parameters for ShiftInt8OutputTransform
@@ -234,6 +228,10 @@ namespace nn
        * The per-output-channel arithmetic right-shifts to be applied to the accumulators.
        */
       int16_t shifts[VPU_INT8_ACC_PERIOD];
+
+      /**
+       */
+      Params(){}
 
       /**
        * Create a ShiftInt8OutputTransform::Params

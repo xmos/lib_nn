@@ -1,5 +1,5 @@
 
-#include "WindowLocation.hpp"
+#include "geom/WindowLocation.hpp"
 
 #include <cassert>
 
@@ -35,6 +35,48 @@ ImageVect WindowLocation::InputCoords(const int filter_row,
   return in_start.add(filter_row * filter.window.dilation.row,
                       filter_col * filter.window.dilation.col,
                       filter_chan);
+}
+
+int WindowLocation::InputIndex(const int filter_row,
+                               const int filter_col,
+                               const int filter_chan) const
+{ 
+  assert(filter_row >= 0);
+  assert(filter_row < filter.window.shape.height);
+  assert(filter_col >= 0);
+  assert(filter_col < filter.window.shape.width);
+  assert(filter_chan >= 0);
+  assert(filter_chan < filter.window.shape.depth);
+
+  if(this->IsPadding(filter_row, filter_col, filter_chan))
+    return -1;
+    
+  return this->filter.input.Index(InputCoords(filter_row, filter_col, filter_chan));
+}
+
+int WindowLocation::FilterIndex(const int filter_row,
+                                const int filter_col,
+                                const int filter_chan) const
+{ 
+  assert(filter_row >= 0);
+  assert(filter_row < filter.window.shape.height);
+  assert(filter_col >= 0);
+  assert(filter_col < filter.window.shape.width);
+  assert(filter_chan >= 0);
+  assert(filter_chan < filter.window.shape.depth);
+
+  // Kernel tensor shape is either
+  //    (Out_Chans, Height, Width, In_Chans)
+  // or
+  //    (Height, Width, In_Chans)
+  // Depending on whether it's depthwise or not.
+
+  int dex =  filter.window.shape.depth * (filter.window.shape.width * filter_row + filter_col) + filter_chan;
+  
+  if( !filter.ModelIsDepthwise() )
+    dex += filter.window.shape.imageElements() * this->output_coords.channel;
+
+  return dex;
 }
 
 padding_t WindowLocation::Padding() const

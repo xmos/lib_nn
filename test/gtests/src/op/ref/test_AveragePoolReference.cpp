@@ -1,11 +1,10 @@
 
 
 #include "nn_types.h"
-#include "../src/cpp/filt2d/misc.hpp"
-#include "../src/cpp/filt2d/geom/Filter2dGeometry.hpp"
+#include "geom/util.hpp"
+#include "geom/Filter2dGeometry.hpp"
 #include "RefOps.hpp"
 #include "Rand.hpp"
-#include "../src/cpp/filt2d/util/TensorWrap.hpp"
 #include "ref_tests.hpp"
 
 #include "gtest/gtest.h"
@@ -25,48 +24,44 @@
 
 using namespace nn::test;
 
+static int32_t AddElements(const ImageVect&, const ImageVect&, int32_t acc32, int8_t elm, bool)
+{
+  return acc32 + elm;
+}
 
+static int CountPixels(const ImageVect&, const ImageVect&, int pix, int8_t, bool is_pad)
+{
+  return is_pad? (pix) : (pix+1);
+}
 
 static auto rng = Rand();
 
-class AveragePoolReferenceTestA : public ::testing::TestWithParam<Filter2dGeometry> {};
+class AveragePoolReferenceTest : public ::testing::TestWithParam<Filter2dGeometry> {};
 
-TEST_P(AveragePoolReferenceTestA, NoPadding)
+TEST_P(AveragePoolReferenceTest, SanityCheck)
 {
   auto geom = GetParam();
 
   auto input = std::vector<int8_t>(geom.input.imageElements());
   auto expected = std::vector<int8_t>(geom.output.imageElements());
-
-  auto in_cov = geom.input.getAddressCovector<int8_t>();
-  auto out_cov = geom.output.getAddressCovector<int8_t>();
 
   auto win_pixy = geom.window.shape.imagePixels();
 
+  for(int k = 0; k < input.size(); k++)
+    input[k] = rng.rand<int8_t>();
+
   for(int xan = 0; xan < geom.output.depth; xan++){
     for(int row = 0; row < geom.output.height; row++){
       for(int col = 0; col < geom.output.width; col++){
 
-        float sum = 0;
+        auto loc = geom.GetWindow(row, col, xan);
 
-        for(int kr = 0; kr < geom.window.shape.height; kr++){
-          for(int kc = 0; kc < geom.window.shape.width; kc++){
+        const auto sum = loc.Fold<int32_t,int8_t>(&input[0], AddElements, 0, 0);
+        const auto pix = loc.Fold<int,int8_t>(&input[0], CountPixels, 0, 0);
 
-            auto xr = row * int(geom.window.shape.height) + kr;
-            auto xc = col * int(geom.window.shape.width ) + kc;
+        const auto out_index = geom.output.Index(row, col, xan);
 
-            int8_t* X = in_cov.resolve(&input[0], xr, xc, xan);
-
-            *X = rng.rand<int8_t>();
-
-            sum += *X;
-          }
-        }
-
-        int8_t* Y = out_cov.resolve(&expected[0], row, col, xan);
-
-        // the ldexp term is to account for differences in rounding behavior between floats and the ref implementation
-        *Y = round_int8(sum / float(win_pixy));
+        expected[out_index] = round_int8(sum / float(pix));
       }
     }
   }
@@ -76,61 +71,8 @@ TEST_P(AveragePoolReferenceTestA, NoPadding)
   ASSERT_EQ(output, expected);
 }
 
-static auto iterA = nn::test::ParamedRandIter<Filter2dGeometry, SimpleFilter>(100, SimpleFilter(true, false, 16));
-INSTANTIATE_TEST_SUITE_P(, AveragePoolReferenceTestA, ::testing::ValuesIn(iterA.begin(), iterA.end()));
+static auto iterA = nn::test::ParamedRandIter<Filter2dGeometry, SimpleFilter>(300, SimpleFilter(true, false, 16));
+static auto iterB = nn::test::ParamedRandIter<Filter2dGeometry, SimpleFilter>(300, SimpleFilter(true, true, 16));
 
-
-
-
-class AveragePoolReferenceTestB : public ::testing::TestWithParam<Filter2dGeometry> {};
-
-TEST_P(AveragePoolReferenceTestB, WithPadding)
-{
-  auto geom = GetParam();
-
-  auto input = std::vector<int8_t>(geom.input.imageElements());
-  auto expected = std::vector<int8_t>(geom.output.imageElements());
-
-  auto in_cov = geom.input.getAddressCovector<int8_t>();
-  auto out_cov = geom.output.getAddressCovector<int8_t>();
-
-  for(int xan = 0; xan < geom.output.depth; xan++){
-    for(int row = 0; row < geom.output.height; row++){
-      for(int col = 0; col < geom.output.width; col++){
-
-        float sum = 0;
-        int filt_count = 0;
-
-        for(int kr = 0; kr < geom.window.shape.height; kr++){
-          for(int kc = 0; kc < geom.window.shape.width; kc++){
-
-            auto xr = geom.window.start.row + row * int(geom.window.shape.height) + kr;
-            auto xc = geom.window.start.col + col * int(geom.window.shape.width ) + kc;
-
-            if(xr < 0 || xr >= geom.input.height) continue;
-            if(xc < 0 || xc >= geom.input.width ) continue;
-
-            filt_count++;
-            int8_t* X = in_cov.resolve(&input[0], xr, xc, xan);
-
-            *X = rng.rand<int8_t>();
-            sum += *X;
-          }
-        }
-
-        int8_t* Y = out_cov.resolve(&expected[0], row, col, xan);
-
-        // the ldexp term is to account for differences in rounding behavior between floats and the ref implementation
-        *Y = round_int8(sum / float(filt_count));
-      }
-    }
-  }
-
-  auto output = nn::test::ops::ref::AveragePoolReference(geom, &input[0]);
-
-  ASSERT_EQ(output, expected);
-
-}
-
-static auto iterB = nn::test::ParamedRandIter<Filter2dGeometry, SimpleFilter>(100, SimpleFilter(true, true, 16));
-INSTANTIATE_TEST_SUITE_P(, AveragePoolReferenceTestB, ::testing::ValuesIn(iterB.begin(), iterB.end()));
+INSTANTIATE_TEST_SUITE_P(Unpadded, AveragePoolReferenceTest, ::testing::ValuesIn(iterA.begin(), iterA.end()));
+INSTANTIATE_TEST_SUITE_P(Padded, AveragePoolReferenceTest, ::testing::ValuesIn(iterB.begin(), iterB.end()));

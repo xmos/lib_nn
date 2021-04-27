@@ -1,7 +1,7 @@
 #include <cstdint>
 #include <cstring>
 
-#include "../src/cpp/filt2d/geom/Filter2dGeometry.hpp"
+#include "geom/Filter2dGeometry.hpp"
 
 namespace nn
 {
@@ -41,12 +41,12 @@ namespace nn
        */
     virtual int8_t *memcopy_fn(int8_t *T, int8_t *X, int32_t h, int32_t w, int32_t c = 0) = 0;
 
-    /**
+      /**
        * 
        */
     virtual size_t get_scratch_bytes() = 0;
 
-    /**
+      /**
        * 
        */
     virtual size_t get_overread_bytes() = 0;
@@ -58,7 +58,6 @@ namespace nn
   class DerefInputFn : public MemCpyFn
   {
 
-  public:
   public:
     class Params
     {
@@ -126,6 +125,10 @@ namespace nn
              const int input_ch_per_output,
              const int8_t pad_val);
 
+        Params(const Filter2dGeometry& filter_geometry,
+               const int8_t padding_value,
+               const int channels_per_output);
+
       Params(std::istream &stream);
 
       void Serialize(std::ostream &stream) const;
@@ -151,31 +154,32 @@ namespace nn
       /**
        * Bytes per row of the input image
        */
-      int32_t bytes_per_h_line;
+      int32_t bytes_per_h_line; 
 
-      /**
+    /**
      * Bytes per pixels of the filter window.
      */
-      int32_t bytes_per_pixel;
+      int32_t bytes_per_pixel; 
 
-      /**
+    /**
      * Height of the filter window in pixels.
      */
       int32_t input_height;
 
-      /**
+    /**
      * Width of the filter window in pixels.
      */
       int32_t input_width;
 
-      /**
+    /**
      * The number of VPU words (vectors) to copy for the entire filter window.
      * 
      * Note that this should be rounded up if the number of words is not integral.
      */
-      int32_t input_channel_groups;
+      int32_t input_channel_groups; 
 
-      /**
+
+    /**
      * The difference between the number of bytes actually copied and the target number of bytes to copy.
      */
       int32_t T_rewind;

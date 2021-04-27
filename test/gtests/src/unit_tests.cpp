@@ -152,7 +152,7 @@ namespace nn
                       MockMemCpyFn mem_fn;
                       MockOutputTransform ot_fn(r_channels_end - r_channels_start);
 
-                      auto akp = typename AbstractKernel<TypeParam>::Params(ip, ir, cog_size);
+                      auto akp = typename AbstractKernel::Params(ip, ir, cog_size);
 
                       TypeParam f(&akp, &mem_fn, &agg_fn, &ot_fn);
 

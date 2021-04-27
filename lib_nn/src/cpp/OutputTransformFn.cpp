@@ -697,7 +697,6 @@ int8_t *OTBinary_bin::output_transform_fn(int8_t *Y, vpu_ring_buffer_t *A, int32
  * DirectWriteOutputTransform
  *****************************/
 
-constexpr int DirectWriteOutputTransform::ChannelsPerOutputGroup;
 
 ////////// DirectWriteOutputTransform::Params //////////////
 DirectWriteOutputTransform::Params::Params(const int image_channels)
@@ -749,8 +748,6 @@ int8_t *DirectWriteOutputTransform::output_transform_fn(int8_t *Y,
 /******************************
  * ShiftInt8OutputTransform
  *****************************/
-
-constexpr int ShiftInt8OutputTransform::ChannelsPerOutputGroup;
 
 ////////// ShiftInt8OutputTransform::Params //////////////
 ShiftInt8OutputTransform::Params::Params(const int image_channels,

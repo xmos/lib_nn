@@ -1,7 +1,24 @@
 
-#include "ImageGeometry.hpp"
+#include "geom/ImageGeometry.hpp"
 
 using namespace nn;
+
+
+int ImageGeometry::Index(const int row,
+                         const int col,
+                         const int channel) const
+{
+  if(row < 0 || row >= this->height) return -1;
+  if(col < 0 || col >= this->width) return -1;
+  if(channel < 0 || channel >= this->depth) return -1;
+
+  return this->depth * (this->width * row + col) + channel;
+}
+
+int ImageGeometry::Index(const ImageVect& input_coords) const
+{
+  return this->Index(input_coords.row, input_coords.col, input_coords.channel);
+}
 
 mem_stride_t ImageGeometry::getStride(
     const ImageVect& vect) const 

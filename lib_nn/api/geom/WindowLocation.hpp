@@ -1,8 +1,7 @@
 #pragma once
 
 #include "nn_types.h"
-#include "../misc.hpp"
-#include "../util/AddressCovector.hpp"
+#include "geom/util.hpp"
 #include "Filter2dGeometry.hpp"
 
 #include <cstdint>
@@ -42,6 +41,26 @@ namespace nn {
       ImageVect InputCoords(const int filter_row,
                             const int filter_col,
                             const int filter_chan) const;
+
+      /**
+       * Get the flattened index of the specified input element using local filter coordinates.
+       * 
+       * The "flattened" index of an element is the index of the element when the image is stored in a 1 dimensional
+       * array. This is ideal, for example, when the input image is backed by a `std::vector` object.
+       * 
+       * This function returns -1 if the specified coordinates (at the current filter window location) refer to
+       * an element in padding (i.e. beyond the bounds of the input image).
+       */
+      int InputIndex(const int filter_row,
+                     const int filter_col,
+                     const int filter_chan) const;
+
+      /**
+       * 
+       */
+      int FilterIndex(const int filter_row,
+                      const int filter_col,
+                      const int filter_chan) const;
 
       /**
        * Determine the top-, left-, bottom- and right-padding requirements for the filter window at this location.

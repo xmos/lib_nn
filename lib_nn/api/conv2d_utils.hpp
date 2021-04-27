@@ -1,13 +1,23 @@
 #pragma once
 
-#include "../misc.hpp"
-#include "../geom/Filter2dGeometry.hpp"
-#include "../OutputTransformers.hpp"
+#include "geom/util.hpp"
+#include "geom/Filter2dGeometry.hpp"
 
 #include <cstdint>
 #include <vector>
 
+C_API typedef struct {
+  int16_t  high[16];
+  uint16_t low[16];
+} vpu_split_acc32_t;
 
+C_API typedef struct {
+    uint16_t shift1[ 16 ];
+    int16_t  scale[ 16 ];
+    int16_t  offset_scale[ 16 ];
+    int16_t  offset[ 16 ];
+    uint16_t shift2[ 16 ];
+} nn_acc32_to_int8_params_t;
 
 namespace nn {
     namespace conv2d {

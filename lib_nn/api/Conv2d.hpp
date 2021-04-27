@@ -2,7 +2,7 @@
 #include <cmath>
 
 #include "Filter2D.hpp"
-#include "../src/cpp/filt2d/geom/Filter2dGeometry.hpp"
+#include "geom/Filter2dGeometry.hpp"
 
 namespace nn
 {
@@ -13,7 +13,7 @@ namespace nn
     //Valid only
     //Multiple of 32 input and 16 output channels
     Conv2dVaildDirect(
-        AbstractKernel<Filter2D>::Params *akp,
+        AbstractKernel::Params *akp,
         DerefInputFn *memcpy,
         MatMulDirectFn *aggregator,
         OT_int8 *ot) : Filter2D(akp, memcpy, aggregator, ot) {}
@@ -26,7 +26,7 @@ namespace nn
     //Valid only
     //Arbitrary input + output channel count
     Conv2dVaildIndirect(
-        AbstractKernel<Filter2D>::Params *akp,
+        AbstractKernel::Params *akp,
         ImToColValid *memcpy,
         MatMulInt8 *aggregator,
         OT_int8 *ot) : Filter2D(akp, memcpy, aggregator, ot) {}
@@ -39,7 +39,7 @@ namespace nn
     //Padded
     //Arbitrary input + output channel count
     Conv2dPaddedInDirect(
-        AbstractKernel<Filter2D>::Params *akp,
+        AbstractKernel::Params *akp,
         ImToColPadded *memcpy,
         MatMulInt8 *aggregator,
         OT_int8 *ot, int8_t *scratch) : Filter2D(akp, memcpy, aggregator, ot, scratch) {}

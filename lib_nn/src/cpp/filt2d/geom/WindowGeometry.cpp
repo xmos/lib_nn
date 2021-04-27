@@ -1,5 +1,5 @@
 
-#include "WindowGeometry.hpp"
+#include "geom/WindowGeometry.hpp"
 
 using namespace nn;
 

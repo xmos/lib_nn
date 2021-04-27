@@ -5,7 +5,7 @@
 
 #include "gtest/gtest.h"
 
-#include "../src/cpp/filt2d/geom/WindowGeometry.hpp"
+#include "geom/WindowGeometry.hpp"
 #include "Rand.hpp"
 
 using namespace nn;

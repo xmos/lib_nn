@@ -1,8 +1,7 @@
 #pragma once
 
 #include "nn_types.h"
-#include "../misc.hpp"
-#include "../util/AddressCovector.hpp"
+#include "geom/util.hpp"
 #include "ImageGeometry.hpp"
 
 #include <cstdint>

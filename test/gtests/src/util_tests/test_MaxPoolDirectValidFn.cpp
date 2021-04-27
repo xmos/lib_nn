@@ -12,7 +12,7 @@
 #include "Rand.hpp"
 #include "VpuHelpers.hpp"
 
-#include "../src/cpp/filt2d/geom/WindowLocation.hpp"
+#include "geom/WindowLocation.hpp"
 
 
 using namespace nn;

@@ -16,8 +16,6 @@ using namespace nn;
  * AvgPoolPatchFn
  *****************************/
 
-constexpr int AvgPoolPatchFn::ChannelsPerOutputGroup;
-
 ///////////////////
 AvgPoolPatchFn::Params::Params(const avgpool_patch_params& ap_params)
     : ap_params(ap_params)
@@ -124,8 +122,6 @@ void AvgPoolPatchFn::aggregate_fn(vpu_ring_buffer_t * acc,
  * AvgPoolDirectValidFn
  *****************************/
 
-constexpr int AvgPoolDirectValidFn::ChannelsPerOutputGroup;
-
 
 ///////////////////
 AvgPoolDirectValidFn::Params::Params(const avgpool_direct_valid_params& ap_params)
@@ -224,12 +220,6 @@ void AvgPoolDirectValidFn::aggregate_fn(vpu_ring_buffer_t * acc,
                                         int8_t * input_img, 
                                         int32_t output_channel_group)
 {
-  const int first_channel = output_channel_group * ChannelsPerOutputGroup;
-
-  // Does this need to happen? Or does te direct memcopy thing also offset the channel?
-  input_img = &input_img[first_channel];
-
-
 #ifdef NN_USE_REF
   avgpool_direct_valid_ref(acc, input_img, &this->params->ap_params);
 #else

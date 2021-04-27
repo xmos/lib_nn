@@ -3,7 +3,7 @@
 #include <vector>
 #include <cstdint>
 
-#include "../src/cpp/filt2d/geom/Filter2dGeometry.hpp"
+#include "geom/Filter2dGeometry.hpp"
 
 namespace nn {
   namespace test {

@@ -2,8 +2,6 @@
 
 #include "nn_types.h"
 #include "util.hpp"
-#include "../util/AddressCovector.hpp"
-// #include "WindowGeometry.hpp"
 
 #include <iostream>
 #include <cassert>
@@ -53,6 +51,21 @@ namespace nn
     int inline const rowBytes() const { return rowElements() * channel_depth; }
     int inline const colBytes() const { return colElements() * channel_depth; }
     int inline const imageBytes() const { return imageElements() * channel_depth; }
+
+      /**
+       * Get the flattened index of the specified image element.
+       * 
+       * The "flattened" index of an element is the index of the element when the image is stored in a 1 dimensional
+       * array. This is ideal, for example, when the image image is backed by a `std::vector` object.
+       * 
+       * This function returns -1 if the specified coordinates refer to an element in padding 
+       * (i.e. beyond the bounds of the image).
+       */
+    int Index(const int row,
+              const int col,
+              const int channel) const;
+
+    int Index(const ImageVect& input_coords) const;
 
     /**
      * Get the memory stride (in bytes) required to move by the specified amount within this geometry.
@@ -123,16 +136,6 @@ namespace nn
     template <typename T>
     void ApplyOperation(T *image_base,
                         std::function<void(int, int, int, T &)> func) const;
-
-    /**
-     * Get an AddressCovector representing the geometry of this image.
-     */
-    template <typename T>
-    AddressCovector<T> getAddressCovector() const
-    {
-      //TODO: Should assert here that channel_depth == sizeof(T) ?
-      return AddressCovector<T>(rowBytes(), pixelBytes(), channel_depth);
-    }
 
     /**
      * Determine whether this ImageGeometry is equal to another.

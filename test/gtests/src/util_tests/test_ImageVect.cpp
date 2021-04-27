@@ -5,7 +5,7 @@
 
 #include "gtest/gtest.h"
 
-#include "../src/cpp/filt2d/geom/util.hpp"
+#include "geom/util.hpp"
 #include "Rand.hpp"
 
 using namespace nn;
