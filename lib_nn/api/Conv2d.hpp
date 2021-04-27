@@ -29,7 +29,7 @@ namespace nn
         AbstractKernel::Params *akp,
         ImToColValid *memcpy,
         MatMulInt8 *aggregator,
-        OT_int8 *ot) : Filter2D(akp, memcpy, aggregator, ot) {}
+        OT_int8 *ot, int8_t *scratch) : Filter2D(akp, memcpy, aggregator, ot, scratch) {}
   };
 
   class Conv2dPaddedInDirect : public Filter2D
