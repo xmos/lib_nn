@@ -168,7 +168,7 @@ int32_t quantise_bias(int32_t p, int p_exp_adjust, int exp_adjust) throw(quant_e
 
   if (r < 16)
   {
-    int32_t t = (((int64_t)p + (1 << 15)) & 0xffff0000) >> r;
+    int32_t t = ((int32_t)((int64_t)p + (1 << 15)) & 0xffff0000) >> r;
 
     if (clrsb(t) < 2)
     {
@@ -376,6 +376,14 @@ void calc_post_accumulation_clamps(
   // *clamp_far_1 = t_clamp_far_1;
 }
 
+int32_t round_away_from_zero(float x)
+{
+  if (x > 0)
+    return std::ceil(x);
+  else
+    return std::floor(x);
+}
+
 QuantisationParams OutputTransformFnInt8::quantise_activation(
     std::vector<double> &output_transform_multiplier,
     std::vector<double> &output_transform_bias,
@@ -386,11 +394,11 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
   //adjust accu_min and max to account for the saturation on the output
   for (int ch = 0; ch < output_transform_multiplier.size(); ch++)
   {
-    int32_t accu_actual_max = ((int32_t)INT8_MAX - output_transform_bias[ch]) / output_transform_multiplier[ch];
-    int32_t accu_actual_min = ((int32_t)INT8_MIN - output_transform_bias[ch]) / output_transform_multiplier[ch];
-    accu_max[ch] = std::min(accu_max[ch], std::max(accu_actual_max, accu_actual_min));
+    float accu_actual_max = ((int32_t)INT8_MAX - output_transform_bias[ch]) / output_transform_multiplier[ch];
+    float accu_actual_min = ((int32_t)INT8_MIN - output_transform_bias[ch]) / output_transform_multiplier[ch];
 
-    accu_min[ch] = std::max(accu_min[ch], std::min(accu_actual_max, accu_actual_min));
+    accu_max[ch] = std::min(accu_max[ch], std::max(round_away_from_zero(accu_actual_max), round_away_from_zero(accu_actual_min)));
+    accu_min[ch] = std::max(accu_min[ch], std::min(round_away_from_zero(accu_actual_max), round_away_from_zero(accu_actual_min)));
   }
 
   assert(output_transform_multiplier.size() == output_transform_bias.size());
