@@ -1,16 +1,11 @@
-#include <algorithm>
-#include <iostream>
-#include <cassert>
-#include <vector>
-#include <algorithm>
-#include <tuple>
 #include <limits>
-#include "AggregateFn.hpp"
 
+#include "AggregateFn.hpp"
 #include "vpu_sim.h"
 
 using namespace nn;
 //TODO: [astew] CHAR_BIT not defined if I build with Cygwin
+//[asj] this should be in limits.h
 #ifndef CHAR_BIT
 #define CHAR_BIT (sizeof(char) * 8)
 #endif
@@ -20,13 +15,12 @@ int8_t *deref2d(int8_t *p, int p_w, int h, int w)
   return p + h * p_w + w;
 }
 
-// std::tuple<int8_t *, int8_t **, int> MatMulInt8::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4> &shape,
 Conv2dReorderedWeights MatMulInt8::reorder_kernel_weights(int8_t *raw_weights, std::array<int, 4> &shape,
                                                           int bits_per_element, int8_t pad_value)
 {
 
-  const int vpu_ring_buffer_length = 16;
-  const int vpu_bytes_per_word = 32;
+  const int vpu_ring_buffer_length = VPU_INT16_EPV;
+  const int vpu_bytes_per_word = XS3_VPU_VREG_WIDTH_BYTES;
 
   int output_channel_count = shape[0];
 
@@ -37,12 +31,9 @@ Conv2dReorderedWeights MatMulInt8::reorder_kernel_weights(int8_t *raw_weights, s
 
   int kernel_size = get_kernel_size(bytes_per_output_channel, output_channel_count);
 
-  int8_t *boggled_weights = new int8_t[kernel_size];
-
   //For each output channel keep a record of the final vpu load
   //so the overlap betweek the desired channel and the next can
   //be accounted for.
-  int8_t **final_load_locations = new int8_t *[output_channel_count];
 
   //The numberof output channel groups needed to compute the whole conv.
   //This is rounded up.
@@ -69,31 +60,19 @@ Conv2dReorderedWeights MatMulInt8::reorder_kernel_weights(int8_t *raw_weights, s
         //reverse order of output channels
         int reversed_out_ch = output_channels_per_ocg - 1 - out_ch;
         int8_t *src = deref2d(raw_weights, bytes_per_output_channel, ocg_offset + reversed_out_ch, vpu_bytes_per_word * icg);
-        int8_t *dst = boggled_weights + dst_offset;
 
-        memcpy(dst, src, bytes_in_this_vpu_copy);
         reordered_weights.weights.insert(reordered_weights.weights.end(), src, src + bytes_in_this_vpu_copy);
 
         if (icg == input_channel_groups - 1)
-        {
-          final_load_locations[ocg_offset + reversed_out_ch] = dst;
           reordered_weights.final_vpu_load_addresses[ocg_offset + reversed_out_ch] = dst_offset;
-        }
+
         dst_offset += bytes_in_this_vpu_copy;
       }
     }
   }
   assert(dst_offset <= kernel_size);
 
-  // for (int i = 0; i < kernel_size - dst_offset; i++)
-  // {
-  //   reordered_weights.weights[dst_offset + i] = pad_value;
-  // }
-
-  // reordered_weights.weights.insert(reordered_weights.weights.end(), src, src + bytes_in_this_vpu_copy);
   reordered_weights.weights.resize(kernel_size, pad_value);
-
-  // return std::make_tuple(boggled_weights, final_load_locations, kernel_size);
   return reordered_weights;
 }
 

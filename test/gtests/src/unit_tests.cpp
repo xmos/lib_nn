@@ -8,8 +8,6 @@
 namespace nn
 {
 
-  static auto rng = test::Rand(42);
-
   class MockMemCpyFn : public MemCpyFn
   {
   public:

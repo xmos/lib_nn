@@ -5,7 +5,6 @@
 
 using namespace nn;
 
-
 ImageVect WindowLocation::InputStart() const
 {
   return filter.window.WindowCoords(this->output_coords);
@@ -13,16 +12,16 @@ ImageVect WindowLocation::InputStart() const
 
 ImageVect WindowLocation::InputEnd() const
 {
-  return  InputStart().add(
-              (filter.window.shape.height - 1) * filter.window.dilation.row,
-              (filter.window.shape.width  - 1) * filter.window.dilation.col,
-              filter.window.shape.depth - 1);
+  return InputStart().add(
+      (filter.window.shape.height - 1) * filter.window.dilation.row,
+      (filter.window.shape.width - 1) * filter.window.dilation.col,
+      filter.window.shape.depth - 1);
 }
 
 ImageVect WindowLocation::InputCoords(const int filter_row,
                                       const int filter_col,
                                       const int filter_chan) const
-{ 
+{
   assert(filter_row >= 0);
   assert(filter_row < filter.window.shape.height);
   assert(filter_col >= 0);
@@ -40,7 +39,7 @@ ImageVect WindowLocation::InputCoords(const int filter_row,
 int WindowLocation::InputIndex(const int filter_row,
                                const int filter_col,
                                const int filter_chan) const
-{ 
+{
   assert(filter_row >= 0);
   assert(filter_row < filter.window.shape.height);
   assert(filter_col >= 0);
@@ -48,16 +47,16 @@ int WindowLocation::InputIndex(const int filter_row,
   assert(filter_chan >= 0);
   assert(filter_chan < filter.window.shape.depth);
 
-  if(this->IsPadding(filter_row, filter_col, filter_chan))
+  if (this->IsPadding(filter_row, filter_col, filter_chan))
     return -1;
-    
+
   return this->filter.input.Index(InputCoords(filter_row, filter_col, filter_chan));
 }
 
 int WindowLocation::FilterIndex(const int filter_row,
                                 const int filter_col,
                                 const int filter_chan) const
-{ 
+{
   assert(filter_row >= 0);
   assert(filter_row < filter.window.shape.height);
   assert(filter_col >= 0);
@@ -71,9 +70,9 @@ int WindowLocation::FilterIndex(const int filter_row,
   //    (Height, Width, In_Chans)
   // Depending on whether it's depthwise or not.
 
-  int dex =  filter.window.shape.depth * (filter.window.shape.width * filter_row + filter_col) + filter_chan;
-  
-  if( !filter.ModelIsDepthwise() )
+  int dex = filter.window.shape.depth * (filter.window.shape.width * filter_row + filter_col) + filter_chan;
+
+  if (!filter.ModelIsDepthwise())
     dex += filter.window.shape.imageElements() * this->output_coords.channel;
 
   return dex;
@@ -91,32 +90,35 @@ padding_t WindowLocation::Padding() const
 
   padding_t res;
 
-  if( (last_pix.row < 0) || (last_pix.col < 0) || (first_pix.row >= X_h) || (first_pix.col >= X_w) ){
+  if ((last_pix.row < 0) || (last_pix.col < 0) || (first_pix.row >= X_h) || (first_pix.col >= X_w))
+  {
     // If any of those conditions are met, the window is entirely outside the input image.
     res.top = K_h;
     res.left = K_w;
     res.bottom = 0;
     res.right = 0;
-  } else if( !filter.window.UsesDilation() ){
+  }
+  else if (!filter.window.UsesDilation())
+  {
     // When dilation is 1x1..
-    res.top    = -first_pix.row;
-    res.left   = -first_pix.col;
+    res.top = -first_pix.row;
+    res.left = -first_pix.col;
     res.bottom = last_pix.row - (X_h - 1);
-    res.right  = last_pix.col - (X_w - 1);
+    res.right = last_pix.col - (X_w - 1);
+  }
+  else
+  {
 
-  } else {
-
-    res.top    = (-first_pix.row + filter.window.dilation.row - 1) / filter.window.dilation.row;
-    res.left   = (-first_pix.col + filter.window.dilation.col - 1) / filter.window.dilation.col;
+    res.top = (-first_pix.row + filter.window.dilation.row - 1) / filter.window.dilation.row;
+    res.left = (-first_pix.col + filter.window.dilation.col - 1) / filter.window.dilation.col;
     res.bottom = (last_pix.row - (X_h - 1) + filter.window.dilation.row - 1) / filter.window.dilation.row;
-    res.right  = (last_pix.col - (X_w - 1) + filter.window.dilation.col - 1) / filter.window.dilation.col;
-    
+    res.right = (last_pix.col - (X_w - 1) + filter.window.dilation.col - 1) / filter.window.dilation.col;
   }
 
-  res.top    = std::max<int>(res.top, 0);
-  res.left   = std::max<int>(res.left, 0);
+  res.top = std::max<int>(res.top, 0);
+  res.left = std::max<int>(res.left, 0);
   res.bottom = std::max<int>(res.bottom, 0);
-  res.right  = std::max<int>(res.right, 0);
+  res.right = std::max<int>(res.right, 0);
 
   return res;
 }
@@ -127,5 +129,4 @@ bool WindowLocation::IsPadding(const int filter_row,
 {
   auto coords = InputCoords(filter_row, filter_col, filter_chan);
   return !filter.input.IsWithinImage(coords);
-
 }

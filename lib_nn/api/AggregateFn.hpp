@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstdint>
-#include <cstring>
 #include <array>
 #include <vector>
 
@@ -14,520 +12,494 @@
 namespace nn
 {
 
-  // template <class T>
-  class AggregateFn
-  {
-  public:
-    virtual void aggregate_fn(vpu_ring_buffer_t *A, int8_t *T, int32_t output_channel_group) = 0;
-    // int8_t * inline aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group) {
-    //   static_cast<T*>(this)->aggregate_fn(...);
-    // }
-  };
+   class AggregateFn
+   {
+   public:
+      virtual void aggregate_fn(vpu_ring_buffer_t *A, int8_t *T, int32_t output_channel_group) = 0;
+   };
 
-  // these should inherit from Conv2DAggrFn
-  // Conv2DAggrFn class should have a boggle method
+   struct Conv2dReorderedWeights
+   {
+      std::vector<int8_t> weights;
+      std::vector<int> final_vpu_load_addresses;
+      Conv2dReorderedWeights(int channels) : weights(),
+                                             final_vpu_load_addresses(channels, 0)
+      {
+      }
+   };
 
-  struct Conv2dReorderedWeights
-  {
-    std::vector<int8_t> weights;
-    std::vector<int> final_vpu_load_addresses;
-    Conv2dReorderedWeights(int channels) : weights(),
-                                           final_vpu_load_addresses(channels, 0)
-    {
-    }
-  };
+   class MatMulInt8 : public AggregateFn
+   {
 
-  class MatMulInt8 : public AggregateFn
-  {
+   public:
+      class Params
+      {
+      public:
+         const int8_t *weights;
+         const int32_t output_slice_channel_count;
+         const size_t bytes_per_kernel_channel;
 
-  public:
-    class Params
-    {
-    public:
-      const int8_t *weights;
-      const int32_t output_slice_channel_count;
-      const size_t bytes_per_kernel_channel;
+         Params(const int output_slice_channel_count, const size_t bytes_per_kernel_channel, const int8_t *weights);
+      };
+      Params *params;
 
-      Params(const int output_slice_channel_count, const size_t bytes_per_kernel_channel, const int8_t *weights);
-    };
-    Params *params;
+   private:
+      void mat_mul_impl(vpu_ring_buffer_t *A, int8_t *T, int32_t output_channel_group);
 
-  private:
-    void mat_mul_impl(vpu_ring_buffer_t *A, int8_t *T, int32_t output_channel_group);
+   public:
+      MatMulInt8(Params *params) : params(params){};
+      void aggregate_fn(vpu_ring_buffer_t *A, int8_t *T, int32_t output_channel_group);
 
-  public:
-    MatMulInt8(Params *params) : params(params){};
-    void aggregate_fn(vpu_ring_buffer_t *A, int8_t *T, int32_t output_channel_group);
+      static Conv2dReorderedWeights reorder_kernel_weights(
+          int8_t *raw_weights, std::array<int, 4> &shape, int bits_per_element, int8_t pad_value);
 
-    static Conv2dReorderedWeights reorder_kernel_weights(
-        int8_t *raw_weights, std::array<int, 4> &shape, int bits_per_element, int8_t pad_value);
+      static int get_kernel_size(int input_bytes, int output_channel_count);
+      static int get_scratch_size(int input_bytes);
+   };
 
-    static int get_kernel_size(int input_bytes, int output_channel_count);
-    static int get_scratch_size(int input_bytes);
-  };
+   class MatMulDirectFn : public AggregateFn
+   {
 
-  // class MatMulBinary : public AggregateFn {
+   public:
+      class Params
+      {
+      public:
+         const int8_t *weights;
 
-  //   private:
-  //   void mat_mul_impl(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
-  //   int8_t * weights;
-  //   int32_t output_slice_channel_count;
-  //   size_t bytes_per_kernel_channel;
+         int32_t bytes_per_kernel_channel;
 
-  //   public:
-  //     MatMulBinary(int output_slice_channel_count, size_t bytes_per_kernel_channel, int8_t * weights);
-  //     void aggregate_fn(vpu_ring_buffer_t * A , int8_t * T, int32_t output_channel_group);
+         int32_t k_height_loop_counter;
+         int32_t k_width_loop_counter;
+         int32_t input_channel_loop_counter;
 
-  //     static Conv2dReorderedWeights reorder_kernel_weights(
-  //       int8_t *raw_weights, std::array<int, 4> &shape, int bits_per_element, int8_t pad_value);
+         int32_t inner_x_h_step;
+         int32_t inner_x_v_step;
 
-  //     static int get_kernel_size(int input_bytes, int output_channel_count);
-  //     static int get_scratch_size(int input_bytes) ;
-  // };
+         Params(const ImageGeometry &X, const WindowGeometry &K, const int input_ch_per_output, const int8_t *weights);
+      };
 
-  class MatMulDirectFn : public AggregateFn
-  {
+   private:
+      void mat_mul_direct_impl(vpu_ring_buffer_t *A, int8_t *T, int32_t output_channel_group);
 
-  public:
-    class Params
-    {
-    public:
-      const int8_t *weights;
+      Params *params;
 
-      int32_t bytes_per_kernel_channel;
+   public:
+      MatMulDirectFn(Params *params) : params(params){};
+      void aggregate_fn(vpu_ring_buffer_t *A, int8_t *T, int32_t output_channel_group);
+   };
 
-      int32_t k_height_loop_counter;
-      int32_t k_width_loop_counter;
-      int32_t input_channel_loop_counter;
-
-      int32_t inner_x_h_step;
-      int32_t inner_x_v_step;
-
-      Params(const ImageGeometry &X, const WindowGeometry &K, const int input_ch_per_output, const int8_t *weights);
-    };
-
-  private:
-    void mat_mul_direct_impl(vpu_ring_buffer_t *A, int8_t *T, int32_t output_channel_group);
-
-    Params *params;
-
-  public:
-    MatMulDirectFn(Params *params) : params(params){};
-    void aggregate_fn(vpu_ring_buffer_t *A, int8_t *T, int32_t output_channel_group);
-  };
-
-  /**
+   /**
    * Aggregator for performing maxpool on a contiguous sequence of 32-channel pixels.
    * 
    * @see DirectWriteOutputTransform
    */
-  class MaxPoolPatchFn : public AggregateFn, 
-                         public ChannelParallelComponent<VPU_INT8_EPV_LOG2> 
-  {
+   class MaxPoolPatchFn : public AggregateFn,
+                          public ChannelParallelComponent<VPU_INT8_EPV_LOG2>
+   {
 
-  public:
-    /**
+   public:
+      /**
        * Configuration parameters for MaxPoolPatchFn
        */
-    struct Params
-    {
+      struct Params
+      {
 
-      /**
+         /**
          * The number of pixels in a patch.
          */
-      int32_t pixel_count;
+         int32_t pixel_count;
 
-      /**
+         /**
          * Construct a MaxPoolPatchFn::Params
          */
-      Params(const int32_t pixel_count);
+         Params(const int32_t pixel_count);
 
-      /**
+         /**
          * Construct a MaxPoolPatchFn::Params
          */
-      Params(const nn::WindowGeometry &window);
+         Params(const nn::WindowGeometry &window);
 
-      /**
+         /**
          * Construct a MaxPoolPatchFn::Params by deserializing it from the provided byte stream.
          */
-      Params(std::istream &stream);
+         Params(std::istream &stream);
 
-      /**
+         /**
          * Serialize this MaxPoolPatchFn::Params into the provided byte stream
          */
-      void Serialize(std::ostream &stream) const;
-    };
+         void Serialize(std::ostream &stream) const;
+      };
 
-  protected:
-    /**
+   protected:
+      /**
        * Configuration parameters for this MaxPoolPatchFn
        */
-    const Params *params;
+      const Params *params;
 
-  public:
-    /**
+   public:
+      /**
        * Construct a MaxPoolPatchFn
        */
-    MaxPoolPatchFn(const Params *params);
+      MaxPoolPatchFn(const Params *params);
 
-    /**
+      /**
        * Perform maxpool aggregation.
        */
-    virtual void aggregate_fn(vpu_ring_buffer_t *acc,
-                              int8_t *input_patch,
-                              int32_t output_channel_group) override;
-  };
+      virtual void aggregate_fn(vpu_ring_buffer_t *acc,
+                                int8_t *input_patch,
+                                int32_t output_channel_group) override;
+   };
 
-  /**
+   /**
    * Parameter struct required by maxpool_direct_valid_ref() and maxpool_direct_valid_xcore().
    */
-  typedef struct
-  {
-    /**
+   typedef struct
+   {
+      /**
      * Stride between columns in the pooling window (taking dilation into account).
      */
-    int32_t col_stride;
+      int32_t col_stride;
 
-    /**
+      /**
      * The number of columns in the pooling widow
      */
-    int32_t cols;
+      int32_t cols;
 
-    /**
+      /**
      * Stride from the last pixel in one row of the pooling window, to the first pixel of the next.
      */
-    int32_t row_stride;
+      int32_t row_stride;
 
-    /**
+      /**
      * The number of rows in the pooling window
      */
-    int32_t rows;
-  } maxpool_direct_valid_params;
+      int32_t rows;
+   } maxpool_direct_valid_params;
 
-  /**
+   /**
    * Aggregator for performing maxpool over a 2D rectangular grid of pixels, not necessarily contiguous in memory.
    * 
    * Maxpooling will be applied across 32 channels.
    * 
    * @see DirectWriteOutputTransform
    */
-  class MaxPoolDirectValidFn : public AggregateFn, 
-                               public ChannelParallelComponent<VPU_INT8_EPV_LOG2> 
-  {
+   class MaxPoolDirectValidFn : public AggregateFn,
+                                public ChannelParallelComponent<VPU_INT8_EPV_LOG2>
+   {
 
-  public:
-    /**
+   public:
+      /**
        * Configuration parameters for MaxPoolDirectValidFn
        */
-    struct Params
-    {
+      struct Params
+      {
 
-      /**
+         /**
          * Parameters to be passed to the kernel function.
          */
-      maxpool_direct_valid_params mp_params;
+         maxpool_direct_valid_params mp_params;
 
-      /**
+         /**
          * Construct a MaxPoolDirectValidFn::Params
          */
-      Params(const maxpool_direct_valid_params &mp_params);
+         Params(const maxpool_direct_valid_params &mp_params);
 
-      /**
+         /**
          * Construct a MaxPoolDirectValidFn::Params
          */
-      Params(const nn::ImageGeometry &input_img,
-             const nn::WindowGeometry &window);
+         Params(const nn::ImageGeometry &input_img,
+                const nn::WindowGeometry &window);
 
-      /**
+         /**
          * Construct a MaxPoolDirectValidFn::Params by deserializing it from the provided byte stream
          */
-      Params(std::istream &stream);
+         Params(std::istream &stream);
 
-      /**
+         /**
          * Seralize this MaxPoolDirectValidFn::Params into the provided byte stream
          */
-      void Serialize(std::ostream &stream) const;
-    };
+         void Serialize(std::ostream &stream) const;
+      };
 
-  protected:
-    /**
+   protected:
+      /**
        * Configuration parameters for this MaxPoolDirectValidFn.
        */
-    const Params *params;
+      const Params *params;
 
-  public:
-    /**
+   public:
+      /**
        * Construct a MaxPoolDirectValidFn
        */
-    MaxPoolDirectValidFn(const Params *params);
+      MaxPoolDirectValidFn(const Params *params);
 
-    /**
+      /**
        * Perform maxpool aggregation.
        */
-    virtual void aggregate_fn(vpu_ring_buffer_t *acc,
-                              int8_t *input_img,
-                              int32_t output_channel_group) override;
-  };
+      virtual void aggregate_fn(vpu_ring_buffer_t *acc,
+                                int8_t *input_img,
+                                int32_t output_channel_group) override;
+   };
 
-  /**
+   /**
    * xcore implementation of maxpool_patch_ref()
    */
-  C_API
-  void maxpool_patch_xcore(
-      vpu_ring_buffer_t *A, // This doesn't really make sense for maxpool.
-      const int8_t *patch,
-      const int pixels);
+   C_API
+   void maxpool_patch_xcore(
+       vpu_ring_buffer_t *A, // This doesn't really make sense for maxpool.
+       const int8_t *patch,
+       const int pixels);
 
-  /**
+   /**
    * xcore implementation of maxpool_direct_valid_ref()
    */
-  C_API
-  void maxpool_direct_valid_xcore(
-      vpu_ring_buffer_t *A,
-      const int8_t *X,
-      const maxpool_direct_valid_params *params);
+   C_API
+   void maxpool_direct_valid_xcore(
+       vpu_ring_buffer_t *A,
+       const int8_t *X,
+       const maxpool_direct_valid_params *params);
 
-  /**
+   /**
    * Portable implementation of maxpool_patch_xcore().
    */
-  C_API
-  void maxpool_patch_ref(
-      vpu_ring_buffer_t *A, // This doesn't really make sense for maxpool.
-      const int8_t *patch,
-      const int pixels);
+   C_API
+   void maxpool_patch_ref(
+       vpu_ring_buffer_t *A, // This doesn't really make sense for maxpool.
+       const int8_t *patch,
+       const int pixels);
 
-  /**
+   /**
    * Portable implementation of maxpool_direct_valid_xcore().
    */
-  C_API
-  void maxpool_direct_valid_ref(
-      vpu_ring_buffer_t *A,
-      const int8_t *X,
-      const maxpool_direct_valid_params *params);
+   C_API
+   void maxpool_direct_valid_ref(
+       vpu_ring_buffer_t *A,
+       const int8_t *X,
+       const maxpool_direct_valid_params *params);
 
-  /**
+   /**
    * Parameter struct required by avgpool_patch_ref() and avgpool_patch_xcore().
    */
-  typedef struct
-  {
-    /**
+   typedef struct
+   {
+      /**
      * Number of pixels in a patch.
      */
-    int32_t pixels;
+      int32_t pixels;
 
-    /**
+      /**
      * Scale value by which input elements are multiplied.
      * 
      * Each scale[k] == scale[j]. It is duplicated for the VPU's sake. 
      */
-    int8_t scale[VPU_INT8_ACC_PERIOD];
-  } avgpool_patch_params;
+      int8_t scale[VPU_INT8_ACC_PERIOD];
+   } avgpool_patch_params;
 
-  /**
+   /**
    * Aggregator for performing avgpool on a contiguous sequence of 16-channel pixels.
    * 
    * @see 
    */
-  class AvgPoolPatchFn : public AggregateFn, 
-                         public ChannelParallelComponent<VPU_INT8_ACC_PERIOD_LOG2> 
-  {
+   class AvgPoolPatchFn : public AggregateFn,
+                          public ChannelParallelComponent<VPU_INT8_ACC_PERIOD_LOG2>
+   {
 
-  public:
-    /**
+   public:
+      /**
        * Configuration parameters for AvgPoolPatchFn
        */
-    struct Params
-    {
+      struct Params
+      {
 
-      /**
+         /**
          * Parameter struct required by the low-level implementation.
          */
-      avgpool_patch_params ap_params;
+         avgpool_patch_params ap_params;
 
-      /**
+         /**
         */
-      Params(){}
+         Params() {}
 
-      /**
+         /**
          * Construct an AvgPoolPatchFn::Params using the supplied params struct.
          */
-      Params(const avgpool_patch_params &ap_params);
+         Params(const avgpool_patch_params &ap_params);
 
-      /**
+         /**
          * Construct an AvgPoolPatchFn::Params from a high-level geometric description of the
          * pooling window.
          */
-      Params(const nn::WindowGeometry &filter,
-             const int8_t scale);
+         Params(const nn::WindowGeometry &filter,
+                const int8_t scale);
 
-      /**
+         /**
          * Deserialize an AvgPoolPatchFn::Params from a byte stream.
          */
-      Params(std::istream &stream);
+         Params(std::istream &stream);
 
-      /**
+         /**
          * Serialize an AvgPoolPatchFn::Params into a byte stream.
          */
-      void Serialize(std::ostream &stream) const;
-    };
+         void Serialize(std::ostream &stream) const;
+      };
 
-  protected:
-    /**
+   protected:
+      /**
        * The configuration parameters for this operator.
        */
-    const Params *params;
+      const Params *params;
 
-  public:
-    /**
+   public:
+      /**
        * Construct an AvgPoolPatchFn
        */
-    AvgPoolPatchFn(const Params *params);
+      AvgPoolPatchFn(const Params *params);
 
-    /**
+      /**
        * Perform avgpool aggregation.
        */
-    virtual void aggregate_fn(vpu_ring_buffer_t *acc,
-                              int8_t *input_patch,
-                              int32_t output_channel_group) override;
-  };
+      virtual void aggregate_fn(vpu_ring_buffer_t *acc,
+                                int8_t *input_patch,
+                                int32_t output_channel_group) override;
+   };
 
-  /**
+   /**
    * Parameter struct required by avgpool_direct_valid_ref() and avgpool_direct_valid_xcore().
    */
-  typedef struct
-  {
+   typedef struct
+   {
 
-    /**
+      /**
      * Stride between columns in the pooling window (taking dilation into account).
      */
-    int32_t col_stride;
+      int32_t col_stride;
 
-    /**
+      /**
      * The number of columns in the pooling widow
      */
-    int32_t cols;
+      int32_t cols;
 
-    /**
+      /**
      * Stride from the last pixel in one row of the pooling window, to the first pixel of the next.
      */
-    int32_t row_stride;
+      int32_t row_stride;
 
-    /**
+      /**
      * The number of rows in the pooling window
      */
-    int32_t rows;
+      int32_t rows;
 
-    /**
+      /**
      * Scale value by which input elements are multiplied.
      * 
      * Each scale[k] == scale[j]. It is duplicated for the VPU's sake. 
      */
-    int8_t scale[VPU_INT8_ACC_PERIOD];
-  } avgpool_direct_valid_params;
+      int8_t scale[VPU_INT8_ACC_PERIOD];
+   } avgpool_direct_valid_params;
 
-  /**
+   /**
    * Aggregator for performing avgpool over a 2D rectangular grid of pixels, not necessarily contiguous in memory.
    * 
    * AvgPoolDirectValidFn can process up to 16 output channels in parallel.
    * 
    * @see ShiftInt8OutputTransform
    */
-  class AvgPoolDirectValidFn : public AggregateFn, 
-                               public ChannelParallelComponent<VPU_INT8_ACC_PERIOD_LOG2>
-  {
+   class AvgPoolDirectValidFn : public AggregateFn,
+                                public ChannelParallelComponent<VPU_INT8_ACC_PERIOD_LOG2>
+   {
 
-  public:
-    /**
+   public:
+      /**
        * Configuration parameters for AvgPoolDirectValidFn
        */
-    struct Params
-    {
+      struct Params
+      {
 
-      /**
+         /**
          * Parameters to be passed to the kernel function.
          */
-      avgpool_direct_valid_params ap_params;
+         avgpool_direct_valid_params ap_params;
 
-      /**
+         /**
          * 
          */
-      Params(){}
+         Params() {}
 
-      /**
+         /**
          * Construct a AvgPoolDirectValidFn::Params
          */
-      Params(const avgpool_direct_valid_params &ap_params);
+         Params(const avgpool_direct_valid_params &ap_params);
 
-      /**
+         /**
          * Construct a AvgPoolDirectValidFn::Params
          */
-      Params(const nn::Filter2dGeometry &filter,
-             const int8_t scale);
+         Params(const nn::Filter2dGeometry &filter,
+                const int8_t scale);
 
-      /**
+         /**
          * Deserialize an AvgPoolDirectValidFn::Params from a byte stream.
          */
-      Params(std::istream &stream);
+         Params(std::istream &stream);
 
-      /**
+         /**
          * Serialize an AvgPoolDirectValidFn::Params into a byte stream.
          */
-      void Serialize(std::ostream &stream) const;
-    };
+         void Serialize(std::ostream &stream) const;
+      };
 
-  protected:
-    /**
+   protected:
+      /**
        * The configuration parameters for this operator.
        */
-    const Params *params;
+      const Params *params;
 
-  public:
-    /**
+   public:
+      /**
        * Construct an AvgPoolDirectValidFn
        */
-    AvgPoolDirectValidFn(const Params *params);
+      AvgPoolDirectValidFn(const Params *params);
 
-    /**
+      /**
        * Perform avgpool aggregation.
        */
-    virtual void aggregate_fn(vpu_ring_buffer_t *acc,
-                              int8_t *input_img,
-                              int32_t output_channel_group) override;
-  };
+      virtual void aggregate_fn(vpu_ring_buffer_t *acc,
+                                int8_t *input_img,
+                                int32_t output_channel_group) override;
+   };
 
-  /**
+   /**
    * xcore implementation of avgpool_patch_ref()
    */
-  C_API
-  void avgpool_patch_xcore(
-      vpu_ring_buffer_t *A,
-      const int8_t patch[],
-      const avgpool_patch_params *params);
+   C_API
+   void avgpool_patch_xcore(
+       vpu_ring_buffer_t *A,
+       const int8_t patch[],
+       const avgpool_patch_params *params);
 
-  /**
+   /**
    * xcore implementation of avgpool_direct_valid_ref()
    */
-  C_API
-  void avgpool_direct_valid_xcore(
-      vpu_ring_buffer_t *acc,
-      const int8_t X[],
-      const avgpool_direct_valid_params *params);
+   C_API
+   void avgpool_direct_valid_xcore(
+       vpu_ring_buffer_t *acc,
+       const int8_t X[],
+       const avgpool_direct_valid_params *params);
 
-  /**
+   /**
    * Portable implementation of avgpool_patch_xcore().
    */
-  C_API
-  void avgpool_patch_ref(
-      vpu_ring_buffer_t *A,
-      const int8_t patch[],
-      const avgpool_patch_params *params);
+   C_API
+   void avgpool_patch_ref(
+       vpu_ring_buffer_t *A,
+       const int8_t patch[],
+       const avgpool_patch_params *params);
 
-  /**
+   /**
    * Portable implementation of avgpool_direct_valid_xcore().
    */
-  C_API
-  void avgpool_direct_valid_ref(
-      vpu_ring_buffer_t *acc,
-      const int8_t X[],
-      const avgpool_direct_valid_params *params);
+   C_API
+   void avgpool_direct_valid_ref(
+       vpu_ring_buffer_t *acc,
+       const int8_t X[],
+       const avgpool_direct_valid_params *params);
 }
