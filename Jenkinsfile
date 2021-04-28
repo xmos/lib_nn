@@ -12,7 +12,7 @@ pipeline {
     parameters { // Available to modify on the job page within Jenkins if starting a build
         string( // use to try different tools versions
             name: 'TOOLS_VERSION',
-            defaultValue: '15.0.1',
+            defaultValue: '15.0.5',
             description: 'The tools version to build with (check /projects/tools/ReleasesTools/)'
         )
     }
@@ -64,10 +64,11 @@ pipeline {
         }
         stage("Build") {
             steps {
-                // below is how we can activate the tools
-                sh """pushd /XMOS/tools/${params.TOOLS_VERSION}/XMOS/xTIMEcomposer/${params.TOOLS_VERSION} && . SetEnv && popd &&
+                // below is how we can activate the tools, NOTE: xTIMEcomposer -> XTC at tools 15.0.5
+                // sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv && // 
+                sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
                       . activate ./lib_nn_venv &&
-                       cd test/unit_test && make all && make all PLATFORM=x86  MEMORY_SAFE=true"""
+                      cd test/unit_test && make all && make all PLATFORM=x86 MEMORY_SAFE=true"""
              }
          }
          stage("Test") {
