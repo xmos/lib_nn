@@ -4,3 +4,4 @@ gemmlowp                     git@github.com:google/gemmlowp.git              248
 ruy                          git@github.com:google/ruy.git                   baa860187fe7fc115c64210ca00bc90ccd197642
 tensorflow                   git@github.com:xmos/tensorflow                  fdfd74c614bf0850c332486826f91654f2a0181a
 Unity                        git@github.com:xmos/Unity.git                   1ab54b8bd2dfdc1216d5bec30cd29eb3052bad18
+googletest                   git@github.com:google/googletest.git            e7e591764baba0a0c3c9ad0014430e7a27331d16
