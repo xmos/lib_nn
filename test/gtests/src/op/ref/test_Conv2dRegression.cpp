@@ -29,9 +29,9 @@ class Conv2dPaddedIndirectRegression : public ::testing::Test
 TEST_F(Conv2dPaddedIndirectRegression, BasicTest)
 {
   // rng.setSeed(1598715445);
-  for (int x_height = 1; x_height <= 8; ++x_height)
+  for (int x_height = 1; x_height <= 5; ++x_height)
   {
-    for (int x_width = 1; x_width <= 8; ++x_width)
+    for (int x_width = 1; x_width <= 5; ++x_width)
     {
       for (int x_channels = 1; x_channels <= 16; x_channels += 1)
       {
