@@ -114,15 +114,10 @@ namespace nn
 
         pick_activation_params(f_multipliers, f_biases, accu_max, accu_min, &seed);
 
-        int t = ((output_ch_count + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length) * vpu_ring_buffer_length;
-
-        int16_t accu_modifier[t]; //this comes from the aggregate fn
-        memset(accu_modifier, 0, sizeof accu_modifier);
-
         QuantisationParams qp = OutputTransformFnInt8::quantise_activation(f_multipliers, f_biases, accu_min, accu_max);
 
         OT_int8::Params p((int32_t)output_ch_count, &qp.otv, qp.biases.data(),
-                          qp.multipliers.data(), (int16_t *)accu_modifier);
+                          qp.multipliers.data());
 
         OT_int8 ot(&p);
 
@@ -150,7 +145,6 @@ namespace nn
             //fill A with random value between accu_max and accu_min
             for (int output_chan = 0; output_chan < chs_in_group; ++output_chan)
             {
-
 
               int64_t range = (int64_t)accu_max[output_chan] - (int64_t)accu_min[output_chan];
               ASSERT_NE(0, range) << "Test case attempted division by zero.";

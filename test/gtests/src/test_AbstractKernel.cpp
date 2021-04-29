@@ -48,8 +48,6 @@ namespace nn
                   {
                     for (int r_channels_end = r_channels_start + 1; r_channels_end <= y_channels; ++r_channels_end)
                     {
-                      // std::cout << " y_height:" << y_height << " y_width:" << y_width << " y_channels:" << y_channels
-                      //           << " r_height_start:" << r_height_start << " r_height_end:" << r_height_end << " r_width_start:" << r_width_start << " r_width_end:" << r_width_end << " r_channels_start:" << r_channels_start << " r_channels_end:" << r_channels_end << std::endl;
                       int const cog_size = VPU_INT8_ACC_PERIOD;
 
                       auto ir = ImageRegion(r_height_start, r_width_start, r_channels_start,
@@ -70,22 +68,6 @@ namespace nn
                       f.execute((int8_t *)Y, nullptr);
 
 #define ITER_MSG "Y: " << ip << " | Output Region: " << ir
-
-                      // for (int y_h = 0; y_h < y_height; y_h++)
-                      // {
-                      //   for (int y_w = 0; y_w < y_width; y_w++)
-                      //   {
-                      //     for (int y_ch = 0; y_ch < y_channels; y_ch++)
-                      //     {
-                      //       int actual = Y[y_h][y_w][y_ch];
-                      //       int expected = ir.Within(y_h, y_w, y_ch) ? 1 : 0;
-                      //       std::cout << "(e" << expected << " a" << actual << ") ";
-                      //     }
-                      //     std::cout << "   ";
-                      //   }
-                      //   std::cout << std::endl;
-                      // }
-                      // std::cout << std::endl;
 
                       //iterate through whohe output tensor
                       for (int y_h = 0; y_h < y_height; y_h++)

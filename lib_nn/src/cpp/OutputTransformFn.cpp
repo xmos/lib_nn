@@ -460,7 +460,6 @@ int8_t *OT_int8::output_transform_fn(int8_t *Y, vpu_ring_buffer_t *A, int32_t ou
   xs3_vpu *vpu = &vpu_mem;
 
   int16_t *cur_post_activation_bias = params->biases + output_channel_group * VPU_INT16_EPV;
-  int16_t *cur_accu_modifier = params->accu_modifier + output_channel_group * VPU_INT16_EPV;
   int16_t *cur_post_activation_mul = params->multipliers + output_channel_group * VPU_INT16_EPV;
 
   VSETC(vpu, MODE_S16); //check this
@@ -477,12 +476,6 @@ int8_t *OT_int8::output_transform_fn(int8_t *Y, vpu_ring_buffer_t *A, int32_t ou
   VLSAT(vpu, params->otv->accu_shr);
   VSTR(vpu, &temp_mem);
   VLASHR(vpu, &temp_mem, params->otv->accu_shl);
-
-  // printf("a\n");
-  // vpu_sim_print(vpu);
-
-  //Subtract the channel overlap
-  VLADD(vpu, cur_accu_modifier);
 
   //Save the 16 bit accumulator, A, to scratch
   VSTR(vpu, &temp_mem);
