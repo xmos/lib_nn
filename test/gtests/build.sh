@@ -1,5 +1,5 @@
 cd ../deps/googletest
-mkdir build
+mkdir -p build
 cd build
 cmake ../
 make all

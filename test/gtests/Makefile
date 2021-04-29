@@ -39,7 +39,6 @@ NN_PATH := ../../lib_nn
 DEPS_PATH := ./../deps
 SHARED_PATH := ./../shared
 
-UNITY_PATH := $(DEPS_PATH)/Unity
 GTEST_PATH := $(abspath $(DEPS_PATH)/googletest)
 COMPUTE_ENGINE_PATH := $(DEPS_PATH)/compute-engine
 FLAT_BUFFERS_PATH := $(DEPS_PATH)/flatbuffers
@@ -63,7 +62,7 @@ ifneq ($(VERBOSE),$(EMPTY_STR))
   $(info OBJ_DIR: $(OBJ_DIR) )
 endif
 
-INCLUDES := $(NN_PATH)/api $(NN_PATH)/src $(UNITY_PATH)/src $(COMPUTE_ENGINE_PATH) $(FLAT_BUFFERS_PATH)/include
+INCLUDES := $(NN_PATH)/api $(NN_PATH)/src $(COMPUTE_ENGINE_PATH) $(FLAT_BUFFERS_PATH)/include
 INCLUDES += $(RUY_PATH) $(TENSORFLOW_PATH) $(GEMMLOWP_PATH) $(GTEST_PATH)/googletest/include
 INCLUDES += $(SHARED_PATH)/include
 SOURCE_DIRS := src $(SHARED_PATH)/src
@@ -186,8 +185,6 @@ $(GTEST_PATH)/build/lib/libgmock_main.a: $(GTEST_PATH)/build/Makefile
 #######################################################
 
 # Libraries are built using a recursive make call.
-UNITY_STATIC_LIB := $(LIB_DIR)/unity.a
-DEPENDENCY_LIBS = $(UNITY_STATIC_LIB) 
 
 LIB_MAKE_OPTS := VERBOSE=$(VERBOSE) BUILD_DIR=$(abspath $(BUILD_DIR)/lib_nn) LIB_DIR=$(abspath $(LIB_DIR)) \
                  PLATFORM=$(PLATFORM) TARGET_DEVICE=$(TARGET_DEVICE)
@@ -200,9 +197,6 @@ force_look:
 
 $(LIB_NN_FILE): force_look
 	@$(MAKE) -C $(NN_PATH) $(abspath $@ ) $(LIB_MAKE_OPTS)
-
-$(UNITY_STATIC_LIB): force_look
-	@$(MAKE) -C ../etc/Unity $(abspath $@ ) $(DEP_MAKE_OPTS)
 
 ALL_STATIC_LIBS += $(LIB_NN_FILE) $(DEPENDENCY_LIBS) 
 ALL_STATIC_LIBS += $(GTEST_LIB) $(GTEST_MAIN_LIB)
