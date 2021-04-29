@@ -62,10 +62,9 @@ namespace nn
 
          /**
           * This is the number of bytes required to move from the start of a pixel 
-          * (offset by output_channel_slice_offset) to the adjecent pixel to the 
-          * right (offset by output_channel_slice_offset).
+          * to the adjecent pixel to the right.
           */
-         int32_t output_w_mem_stride; //different for all output regions of different widths
+         int32_t output_w_mem_stride;
 
          Params(const ImageGeometry &output_image,
                 const ImageRegion &output_region,
