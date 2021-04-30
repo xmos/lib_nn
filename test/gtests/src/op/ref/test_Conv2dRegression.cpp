@@ -1,8 +1,8 @@
 
 
 #include "nn_types.h"
-#include "../src/cpp/filt2d/misc.hpp"
-#include "../src/cpp/filt2d/geom/Filter2dGeometry.hpp"
+#include "geom/util.hpp"
+#include "geom/Filter2dGeometry.hpp"
 #include "RefOps.hpp"
 #include "Rand.hpp"
 #include "ref_tests.hpp"
@@ -224,7 +224,7 @@ TEST_F(Conv2dDenseReferenceRegression, BasicTest)
                                                     Y.height,
                                                     Y.width, Y.depth);
 
-                              AbstractKernel<Filter2D>::Params akp(Y, ir);
+                              AbstractKernel::Params akp(Y, ir);
 
                               Conv2dPaddedInDirect conv2d(
                                   &akp,

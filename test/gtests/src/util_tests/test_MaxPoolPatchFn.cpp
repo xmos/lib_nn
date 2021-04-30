@@ -156,13 +156,11 @@ TEST_P(MaxPoolPatchFnTest, aggregate_fn)
   }
 }
 
+static auto params = ::testing::Combine( ::testing::Range(1, 6, 1),
+                                         ::testing::Range(1, 6, 1));
 
-INSTANTIATE_TEST_SUITE_P(, MaxPoolPatchFnParamsTest,  ::testing::Combine(
-                                                          ::testing::Range(1, 6, 1),
-                                                          ::testing::Range(1, 6, 1)) );
-INSTANTIATE_TEST_SUITE_P(, MaxPoolPatchFnTest, ::testing::Combine(
-                                                  ::testing::Range(1, 6, 1),
-                                                  ::testing::Range(1, 6, 1)) );
+INSTANTIATE_TEST_SUITE_P(, MaxPoolPatchFnParamsTest, params);
+INSTANTIATE_TEST_SUITE_P(, MaxPoolPatchFnTest, params );
 
 
 

@@ -19,8 +19,8 @@ using namespace nn;
 template <typename T>
 static std::vector<ImageGeometry> TestGeometries()
 {
-  const auto max_height = 8;
-  const auto max_width = 8;
+  const auto max_height = 4;
+  const auto max_width = 4;
   const auto max_depth = 8;
 
   auto res = std::vector<ImageGeometry>( );
