@@ -124,8 +124,8 @@ void MatMulInt8::mat_mul_impl(vpu_ring_buffer_t *A, int8_t *T, int32_t output_ch
   VSETC(vpu, MODE_S8);
   VCLRDR(vpu);
 
-  const int vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
-  const int vpu_epv = VPU_INT16_EPV;
+  const int32_t vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
+  const int32_t vpu_epv = VPU_INT16_EPV;
 
   int32_t cur_output_channels_in_scope = std::min(params->output_slice_channel_count - output_channel_group * vpu_epv, vpu_epv);
 
@@ -242,12 +242,50 @@ void MatMulDirectFn::mat_mul_direct_impl(vpu_ring_buffer_t *A, int8_t *X, int32_
   VSTD(vpu, &A->vR);
 }
 
+void MatMulBinaryDirectFn::mat_mul_direct_impl(vpu_ring_buffer_t *A, int8_t *X, int32_t output_channel_group)
+{
+  xs3_vpu vpu_mem;
+  xs3_vpu *vpu = &vpu_mem;
+
+  VSETC(vpu, MODE_S8);
+  VCLRDR(vpu);
+
+  int8_t *X_cur_p = X;
+
+  int8_t *K_p = (int8_t *)params->weights + params->bytes_per_kernel_channel * VPU_INT16_EPV * output_channel_group;
+  for (int kh = params->k_height_loop_counter; kh >= 0; kh--)
+  {
+    for (int kw = params->k_width_loop_counter; kw >= 0; kw--)
+    {
+
+      for (int ic = params->input_channel_loop_counter; ic >= 0; ic--)
+      {
+        VLDC(vpu, X_cur_p);
+
+        X_cur_p += XS3_VPU_VREG_WIDTH_BYTES;
+
+        for (unsigned l = 0; l < VPU_INT16_EPV; l++)
+        {
+          VLMACCR1(vpu, K_p);
+          K_p += XS3_VPU_VREG_WIDTH_BYTES;
+        }
+      }
+      X_cur_p += params->inner_x_h_step;
+    }
+    X_cur_p += params->inner_x_v_step;
+  }
+
+  //save off the accumulator
+  VSTR(vpu, &A->vD);
+  VSTD(vpu, &A->vR);
+}
+
 void MatMulDirectFn::aggregate_fn(vpu_ring_buffer_t *A, int8_t *T, int32_t output_channel_group)
 {
 #ifdef NN_USE_REF
   mat_mul_direct_impl(A, T, output_channel_group);
 #else
-  mat_mul_direct_impl_asm(A, T, output_channel_group);
+  // mat_mul_direct_impl_asm(A, T, output_channel_group);
 #endif // NN_USE_REF
 }
 
@@ -256,6 +294,6 @@ void MatMulInt8::aggregate_fn(vpu_ring_buffer_t *A, int8_t *T, int32_t output_ch
 #ifdef NN_USE_REF
   mat_mul_impl(A, T, output_channel_group);
 #else
-  mat_mul_impl_asm(A, T, output_channel_group);
+  // mat_mul_impl_asm(A, T, output_channel_group);
 #endif // NN_USE_REF
 }

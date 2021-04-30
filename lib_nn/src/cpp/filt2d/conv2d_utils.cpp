@@ -240,7 +240,7 @@ void conv2d::util::TfLiteConverter::QuantizeEffectiveOutputMultiplier(
     return;
   }
 
-  const double x = std::frexp(effective_multiplier, &exponent);
+  const double x = std::frexp(effective_multiplier, &((int &)exponent));
   int64_t y = static_cast<int64_t>(round(std::ldexp(x, 31)));
 
   assert(y <= std::ldexp(1, 31));
