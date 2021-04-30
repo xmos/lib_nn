@@ -442,7 +442,7 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
   for (auto f : output_transform_bias)
   {
     int32_t pa_bias = (int32_t)round(ldexp(f, adjusted_B));
-    pa_bias = std::min(INT16_MAX, pa_bias); //TODO think about this
+    pa_bias = std::min((int32_t)INT16_MAX, pa_bias); //TODO think about this
     q.biases.push_back((int16_t)pa_bias);
   }
 
@@ -526,7 +526,7 @@ int8_t *OT_int8::output_transform_fn(int8_t *Y, vpu_ring_buffer_t *A, int32_t ou
   VDEPTH8_FIXED(vpu);
 
   //we need to know how many we are processing
-  int output_count = std::min(params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV, (int)VPU_INT16_EPV);
+  int output_count = std::min(params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV, (int32_t)VPU_INT16_EPV);
 
   int mask = (1 << output_count) - 1;
 
@@ -598,7 +598,7 @@ int8_t *OTBinary_int8::output_transform_fn(int8_t *Y, vpu_ring_buffer_t *A, int3
   VDEPTH8_FIXED(vpu);
 
   //we need to know how many we are processing
-  int output_count = std::min(params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV, (int)VPU_INT16_EPV);
+  int output_count = std::min(params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV, (int32_t)VPU_INT16_EPV);
 
   int mask = (1 << output_count) - 1;
 
