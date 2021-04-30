@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstdint>
-#include <cstring>
 #include <vector>
 
 #include "Utils.hpp"
@@ -56,7 +54,63 @@ namespace nn
 
   class OutputTransformFnInt8 : public OutputTransformFn
   {
+
   public:
+    struct CanonicalMulAndBias
+    {
+      std::vector<double> f_biases;
+      std::vector<double> f_multipliers;
+      std::vector<int32_t> accu_min;
+      std::vector<int32_t> accu_max;
+      CanonicalMulAndBias(int output_channels) : f_biases(output_channels, 0),
+                                                 f_multipliers(output_channels, 0),
+                                                 accu_min(output_channels, 0),
+                                                 accu_max(output_channels, 0){};
+    };
+
+    static CanonicalMulAndBias canonicalise_mul_and_bias(std::vector<float> &eff_mult,
+                                                         std::vector<int32_t> &bias, std::vector<int8_t> &weights,
+                                                         int input_zero_point, int output_zero_point, int output_channels)
+    {
+
+      CanonicalMulAndBias canonical_values(output_channels);
+
+      int elements_per_channel = weights.size() / output_channels;
+      assert((weights.size() % output_channels) == 0);
+
+      for (int out_chan = 0; out_chan < output_channels; out_chan++)
+      {
+        int32_t max_accu_sum = 0;
+        int32_t min_accu_sum = 0;
+
+        int32_t coefs_sum = 0;
+
+        for (int e = 0; e < elements_per_channel; e++)
+        {
+          int32_t coef = (int32_t)weights[out_chan * elements_per_channel + e];
+          coefs_sum += coef;
+
+          if (coef > 0)
+          {
+            max_accu_sum += coef * (int32_t)INT8_MAX;
+            min_accu_sum += coef * (int32_t)INT8_MIN;
+          }
+          else
+          {
+            max_accu_sum += coef * (int32_t)INT8_MIN;
+            min_accu_sum += coef * (int32_t)INT8_MAX;
+          }
+        }
+
+        canonical_values.f_biases[out_chan] = (bias[out_chan] - input_zero_point * coefs_sum) * eff_mult[out_chan] + output_zero_point;
+        canonical_values.f_multipliers[out_chan] = eff_mult[out_chan];
+
+        canonical_values.accu_min[out_chan] = min_accu_sum;
+        canonical_values.accu_max[out_chan] = max_accu_sum;
+      }
+      return canonical_values;
+    }
+
     static QuantisationParams quantise_activation(std::vector<double> &output_transform_multiplier,
                                                   std::vector<double> &output_transform_bias,
                                                   std::vector<int32_t> &accu_min,
@@ -73,16 +127,14 @@ namespace nn
     {
       int32_t output_slice_channel_count; //TODO push into base class
       OutputTransformValues *otv;
-      int16_t *biases;        //[output_slice_channel_count];
-      int16_t *multipliers;   //[output_slice_channel_count];
-      int16_t *accu_modifier; //[output_slice_channel_count];
+      int16_t *biases;      //[output_slice_channel_count];
+      int16_t *multipliers; //[output_slice_channel_count];
 
       Params(int32_t output_slice_channel_count, OutputTransformValues *otv,
-             int16_t *biases, int16_t *multipliers, int16_t *accu_modifier) : output_slice_channel_count(output_slice_channel_count),
-                                                                              otv(otv),
-                                                                              biases(biases),
-                                                                              multipliers(multipliers),
-                                                                              accu_modifier(accu_modifier) {}
+             int16_t *biases, int16_t *multipliers) : output_slice_channel_count(output_slice_channel_count),
+                                                      otv(otv),
+                                                      biases(biases),
+                                                      multipliers(multipliers) {}
     };
 
   private:
@@ -138,10 +190,9 @@ namespace nn
  * This output transform assumes the int8_t channel data is in vR[] of the accumulator.
  */
   class DirectWriteOutputTransform : public OutputTransformFn,
-                                     public ChannelParallelComponent<VPU_INT8_EPV_LOG2> 
+                                     public ChannelParallelComponent<VPU_INT8_EPV_LOG2>
   {
   public:
-
     /**
      * Configuration parameters for DirectWriteOutputTransform
      */
@@ -206,11 +257,10 @@ namespace nn
  * This output transform applies a per-channel, rounding, saturating right-shift to the 32-bit
  * accumulators to get 8-bit results.
  */
-class ShiftInt8OutputTransform : public OutputTransformFn, 
-                                 public ChannelParallelComponent<VPU_INT8_ACC_PERIOD_LOG2> 
-{
+  class ShiftInt8OutputTransform : public OutputTransformFn,
+                                   public ChannelParallelComponent<VPU_INT8_ACC_PERIOD_LOG2>
+  {
   public:
-
     /**
      * Configuration parameters for ShiftInt8OutputTransform
      */
@@ -231,7 +281,7 @@ class ShiftInt8OutputTransform : public OutputTransformFn,
 
       /**
        */
-      Params(){}
+      Params() {}
 
       /**
        * Create a ShiftInt8OutputTransform::Params

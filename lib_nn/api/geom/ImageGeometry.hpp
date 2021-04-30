@@ -21,14 +21,6 @@ namespace nn
 
     constexpr ImageGeometry() : height(0), width(0), depth(0), channel_depth(1) {}
 
-    // constexpr ImageGeometry(
-    //     ImageGeometry &X,
-    //     WindowGeometry &K) noexcept : height(CONV2D_OUTPUT_LENGTH(X.height, K.shape.height, K.dilation.row, K.stride.row)),
-    //                                   width(CONV2D_OUTPUT_LENGTH(X.width, K.shape.width, K.dilation.col, K.stride.col)),
-    //                                   depth(K.shape.depth)
-    // {
-    // }
-
     constexpr ImageGeometry(
         int const rows,
         int const cols,
@@ -52,7 +44,7 @@ namespace nn
     int inline const colBytes() const { return colElements() * channel_depth; }
     int inline const imageBytes() const { return imageElements() * channel_depth; }
 
-      /**
+    /**
        * Get the flattened index of the specified image element.
        * 
        * The "flattened" index of an element is the index of the element when the image is stored in a 1 dimensional
@@ -65,7 +57,7 @@ namespace nn
               const int col,
               const int channel) const;
 
-    int Index(const ImageVect& input_coords) const;
+    int Index(const ImageVect &input_coords) const;
 
     /**
      * Get the memory stride (in bytes) required to move by the specified amount within this geometry.

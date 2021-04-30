@@ -1,3 +1,5 @@
+// Copyright 2021 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include <string.h>
 #include <assert.h>
 
@@ -28,7 +30,7 @@ void vpu_memcpy_vector_int(void * dst, const void * src, int vector_count){
 
 #else
 
-static void vpu_memcpy_base(void * dst, const void * src, size_t byte_count, 
+static inline void vpu_memcpy_base(void * dst, const void * src, size_t byte_count, 
   void (*mem_cpy_func)(), size_t vector_bytes){
   
   //The code below doesnt support such small copies
