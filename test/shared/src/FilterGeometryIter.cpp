@@ -10,7 +10,13 @@ using namespace nn::ff;
 
 FilterGeometryIterator::FilterGeometryIterator(nn::Filter2dGeometry seed,
                                                std::initializer_list<IFilterFrame*> filter_frames)
-    : frames( filter_frames )
+    : frames( filter_frames ),
+      seed( seed )
+{
+  frames.Push( seed );
+}
+
+void FilterGeometryIterator::Reset()
 {
   frames.Push( seed );
 }

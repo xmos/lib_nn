@@ -17,6 +17,8 @@
 #include <iostream>
 #include <cassert>
 
+#include "FilterGeometryIterHelper.hpp"
+
 /*
   This is just a sanity check for AveragePoolReference(). It's not meant to thoroughly vet it, because if we're going to
   do that, we have no need for it.
@@ -36,43 +38,48 @@ static int CountPixels(const ImageVect&, const ImageVect&, int pix, int8_t, bool
 
 static auto rng = Rand();
 
-class AveragePoolReferenceTest : public ::testing::TestWithParam<Filter2dGeometry> {};
+static nn::ff::FilterGeometryIterator filter_sets[] = {
+  test::unpadded::SimpleDepthwise({1,8}, {1,4}, {4,66}),
+};
 
-TEST_P(AveragePoolReferenceTest, SanityCheck)
+TEST(AveragePoolReference_Test, SanityCheck)
 {
-  auto geom = GetParam();
+  int total_iter = 0;
 
-  auto input = std::vector<int8_t>(geom.input.imageElements());
-  auto expected = std::vector<int8_t>(geom.output.imageElements());
+  for(auto filter_set : filter_sets){
+    filter_set.Reset();
+    for(auto geom : filter_set){
 
-  auto win_pixy = geom.window.shape.imagePixels();
+    auto input = std::vector<int8_t>(geom.input.imageElements());
+    auto expected = std::vector<int8_t>(geom.output.imageElements());
 
-  for(int k = 0; k < input.size(); k++)
-    input[k] = rng.rand<int8_t>();
+    auto win_pixy = geom.window.shape.imagePixels();
 
-  for(int xan = 0; xan < geom.output.depth; xan++){
-    for(int row = 0; row < geom.output.height; row++){
-      for(int col = 0; col < geom.output.width; col++){
+    for(int k = 0; k < input.size(); k++)
+      input[k] = rng.rand<int8_t>();
 
-        auto loc = geom.GetWindow(row, col, xan);
+    for(int xan = 0; xan < geom.output.depth; xan++){
+      for(int row = 0; row < geom.output.height; row++){
+        for(int col = 0; col < geom.output.width; col++){
 
-        const auto sum = loc.Fold<int32_t,int8_t>(&input[0], AddElements, 0, 0);
-        const auto pix = loc.Fold<int,int8_t>(&input[0], CountPixels, 0, 0);
+          auto loc = geom.GetWindow(row, col, xan);
 
-        const auto out_index = geom.output.Index(row, col, xan);
+          const auto sum = loc.Fold<int32_t,int8_t>(&input[0], AddElements, 0, 0);
+          const auto pix = loc.Fold<int,int8_t>(&input[0], CountPixels, 0, 0);
 
-        expected[out_index] = round_int8(sum / float(pix));
+          const auto out_index = geom.output.Index(row, col, xan);
+
+          expected[out_index] = round_int8(sum / float(pix));
+        }
       }
+    }
+
+    auto output = nn::test::ops::ref::AveragePoolReference(geom, &input[0]);
+
+    ASSERT_EQ(output, expected);
+      total_iter++;
     }
   }
 
-  auto output = nn::test::ops::ref::AveragePoolReference(geom, &input[0]);
-
-  ASSERT_EQ(output, expected);
+  std::cout << "Count: " << total_iter << std::endl;
 }
-
-static auto iterA = nn::test::ParamedRandIter<Filter2dGeometry, SimpleFilter>(300, SimpleFilter(true, false, 16));
-static auto iterB = nn::test::ParamedRandIter<Filter2dGeometry, SimpleFilter>(300, SimpleFilter(true, true, 16));
-
-INSTANTIATE_TEST_SUITE_P(Unpadded, AveragePoolReferenceTest, ::testing::ValuesIn(iterA.begin(), iterA.end()));
-INSTANTIATE_TEST_SUITE_P(Padded, AveragePoolReferenceTest, ::testing::ValuesIn(iterB.begin(), iterB.end()));

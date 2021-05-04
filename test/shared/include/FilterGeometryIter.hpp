@@ -213,6 +213,7 @@ namespace nn {
 
       private:
         FrameStack frames;
+        nn::Filter2dGeometry seed;
 
       public:
         FilterGeometryIterator(nn::Filter2dGeometry seed,
@@ -223,6 +224,8 @@ namespace nn {
         bool operator==(FilterGeometryIterator& other) const;
         bool operator!=(FilterGeometryIterator& other) const;
         const nn::Filter2dGeometry &operator*();
+
+        void Reset();
 
         /**
          * Get the initial iterator
