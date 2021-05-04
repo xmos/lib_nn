@@ -78,7 +78,7 @@ namespace nn
          Params(const ImageGeometry &X, const WindowGeometry &K, const int input_ch_per_output, const int8_t *weights);
       };
 
-   private:
+   protected:
       void mat_mul_direct_impl(vpu_ring_buffer_t *A, int8_t *T, int32_t output_channel_group);
 
       Params *params;
@@ -86,6 +86,15 @@ namespace nn
    public:
       MatMulDirectFn(Params *params) : params(params){};
       void aggregate_fn(vpu_ring_buffer_t *A, int8_t *T, int32_t output_channel_group);
+   };
+
+   class MatMulBinaryDirectFn : public MatMulDirectFn
+   {
+   public:
+      MatMulBinaryDirectFn(Params *params) : MatMulDirectFn(params) {}
+
+   private:
+      void mat_mul_direct_impl(vpu_ring_buffer_t *A, int8_t *T, int32_t output_channel_group);
    };
 
    /**

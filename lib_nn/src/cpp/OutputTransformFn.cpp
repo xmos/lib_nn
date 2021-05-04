@@ -89,15 +89,8 @@ static void get_bounds_on_Exp(int *min_Exp, int *max_Exp, std::vector<double> &v
   *max_Exp = *min_Exp + bound_width;
 }
 
-enum quant_error
-{
-  Accu = 0,
-  Multiplier = 1,
-  Other = 2
-};
-
 //v *= 2**exp_adjust; //and round like the vpu does
-int16_t quantise_accu(int32_t v, int exp_adjust) throw(quant_error)
+int16_t quantise_accu(int32_t v, int exp_adjust, int &error)
 {
 
   if (exp_adjust < -31)
@@ -112,44 +105,45 @@ int16_t quantise_accu(int32_t v, int exp_adjust) throw(quant_error)
   }
   else if (exp_adjust < 16)
   {
-    // exp_adjust >= 0
-    // shifting left
-
     v = (unsigned)v << exp_adjust;
   }
   else
   {
-    throw Accu;
+    error = 1;
+    return 0;
   }
 
   if (clrsb(v) < 16)
   {
-    throw Accu;
+    error = 1;
+    return 0;
   }
 
   return (int16_t)v;
 }
 
 template <class activationT>
-int16_t quantise_multiplier(activationT v, int exp_adjust) throw(quant_error)
+int16_t quantise_multiplier(activationT v, int exp_adjust, int &error)
 {
 
   int32_t v_q = std::round(std::ldexp(static_cast<double>(v), exp_adjust));
 
   if (clrsb(v_q) < 16)
   {
-    throw Multiplier;
+    error = 1;
+    return 0;
   }
 
   return (int16_t)v_q;
 }
 
-int32_t quantise_bias(int32_t p, int p_exp_adjust, int exp_adjust) throw(quant_error)
+int32_t quantise_bias(int32_t p, int p_exp_adjust, int exp_adjust, int &error)
 {
 
   if (exp_adjust > p_exp_adjust)
   {
-    throw Other;
+    error = 1;
+    return 0;
   }
 
   int r = p_exp_adjust - exp_adjust;
@@ -163,7 +157,8 @@ int32_t quantise_bias(int32_t p, int p_exp_adjust, int exp_adjust) throw(quant_e
 
     if (clrsb(t) < 2)
     {
-      throw Other;
+      error = 1;
+      return 0;
     }
     return t;
   }
@@ -173,18 +168,19 @@ int32_t quantise_bias(int32_t p, int p_exp_adjust, int exp_adjust) throw(quant_e
   }
 }
 
-int32_t compute_product(int16_t a, int16_t m) throw(quant_error)
+int32_t compute_product(int16_t a, int16_t m)
 {
   int32_t p = (int16_t)a * (int16_t)m;
   return (int32_t)p;
 }
 
-int32_t compute_sum(int32_t p, int32_t b) throw(quant_error)
+int32_t compute_sum(int32_t p, int32_t b, int &error)
 {
   int64_t r = (int64_t)p + (int64_t)b;
   if (clrsbll(r) < 32)
   {
-    throw Other;
+    error = 1;
+    return 0;
   }
 
   return (int32_t)r;
@@ -239,66 +235,92 @@ std::tuple<int, int, int> solve_for_constraint(
 
   int accu_hr = 0;
   int mul_hr = 0;
-
-  //TODO need to think about these, i.e. if A is positive then precision should be given to M
   int A = max_A + 1;
   int M = max_M + 1;
 
-  while (1)
+  for (auto ch = 0; ch < ch_count; ++ch)
   {
-    int B = A + M;
 
-    try
+    int error = 0;
+    int16_t m = quantise_multiplier(multiplier[ch], M, error);
+
+    if (error)
     {
-      for (auto ch = 0; ch < ch_count; ++ch)
-      {
-
-        int16_t m = quantise_multiplier(multiplier[ch], M);
-        int32_t b = quantise_bias(q_bias[ch], q_bias_exp_adjust, B);
-
-        //Check the max fits
-        int16_t a_max = quantise_accu(accu_max[ch], A);
-        compute_sum(compute_product(a_max, m), b);
-
-        //Check the min fits
-        int16_t a_min = quantise_accu(accu_min[ch], A);
-        compute_sum(compute_product(a_min, m), b);
-      }
-
-      return std::make_tuple(B, A, M);
+      --M;
+      mul_hr++;
+      ch = -1;
+      continue;
     }
-    catch (quant_error q)
-    {
 
-      //try again but with better numbers
-      switch (q)
+    int32_t b = quantise_bias(q_bias[ch], q_bias_exp_adjust, A + M, error);
+    if (error)
+    {
+      if (mul_hr > accu_hr)
       {
-      case Multiplier:
-        --M;
-        mul_hr++;
-        break;
-      case Accu:
         --A;
         accu_hr++;
-        break;
-      case Other:
-        //make a decision based on which one would lose the least data
-        //this will do for now
-        if (mul_hr > accu_hr)
-        {
-          --A;
-          accu_hr++;
-        }
-        else
-        {
-          --M;
-          mul_hr++;
-        }
-        break;
       }
+      else
+      {
+        --M;
+        mul_hr++;
+      }
+      ch = -1;
+      continue;
+    }
+
+    int16_t a_max = quantise_accu(accu_max[ch], A, error);
+    if (error)
+    {
+      --A;
+      accu_hr++;
+      ch = -1;
+      continue;
+    }
+    compute_sum(compute_product(a_max, m), b, error);
+    if (error)
+    {
+      if (mul_hr > accu_hr)
+      {
+        --A;
+        accu_hr++;
+      }
+      else
+      {
+        --M;
+        mul_hr++;
+      }
+      ch = -1;
+      continue;
+    }
+
+    int16_t a_min = quantise_accu(accu_min[ch], A, error);
+    if (error)
+    {
+      --A;
+      accu_hr++;
+      ch = -1;
+      continue;
+    }
+    compute_sum(compute_product(a_min, m), b, error);
+    if (error)
+    {
+      if (mul_hr > accu_hr)
+      {
+        --A;
+        accu_hr++;
+      }
+      else
+      {
+        --M;
+        mul_hr++;
+      }
+      ch = -1;
+      continue;
     }
   }
-  assert(0);
+
+  return std::make_tuple(A + M, A, M);
 }
 
 template <class T>
@@ -420,7 +442,7 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
   for (auto f : output_transform_bias)
   {
     int32_t pa_bias = (int32_t)round(ldexp(f, adjusted_B));
-    pa_bias = std::min(INT16_MAX, pa_bias); //TODO think about this
+    pa_bias = std::min((int32_t)INT16_MAX, pa_bias); //TODO think about this
     q.biases.push_back((int16_t)pa_bias);
   }
 
@@ -504,7 +526,7 @@ int8_t *OT_int8::output_transform_fn(int8_t *Y, vpu_ring_buffer_t *A, int32_t ou
   VDEPTH8_FIXED(vpu);
 
   //we need to know how many we are processing
-  int output_count = std::min(params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV, (int)VPU_INT16_EPV);
+  int output_count = std::min(params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV, (int32_t)VPU_INT16_EPV);
 
   int mask = (1 << output_count) - 1;
 
@@ -576,7 +598,7 @@ int8_t *OTBinary_int8::output_transform_fn(int8_t *Y, vpu_ring_buffer_t *A, int3
   VDEPTH8_FIXED(vpu);
 
   //we need to know how many we are processing
-  int output_count = std::min(params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV, (int)VPU_INT16_EPV);
+  int output_count = std::min(params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV, (int32_t)VPU_INT16_EPV);
 
   int mask = (1 << output_count) - 1;
 
