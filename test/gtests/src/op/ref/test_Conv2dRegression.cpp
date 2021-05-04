@@ -72,9 +72,9 @@ KernelStimulus create_simple_stimulus(Filter2dGeometry &geom)
 
 TEST_F(Conv2dPaddedIndirectRegression, BasicTest)
 {
-  for (int x_height = 1; x_height <= 3; ++x_height)
+  for (int x_height = 1; x_height <= 2; ++x_height)
   {
-    for (int x_width = 1; x_width <= 3; ++x_width)
+    for (int x_width = 1; x_width <= 2; ++x_width)
     {
       for (int x_channels = 1; x_channels <= 16; x_channels += 1)
       {

@@ -109,9 +109,9 @@ int MatMulInt8::get_kernel_size(int input_bytes, int output_channel_count)
   return kernel_bytes;
 }
 
-MatMulInt8::Params::Params(const int output_slice_channel_count, const size_t bytes_per_kernel_channel, const int8_t *weights) : weights(weights),
-                                                                                                                                 output_slice_channel_count(output_slice_channel_count),
-                                                                                                                                 bytes_per_kernel_channel(bytes_per_kernel_channel)
+MatMulInt8::Params::Params(const int output_slice_channel_count, const int32_t bytes_per_kernel_channel, const int8_t *weights) : weights(weights),
+                                                                                                                                  output_slice_channel_count(output_slice_channel_count),
+                                                                                                                                  bytes_per_kernel_channel(bytes_per_kernel_channel)
 {
   //maybe compute k_p_adjust and input_channel_group_count
 }
@@ -127,31 +127,28 @@ void MatMulInt8::mat_mul_impl(vpu_ring_buffer_t *A, int8_t *T, int32_t output_ch
   const int32_t vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
   const int32_t vpu_epv = VPU_INT16_EPV;
 
-  int32_t cur_output_channels_in_scope = std::min(params->output_slice_channel_count - output_channel_group * vpu_epv, vpu_epv);
+  output_channel_group *= vpu_epv;
 
-  int8_t *K_p = (int8_t *)params->weights + params->bytes_per_kernel_channel * vpu_epv * output_channel_group; //changes
+  int8_t *K_p = (int8_t *)params->weights + params->bytes_per_kernel_channel * output_channel_group; //changes
 
-  assert(cur_output_channels_in_scope > 0);
-
-  //These are a function of the number of output channels in scope
-  //They might change depending on which output channel slice we are doing
-  int step = (cur_output_channels_in_scope - (vpu_epv - 1)) * vpu_bytes;
-
-  int tail_loops = vpu_epv - 1 + step / vpu_bytes;
+  int step = vpu_bytes;
+  int t = params->output_slice_channel_count - output_channel_group;
+  t -= (vpu_epv - 1);
+  if (t <= 0)
+    step *= t;
 
   //these are a funciton of the number of input bytes
   //These are unchanging and could be hoisted into the constructor
-  int32_t k_p_adjust = params->bytes_per_kernel_channel % vpu_bytes; //TODO -make this a one liner
+  int32_t k_p_adjust = params->bytes_per_kernel_channel % vpu_bytes;
+  int input_channel_group_count = (params->bytes_per_kernel_channel) / vpu_bytes;
 
   //The tail loop must execute in order to rotate the ring buffer to leave the results in
   //0->N-1 of the ring buffer
   if (k_p_adjust == 0)
+  {
+    input_channel_group_count--;
     k_p_adjust = vpu_bytes;
-
-  int input_channel_group_count = (params->bytes_per_kernel_channel - k_p_adjust) / vpu_bytes;
-
-  // std::cout << "k_p_adjust: " << k_p_adjust << std::endl;
-  // std::cout << "input_channel_group_count: " << input_channel_group_count << std::endl;
+  }
 
   int8_t *D_p = T;
 
@@ -172,6 +169,7 @@ void MatMulInt8::mat_mul_impl(vpu_ring_buffer_t *A, int8_t *T, int32_t output_ch
 
   VLDC(vpu, D_p);
 
+  int tail_loops = vpu_epv - 1 + step / vpu_bytes;
   //Note: This forces kernels to be padded to word aligned boundaries TODO put an assert on this
   for (int l = 0; l < tail_loops; l++)
   {
@@ -280,12 +278,28 @@ void MatMulBinaryDirectFn::mat_mul_direct_impl(vpu_ring_buffer_t *A, int8_t *X, 
   VSTD(vpu, &A->vR);
 }
 
+extern "C" void mat_mul_direct_impl_asm(void *params, vpu_ring_buffer_t *A, int8_t *X, int32_t output_channel_group);
+
+extern "C" void mat_mul_impl_asm(void *params, vpu_ring_buffer_t *A, int8_t *X, int32_t output_channel_group);
+
 void MatMulDirectFn::aggregate_fn(vpu_ring_buffer_t *A, int8_t *T, int32_t output_channel_group)
 {
 #ifdef NN_USE_REF
   mat_mul_direct_impl(A, T, output_channel_group);
 #else
-  // mat_mul_direct_impl_asm(A, T, output_channel_group);
+  printf("mat_mul_direct_impl_asm\n");
+  printf("this->params: %p\n", this->params);
+  printf("this->params->bytes_per_kernel_channel: %ld\n", this->params->bytes_per_kernel_channel);
+  printf("this->params->k_height_loop_counter: %ld\n", this->params->k_height_loop_counter);
+  printf("this->params->k_width_loop_counter: %ld\n", this->params->k_width_loop_counter);
+  printf("this->params->input_channel_loop_counter: %ld\n", this->params->input_channel_loop_counter);
+  printf("this->params->inner_x_h_step: %ld\n", this->params->inner_x_h_step);
+  printf("this->params->inner_x_v_step: %ld\n", this->params->inner_x_v_step);
+  printf("this->params->weights): %p\n", this->params->weights);
+  printf("A: %p\n", A);
+  printf("T: %p\n", T);
+  printf("output_c_coord: %ld\n", output_channel_group);
+  mat_mul_direct_impl_asm(this->params, A, T, output_channel_group);
 #endif // NN_USE_REF
 }
 
@@ -294,6 +308,14 @@ void MatMulInt8::aggregate_fn(vpu_ring_buffer_t *A, int8_t *T, int32_t output_ch
 #ifdef NN_USE_REF
   mat_mul_impl(A, T, output_channel_group);
 #else
-  // mat_mul_impl_asm(A, T, output_channel_group);
+  printf("mat_mul_impl_asm\n");
+  printf("this->params: %p\n", this->params);
+  printf("this->params->bytes_per_kernel_channel: %ld\n", this->params->bytes_per_kernel_channel);
+  printf("this->params->output_slice_channel_count: %ld\n", this->params->output_slice_channel_count);
+  printf("this->params->weights): %p\n", this->params->weights);
+  printf("A: %p\n", A);
+  printf("T: %p\n", T);
+  printf("output_c_coord: %ld\n", output_channel_group);
+  mat_mul_impl_asm(this->params, A, T, output_channel_group);
 #endif // NN_USE_REF
 }
