@@ -17,7 +17,7 @@
 namespace nn {
   
 
-  C_API typedef struct {
+  C_API typedef struct padding_t {
     int16_t top;
     int16_t left;
     int16_t bottom;

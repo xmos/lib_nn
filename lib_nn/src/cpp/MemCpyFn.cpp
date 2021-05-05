@@ -191,8 +191,8 @@ void ImToColPadded::Params::Serialize(std::ostream &stream) const
 #undef WRITE_MEMBER
 }
 
-int8_t *ImToColPadded::memcopy_fn(int8_t *T, int8_t *X,
-                                  int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord)
+int8_t *ImToColPadded::memcopy_fn_impl(int8_t *T, int8_t *X,
+                                       int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord)
 {
 
   xs3_vpu vpu_mem;
@@ -289,8 +289,8 @@ size_t ImToColValid::get_overread_bytes()
   return params->T_rewind;
 }
 
-int8_t *ImToColValid::memcopy_fn(int8_t *T, int8_t *X,
-                                 int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord)
+int8_t *ImToColValid::memcopy_fn_impl(int8_t *T, int8_t *X,
+                                      int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord)
 {
 
   xs3_vpu vpu_mem;
@@ -330,4 +330,71 @@ int8_t *ImToColValid::memcopy_fn(int8_t *T, int8_t *X,
   VSTD(vpu, T);
 
   return T_in;
+}
+
+extern "C" int8_t *im_to_col_valid_impl_asm(void *params, int8_t *T, int8_t *X,
+                                            int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord);
+
+#include <stdio.h>
+int8_t *ImToColValid::memcopy_fn(int8_t *T, int8_t *X,
+                                 int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord)
+{
+
+#ifdef NN_USE_REF
+  return memcopy_fn_impl(T, X, output_v_coord, output_h_coord, output_c_coord);
+#else
+  printf("this->params: %p\n", this->params);
+  printf("this->params->bytes_per_h_line: %ld\n", this->params->bytes_per_h_line);
+  printf("this->params->bytes_per_pixel: %ld\n", this->params->bytes_per_pixel);
+  printf("this->params->horizontal_mem_stride): %ld\n", this->params->horizontal_mem_stride);
+  printf("this->params->input_channel_groups: %ld\n", this->params->input_channel_groups);
+  printf("this->params->input_height: %ld\n", this->params->input_height);
+  printf("this->params->input_width: %ld\n", this->params->input_width);
+  printf("this->params->T_rewind: %ld\n", this->params->T_rewind);
+  printf("this->params->vertical_mem_stride: %ld\n", this->params->vertical_mem_stride);
+  printf("T: %p\n", T);
+  printf("X: %p\n", X);
+  printf("output_v_coord: %ld\n", output_v_coord);
+  printf("output_h_coord: %ld\n", output_h_coord);
+  printf("output_c_coord: %ld\n", output_c_coord);
+
+  return im_to_col_valid_impl_asm(this->params, T, X, output_v_coord, output_h_coord, output_c_coord);
+#endif // NN_USE_REF
+}
+
+extern "C" int8_t *im_to_col_padded_impl_asm(void *params, int8_t *T, int8_t *X,
+                                             int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord);
+int8_t *ImToColPadded::memcopy_fn(int8_t *T, int8_t *X,
+                                  int32_t output_v_coord, int32_t output_h_coord, int32_t output_c_coord)
+{
+
+#ifdef NN_USE_REF
+  return memcopy_fn_impl(T, X, output_v_coord, output_h_coord, output_c_coord);
+#else
+  printf("this->params: %p\n", this->params);
+  printf("this->params->bytes_per_h_line: %ld\n", this->params->bytes_per_h_line);
+  printf("this->params->bytes_per_pixel: %ld\n", this->params->bytes_per_pixel);
+  printf("this->params->horizontal_mem_stride): %ld\n", this->params->horizontal_mem_stride);
+  printf("this->params->bytes_per_copy_per_channel: %ld\n", this->params->bytes_per_copy_per_channel);
+  printf("this->params->kernel_height: %ld\n", this->params->kernel_height);
+  printf("this->params->kernel_width: %ld\n", this->params->kernel_width);
+  printf("this->params->vertical_stride: %ld\n", this->params->vertical_stride);
+  printf("this->params->horizontal_stride: %ld\n", this->params->horizontal_stride);
+  printf("this->params->vertical_dilation: %ld\n", this->params->vertical_dilation);
+  printf("this->params->horizontal_dilation: %ld\n", this->params->horizontal_dilation);
+  printf("this->params->padding.top: %hd\n", this->params->padding.top);
+  printf("this->params->padding.bottom: %hd\n", this->params->padding.bottom);
+  printf("this->params->padding.left: %hd\n", this->params->padding.left);
+  printf("this->params->padding.right: %hd\n", this->params->padding.right);
+  printf("this->params->input_v_length: %ld\n", this->params->input_v_length);
+  printf("this->params->input_h_length: %ld\n", this->params->input_h_length);
+  printf("this->params->padding_val: %ld\n", this->params->padding_val);
+  printf("T: %p\n", T);
+  printf("X: %p\n", X);
+  printf("output_v_coord: %ld\n", output_v_coord);
+  printf("output_h_coord: %ld\n", output_h_coord);
+  printf("output_c_coord: %ld\n", output_c_coord);
+
+  return im_to_col_padded_impl_asm(this->params, T, X, output_v_coord, output_h_coord, output_c_coord);
+#endif // NN_USE_REF
 }

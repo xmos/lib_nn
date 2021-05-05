@@ -37,9 +37,9 @@ namespace nn
       public:
          const int8_t *weights;
          const int32_t output_slice_channel_count;
-         const size_t bytes_per_kernel_channel;
+         const int32_t bytes_per_kernel_channel;
 
-         Params(const int output_slice_channel_count, const size_t bytes_per_kernel_channel, const int8_t *weights);
+         Params(const int output_slice_channel_count, const int32_t bytes_per_kernel_channel, const int8_t *weights);
       };
       Params *params;
 

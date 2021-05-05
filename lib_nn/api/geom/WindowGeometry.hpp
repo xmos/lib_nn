@@ -35,20 +35,8 @@ namespace nn
       int col;
     } dilation;
 
-  public:    
-    constexpr WindowGeometry() noexcept : WindowGeometry({0,0,0},{0,0},{0,0,0},{0,0}) {}
-
-    constexpr WindowGeometry( const std::array<int,3> shape, 
-                              const std::array<int,2> starts, 
-                              const std::array<int,3> stride, 
-                              const std::array<int,2> dilation, 
-                              int channel_depth = 1) noexcept
-      : shape(shape[0], shape[1], shape[2], channel_depth),
-        start{ starts[0], starts[1] },
-        stride{ stride[0], stride[1], stride[2] },
-        dilation{ dilation[0], dilation[1] }
-    {
-    }
+  public:
+    constexpr WindowGeometry() noexcept : WindowGeometry(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) {}
 
     constexpr WindowGeometry(
         int const height,

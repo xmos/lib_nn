@@ -136,6 +136,7 @@ namespace nn
 
   public:
     ImToColPadded(Params *p) : params(p) {}
+    int8_t *memcopy_fn_impl(int8_t *T, int8_t *X, int32_t h, int32_t w, int32_t c);
     int8_t *memcopy_fn(int8_t *T, int8_t *X, int32_t h, int32_t w, int32_t c);
     size_t get_scratch_bytes();
     size_t get_overread_bytes();
@@ -200,7 +201,8 @@ namespace nn
 
     size_t get_scratch_bytes();
     size_t get_overread_bytes();
-
+    
+    int8_t *memcopy_fn_impl(int8_t *T, int8_t *X, int32_t h, int32_t w, int32_t c);
     int8_t *memcopy_fn(int8_t *T, int8_t *X, int32_t h, int32_t w, int32_t c);
   };
 }

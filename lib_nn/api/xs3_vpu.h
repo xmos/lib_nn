@@ -1,11 +1,8 @@
 // Copyright 2020-2021 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
-
 #ifndef XS3_VPU_H_
 #define XS3_VPU_H_
-
-#include <stdint.h>
 
 #include "nn_api.h"
 
@@ -15,22 +12,22 @@
 #define XS1_VSR_HEADROOM_SHIFT 0x0
 #define XS1_VSR_HEADROOM_SIZE 0x5
 #define XS1_VSR_HEADROOM_MASK (((1 << XS1_VSR_HEADROOM_SIZE) - 1) << XS1_VSR_HEADROOM_SHIFT)
-#define XS1_VSR_HEADROOM(x) (((x) & XS1_VSR_HEADROOM_MASK) >> XS1_VSR_HEADROOM_SHIFT)
+#define XS1_VSR_HEADROOM(x) (((x)&XS1_VSR_HEADROOM_MASK) >> XS1_VSR_HEADROOM_SHIFT)
 #define XS1_VSR_HEADROOM_SET(x, v) (((x) & ~XS1_VSR_HEADROOM_MASK) | (((v) << XS1_VSR_HEADROOM_SHIFT) & XS1_VSR_HEADROOM_MASK))
 #define XS1_VSR_SHIFT_SHIFT 0x6
 #define XS1_VSR_SHIFT_SIZE 0x2
 #define XS1_VSR_SHIFT_MASK (((1 << XS1_VSR_SHIFT_SIZE) - 1) << XS1_VSR_SHIFT_SHIFT)
-#define XS1_VSR_SHIFT(x) (((x) & XS1_VSR_SHIFT_MASK) >> XS1_VSR_SHIFT_SHIFT)
+#define XS1_VSR_SHIFT(x) (((x)&XS1_VSR_SHIFT_MASK) >> XS1_VSR_SHIFT_SHIFT)
 #define XS1_VSR_SHIFT_SET(x, v) (((x) & ~XS1_VSR_SHIFT_MASK) | (((v) << XS1_VSR_SHIFT_SHIFT) & XS1_VSR_SHIFT_MASK))
 #define XS1_VSR_TYPE_SHIFT 0x8
 #define XS1_VSR_TYPE_SIZE 0x4
 #define XS1_VSR_TYPE_MASK (((1 << XS1_VSR_TYPE_SIZE) - 1) << XS1_VSR_TYPE_SHIFT)
-#define XS1_VSR_TYPE(x) (((x) & XS1_VSR_TYPE_MASK) >> XS1_VSR_TYPE_SHIFT)
+#define XS1_VSR_TYPE(x) (((x)&XS1_VSR_TYPE_MASK) >> XS1_VSR_TYPE_SHIFT)
 #define XS1_VSR_TYPE_SET(x, v) (((x) & ~XS1_VSR_TYPE_MASK) | (((v) << XS1_VSR_TYPE_SHIFT) & XS1_VSR_TYPE_MASK))
 #define XS1_VSR_LENGTH_SHIFT 0xc
 #define XS1_VSR_LENGTH_SIZE 0x4
 #define XS1_VSR_LENGTH_MASK (((1 << XS1_VSR_LENGTH_SIZE) - 1) << XS1_VSR_LENGTH_SHIFT)
-#define XS1_VSR_LENGTH(x) (((x) & XS1_VSR_LENGTH_MASK) >> XS1_VSR_LENGTH_SHIFT)
+#define XS1_VSR_LENGTH(x) (((x)&XS1_VSR_LENGTH_MASK) >> XS1_VSR_LENGTH_SHIFT)
 #define XS1_VSR_LENGTH_SET(x, v) (((x) & ~XS1_VSR_LENGTH_MASK) | (((v) << XS1_VSR_LENGTH_SHIFT) & XS1_VSR_LENGTH_MASK))
 
 #define XS1_VSETC_SHIFT_NOSHIFT 0x0
@@ -44,39 +41,39 @@
 
 /* End of xs3a_kernel.h */
 
-#define XS3_VPU_VREG_WIDTH_BITS     (XS1_NUM_WORDS_PER_VECTOR * XS1_ALL_BITS_SIZE)
-#define XS3_VPU_VREG_WIDTH_BYTES    (XS3_VPU_VREG_WIDTH_BITS  >> 3)
-#define XS3_VPU_VREG_WIDTH_WORDS    (XS3_VPU_VREG_WIDTH_BYTES >> 2)
+#define XS3_VPU_VREG_WIDTH_BITS (XS1_NUM_WORDS_PER_VECTOR * XS1_ALL_BITS_SIZE)
+#define XS3_VPU_VREG_WIDTH_BYTES (XS3_VPU_VREG_WIDTH_BITS >> 3)
+#define XS3_VPU_VREG_WIDTH_WORDS (XS3_VPU_VREG_WIDTH_BYTES >> 2)
 
 #ifndef __ASSEMBLER__
 
 C_API enum {
-    VEC_INT_32 = 0,   /**< 0 */
-    VEC_INT_16 = 1,   /**< 1 */
-    VEC_INT_8  = 2,   /**< 2 */
-    VEC_FLT_32 = 4,   /**< 4 */
-    VEC_FLT_16 = 5,   /**< 5 */
-    VEC_FLT_8  = 6,   /**< 6 */
+    VEC_INT_32 = 0, /**< 0 */
+    VEC_INT_16 = 1, /**< 1 */
+    VEC_INT_8 = 2,  /**< 2 */
+    VEC_FLT_32 = 4, /**< 4 */
+    VEC_FLT_16 = 5, /**< 5 */
+    VEC_FLT_8 = 6,  /**< 6 */
 };
 
 C_API enum {
-    VEC_SH0 = 0,   /**< 0 */
-    VEC_SHL = 1,   /**< 1 */
-    VEC_SHR = 2,   /**< 2 */
+    VEC_SH0 = 0, /**< 0 */
+    VEC_SHL = 1, /**< 1 */
+    VEC_SHR = 2, /**< 2 */
 };
 
 /**
  * The saturation bounds for signed integers in each VPU operating mode.
  */
 C_API enum {
-    VPU_INT8_MAX =  0x7F,              /**<  0x7F */
-    VPU_INT8_MIN = -0x7F,              /**< -0x7F */
+    VPU_INT8_MAX = 0x7F,  /**<  0x7F */
+    VPU_INT8_MIN = -0x7F, /**< -0x7F */
 
-    VPU_INT16_MAX =  0x7FFF,           /**<  0x7FFF */
-    VPU_INT16_MIN = -0x7FFF,           /**< -0x7FFF */
+    VPU_INT16_MAX = 0x7FFF,  /**<  0x7FFF */
+    VPU_INT16_MIN = -0x7FFF, /**< -0x7FFF */
 
-    VPU_INT32_MAX =  0x7FFFFFFF,       /**<  0x7FFFFFFF */
-    VPU_INT32_MIN = -0x7FFFFFFF,       /**< -0x7FFFFFFF */
+    VPU_INT32_MAX = 0x7FFFFFFF,  /**<  0x7FFFFFFF */
+    VPU_INT32_MIN = -0x7FFFFFFF, /**< -0x7FFFFFFF */
 };
 
 /**
@@ -88,9 +85,9 @@ C_API enum {
  * in vR.
  */
 C_API enum {
-    VPU_INT8_ACC_SIZE = 32,    /**< 32 */
-    VPU_INT16_ACC_SIZE = 32,   /**< 32 */
-    VPU_INT32_ACC_SIZE = 40,   /**< 40 */
+    VPU_INT8_ACC_SIZE = 32,  /**< 32 */
+    VPU_INT16_ACC_SIZE = 32, /**< 32 */
+    VPU_INT32_ACC_SIZE = 40, /**< 40 */
 };
 
 /**
@@ -98,18 +95,18 @@ C_API enum {
  * bits are stored in vR, with the remaining bits stored in vD.
  */
 C_API enum {
-    VPU_INT8_ACC_VR_BITS = 16,     /**< 16 */
-    VPU_INT16_ACC_VR_BITS = 16,    /**< 16 */
-    VPU_INT32_ACC_VR_BITS = 32,    /**< 32 */
+    VPU_INT8_ACC_VR_BITS = 16,  /**< 16 */
+    VPU_INT16_ACC_VR_BITS = 16, /**< 16 */
+    VPU_INT32_ACC_VR_BITS = 32, /**< 32 */
 };
 /**
  * When vD and vR contain accumulators, the values in this enum can be used to mask off the bits of
  * the accumulator value which correspond to the portion in vR.
  */
 C_API enum {
-    VPU_INT8_ACC_VR_MASK = 0xFFFF,         /**< 0xFFFF */
-    VPU_INT16_ACC_VR_MASK = 0xFFFF,        /**< 0xFFFF */
-    VPU_INT32_ACC_VR_MASK = 0xFFFFFFFF,    /**< 0xFFFFFFFF */
+    VPU_INT8_ACC_VR_MASK = 0xFFFF,      /**< 0xFFFF */
+    VPU_INT16_ACC_VR_MASK = 0xFFFF,     /**< 0xFFFF */
+    VPU_INT32_ACC_VR_MASK = 0xFFFFFFFF, /**< 0xFFFFFFFF */
 };
 
 /**
@@ -136,18 +133,18 @@ C_API typedef int64_t vpu_int32_acc_t;
  *      
  */
 C_API enum {
-    VPU_INT8_EPV    = 32,   /**< 32 */
-    VPU_INT16_EPV   = 16,   /**< 16 */
-    VPU_INT32_EPV   =  8,   /**< 8 */
+    VPU_INT8_EPV = 32,  /**< 32 */
+    VPU_INT16_EPV = 16, /**< 16 */
+    VPU_INT32_EPV = 8,  /**< 8 */
 };
 
 /**
  * log-base-2 of the corresponding VPU_INT*_EPV values.
  */
 C_API enum {
-    VPU_INT8_EPV_LOG2    = 5,   /**< 5 */
-    VPU_INT16_EPV_LOG2   = 4,   /**< 4 */
-    VPU_INT32_EPV_LOG2   = 3,   /**< 3 */
+    VPU_INT8_EPV_LOG2 = 5,  /**< 5 */
+    VPU_INT16_EPV_LOG2 = 4, /**< 4 */
+    VPU_INT32_EPV_LOG2 = 3, /**< 3 */
 };
 
 /**
@@ -157,19 +154,19 @@ C_API enum {
  * VLMACC instruction.
  */
 C_API enum {
-    VPU_BIN_ACC_PERIOD   = 16,    /**< 16 */
-    VPU_INT8_ACC_PERIOD  = 16,    /**< 16 */
-    VPU_INT16_ACC_PERIOD = 16,    /**< 16 */
-    VPU_INT32_ACC_PERIOD =  8,    /**< 8 */
+    VPU_BIN_ACC_PERIOD = 16,   /**< 16 */
+    VPU_INT8_ACC_PERIOD = 16,  /**< 16 */
+    VPU_INT16_ACC_PERIOD = 16, /**< 16 */
+    VPU_INT32_ACC_PERIOD = 8,  /**< 8 */
 };
 
 /**
  * log-base-2 of the corresponding VPU_INT*_ACC_PERIOD values.
  */
 C_API enum {
-    VPU_INT8_ACC_PERIOD_LOG2  = 4,   /**< 4 */
-    VPU_INT16_ACC_PERIOD_LOG2 = 4,   /**< 4 */
-    VPU_INT32_ACC_PERIOD_LOG2 = 3,   /**< 3 */
+    VPU_INT8_ACC_PERIOD_LOG2 = 4,  /**< 4 */
+    VPU_INT16_ACC_PERIOD_LOG2 = 4, /**< 4 */
+    VPU_INT32_ACC_PERIOD_LOG2 = 3, /**< 3 */
 };
 
 /**
@@ -178,18 +175,18 @@ C_API enum {
  * instruction.
  */
 C_API enum {
-    VPU_INT8_VLMACC_ELMS = 16,    /**< 16 */
-    VPU_INT16_VLMACC_ELMS = 16,   /**< 16 */
-    VPU_INT32_VLMACC_ELMS = 8,    /**< 8 */
+    VPU_INT8_VLMACC_ELMS = 16,  /**< 16 */
+    VPU_INT16_VLMACC_ELMS = 16, /**< 16 */
+    VPU_INT32_VLMACC_ELMS = 8,  /**< 8 */
 };
 
 /**
  * log-base-2 of the corresponding VPU_INT*_VLMACC_ELMS values.
  */
 C_API enum {
-    VPU_INT8_VLMACC_ELMS_LOG2 = 4,    /**< 4 */
-    VPU_INT16_VLMACC_ELMS_LOG2 = 4,   /**< 4 */
-    VPU_INT32_VLMACC_ELMS_LOG2 = 3,   /**< 3 */
+    VPU_INT8_VLMACC_ELMS_LOG2 = 4,  /**< 4 */
+    VPU_INT16_VLMACC_ELMS_LOG2 = 4, /**< 4 */
+    VPU_INT32_VLMACC_ELMS_LOG2 = 3, /**< 3 */
 };
 
 #endif //__ASM__
