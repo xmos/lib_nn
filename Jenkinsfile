@@ -69,11 +69,15 @@ pipeline {
                 sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
                       . activate ./lib_nn_venv &&
                       cd test/unit_test && make all && make all PLATFORM=x86 MEMORY_SAFE=true"""
+                sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
+                      . activate ./lib_nn_venv &&
+                      cd test/gtests && ./build.sh && make all PLATFORM=x86 MEMORY_SAFE=true"""
              }
          }
          stage("Test") {
              steps {
-                 sh """cd test/unit_test && ./bin/x86/unit_test"""
+                 sh "cd test/unit_test && ./bin/x86/unit_test"
+                 sh "cd test/gtests && ./bin/x86/unit_test"
             }
         }
     }
