@@ -300,7 +300,7 @@ TEST_F(Conv2dValidIndirectRegression, BasicTest)
 
                               Filter2D::Params akp(Y, ir, VPU_INT8_ACC_PERIOD);
 
-                              Conv2dVaildIndirect conv2d(
+                              Conv2dValidIndirect conv2d(
                                   &akp,
                                   &memcpy,
                                   &aggregator,
@@ -435,7 +435,7 @@ TEST_F(Conv2dValidDirectRegression, BasicTest)
 
                               Filter2D::Params akp(Y, ir, VPU_INT8_ACC_PERIOD);
 
-                              Conv2dVaildDirect conv2d(
+                              Conv2dValidDirect conv2d(
                                   &akp,
                                   &memcpy,
                                   &aggregator,
