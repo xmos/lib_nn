@@ -48,7 +48,7 @@ static std::vector<int8_t> run_op(MaxPoolDirectValidFn::Params* params,
 
 
 static nn::ff::FilterGeometryIterator filter_sets[] = {
-  test::unpadded::SimpleDepthwise({1,8}, {1,4}, {4,66}),
+  test::unpadded::AllUnpadded( nn::Filter2dGeometry({0,0,36}, {3,3,36}, {{4,4,1}, {2,2}, {2,3}, {2,3}}), true, 4)
 };
 
 
@@ -171,6 +171,7 @@ TEST(MaxPoolDirectValidFn_Test, aggregate_fn)
       auto op = MaxPoolDirectValidFn( &params );
 
       auto input_img  = std::vector<int8_t>( filter.input.imageElements() );
+      auto in_start = filter.input.Index({filter.window.start.row, filter.window.start.col, 0});
       auto exp = std::vector<int8_t>( MaxPoolDirectValidFn::ChannelsPerOutputGroup );
 
       rand.rand_bytes( &input_img[0], sizeof(int8_t) * input_img.size() );
@@ -195,7 +196,7 @@ TEST(MaxPoolDirectValidFn_Test, aggregate_fn)
       vpu_ring_buffer_t acc;
       int8_t* out = reinterpret_cast<int8_t*>(&acc);
 
-      maxpool_direct_valid_ref(&acc, &input_img[0], &params.mp_params);
+      maxpool_direct_valid_ref(&acc, &input_img[in_start], &params.mp_params);
         
       for(int i = 0; i < out_channels; i++){
         ASSERT_EQ(exp[i], out[i])
@@ -231,6 +232,7 @@ TEST(MaxPoolDirectValidFn_Test, maxpool_direct_valid_ref_test)
       int8_t exp[VPU_INT8_EPV];
 
       auto input_img = std::vector<int8_t>( filter.input.imageElements() );
+      auto in_start = filter.input.Index({filter.window.start.row, filter.window.start.col, 0});
 
       rand.rand_bytes( &input_img[0], sizeof(int8_t) * input_img.size() );
 
@@ -254,7 +256,7 @@ TEST(MaxPoolDirectValidFn_Test, maxpool_direct_valid_ref_test)
       vpu_ring_buffer_t acc;
       int8_t* out = reinterpret_cast<int8_t*>(&acc);
 
-      maxpool_direct_valid_ref(&acc, &input_img[0], &params.mp_params);
+      maxpool_direct_valid_ref(&acc, &input_img[in_start], &params.mp_params);
         
       for(int i = 0; i < out_channels; i++){
         ASSERT_EQ(exp[i], out[i])

@@ -15,6 +15,8 @@
 #include "geom/WindowLocation.hpp"
 #include "AvgPool2d.hpp"
 
+#include "FilterGeometryIterHelper.hpp"
+
 
 using namespace nn;
 
@@ -42,94 +44,51 @@ static vpu_ring_buffer_t run_op(AvgPoolDirectValidFn::Params* params,
   return acc;
 }
 
-/**
- * Update the filter to the next param
- */
-static bool UpdateParam(nn::Filter2dGeometry& filter)
-{
-  auto& input = filter.input;
-  auto& output = filter.output;
-  auto& window = filter.window;
 
-  constexpr int X_h_MAX = 8;
-  constexpr int X_w_MAX = 8;
-  constexpr int X_d_MAX = 36;
-
-  constexpr int K_h_MAX = 4;
-  constexpr int K_w_MAX = 4;
-
-  constexpr int K_dil_h_MAX = 3;
-  constexpr int K_dil_w_MAX = 3;
-
-#define UPDATE(FIELD, INIT, INCR, CONDITION)    do {                  \
-                                                  FIELD += (INCR);    \
-                                                  if( (CONDITION) )   \
-                                                    return true;      \
-                                                  FIELD = (INIT);     \
-                                                } while(0)
-
-  UPDATE(window.dilation.col, 1, 1, 
-    ( (window.dilation.col <= K_dil_w_MAX) && (((window.shape.width-1)*window.dilation.col) < input.width) ) );
-  UPDATE(window.dilation.row, 1, 1,
-    ( (window.dilation.row <= K_dil_h_MAX) && (((window.shape.height-1)*window.dilation.row) < input.height) ) );
-  UPDATE(window.shape.width, 1, 1, window.shape.width <= input.width && window.shape.width <= K_w_MAX);
-  UPDATE(window.shape.height, 1, 1, window.shape.height <= input.height && window.shape.height <= K_h_MAX);
-  UPDATE(input.depth, 4, 4, input.depth <= X_d_MAX);
-  UPDATE(input.width, 1, 1, input.width <= X_w_MAX);
-  UPDATE(input.height, 1, 1, input.height <= X_h_MAX);
-
-  return false;
-
-#undef UPDATE
-}
-
-/**
- * Generates the sequence of test parameters
- */
-static bool NextParam(nn::Filter2dGeometry& filter)
-{
-  if(!UpdateParam(filter)) return false;
-
-  // Fix it up to make sure it stays valid.
-  filter.output.depth = filter.input.depth;
-
-  return true;
-}
-
+static nn::ff::FilterGeometryIterator filter_sets[] = {
+  test::unpadded::AllUnpadded( nn::Filter2dGeometry({0,0,36}, {3,3,36}, {{4,4,1}, {2,2}, {2,3}, {2,3}}), true, 4)
+};
 
 ////////////////////
 TEST(AvgPoolDirectValidFn_Test, ConstructorA)
 {
-  nn::Filter2dGeometry filter(nn::ImageGeometry(1, 1, 4),
-                              nn::ImageGeometry(1, 1, 4),
-                              nn::WindowGeometry(1, 1, 1,   0, 0,   1, 1, 1,   1, 1)); 
-  do {
+  int total_iter = 0;
 
-    ASSERT_TRUE( nn::AvgPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
+  for(auto filter_set : filter_sets) {
+    filter_set.Reset();
+    for(auto filter : filter_set) {
 
-    const auto pixel_count = filter.window.shape.imagePixels();
+      ASSERT_TRUE( nn::AvgPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
 
-    avgpool_direct_valid_params ap_params;
-    ap_params.rows = filter.window.shape.height;
-    ap_params.cols = filter.window.shape.width;
-    ap_params.col_stride = filter.window.dilation.col * filter.input.pixelBytes();
-    ap_params.row_stride = (filter.window.dilation.row * filter.input.rowBytes())
-                          - (filter.window.shape.width * ap_params.col_stride);
-    std::memset(ap_params.scale, 12, sizeof(ap_params.scale));
+      const auto pixel_count = filter.window.shape.imagePixels();
 
-    AvgPoolDirectValidFn::Params params = AvgPoolDirectValidFn::Params(ap_params );
+      avgpool_direct_valid_params ap_params;
+      ap_params.rows = filter.window.shape.height;
+      ap_params.cols = filter.window.shape.width;
+      ap_params.col_stride = filter.window.dilation.col * filter.input.pixelBytes();
+      ap_params.row_stride = (filter.window.dilation.row * filter.input.rowBytes())
+                            - (filter.window.shape.width * ap_params.col_stride);
+      std::memset(ap_params.scale, 12, sizeof(ap_params.scale));
 
-    const auto bleh = std::min<int>( filter.input.depth, AvgPoolDirectValidFn::ChannelsPerOutputGroup );
+      AvgPoolDirectValidFn::Params params = AvgPoolDirectValidFn::Params(ap_params );
 
-    vpu_ring_buffer_t expected = {{0}};
-    for(int i = 0; i < bleh; i++) expected.set_acc(i, pixel_count * i * params.ap_params.scale[0]);
+      const auto bleh = std::min<int>( filter.input.depth, AvgPoolDirectValidFn::ChannelsPerOutputGroup );
 
-    auto res = run_op(&params, filter);
+      vpu_ring_buffer_t expected = {{0}};
+      for(int i = 0; i < bleh; i++) expected.set_acc(i, pixel_count * i * params.ap_params.scale[0]);
 
-    ASSERT_EQ(expected, res) << "Filter geometry: " << filter;
+      auto res = run_op(&params, filter);
 
-  } while( NextParam(filter) );
+      ASSERT_EQ(expected, res)
+        << "Filter geometry: " << filter << std::endl
+        << "iter: " << total_iter;
+      total_iter++;
+    }
+  }
+
+  std::cout << "Count: " << total_iter << std::endl;
 }
+
 
 
 
@@ -139,28 +98,36 @@ TEST(AvgPoolDirectValidFn_Test, ConstructorA)
 ////////////////////
 TEST(AvgPoolDirectValidFn_Test, ConstructorB)
 {
-  nn::Filter2dGeometry filter(nn::ImageGeometry(1, 1, 4),
-                              nn::ImageGeometry(1, 1, 4),
-                              nn::WindowGeometry(1, 1, 1,   0, 0,   1, 1, 1,   1, 1)); 
-  do {
+  int total_iter = 0;
 
-    ASSERT_TRUE( nn::AvgPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
+  for(auto filter_set : filter_sets) {
+    filter_set.Reset();
+    for(auto filter : filter_set) {
 
-    const auto pixel_count = filter.window.shape.imagePixels();
 
-    AvgPoolDirectValidFn::Params params = AvgPoolDirectValidFn::Params( filter, 13 );
+      ASSERT_TRUE( nn::AvgPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
 
-    const auto bleh = std::min<int>( filter.input.depth, AvgPoolDirectValidFn::ChannelsPerOutputGroup );
+      const auto pixel_count = filter.window.shape.imagePixels();
 
-    vpu_ring_buffer_t expected = {{0}};
-    for(int i = 0; i < bleh; i++) expected.set_acc(i, pixel_count * i * params.ap_params.scale[0]);
+      AvgPoolDirectValidFn::Params params = AvgPoolDirectValidFn::Params( filter, 13 );
 
-    auto res = run_op(&params, filter);
+      const auto bleh = std::min<int>( filter.input.depth, AvgPoolDirectValidFn::ChannelsPerOutputGroup );
 
-    ASSERT_EQ(expected, res) << "Filter geometry: " << filter;
+      vpu_ring_buffer_t expected = {{0}};
+      for(int i = 0; i < bleh; i++) expected.set_acc(i, pixel_count * i * params.ap_params.scale[0]);
 
-  } while( NextParam(filter) );
+      auto res = run_op(&params, filter);
+
+      ASSERT_EQ(expected, res)
+        << "Filter geometry: " << filter << std::endl
+        << "iter: " << total_iter;
+      total_iter++;
+    }
+  }
+
+  std::cout << "Count: " << total_iter << std::endl;
 }
+
 
 
 
@@ -171,33 +138,41 @@ TEST(AvgPoolDirectValidFn_Test, ConstructorB)
 ////////////////////
 TEST(AvgPoolDirectValidFn_Test, Serialization)
 {
-  nn::Filter2dGeometry filter(nn::ImageGeometry(1, 1, 4),
-                              nn::ImageGeometry(1, 1, 4),
-                              nn::WindowGeometry(1, 1, 1,   0, 0,   1, 1, 1,   1, 1)); 
-  do {
+  int total_iter = 0;
 
-    ASSERT_TRUE( nn::AvgPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
+  for(auto filter_set : filter_sets) {
+    filter_set.Reset();
+    for(auto filter : filter_set) {
 
-    const auto pixel_count = filter.window.shape.imagePixels();
 
-    AvgPoolDirectValidFn::Params params = AvgPoolDirectValidFn::Params( filter, 13 );
+      ASSERT_TRUE( nn::AvgPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
 
-    // Serialize and Deserialize the params
-    auto stream = std::stringstream();
-    params.Serialize(stream);
-    params = AvgPoolDirectValidFn::Params(stream);
+      const auto pixel_count = filter.window.shape.imagePixels();
 
-    const auto bleh = std::min<int>( filter.input.depth, AvgPoolDirectValidFn::ChannelsPerOutputGroup );
+      AvgPoolDirectValidFn::Params params = AvgPoolDirectValidFn::Params( filter, 13 );
 
-    vpu_ring_buffer_t expected = {{0}};
-    for(int i = 0; i < bleh; i++) expected.set_acc(i, pixel_count * i * params.ap_params.scale[0]);
+      // Serialize and Deserialize the params
+      auto stream = std::stringstream();
+      params.Serialize(stream);
+      params = AvgPoolDirectValidFn::Params(stream);
 
-    auto res = run_op(&params, filter);
+      const auto bleh = std::min<int>( filter.input.depth, AvgPoolDirectValidFn::ChannelsPerOutputGroup );
 
-    ASSERT_EQ(expected, res) << "Filter geometry: " << filter;
+      vpu_ring_buffer_t expected = {{0}};
+      for(int i = 0; i < bleh; i++) expected.set_acc(i, pixel_count * i * params.ap_params.scale[0]);
 
-  } while( NextParam(filter) );
+      auto res = run_op(&params, filter);
+
+      ASSERT_EQ(expected, res)
+        << "Filter geometry: " << filter << std::endl
+        << "iter: " << total_iter;
+      total_iter++;
+    }
+  }
+
+  std::cout << "Count: " << total_iter << std::endl;
 }
+
 
 
 
@@ -208,25 +183,25 @@ TEST(AvgPoolDirectValidFn_Test, Serialization)
 ////////////////////
 TEST(AvgPoolDirectValidFn_Test, aggregate_fn)
 {
-  constexpr int ITER_COUNT = 10;
+  int total_iter = 0;
 
-  nn::Filter2dGeometry filter(nn::ImageGeometry(1, 1, 4),
-                              nn::ImageGeometry(1, 1, 4),
-                              nn::WindowGeometry(1, 1, 1,   0, 0,   1, 1, 1,   1, 1)); 
-  do {
+  for(auto filter_set : filter_sets) {
+    filter_set.Reset();
+    for(auto filter : filter_set) {
+      // auto filter = nn::Filter2dGeometry( {1,2,4,1}, {1,1,4,1}, {{1,1,1},{0,1},{1,1,1},{1,1}} ); {
 
-    ASSERT_TRUE( nn::AvgPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
+      ASSERT_TRUE( nn::AvgPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
 
-    const auto pixel_count = filter.window.shape.imagePixels();
+      const auto pixel_count = filter.window.shape.imagePixels();
 
-    auto rand = nn::test::Rand( pixel_count * 87989 );
+      auto rand = nn::test::Rand( pixel_count * 87989 );
 
-    auto input_img = std::vector<int8_t>( filter.input.imageElements() );
-
-    for(int iter = 0; iter < ITER_COUNT; iter++){
-      
+      auto input_img = std::vector<int8_t>( filter.input.imageElements() );
+        
       int32_t scale = rand.rand<int8_t>();
       AvgPoolDirectValidFn::Params params = AvgPoolDirectValidFn::Params( filter, int8_t(scale) );
+
+      auto in_start = filter.input.Index({filter.window.start.row, filter.window.start.col, 0});
 
       vpu_ring_buffer_t expected = {{0}};
 
@@ -249,19 +224,24 @@ TEST(AvgPoolDirectValidFn_Test, aggregate_fn)
 
       vpu_ring_buffer_t acc;
       auto op = AvgPoolDirectValidFn(&params);
-      op.aggregate_fn( &acc, &input_img[0], 0);
+      op.aggregate_fn( &acc, &input_img[in_start], 0);
 
       // If input channels < VPU_INT8_ACC_PERIOD, the last few accumulators will have junk in them
       for(int k = filter.input.depth; k < AvgPoolDirectValidFn::ChannelsPerOutputGroup; k++)
         acc.set_acc(k, 0);
 
       ASSERT_EQ(expected, acc) 
-        << "Filter geometry: " << filter
-        << "iter: " << iter;
-    }
+        << "Filter geometry: " << filter << std::endl
+        << "iter: " << total_iter << std::endl
+        << "scale: " << int(scale) << std::endl;
 
-  } while( NextParam(filter) );
+      total_iter++;
+    }
+  }
+
+  std::cout << "Count: " << total_iter << std::endl;
 }
+
 
 
 
@@ -272,23 +252,19 @@ TEST(AvgPoolDirectValidFn_Test, aggregate_fn)
 ////////////////////
 TEST(AvgPoolDirectValidFn_Test, avgpool_direct_valid_ref)
 {
-  constexpr int ITER_COUNT = 10;
+  int total_iter = 0;
 
-  nn::Filter2dGeometry filter(nn::ImageGeometry(1, 1, 4),
-                              nn::ImageGeometry(1, 1, 4),
-                              nn::WindowGeometry(1, 1, 1,   0, 0,   1, 1, 1,   1, 1)); 
-  do {
+  for(auto filter_set : filter_sets) {
+    filter_set.Reset();
+    for(auto filter : filter_set) {
+      // auto filter = nn::Filter2dGeometry( {1,2,4,1}, {1,1,4,1}, {{1,1,1},{0,1},{1,1,1},{1,1}} ); {
 
-    ASSERT_TRUE( nn::AvgPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
+      ASSERT_TRUE( nn::AvgPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
 
+      auto rand = nn::test::Rand(8876 * filter.input.imageBytes() );
 
-
-
-    auto rand = nn::test::Rand(8876 * filter.input.imageBytes() );
-
-    auto input_img = std::vector<int8_t>( filter.input.imageElements() );
-
-    for(int iter = 0; iter < ITER_COUNT; iter++){
+      auto input_img = std::vector<int8_t>( filter.input.imageElements() );
+      auto in_start = filter.input.Index({filter.window.start.row, filter.window.start.col, 0});
 
       const auto scale = rand.rand<int8_t>(1, INT8_MAX);
 
@@ -314,17 +290,20 @@ TEST(AvgPoolDirectValidFn_Test, avgpool_direct_valid_ref)
       }
 
       vpu_ring_buffer_t acc = {{0}};
-      avgpool_direct_valid_ref(&acc, &input_img[0], &ap_params);
+      avgpool_direct_valid_ref(&acc, &input_img[in_start], &ap_params);
 
       // If input channels < VPU_INT8_ACC_PERIOD, the last few accumulators will have junk in them
       for(int k = filter.input.depth; k < AvgPoolDirectValidFn::ChannelsPerOutputGroup; k++)
         acc.set_acc(k, 0);
       
       ASSERT_EQ(exp_acc, acc) << "Failure details...\n"
-        << "\t| Filter geometry: " << filter
-        << "\t| iter: " << iter;
+        << "Filter geometry: " << filter << std::endl
+        << "iter: " << total_iter;
+      total_iter++;
     }
+  }
 
-  } while( NextParam(filter) );
+  std::cout << "Count: " << total_iter << std::endl;
 }
+
 

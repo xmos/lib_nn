@@ -62,8 +62,15 @@ bool MaxPool2d_Generic::SupportsGeometry(const Filter2dGeometry& filter)
 
   // There must be at least one pixel of the filter window intersecting
   // with the input image for every output pixel location.
-  if( filter.GetWindow(0,0,0).IsPadding( window.shape.height-1, window.shape.width-1 ) ) return false;
-  if( filter.GetWindow(output.height-1, output.width-1, 0).IsPadding( 0, 0 ) ) return false;
+
+  auto loc1 = filter.GetWindow(0,0,0);
+  auto cc = loc1.InputCoords(window.shape.height-1, window.shape.width-1,0);
+  if(cc.row < 0) return false;
+  if(cc.col < 0) return false;
+  auto loc2 = filter.GetWindow(output.height-1, output.width-1, 0);
+  cc = loc2.InputCoords(0,0,0);
+  if(cc.row >= input.height) return false;
+  if(cc.col >= input.width) return false;
 
   // Otherwise, it's supported
   return true;

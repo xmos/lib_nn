@@ -3,6 +3,7 @@
 #include "nn_api.h"
 
 #include <iostream>
+#include <array>
 
 
 
@@ -50,6 +51,9 @@ namespace nn {
         int const img_col,
         int const img_chan)
           : row(img_row), col(img_col), channel(img_chan){}
+
+      ImageVect(const std::array<int,3> coords)
+          : ImageVect(coords[0], coords[1], coords[2]) {}
 
       ImageVect operator+(ImageVect const& other) const
         { return this->add(other.row, other.col, other.channel);  }

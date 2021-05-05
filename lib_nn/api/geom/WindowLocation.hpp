@@ -66,6 +66,11 @@ namespace nn {
        * Determine the top-, left-, bottom- and right-padding requirements for the filter window at this location.
        */
       padding_t Padding() const;
+      
+      /**
+       * Determine the top-, left-, bottom- and right-padding requirements for the filter window at this location.
+       */
+      padding_t SignedPadding() const;
 
       bool IsPadding(const int filter_row,
                      const int filter_col,

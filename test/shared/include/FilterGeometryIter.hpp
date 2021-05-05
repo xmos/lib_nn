@@ -73,6 +73,69 @@ namespace nn {
         virtual const nn::Filter2dGeometry& Filter() override;
         virtual void Push(const nn::Filter2dGeometry& filter) override;
         virtual bool UpdateFilter() override;
+    };    
+    
+    /**
+     * 
+     */
+    class AllUnpadded : public FilterFrame {
+      private:
+
+        nn::Filter2dGeometry max_geometry;
+        int channel_step;
+        bool depthwise;
+
+      protected:
+        virtual void Push(const nn::Filter2dGeometry& new_filter) override;
+        bool _UpdateFilter();
+        virtual bool UpdateFilter() override;
+      public:
+        AllUnpadded( const nn::Filter2dGeometry max_geometry,
+                     const bool depthwise = false,
+                     const int channel_step = 4);
+
+    };
+    
+    
+    
+    /**
+     * 
+     */
+    class AllPaddedBase : public FilterFrame {
+      private:
+
+        nn::Filter2dGeometry max_geometry;
+        int channel_step;
+        bool depthwise;
+
+      protected:
+        virtual void Push(const nn::Filter2dGeometry& new_filter) override;
+        virtual bool UpdateFilter() override;
+      public:
+        AllPaddedBase( const nn::Filter2dGeometry max_geometry,
+                       const bool depthwise = false,
+                       const int channel_step = 4);
+
+    };
+    
+    /**
+     * 
+     */
+    class MakePadded : public FilterFrame {
+      private:
+
+        nn::padding_t max_padding;
+        nn::padding_t cur_padding;
+        bool depthwise;
+
+      protected:
+        virtual void Push(const nn::Filter2dGeometry& new_filter) override;
+        bool _UpdateFilter();
+        virtual bool UpdateFilter() override;
+      public:
+        MakePadded( const nn::padding_t max_padding,
+                    const bool depthwise = false);
+
     };
 
 
@@ -218,6 +281,7 @@ namespace nn {
       public:
         FilterGeometryIterator(nn::Filter2dGeometry seed,
                               std::initializer_list<IFilterFrame*> filter_frames);
+        FilterGeometryIterator(std::initializer_list<IFilterFrame*> filter_frames);
 
         FilterGeometryIterator& operator++();
 
@@ -239,8 +303,11 @@ namespace nn {
     };
 
 
-    nn::Filter2dGeometry MakeUnpadded(nn::Filter2dGeometry);
-    nn::Filter2dGeometry MakePadded(nn::Filter2dGeometry);
+    nn::Filter2dGeometry MakeUnpaddedDepthwise(nn::Filter2dGeometry);
+    nn::Filter2dGeometry MakePaddedDepthwise(nn::Filter2dGeometry);
+
+    nn::Filter2dGeometry MakeUnpaddedDense(nn::Filter2dGeometry);
+    nn::Filter2dGeometry MakePaddedDense(nn::Filter2dGeometry);
 
 
   }

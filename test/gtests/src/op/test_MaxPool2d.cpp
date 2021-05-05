@@ -118,8 +118,8 @@ static nn::ff::FilterGeometryIterator TestFilterIterator()
               new OutputShape( {1,1,4}, {4,8,36}, {1,1,4} ),
               new WindowShape( {1,1}, {4,4}, {1,1} ),
               new FrameSequence( {
-                  new Apply( MakeUnpadded ), 
-                  new Apply( MakePadded ) } ) 
+                  new Apply( MakeUnpaddedDepthwise ), 
+                  new Apply( MakePaddedDepthwise ) } ) 
             } );
 }
 
