@@ -21,7 +21,7 @@ namespace nn
     WindowGeometry window;
 
   public:
-    constexpr Filter2dGeometry() noexcept {}
+    constexpr Filter2dGeometry() noexcept : input(), output(), window() {}
 
     constexpr Filter2dGeometry(
         ImageGeometry input_geom,
@@ -41,25 +41,24 @@ namespace nn
 
     bool ModelIsDepthwise() const;
 
-      /**
+    /**
        * Get the total implied padding around each edge of the input image.
        * 
        * Note: This is the unsigned padding
        */
-      padding_t Padding() const;
+    padding_t Padding() const;
 
     //TODO
     int getReceptiveVolumeElements() const { return window.shape.height * window.shape.width * input.pixelElements(); }
 
     int getReceptiveVolumeBytes() const { return window.shape.height * window.shape.width * input.pixelBytes(); }
 
-      /**
+    /**
        * @Deprecated
        * @TODO: Get rid of this when possible. There are a couple test cases that still use it.
       */
     padding_t ModelPadding(bool initial = true,
                            bool signed_padding = true) const;
-
   };
 
   inline std::ostream &operator<<(std::ostream &stream, const Filter2dGeometry &filt)
