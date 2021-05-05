@@ -5,6 +5,8 @@
 #ifndef XS3_VPU_H_
 #define XS3_VPU_H_
 
+#include <stdint.h>
+
 #include "nn_api.h"
 
 #include <xs3a_registers.h>

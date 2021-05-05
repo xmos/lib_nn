@@ -20,6 +20,8 @@
 using namespace nn;
 using namespace nn::test;
 
+static auto rng = Rand(69);
+
 /**
  * 
  * 

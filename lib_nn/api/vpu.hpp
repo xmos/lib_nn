@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <ostream>
+#include <cstring>
 
 #ifndef VPU_HPP_
 #define VPU_HPP_

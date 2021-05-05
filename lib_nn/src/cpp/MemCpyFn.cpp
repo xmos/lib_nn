@@ -4,6 +4,11 @@
 
 using namespace nn;
 
+//TODO: [astew] CHAR_BIT not defined if I build with Cygwin or gcc+Ubuntu+WSL. Not in <limits> either.
+#ifndef CHAR_BIT
+#define CHAR_BIT (sizeof(char) * 8)
+#endif
+
 DerefInputFn::Params::Params(const int32_t bytes_per_h_line,
                              const int32_t bytes_per_pixel)
     : bytes_per_h_line(bytes_per_h_line), bytes_per_pixel(bytes_per_pixel)

@@ -21,6 +21,8 @@ namespace nn
     WindowGeometry window;
 
   public:
+    constexpr Filter2dGeometry() noexcept {}
+
     constexpr Filter2dGeometry(
         ImageGeometry input_geom,
         ImageGeometry output_geom,

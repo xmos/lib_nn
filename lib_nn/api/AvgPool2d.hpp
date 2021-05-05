@@ -22,7 +22,7 @@ namespace nn {
    * AvgPool2d operator that should work for (almost) any geometry.
    * 
    * Where supported, AvgPool2d_Valid should generally be used. In particular, this operator
-   * supports geometries that involve input padding or dilations other than 1.
+   * supports geometries that involve input padding.
    * 
    * @see AvgPool2d_Valid
    **/
@@ -59,8 +59,7 @@ namespace nn {
   };
 
   /**
-   * AvgPool2d operator that works for geometries which involve no input padding and 
-   * where both vertical and horizontal dilation are 1.
+   * AvgPool2d operator that works for geometries which involve no input padding.
    **/
   class AvgPool2d_Valid : public Filter2D_DW, public AvgPool2d {
 

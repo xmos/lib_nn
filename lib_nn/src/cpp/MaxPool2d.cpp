@@ -82,8 +82,8 @@ bool MaxPool2d_Valid::SupportsGeometry(const Filter2dGeometry& filter)
   // Padding is not supported
   if( filter.Padding().HasPadding() ) return false;
 
-  // Dilation other than 1 isn't supported
-  if( window.dilation.row != 1 || window.dilation.col != 1 ) return false;
+  // // Dilation other than 1 isn't supported
+  // if( window.dilation.row != 1 || window.dilation.col != 1 ) return false;
 
   // Otherwise, it's supported
   return true;
