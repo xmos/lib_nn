@@ -678,18 +678,12 @@ int8_t *DirectWriteOutputTransform::output_transform_fn(int8_t *Y,
                                                         vpu_ring_buffer_t *acc,
                                                         int32_t output_channel_group)
 {
-
   const int32_t first_channel = DirectWriteOutputTransform::ChannelsPerOutputGroup * output_channel_group;
   const int32_t count = std::min<int32_t>(DirectWriteOutputTransform::ChannelsPerOutputGroup,
                                           this->params->output_img_channels - first_channel);
 
-  // #ifdef NN_USE_REF
+  // This might be slightly sped up with an xcore-specific implementation, but it's likely unnecessary
   std::memcpy(Y, &acc->vR[0], count);
-  // #else
-  //   volatile asm("mkmsk %0, %0" : "=r"(count));
-  //   volatile asm("vldr %0[0]" : "r"(%acc->vR[0]));
-  //   volatile asm("vstrpv %0[0], %1" : "r"(Y, count));
-  // #endif // NN_USE_REF
 
   return &Y[count];
 }
@@ -779,9 +773,7 @@ int8_t *ShiftInt8OutputTransform::output_transform_fn(int8_t *Y,
   const int32_t count = std::min<int32_t>(ShiftInt8OutputTransform::ChannelsPerOutputGroup,
                                           this->params->output_img_channels - first_channel);
 
-  // const int16_t* shifts = &this->params->shifts[first_channel];
-
-#ifdef NN_USE_REF
+#if defined(NN_USE_REF) || !defined(__XS3A__)
   shift_int8_output_transform_ref(Y, acc, this->params->shifts, count);
 #else
   shift_int8_output_transform_xcore(Y, acc, this->params->shifts, count);

@@ -109,9 +109,12 @@ int MatMulInt8::get_kernel_size(int input_bytes, int output_channel_count)
   return kernel_bytes;
 }
 
-MatMulInt8::Params::Params(const int output_slice_channel_count, const int32_t bytes_per_kernel_channel, const int8_t *weights) : weights(weights),
-                                                                                                                                  output_slice_channel_count(output_slice_channel_count),
-                                                                                                                                  bytes_per_kernel_channel(bytes_per_kernel_channel)
+MatMulInt8::Params::Params(const int output_slice_channel_count, 
+                           const int32_t bytes_per_kernel_channel, 
+                           const int8_t *weights) 
+    : weights(weights), 
+      output_slice_channel_count(output_slice_channel_count), 
+      bytes_per_kernel_channel(bytes_per_kernel_channel)
 {
   //maybe compute k_p_adjust and input_channel_group_count
 }
@@ -127,12 +130,13 @@ void MatMulInt8::mat_mul_impl(vpu_ring_buffer_t *A, int8_t *T, int32_t output_ch
   const int32_t vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
   const int32_t vpu_epv = VPU_INT16_EPV;
 
-  output_channel_group *= vpu_epv;
+  const int32_t first_output_channel = output_channel_group * vpu_epv;
 
-  int8_t *K_p = (int8_t *)params->weights + params->bytes_per_kernel_channel * output_channel_group; //changes
+  // Point K_p at the beginning of the first output channel
+  int8_t *K_p = (int8_t *)params->weights + params->bytes_per_kernel_channel * first_output_channel; //changes
 
   int step = vpu_bytes;
-  int t = params->output_slice_channel_count - output_channel_group;
+  int t = params->output_slice_channel_count - first_output_channel;
   t -= (vpu_epv - 1);
   if (t <= 0)
     step *= t;
@@ -278,9 +282,9 @@ void MatMulBinaryDirectFn::mat_mul_direct_impl(vpu_ring_buffer_t *A, int8_t *X, 
   VSTD(vpu, &A->vR);
 }
 
-extern "C" void mat_mul_direct_impl_asm(void *params, vpu_ring_buffer_t *A, int8_t *X, int32_t output_channel_group);
+C_API void mat_mul_direct_impl_asm(void *params, vpu_ring_buffer_t *A, int8_t *X, int32_t output_channel_group);
 
-extern "C" void mat_mul_impl_asm(void *params, vpu_ring_buffer_t *A, int8_t *X, int32_t output_channel_group);
+C_API void mat_mul_impl_asm(void *params, vpu_ring_buffer_t *A, int8_t *X, int32_t output_channel_group);
 
 void MatMulDirectFn::aggregate_fn(vpu_ring_buffer_t *A, int8_t *T, int32_t output_channel_group)
 {

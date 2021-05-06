@@ -78,11 +78,11 @@ void MaxPoolPatchFn::aggregate_fn(vpu_ring_buffer_t * acc,
                                   int8_t * input_patch, 
                                   int32_t output_channel_group)
 {
-#ifdef NN_USE_REF
+#if defined(NN_USE_REF) || !defined(__XS3A__)
   maxpool_patch_ref(acc, input_patch, this->params->pixel_count);
 #else
   maxpool_patch_xcore(acc, input_patch, this->params->pixel_count);
-#endif // NN_USE_REF
+#endif
 }
 
 /******************************
@@ -169,10 +169,10 @@ void MaxPoolDirectValidFn::aggregate_fn(vpu_ring_buffer_t * acc,
                                         int8_t * input_img, 
                                         int32_t output_channel_group)
 {
-#ifdef NN_USE_REF
+#if defined(NN_USE_REF) || !defined(__XS3A__)
   maxpool_direct_valid_ref(acc, input_img, &this->params->mp_params);
 #else
   maxpool_direct_valid_xcore(acc, input_img, &this->params->mp_params);
-#endif // NN_USE_REF
+#endif
 }
 
