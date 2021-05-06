@@ -19,9 +19,9 @@ PLATFORM_FLAGS := $(PLATFORM_FLAGS_DEFAULT) -DTF_LITE_DISABLE_X86_NEON
 # PLATFORM_FLAGS := $(PLATFORM_FLAGS_DEFAULT) -DTF_LITE_DISABLE_X86_NEON -Wall -fsanitize=undefined -fsanitize=integer -fsanitize=implicit-conversion -fsanitize=address -fsanitize-recover=address
 
 
-CC := gcc
-XCC := g++
-CXX := g++
+CC := cc
+XCC := c++
+CXX := c++
 
 AR_FLAGS := -r
 CC_FLAGS  := -g -O3
