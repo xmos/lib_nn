@@ -177,8 +177,8 @@ void MatMulInt8::mat_mul_impl(vpu_ring_buffer_t *A, int8_t *T, int32_t output_ch
     K_p += k_p_adjust;
   }
 
-  VSTR(vpu, &A->vD);
-  VSTD(vpu, &A->vR);
+  VSTR(vpu, &A->vR);
+  VSTD(vpu, &A->vD);
 }
 
 MatMulDirectFn::Params::Params(const ImageGeometry &X, const WindowGeometry &K, const int input_ch_per_output, const int8_t *weights) : weights(weights)
@@ -194,7 +194,7 @@ MatMulDirectFn::Params::Params(const ImageGeometry &X, const WindowGeometry &K, 
   input_channel_loop_counter =
       (bytes_per_copy_per_channel / XS3_VPU_VREG_WIDTH_BYTES) - 1;
 
-  bytes_per_kernel_channel = K.shape.height * K.shape.width * X.depth;
+  bytes_per_kernel_channel = K.shape.height * K.shape.width * X.depth * VPU_INT16_EPV;
 
   int bytes_per_pixel = X.pixelBytes();
 
@@ -212,12 +212,11 @@ void MatMulDirectFn::mat_mul_direct_impl(vpu_ring_buffer_t *A, int8_t *X, int32_
 
   int8_t *X_cur_p = X;
 
-  int8_t *K_p = (int8_t *)params->weights + params->bytes_per_kernel_channel * VPU_INT16_EPV * output_channel_group;
+  int8_t *K_p = (int8_t *)params->weights + params->bytes_per_kernel_channel * output_channel_group;
   for (int kh = params->k_height_loop_counter; kh >= 0; kh--)
   {
     for (int kw = params->k_width_loop_counter; kw >= 0; kw--)
     {
-
       for (int ic = params->input_channel_loop_counter; ic >= 0; ic--)
       {
         VLDC(vpu, X_cur_p);
@@ -236,8 +235,8 @@ void MatMulDirectFn::mat_mul_direct_impl(vpu_ring_buffer_t *A, int8_t *X, int32_
   }
 
   //save off the accumulator
-  VSTR(vpu, &A->vD);
-  VSTD(vpu, &A->vR);
+  VSTR(vpu, &A->vR);
+  VSTD(vpu, &A->vD);
 }
 
 void MatMulBinaryDirectFn::mat_mul_direct_impl(vpu_ring_buffer_t *A, int8_t *X, int32_t output_channel_group)
@@ -250,12 +249,11 @@ void MatMulBinaryDirectFn::mat_mul_direct_impl(vpu_ring_buffer_t *A, int8_t *X, 
 
   int8_t *X_cur_p = X;
 
-  int8_t *K_p = (int8_t *)params->weights + params->bytes_per_kernel_channel * VPU_INT16_EPV * output_channel_group;
+  int8_t *K_p = (int8_t *)params->weights + params->bytes_per_kernel_channel * output_channel_group;
   for (int kh = params->k_height_loop_counter; kh >= 0; kh--)
   {
     for (int kw = params->k_width_loop_counter; kw >= 0; kw--)
     {
-
       for (int ic = params->input_channel_loop_counter; ic >= 0; ic--)
       {
         VLDC(vpu, X_cur_p);
@@ -274,8 +272,8 @@ void MatMulBinaryDirectFn::mat_mul_direct_impl(vpu_ring_buffer_t *A, int8_t *X, 
   }
 
   //save off the accumulator
-  VSTR(vpu, &A->vD);
-  VSTD(vpu, &A->vR);
+  VSTR(vpu, &A->vR);
+  VSTD(vpu, &A->vD);
 }
 
 extern "C" void mat_mul_direct_impl_asm(void *params, vpu_ring_buffer_t *A, int8_t *X, int32_t output_channel_group);
@@ -285,20 +283,21 @@ extern "C" void mat_mul_impl_asm(void *params, vpu_ring_buffer_t *A, int8_t *X, 
 void MatMulDirectFn::aggregate_fn(vpu_ring_buffer_t *A, int8_t *T, int32_t output_channel_group)
 {
 #ifdef NN_USE_REF
+  // #if 1
   mat_mul_direct_impl(A, T, output_channel_group);
 #else
-  printf("mat_mul_direct_impl_asm\n");
-  printf("this->params: %p\n", this->params);
-  printf("this->params->bytes_per_kernel_channel: %ld\n", this->params->bytes_per_kernel_channel);
-  printf("this->params->k_height_loop_counter: %ld\n", this->params->k_height_loop_counter);
-  printf("this->params->k_width_loop_counter: %ld\n", this->params->k_width_loop_counter);
-  printf("this->params->input_channel_loop_counter: %ld\n", this->params->input_channel_loop_counter);
-  printf("this->params->inner_x_h_step: %ld\n", this->params->inner_x_h_step);
-  printf("this->params->inner_x_v_step: %ld\n", this->params->inner_x_v_step);
-  printf("this->params->weights): %p\n", this->params->weights);
-  printf("A: %p\n", A);
-  printf("T: %p\n", T);
-  printf("output_c_coord: %ld\n", output_channel_group);
+  // printf("mat_mul_direct_impl_asm\n");
+  // printf("this->params: %p\n", this->params);
+  // printf("this->params->bytes_per_kernel_channel: %ld\n", this->params->bytes_per_kernel_channel);
+  // printf("this->params->k_height_loop_counter: %ld\n", this->params->k_height_loop_counter);
+  // printf("this->params->k_width_loop_counter: %ld\n", this->params->k_width_loop_counter);
+  // printf("this->params->input_channel_loop_counter: %ld\n", this->params->input_channel_loop_counter);
+  // printf("this->params->inner_x_h_step: %ld\n", this->params->inner_x_h_step);
+  // printf("this->params->inner_x_v_step: %ld\n", this->params->inner_x_v_step);
+  // printf("this->params->weights): %p\n", this->params->weights);
+  // printf("A: %p\n", A);
+  // printf("T: %p\n", T);
+  // printf("output_channel_group: %ld\n", output_channel_group);
   mat_mul_direct_impl_asm(this->params, A, T, output_channel_group);
 #endif // NN_USE_REF
 }

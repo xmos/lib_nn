@@ -55,28 +55,23 @@ FUNCTION_NAME:
     std r6, r7, sp[1]
     std r8, r9, sp[2]
 
-    ldc t, 0x200
+    {vclrdr; ldc t, 32}
+    {ldw kw, params_p[PARAMS_bytes_per_kernel_channel]; shl t, t, 4}
     {vsetc t; nop}
-    {vclrdr; nop}
-
-    {ldw t, params_p[PARAMS_bytes_per_kernel_channel]; nop}
-    mul output_channel_group, t, output_channel_group
-
+    mul output_channel_group, kw, output_channel_group
     {ldw K_p, params_p[PARAMS_weights]; nop} 
     {ldw inner_x_v_step, params_p[PARAMS_inner_x_v_step]; add K_p, output_channel_group, K_p}
     {ldc thirty_two, 32; ldw inner_x_h_step, params_p[PARAMS_inner_x_h_step]}
-
-    ldw kh, params_p[PARAMS_k_height_loop_counter]
-    ldw kw_init, params_p[PARAMS_k_width_loop_counter]
-    ldw ic_init, params_p[PARAMS_input_channel_loop_counter]
+    {ldw kh, params_p[PARAMS_k_height_loop_counter];nop}
+    {ldw kw_init, params_p[PARAMS_k_width_loop_counter]; sub X_p, X_p, inner_x_h_step}
+    {ldw ic_init, params_p[PARAMS_input_channel_loop_counter]; sub X_p, X_p, inner_x_v_step}
 
     kh_loop_asm:
-        {mov kw, kw_init; nop}
+        {mov kw, kw_init; add X_p, X_p, inner_x_v_step}
         kw_loop_asm:
-            {mov ic, ic_init; nop}
+            {mov ic, ic_init; add X_p, X_p, inner_x_h_step}
             ic_loop_asm:
                 {vldc X_p[0]; add X_p, X_p, thirty_two}
-
                 {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
                 {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
                 {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
@@ -93,14 +88,8 @@ FUNCTION_NAME:
                 {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
                 {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
                 {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
-
             {bt ic, ic_loop_asm; sub ic, ic, 1}
-
-            {add X_p, X_p, inner_x_h_step; nop}    //this could be hoisted
-
         {bt kw, kw_loop_asm; sub kw, kw, 1}
-
-        {add X_p, X_p, inner_x_v_step; nop}    //as could this
     {bt kh, kh_loop_asm; sub kh, kh, 1}
 
     {vstd A_p[0]; add A_p, A_p, thirty_two}

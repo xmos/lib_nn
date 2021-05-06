@@ -486,8 +486,8 @@ int8_t *OT_int8::output_transform_fn(int8_t *Y, vpu_ring_buffer_t *A, int32_t ou
 
   VSETC(vpu, MODE_S16); //check this
 
-  VLDR(vpu, &A->vD);
-  VLDD(vpu, &A->vR);
+  VLDR(vpu, &A->vR);
+  VLDD(vpu, &A->vD);
 
   // vpu_sim_print(vpu);
 
@@ -557,8 +557,8 @@ int8_t *OTBinary_int8::output_transform_fn(int8_t *Y, vpu_ring_buffer_t *A, int3
 
   VSETC(vpu, MODE_S16); //check this
 
-  VLDR(vpu, &A->vD);
-  VLDD(vpu, &A->vR);
+  VLDR(vpu, &A->vR);
+  VLDD(vpu, &A->vD);
 
   vpu_vector_t temp_mem;
   memset(&temp_mem, 0, sizeof(temp_mem));
@@ -625,11 +625,8 @@ int8_t *OTBinary_bin::output_transform_fn(int8_t *Y, vpu_ring_buffer_t *A, int32
 
   VSETC(vpu, MODE_S16); //check this - i dont think it's needed
 
-  VLDR(vpu, &A->vD);
-  VLDD(vpu, &A->vR);
-
-  VLDR(vpu, &A->vD);
-  VLDD(vpu, &A->vR);
+  VLDR(vpu, &A->vR);
+  VLDD(vpu, &A->vD);
 
   VLSAT(vpu, &zero_mem);
   VLSAT(vpu, cur_thresholds);
