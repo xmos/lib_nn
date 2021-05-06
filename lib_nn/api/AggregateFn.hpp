@@ -66,6 +66,7 @@ namespace nn
       public:
          const int8_t *weights;
 
+         //This has been scaled by VPU_INT16_EPV (bytes_per_kernel_channel_group?)
          int32_t bytes_per_kernel_channel;
 
          int32_t k_height_loop_counter;

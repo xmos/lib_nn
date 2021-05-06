@@ -151,8 +151,8 @@ namespace nn
               int32_t v = (int64_t)accu_min[output_chan] + (rng.rand<unsigned>()) % range;
 
               accu_values[output_chan] = v;
-              A.vR[output_chan] = ((int16_t *)&v)[1];
-              A.vD[output_chan] = ((int16_t *)&v)[0];
+              A.vR[output_chan] = ((int16_t *)&v)[0];
+              A.vD[output_chan] = ((int16_t *)&v)[1];
             }
 
             next_y = ot.output_transform_fn(y, &A, ocg);
