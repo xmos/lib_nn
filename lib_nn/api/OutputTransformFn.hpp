@@ -332,7 +332,8 @@ namespace nn
   /**
  *  xcore implementation of shift_int8_output_transform_ref()
  */
-  C_API void shift_int8_output_transform_xcore(
+  C_API 
+  void shift_int8_output_transform_xcore(
       int8_t *output,
       const vpu_ring_buffer_t *acc,
       const int16_t *right_shifts,
@@ -341,7 +342,8 @@ namespace nn
   /**
  *  Portable implementation of shift_int8_output_transform_xcore()
  */
-  C_API void shift_int8_output_transform_ref(
+  C_API 
+  void shift_int8_output_transform_ref(
       int8_t *output,
       const vpu_ring_buffer_t *acc,
       const int16_t *right_shifts,

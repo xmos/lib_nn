@@ -14,7 +14,7 @@
        const avgpool_patch_params* params)
  */
 
-// #if defined(__XS3A__)
+#if defined(__XS3A__)
 
 #include "asm_constants.h"
 
@@ -31,7 +31,7 @@
 #define acc         r0
 #define patch       r1
 #define params      r2
-#define _32         r3
+#define _16         r3
 
 #define pixels      params
     
@@ -47,8 +47,8 @@ FUNCTION_NAME:
 
     ldc r11, VPU_MODE_8BIT
   { add r11, params, 4                    ; vsetc r11                             }
-  { ldc _32, 32                           ; vclrdr                                }
-  {                                       ; vldc r11[0]                           }
+  { ldc _16, 16                           ; vclrdr                                }
+  {  ldc r11, 32                          ; vldc r11[0]                           }
   {                                       ; ldw pixels, params[0]                 }
 
   // astew: This can be optimized further by unrolling the loop below. To maximize efficiency
@@ -65,10 +65,10 @@ FUNCTION_NAME:
   //        8:11, so that's worse.
   .L_loop_top:
     { sub pixels, pixels, 1                 ; vlmacc patch[0]                       }
-    { add patch, patch, _32                 ; bt pixels, .L_loop_top                }
+    { add patch, patch, _16                 ; bt pixels, .L_loop_top                }
   .L_loop_bot:
 
-  { add acc, acc, _32                     ; vstr acc[0]                           }
+  { add acc, acc, r11                     ; vstr acc[0]                           }
   {                                       ; vstd acc[0]                           }
 
 .L_cleanup:
@@ -83,7 +83,7 @@ FUNCTION_NAME:
 
 .size FUNCTION_NAME, .L_func_end-FUNCTION_NAME
 
-// #endif
+#endif
 
 
 

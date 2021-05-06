@@ -68,22 +68,20 @@ FUNCTION_NAME:
   {                                       ; ldw rows, params[PRM_ROWS]            }
   { add r11, r11, col_stride              ; vldr r11[0]                           }
   {                                       ; vstr acc[0]                           }
-    nop // guarantees 16-byte alignment of .L_col_loop, which means no FNOPs in the
+    nop // guarantees 16-byte alignment of .L_loop_top, which means no FNOPs in the
         // inner loop.
 
-  .L_row_loop:
-    .L_col_loop:
-      { sub cols, cols, 1                     ; vldr r11[0]                           }
-      { ldc tmp, 32                           ; vlsub acc[0]                          }
-      { add tmp, acc, tmp                     ; vdepth1                               }
-      {                                       ; vstr tmp[0]                           }
-      {                                       ; ldw tmp, tmp[0]                       }
-      { add r11, r11, col_stride              ; vldr r11[0]                           }
-        vstrpv acc[0], tmp
-      {                                       ; bt cols, .L_col_loop                  }
-
+  .L_loop_top:
+    { sub cols, cols, 1                     ; vldr r11[0]                           }
+    { ldc tmp, 32                           ; vlsub acc[0]                          }
+    { add tmp, acc, tmp                     ; vdepth1                               }
+    {                                       ; vstr tmp[0]                           }
+    {                                       ; ldw tmp, tmp[0]                       }
+    { add r11, r11, col_stride              ; vldr r11[0]                           }
+      vstrpv acc[0], tmp
+    {                                       ; bt cols, .L_loop_top                  }
     { sub rows, rows, 1                     ; ldw cols, params[PRM_COLS]            }
-    { add r11, r11, row_stride              ; bt rows, .L_row_loop                  }
+    { add r11, r11, row_stride              ; bt rows, .L_loop_top                  }
   .L_loop_bot:
 
 .L_cleanup:

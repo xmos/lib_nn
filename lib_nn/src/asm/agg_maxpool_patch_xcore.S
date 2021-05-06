@@ -57,8 +57,9 @@ FUNCTION_NAME:
     ldc r11, VPU_MODE_8BIT
   { mov r11, arg_patch                    ; vsetc r11                             }
   { ldc _32, 32                           ; vldr r11[0]                           }
-  { add r11, r11, _32                     ; vstr acc[0]                           }
-  { sub pix, pix, 1                       ; bu .L_loop_top                        }
+  { sub pix, pix, 1                       ; vstr acc[0]                           }
+  { add r11, r11, _32                     ; bf pix, .L_loop_bot                   }
+  {                                       ; bu .L_loop_top                        }
   /////
 
   .align 16  // This prevents any need for FNOPs in the loop
@@ -68,7 +69,7 @@ FUNCTION_NAME:
     {                                       ; vdepth1                               }
     {                                       ; vstr tmp[0]                           }
     {                                       ; ldw tmp, tmp[0]                       }
-    { add r11, r11, _32                     ; vldr r11[0]                           }
+    {                                       ; vldr r11[0]                           }
       vstrpv acc[0], tmp
     { add r11, r11, _32                     ; bt pix, .L_loop_top                   }
   .L_loop_bot:

@@ -4,7 +4,7 @@
 /**
  * 
  * C_API
- * void shift_int8_output_transform_asm(
+ * void shift_int8_output_transform_xcore(
  *    int8_t* output,
  *    const vpu_ring_buffer_t* acc,
  *    const int16_t* right_shifts,
@@ -17,7 +17,7 @@
 #include "asm_constants.h"
 
 
-#define FUNCTION_NAME shift_int8_output_transform_asm
+#define FUNCTION_NAME shift_int8_output_transform_xcore
 
 #define NSTACKVECTS   1
 #define NSTACKWORDS   (4 + 8*(NSTACKVECTS))
@@ -31,7 +31,7 @@
 #define shr     r2
 #define chans   r3
 #define tmp     r4
-#define neg8    r5
+#define tmp2    r5
 
 #define _32     acc
 #define mask    chans
@@ -46,26 +46,31 @@
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
     std r4, r5, sp[0]
-
     ldc r11, VPU_MODE_16BIT
-  { ldap r11, vpu_vect_0x80               ; vsetc r11                             }
+  {                                       ; vsetc r11                             }
+
+    ldap r11, vpu_vect_0x80
   { mkmsk mask, chans                     ; vldr r11[0]                           }
     vstrpv output[0], mask
   { mov r11, acc                          ; ldc _32, 32                           }
+
   { add r11, r11, _32                     ; vldr r11[0]                           }
-  { ldc neg8, 8                           ; vldd r11[0]                           }
+  {                                       ; vldd r11[0]                           }
   { ldaw r11, sp[STACK_VECT_TMP]          ; vlsat shr[0]                          }
-  { neg neg8, neg8                        ; vstr r11[0]                           }
+  { ldaw tmp2, sp[STACK_TMP]              ; vstr r11[0]                           }
+
     ldap r11, vpu_vect_0x007F
   { mkmsk tmp, 4                          ; vladd r11[0]                          }
   { ldaw r11, sp[STACK_VECT_TMP]          ; vdepth1                               }
-    vstrpv r11[0], tmp
-  {                                       ; ldw tmp, sp[STACK_TMP]                }
-  { andnot mask, tmp                      ;                                       }
-    vlashr r11[0], neg8  
-  {                                       ; vdepth8                               }
-    vstrpv output[0], mask
+    vstrpv tmp2[0], tmp
 
+  { ldc tmp2, 8                           ; ldw tmp, sp[STACK_TMP]                }
+  { andnot mask, tmp                      ; neg tmp2, tmp2                        }
+    vlashr r11[0], tmp2
+  {                                       ; vdepth8                               }
+
+    vstrpv output[0], mask
+.L_clean_up:
     ldd r4, r5, sp[0]
     retsp NSTACKWORDS
 .L_func_end:

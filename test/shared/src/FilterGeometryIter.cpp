@@ -178,9 +178,10 @@ AllUnpadded::AllUnpadded( const nn::Filter2dGeometry max_geometry,
 
 void AllUnpadded::Push(const nn::Filter2dGeometry& new_filter)
 {
-  this->filter = nn::Filter2dGeometry({1,1,channel_step}, {1,1,channel_step}, 
-                                      { {1,1,depthwise? 1 : channel_step}, {0,0}, 
-                                        {1,1,depthwise? 1 : 0}, {1,1} } );
+  this->filter = nn::Filter2dGeometry(nn::ImageGeometry(1,1,channel_step), 
+                                      nn::ImageGeometry(1,1,channel_step), 
+                                      nn::WindowGeometry( 1, 1, depthwise? 1 : channel_step, 0, 0, 
+                                        1,1,depthwise? 1 : 0, 1, 1 ) );
 }
 
 bool AllUnpadded::_UpdateFilter()
@@ -206,6 +207,8 @@ bool AllUnpadded::_UpdateFilter()
   UPDATE(output.width, 1, 1);
   UPDATE(output.height, 1, 1);
 #undef UPDATE
+
+  return false;
 }
 
 bool AllUnpadded::UpdateFilter()
@@ -252,9 +255,10 @@ AllPaddedBase::AllPaddedBase( const nn::Filter2dGeometry max_geometry,
 
 void AllPaddedBase::Push(const nn::Filter2dGeometry& new_filter)
 {
-  this->filter = nn::Filter2dGeometry({1,1,channel_step}, {1,1,channel_step}, 
-                                      { {2,2,depthwise? 1 : channel_step}, {0,0}, 
-                                        {1,1,depthwise? 1 : 0}, {1,1} } );
+  this->filter = nn::Filter2dGeometry(nn::ImageGeometry(1,1,channel_step), 
+                                      nn::ImageGeometry(1,1,channel_step), 
+                                      nn::WindowGeometry( 2, 2, depthwise? 1:channel_step, 0, 0, 
+                                        1, 1, depthwise?1:0, 1, 1 ) );
 }
 
 bool AllPaddedBase::UpdateFilter()

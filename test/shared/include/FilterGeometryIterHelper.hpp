@@ -41,11 +41,11 @@ namespace nn {
                                                                     const int output_step = 1,
                                                                     const int window_step = 1,
                                                                     const int channel_step = 4)
-      {
+      { 
         return FilterGeometryIterator( 
                   nn::Filter2dGeometry( {output_spatial_range[0], output_spatial_range[0], channel_count_range[0]},   
                                         {1, 1, 4}, 
-                                        { {window_spatial_range[0], window_spatial_range[0], 1}, {0, 0}, {0, 0, 1}, {1, 1} } ), 
+                                        nn::WindowGeometry(window_spatial_range[0], window_spatial_range[0], 1, 0, 0, 0, 0, 1, 1, 1 ) ), 
                   {
                     new OutputShape( {output_spatial_range[0], output_spatial_range[0], channel_count_range[0]}, 
                                      {output_spatial_range[1], output_spatial_range[1], channel_count_range[1]}, 
@@ -80,7 +80,7 @@ namespace nn {
         return FilterGeometryIterator( 
                   nn::Filter2dGeometry( {output_spatial_range[0], output_spatial_range[0], out_channel_count_range[0]},   
                                         {1, 1, 4}, 
-                                        { {window_spatial_range[0], window_spatial_range[0], 1}, {0, 0}, {0, 0, 1}, {1, 1} } ), 
+                                        nn::WindowGeometry(window_spatial_range[0], window_spatial_range[0], 1, 0, 0, 0, 0, 1, 1, 1 ) ), 
                   {
                     new OutputShape( {output_spatial_range[0], output_spatial_range[0], out_channel_count_range[0]}, 
                                      {output_spatial_range[1], output_spatial_range[1], out_channel_count_range[1]}, 

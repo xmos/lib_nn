@@ -18,7 +18,7 @@
  *    const avgpool_direct_valid_params* params);
  */
 
-// #if defined(__XS3A__)
+#if defined(__XS3A__)
 
 #include "asm_constants.h"
 
@@ -61,18 +61,18 @@ FUNCTION_NAME:
   { ldc r11, (PRM_SCALES * 4)             ; vsetc r11                             }
 
   { add r11, params, r11                  ; ldw col_stride, params[PRM_COL_STRIDE]}
-  { ldc r11, 32                           ; vldc r11[0]                           }
-  { add acc, acc, r11                     ; vclrdr                                }
+  {                                       ; vldc r11[0]                           }
+  {                                       ; vclrdr                                }
   {                                       ; ldw row_stride, params[PRM_ROW_STRIDE]}
 
-  {                                       ; ldw rows, params[PRM_ROWS]            }
-  {                                       ; ldw total_cols, params[PRM_COLS]      }
+  {                                       ; ldw r11, params[PRM_COLS]             }
+  { mov total_cols, r11                   ; ldw rows, params[PRM_ROWS]            }
 
-  .L_loop_loop:
+  .L_loop_top:
     { sub r11, r11, 1                       ; vlmacc X[0]                           }
-    { add X, X, col_stride                  ; bt r11, .L_col_loop                   }
+    { add X, X, col_stride                  ; bt r11, .L_loop_top                   }
     { sub rows, rows, 1                     ; mov r11, total_cols                   }
-    { add X, X, row_stride                  ; bt rows, .L_row_loop                  }
+    { add X, X, row_stride                  ; bt rows, .L_loop_top                  }
   .L_loop_bot:
 
   { ldc r11, 32                           ;                                       }
@@ -92,7 +92,7 @@ FUNCTION_NAME:
 
 .size FUNCTION_NAME, .L_func_end-FUNCTION_NAME
 
-// #endif
+#endif
 
 
 
