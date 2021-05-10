@@ -12,19 +12,35 @@
 
 using namespace nn;
 
-// class Filter2dGeometryTest : public ::testing::TestWithParam<Filter2dGeometry> {};
 
+static const bool PRINT_CASE_COUNTS = true;
 
 
 static nn::ff::FilterGeometryIterator filter_sets[] = {
-  test::unpadded::AllUnpadded( nn::Filter2dGeometry({0,0,36}, {3,3,36}, {{4,4,0}, {2,2}, {2,3}, {2,3}}), false, 1),
-  test::padded::AllPadded( nn::Filter2dGeometry({0,0,0}, {3,3,36}, {{4,4,0}, {2,2}, {2,3}, {2,3}} ), {3, 3, 3, 3}, false, 1),
-  test::unpadded::AllUnpadded( nn::Filter2dGeometry({0,0,36}, {3,3,36}, {{4,4,1}, {2,2}, {2,3}, {2,3}}), true, 1),
-  test::padded::AllPadded( nn::Filter2dGeometry({0,0,0}, {3,3,36}, {{4,4,1}, {2,2}, {2,3}, {2,3}} ), {3, 3, 3, 3}, true, 1),
+
+  //Dense
+  test::unpadded::AllUnpadded( nn::Filter2dGeometry({0,0,12}, {3,3,12}, {{4,4,0}, {2,2}, {2,3}, {2,3}}), 
+                               false, 1),
+
+  test::padded::AllPadded(     nn::Filter2dGeometry({0,0,12}, {3,3,12}, {{4,4,0}, {2,2}, {2,3}, {2,3}} ), 
+                               {2, 2, 2, 2}, 
+                               false, 1),
+
+  //Depthwise
+  test::unpadded::AllUnpadded( nn::Filter2dGeometry({0,0,0}, {3,3,12}, {{4,4,1}, {2,2}, {2,3}, {2,3}}), 
+                               true, 1),
+
+  test::padded::AllPadded(     nn::Filter2dGeometry({0,0,0}, {3,3,12}, {{4,4,1}, {2,2}, {2,3}, {2,3}} ), 
+                              {2, 2, 2, 2}, 
+                               true, 1),
 };
 
 
-TEST(Filter2dGeometry_Test, ModelIsDepthwise)
+
+/////////////////////////////////////////////////////////////////////////
+//
+//
+TEST(Filter2dGeometry_Test, IsDepthwise)
 {
   int total_iter = 0;
 
@@ -32,56 +48,112 @@ TEST(Filter2dGeometry_Test, ModelIsDepthwise)
     filter_set.Reset();
     for(auto filter : filter_set) {
 
-      ASSERT_EQ(filter.ModelIsDepthwise(), filter.window.stride.channel == 1);
+      ASSERT_EQ(filter.IsDepthwise(), filter.window.stride.channel == 1);
       total_iter++;
     }
   }
 
-  std::cout << "Count: " << total_iter << std::endl;
+  if(PRINT_CASE_COUNTS)
+    std::cout << "Case Count: " << total_iter << std::endl;
 }
 
 
-TEST(Filter2dGeometry_Test, ModelPadding)
+/////////////////////////////////////////////////////////////////////////
+//
+//
+TEST(Filter2dGeometry_Test, GetWindow)
 {
   int total_iter = 0;
 
   for(auto filter_set : filter_sets) {
     filter_set.Reset();
     for(auto filter : filter_set) {
-      // nn::Filter2dGeometry filter = {{1,2,1,1}, {1,1,1,1}, {{1,1,1},{0,1},{1,1,1},{1,2}}}; {
-      // if(total_iter % 1024 == 0)
-      //   std::cout << "iters... " << total_iter << "\n";
 
-      auto pad_init_signed = filter.ModelPadding(true, true);
-      auto pad_init_unsigned = filter.ModelPadding(true, false);
+      
+      for(int row = 0; row < filter.output.height; row+=2){
+        for(int col = 0; col < filter.output.width; col+=2){
+          for(int chan = 0; chan < filter.output.depth; chan+=5){
+            auto v = nn::ImageVect(row, col, chan);
+            auto loc1 = filter.GetWindow(row, col, chan);
+            auto loc2 = filter.GetWindow(v);
 
-      auto first_loc = filter.GetWindow({0,0,0});
-      auto last_loc = filter.GetWindow({filter.output.height-1, filter.output.width-1, 0});
+            ASSERT_EQ(v, loc1.output_coords);
+            ASSERT_EQ(v, loc2.output_coords);
 
-#define FAIL_MSG  "iter: " << total_iter << std::endl                     \
-                  << "filter: " << filter << std::endl                    \
-                  << "pad_init_signed: " << pad_init_signed << std::endl  \
-                  << "pad_init_unsigned: " << pad_init_unsigned     
+            ASSERT_EQ(filter, loc1.filter);
+            ASSERT_EQ(filter, loc2.filter);
 
-      auto first_pad = first_loc.SignedPadding();
-      auto last_pad = last_loc.SignedPadding();
-
-      ASSERT_EQ(pad_init_signed.top,  first_pad.top)      << FAIL_MSG;
-      ASSERT_EQ(pad_init_signed.left, first_pad.left)     << FAIL_MSG;
-      ASSERT_EQ(pad_init_signed.bottom, last_pad.bottom)  << FAIL_MSG;
-      ASSERT_EQ(pad_init_signed.right,  last_pad.right)   << FAIL_MSG;
-
-      first_pad.MakeUnsigned();
-      last_pad.MakeUnsigned();
-
-      ASSERT_EQ(pad_init_unsigned.top,  first_pad.top)      << FAIL_MSG;
-      ASSERT_EQ(pad_init_unsigned.left, first_pad.left)     << FAIL_MSG;
-      ASSERT_EQ(pad_init_unsigned.bottom, last_pad.bottom)  << FAIL_MSG;
-      ASSERT_EQ(pad_init_unsigned.right,  last_pad.right)   << FAIL_MSG;
-#undef FAIL_MSG
+          }
+        }
+      }
+      
       total_iter++;
     }
   }
 
-  std::cout << "Count: " << total_iter << std::endl;
+  if(PRINT_CASE_COUNTS)
+    std::cout << "Case Count: " << total_iter << std::endl;
+}
+
+
+/////////////////////////////////////////////////////////////////////////
+//
+//
+TEST(Filter2dGeometry_Test, Padding)
+{
+  int total_iter = 0;
+
+  for(auto filter_set : filter_sets) {
+    filter_set.Reset();
+    for(auto filter : filter_set) {
+
+      padding_t padding = filter.Padding();
+
+      padding_t exp_padding;
+
+
+      exp_padding.top = -filter.window.start.row;
+      exp_padding.left = -filter.window.start.col;
+
+      auto loc = filter.GetWindow(filter.output.height-1, filter.output.width-1, 0);
+      auto last_x = loc.InputCoords(filter.window.shape.height-1, filter.window.shape.width-1, 0);
+
+      exp_padding.bottom = last_x.row - (filter.input.height-1);
+      exp_padding.right = last_x.col - (filter.input.width-1);
+
+      exp_padding.MakeUnsigned();
+
+      ASSERT_EQ(exp_padding, padding) << "Filter: " << filter;
+      
+      total_iter++;
+    }
+  }
+
+  if(PRINT_CASE_COUNTS)
+    std::cout << "Case Count: " << total_iter << std::endl;
+}
+
+
+/////////////////////////////////////////////////////////////////////////
+//
+//
+TEST(Filter2dGeometry_Test, getReceptiveVolume)
+{
+  int total_iter = 0;
+
+  for(auto filter_set : filter_sets) {
+    filter_set.Reset();
+    for(auto filter : filter_set) {
+
+      int input_elms = filter.window.shape.imagePixels() * (filter.IsDepthwise()? 1 : filter.input.depth);
+      
+      ASSERT_EQ(input_elms, filter.getReceptiveVolumeElements()) << "Filter: " << filter;
+      ASSERT_EQ(input_elms * filter.input.channel_depth, filter.getReceptiveVolumeBytes()) << "Filter: " << filter;
+
+      total_iter++;
+    }
+  }
+
+  if(PRINT_CASE_COUNTS)
+    std::cout << "Case Count: " << total_iter << std::endl;
 }

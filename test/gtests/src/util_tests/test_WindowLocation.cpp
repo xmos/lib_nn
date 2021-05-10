@@ -178,34 +178,19 @@ TEST(WindowLocation_Test, Padding)
     filter_set.Reset();
     for(auto filter : filter_set) {
 
-      auto pad_start = filter.ModelPadding(true, true);
-
-      auto exp_pad = pad_start;
-
       for(int yr = 0; yr < filter.output.height; yr++){
-
-        exp_pad.left = pad_start.left;
-        exp_pad.right = pad_start.right;
         for(int yc = 0; yc < filter.output.width; yc++){
-
-          for(int yx = 0; yx < filter.output.depth; yx++){
-            auto loc = WindowLocation(filter, ImageVect(yr,yc,yx));
-
+            auto loc = WindowLocation(filter, ImageVect(yr,yc,0));
             auto actual = loc.Padding();
 
-            EXPECT_EQ( std::max<int>( 0, exp_pad.top    ), actual.top    ) << "Y: " << ImageVect(yr,yc,yx);
-            EXPECT_EQ( std::max<int>( 0, exp_pad.left   ), actual.left   ) << "Y: " << ImageVect(yr,yc,yx);
-            EXPECT_EQ( std::max<int>( 0, exp_pad.bottom ), actual.bottom ) << "Y: " << ImageVect(yr,yc,yx);
-            EXPECT_EQ( std::max<int>( 0, exp_pad.right  ), actual.right  ) << "Y: " << ImageVect(yr,yc,yx);
-
-          }
-
-          exp_pad.left  -= filter.window.stride.col;
-          exp_pad.right += filter.window.stride.col;
+            for(int kr = 0; kr < filter.window.shape.height; kr++){
+              for(int kc = 0; kc < filter.window.shape.width; kc++){
+                EXPECT_EQ(loc.IsPadding(kr,kc,0),    
+                             (kr < actual.top)  || (kr > filter.window.shape.height - actual.bottom)
+                          || (kc < actual.left) || (kc > filter.window.shape.width - actual.right));
+              }
+            }
         }
-
-        exp_pad.top    -= filter.window.stride.row;
-        exp_pad.bottom += filter.window.stride.row;
       }
       total_iter++;
     }

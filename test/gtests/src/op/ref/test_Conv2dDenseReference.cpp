@@ -108,24 +108,18 @@ TEST_P(Conv2dDenseReferenceTestB, WithPadding)
     eff_mult[k] = float(target_acc8) / float(target_acc32);
   }
 
-  auto init_pad = geom.ModelPadding();
-  for (int row = 0; row < geom.output.height; row++)
-  {
-    for (int col = 0; col < geom.output.width; col++)
-    {
+  for (int row = 0; row < geom.output.height; row++) {
+    for (int col = 0; col < geom.output.width; col++) {
 
-      // The behavior here depends on how many pixels are outside the input image.
-      auto pad = init_pad;
-      pad.top -= row * geom.window.stride.row;
-      pad.left -= col * geom.window.stride.col;
-      pad.bottom += row * geom.window.stride.row;
-      pad.right += col * geom.window.stride.col;
-      pad.MakeUnsigned();
+      auto non_pad_pixels = geom.GetWindow(row, col, 0).Fold<int,int8_t>(
+                                              &input[0], [](const nn::ImageVect&, 
+                                                            const nn::ImageVect&, 
+                                                            int acc, int8_t, 
+                                                            bool is_pad){
+                                                return acc + (is_pad?0:1);
+                                              }, 0);
 
-      auto patch_rows = int(geom.window.shape.height) - pad.top - pad.bottom;
-      auto patch_cols = int(geom.window.shape.width) - pad.left - pad.right;
-
-      auto patch_pix = patch_rows * patch_cols;
+      auto patch_pix = non_pad_pixels;
 
       int32_t acc32 = patch_pix * pix_acc;
 

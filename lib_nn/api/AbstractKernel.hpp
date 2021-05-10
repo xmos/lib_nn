@@ -69,8 +69,8 @@ namespace nn
          Params(const ImageGeometry &output_image,
                 const ImageRegion &output_region,
                 const int channels_per_group)
-             : h_begin(output_region.start.row), h_end(output_region.endVect().row),
-               w_begin(output_region.start.col), w_end(output_region.endVect().col),
+             : h_begin(output_region.start.row), h_end(output_region.EndVect().row),
+               w_begin(output_region.start.col), w_end(output_region.EndVect().col),
                output_channel_group_count((output_region.shape.depth + channels_per_group - 1) / channels_per_group),
                output_channel_slice_offset(output_region.start.channel),
                output_h_mem_stride(output_image.getStride(1, -output_region.shape.width, 0)),

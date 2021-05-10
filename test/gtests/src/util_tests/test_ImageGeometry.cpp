@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <tuple>
+#include <cstring>
 
 #include "gtest/gtest.h"
 
@@ -41,73 +42,59 @@ static std::vector<ImageGeometry> TestGeometries()
  */
 
 /** ImageGeometryTest is run against all three types */
-class ImageGeometryTest : public ::testing::TestWithParam<ImageGeometry> {};
-class ImageGeometryTest_int8 : public ImageGeometryTest {};
-class ImageGeometryTest_int16 : public ImageGeometryTest {};
-class ImageGeometryTest_int32 : public ImageGeometryTest {};
+class ImageGeometry_Test : public ::testing::TestWithParam<ImageGeometry> {};
 
 /**
  * Tests
  */
 
-TEST_P(ImageGeometryTest, imagePixels)
+TEST_P(ImageGeometry_Test, imagePixels)
 {
   auto img = GetParam();
   ASSERT_EQ(img.width * img.height, img.imagePixels());
 }
 
 
-TEST_P(ImageGeometryTest, pixelElements)
+TEST_P(ImageGeometry_Test, ElementCounts)
 {
   auto img = GetParam();
   ASSERT_EQ(img.depth, img.pixelElements());
-}
-
-TEST_P(ImageGeometryTest, rowElements)
-{
-  auto img = GetParam();
   ASSERT_EQ(img.depth * img.width, img.rowElements());
-}
-
-TEST_P(ImageGeometryTest, colElements)
-{
-  auto img = GetParam();
   ASSERT_EQ(img.depth * img.height, img.colElements());
-}
-
-TEST_P(ImageGeometryTest, imageElements)
-{
-  auto img = GetParam();
   ASSERT_EQ(img.depth * img.width * img.height, img.imageElements());
+  ASSERT_EQ(img.depth * img.width * img.height * img.depth, img.volumeElements());
 }
 
-TEST_P(ImageGeometryTest, pixelBytes)
+
+TEST_P(ImageGeometry_Test, pixelBytes)
 {
   auto img = GetParam();
   ASSERT_EQ(img.depth * img.channel_depth, img.pixelBytes());
-}
-
-TEST_P(ImageGeometryTest, rowBytes)
-{
-  auto img = GetParam();
   ASSERT_EQ(img.depth * img.width * img.channel_depth, img.rowBytes());
-}
-
-TEST_P(ImageGeometryTest, colBytes)
-{
-  auto img = GetParam();
   ASSERT_EQ(img.depth * img.height * img.channel_depth, img.colBytes());
-}
-
-TEST_P(ImageGeometryTest, imageBytes)
-{
-  auto img = GetParam();
   ASSERT_EQ(img.depth * img.width * img.height * img.channel_depth, img.imageBytes());
 }
 
 
+TEST_P(ImageGeometry_Test, Index)
+{
+  auto img = GetParam();
 
-TEST_P(ImageGeometryTest, getStride)
+  int k = 0;
+  for(int row = 0; row < img.height; ++row){
+    for(int col = 0; col < img.width; ++col){
+      for(int chan = 0; chan < img.depth; ++chan){
+        ASSERT_EQ(k, img.Index(row, col, chan));
+        ASSERT_EQ(k, img.Index({row, col, chan}));
+        k++;
+      }
+    }
+  }
+}
+
+
+
+TEST_P(ImageGeometry_Test, getStride)
 {
   auto img = GetParam();
 
@@ -144,10 +131,7 @@ TEST_P(ImageGeometryTest, getStride)
 
 
 
-
-
-
-TEST_P(ImageGeometryTest, IsWithinImage)
+TEST_P(ImageGeometry_Test, IsWithinImage)
 {
   auto img = GetParam();
 
@@ -176,54 +160,10 @@ TEST_P(ImageGeometryTest, IsWithinImage)
   }
 }
 
-
-TEST_P(ImageGeometryTest_int8, Element)
+template <typename T_elm>
+static void _ElementTest(nn::ImageGeometry img)
 {
-  using T_elm = int8_t;
-  auto img = GetParam();
-  auto input = std::vector<T_elm>( img.imageElements() );
-  int k = 0;
-  for(int row = 0; row < img.height; ++row){
-    for(int col = 0; col < img.width; ++col){
-      for(int chan = 0; chan < img.depth; ++chan){
-
-#define FAIL_MSG  "v = " << nn::ImageVect(row, col, chan)
-
-        T_elm& refA = img.Element<T_elm>(&input[0], row, col, chan);
-        T_elm& refB = input[k++];
-        ASSERT_EQ(&(refA), &(refB))                   << FAIL_MSG;
-        refA = T_elm(13*row + 7*col + chan);
-        ASSERT_EQ(refB, T_elm(13*row + 7*col + chan)) << FAIL_MSG;
-
-#undef FAIL_MSG
-      }
-    }
-  }
-}
-
-TEST_P(ImageGeometryTest_int16, Element)
-{
-  using T_elm = int16_t;
-  auto img = GetParam();
-  auto input = std::vector<T_elm>( img.imageElements() );
-  int k = 0;
-  for(int row = 0; row < img.height; ++row){
-    for(int col = 0; col < img.width; ++col){
-      for(int chan = 0; chan < img.depth; ++chan){
-        T_elm& refA = img.Element<T_elm>(&input[0], row, col, chan);
-        T_elm& refB = input[k++];
-        ASSERT_EQ(&(refA), &(refB));
-        refA = T_elm(13*row + 7*col + chan);
-        ASSERT_EQ(refB, T_elm(13*row + 7*col + chan));
-      }
-    }
-  }
-}
-
-TEST_P(ImageGeometryTest_int32, Element)
-{
-  using T_elm = int32_t;
-  auto img = GetParam();
+  img.channel_depth = sizeof(T_elm);
   auto input = std::vector<T_elm>( img.imageElements() );
   int k = 0;
   for(int row = 0; row < img.height; ++row){
@@ -240,11 +180,23 @@ TEST_P(ImageGeometryTest_int32, Element)
 }
 
 
-
-TEST_P(ImageGeometryTest_int8, Get)
+TEST_P(ImageGeometry_Test, Element)
 {
-  using T_elm = int8_t;
-  auto img = GetParam();
+  switch(GetParam().channel_depth){
+    case 1: ASSERT_NO_FATAL_FAILURE( _ElementTest<int8_t>( GetParam()) ); break;
+    case 2: ASSERT_NO_FATAL_FAILURE( _ElementTest<int16_t>(GetParam()) ); break;
+    case 4: ASSERT_NO_FATAL_FAILURE( _ElementTest<int32_t>(GetParam()) ); break;
+    default: FAIL();
+  }
+}
+
+
+
+
+template <typename T_elm>
+static void _GetTest(nn::ImageGeometry img)
+{
+  img.channel_depth = sizeof(T_elm);
   auto input = std::vector<T_elm>( img.imageElements() );
   int k = 0;
   for(int row = -1; row <= img.height; ++row){
@@ -269,81 +221,53 @@ TEST_P(ImageGeometryTest_int8, Get)
 #undef FAIL_MSG
       }
     }
-  }  
+  }
 }
 
-
-
-TEST_P(ImageGeometryTest_int16, Get)
+TEST_P(ImageGeometry_Test, Get)
 {
-  using T_elm = int16_t;
-  auto img = GetParam();
-  auto input = std::vector<T_elm>( img.imageElements() );
-  int k = 0;
-  for(int row = -1; row <= img.height; ++row){
-    for(int col = -1; col <= img.width; ++col){
-      for(int xan = -1; xan <= img.depth; ++xan){
-        ImageVect v(row,col,xan);
-#define FAIL_MSG  "v = " << v << " | k = " << k
-        if(img.IsWithinImage(v)){
-          T_elm& elm = input[k++];
-          elm = -23;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v, -52), -23) << FAIL_MSG;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, -52), -23) << FAIL_MSG;
-          elm = 77;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v, 99), 77) << FAIL_MSG;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, 99), 77) << FAIL_MSG;
-        } else {
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v, -52), -52) << FAIL_MSG;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, -52), -52) << FAIL_MSG;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v,  99),  99) << FAIL_MSG;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan,  99),  99) << FAIL_MSG;
-        }
-#undef FAIL_MSG
-      }
-    }
-  }  
+  switch(GetParam().channel_depth){
+    case 1: ASSERT_NO_FATAL_FAILURE( _GetTest<int8_t>( GetParam()) ); break;
+    case 2: ASSERT_NO_FATAL_FAILURE( _GetTest<int16_t>(GetParam()) ); break;
+    case 4: ASSERT_NO_FATAL_FAILURE( _GetTest<int32_t>(GetParam()) ); break;
+    default: FAIL();
+  }
 }
 
 
-
-TEST_P(ImageGeometryTest_int32, Get)
+template <typename T_elm>
+static void _ApplyOpTest(nn::ImageGeometry img)
 {
-  using T_elm = int32_t;
-  auto img = GetParam();
-  auto input = std::vector<T_elm>( img.imageElements() );
-  int k = 0;
-  for(int row = -1; row <= img.height; ++row){
-    for(int col = -1; col <= img.width; ++col){
-      for(int xan = -1; xan <= img.depth; ++xan){
-        ImageVect v(row,col,xan);
-#define FAIL_MSG  "v = " << v << " | k = " << k
-        if(img.IsWithinImage(v)){
-          T_elm& elm = input[k++];
-          elm = -23;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v, -52), -23) << FAIL_MSG;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, -52), -23) << FAIL_MSG;
-          elm = 77;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v, 99), 77) << FAIL_MSG;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, 99), 77) << FAIL_MSG;
-        } else {
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v, -52), -52) << FAIL_MSG;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan, -52), -52) << FAIL_MSG;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], v,  99),  99) << FAIL_MSG;
-          ASSERT_EQ(img.Get<T_elm>(&input[0], row, col, xan,  99),  99) << FAIL_MSG;
-        }
-#undef FAIL_MSG
-      }
+    img.channel_depth = sizeof(T_elm);
+    auto buff = std::vector<T_elm>( img.imageElements() );
+    std::memset(&buff[0], 0, buff.size() * sizeof(T_elm));
+
+    auto lam = [](const int row, const int col, const int chan, T_elm& elm) {
+      elm = 1;
+    };
+
+    img.ApplyOperation<T_elm>(&buff[0], lam);
+
+    for(int k = 0; k < buff.size(); k++){
+      ASSERT_EQ(int(1), int(buff[k]));
     }
-  }  
+}
+
+TEST_P(ImageGeometry_Test, ApplyOperation)
+{
+  switch(GetParam().channel_depth){
+    case 1: ASSERT_NO_FATAL_FAILURE( _ApplyOpTest<int8_t>( GetParam()) ); break;
+    case 2: ASSERT_NO_FATAL_FAILURE( _ApplyOpTest<int16_t>(GetParam()) ); break;
+    case 4: ASSERT_NO_FATAL_FAILURE( _ApplyOpTest<int32_t>(GetParam()) ); break;
+    default: FAIL();
+  }
 }
 
 
-INSTANTIATE_TEST_SUITE_P(int8,  ImageGeometryTest, ::testing::ValuesIn( TestGeometries<int8_t>() )); 
-INSTANTIATE_TEST_SUITE_P(int16, ImageGeometryTest, ::testing::ValuesIn( TestGeometries<int16_t>() )); 
-INSTANTIATE_TEST_SUITE_P(int32, ImageGeometryTest, ::testing::ValuesIn( TestGeometries<int32_t>() )); 
 
-INSTANTIATE_TEST_SUITE_P(,  ImageGeometryTest_int8,  ::testing::ValuesIn( TestGeometries<int8_t>() )); 
-INSTANTIATE_TEST_SUITE_P(, ImageGeometryTest_int16, ::testing::ValuesIn( TestGeometries<int16_t>() )); 
-INSTANTIATE_TEST_SUITE_P(, ImageGeometryTest_int32, ::testing::ValuesIn( TestGeometries<int32_t>() )); 
+
+INSTANTIATE_TEST_SUITE_P(int8,  ImageGeometry_Test, ::testing::ValuesIn( TestGeometries<int8_t>() )); 
+INSTANTIATE_TEST_SUITE_P(int16, ImageGeometry_Test, ::testing::ValuesIn( TestGeometries<int16_t>() )); 
+INSTANTIATE_TEST_SUITE_P(int32, ImageGeometry_Test, ::testing::ValuesIn( TestGeometries<int32_t>() )); 
+
 

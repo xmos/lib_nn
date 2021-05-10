@@ -16,116 +16,214 @@
 
 namespace nn {
   
-
-  C_API typedef struct padding_t {
+  /**
+   * Represents padding for a filter (Filter2dGeometry::Padding()) or receptive 
+   * field (WindowLocation::Padding()).
+   * 
+   * The padding may be signed or unsigned. Signed padding may include negative values,
+   * which effectively indicate the buffer before encountering the corresponding edge
+   * of the input image (e.g.  `left == -4` for a particular receptive field indicates 
+   * that there are 4 pixels between the left edge of the receptive field and the left
+   * edge of the input image).
+   * 
+   * Unsigned padding is similar, but negative values are 0 instead.
+   */
+  C_API 
+  typedef struct padding_t {
+    /// Rows of padding associated with the top edge (i.e. low row values)
     int16_t top;
+    /// Columns of padding associated with the left edge  (i.e. low column values)
     int16_t left;
+    /// Rows of padding associated with the bottom edge (i.e. higher row values)
     int16_t bottom;
+    /// Columns of padding associated with the right edge  (i.e. higher column values)
     int16_t right;
 
-    void MakeUnsigned(){
-      top = std::max<int16_t>(0, top);
-      left = std::max<int16_t>(0, left);
-      bottom = std::max<int16_t>(0, bottom);
-      right = std::max<int16_t>(0, right);
-    }
+    /**
+     * Replace negative fields with 0.
+     */
+    void MakeUnsigned();
 
-    bool HasPadding() const {
-      return top > 0 || left > 0 || bottom > 0 || right > 0;
-    }
+    /**
+     * Indicates whether padding is required in any direction.
+     */
+    bool HasPadding() const;
+
+    /**
+     * Test for equality of two `padding_t`.
+     * 
+     * Two `padding_t` are equal iff all of their (corresponding) fields are equal.
+     */
+    bool operator==(const padding_t& other) const;
+
+    /**
+     * Test for inequality of two `padding_t`.
+     * 
+     * Two `padding_t` are unequal iff any of their (corresponding) fields are unequal.
+     */
+    bool operator!=(const padding_t& other) const;
   } padding_t;
 
 
 
+
+
+
+  /**
+   * Represents a vector in an image's coordinate space
+   */
   class ImageVect {
 
    
     public:
-
+      /// A row coordinate (or row count) corresponding to the height dimension of an 
+      /// image (where index 0 starts at the top).
       int row;
+
+      /// A column coordinate (or column count) corresponding to the width dimension of an 
+      /// image (where index 0 starts on the left).
       int col;
+
+      /// A channel coordinate (or channel count) corresponding to the depth (considered to be
+      /// non-spatial) dimension of an image.
       int channel;
 
-      ImageVect(
-        int const img_row,
-        int const img_col,
-        int const img_chan)
-          : row(img_row), col(img_col), channel(img_chan){}
+      /**
+       * Construct an image coordinate vector with the specified values
+       */
+      constexpr ImageVect(int const row, int const col, int const chan) noexcept
+          : row(row), col(col), channel(chan) { }
 
-      ImageVect(const std::array<int,3> coords)
-          : ImageVect(coords[0], coords[1], coords[2]) {}
+      /**
+       * Construct an image coordinate vector with the specified values.
+       * 
+       * The order of elements in `coords` is row, column, channel.
+       */
+      constexpr ImageVect(const std::array<int,3> coords) noexcept
+          : ImageVect(coords[0], coords[1], coords[2]) { }
 
-      ImageVect operator+(ImageVect const& other) const
-        { return this->add(other.row, other.col, other.channel);  }
+      /**
+       * Add another ImageVect to this one.
+       */
+      ImageVect operator+(ImageVect const& other) const;
 
-      ImageVect operator-(ImageVect const& other) const
-        { return this->sub(other.row, other.col, other.channel);  }
+      /**
+       * Subtract another ImageVect from this one.
+       */
+      ImageVect operator-(ImageVect const& other) const;
 
-      ImageVect add(int const rows, int const cols, int const chans) const
-        { return ImageVect(this->row + rows, this->col + cols, this->channel + chans); }
+      /**
+       * Add some number of rows, columns and channels to this vector.
+       */
+      ImageVect add(int const rows, int const cols, int const chans = 0) const;
 
-      ImageVect sub(int const rows, int const cols, int const chans) const
-        { return ImageVect(this->row - rows, this->col - cols, this->channel - chans); }
+      /**
+       * Subtract some number of rows, columns and channels from this vector.
+       */
+      ImageVect sub(int const rows, int const cols, int const chans = 0) const;
 
-      bool operator==(const ImageVect& other) const 
-        { return (row==other.row)&&(col==other.col)&&(channel==other.channel); }
-      bool operator!=(const ImageVect& other) const 
-        { return !((row==other.row)&&(col==other.col)&&(channel==other.channel)); }
+      /**
+       * Test for equality of two ImageVects.
+       * 
+       * Two ImageVects are considered equal iff all of their corresponding fields are equal.
+       */
+      bool operator==(const ImageVect& other) const;
+
+      /**
+       * Test for inequality of two ImageVects.
+       * 
+       * Two ImageVects are considered unequal iff any of their corresponding fields are unequal.
+       */
+      bool operator!=(const ImageVect& other) const;
   };
 
 
+
+
+
+  /**
+   * Represents a rectangular sub-region of an image.
+   */
   class ImageRegion {
 
     public:
 
       struct {
+        /// First row included in the region
         const int row;
+        /// First column included in the region
         const int col;
+        /// First channel included in the region
         const int channel;
       } start;
 
       struct {
+        /// Number of rows included in the region (starting from `start.row`)
         const int height;
+        /// Number of columns included in the region (starting from `start.col`)
         const int width;
+        /// Number of channels included in the region (starting from `start.channel`)
         const int depth;
       } shape;
 
     public:
 
-      ImageRegion(
-        int const row,
-        int const col,
-        int const chan,
-        int const height,
-        int const width,
-        int const depth)
-          : start{row,col,chan}, shape{height,width,depth} {}
+      /**
+       * Construct an ImageRegion
+       */
+      constexpr ImageRegion(int row,    int col,   int chan,
+                            int height, int width, int depth) noexcept 
+          : start{row, col, chan}, 
+            shape{height, width, depth} { }
+      
+      /**
+       * Construct an ImageRegion
+       */
+      constexpr ImageRegion(const std::array<int,3> start,
+                            const std::array<int,3> shape) noexcept
+          : start{start[0], start[1], start[2]}, 
+            shape{shape[0], shape[1], shape[2]} { }
 
-      ImageVect startVect() const
-        { return ImageVect(start.row, start.col, start.channel); }
-      ImageVect endVect(bool inclusive = false) const 
-        { return ImageVect(start.row + shape.height + (inclusive? -1 : 0), 
-                           start.col + shape.width + (inclusive? -1 : 0), 
-                           start.channel + shape.depth + (inclusive? -1 : 0)); }
+      /**
+       * Get an ImageVect representing the start coordinate of this image region.
+       */
+      ImageVect StartVect() const;
 
-      bool Within(int row, int col, int channel) const
-      {
-        if( row < start.row || row >= (start.row + shape.height) ) return false;
-        if( col < start.col || col >= (start.col + shape.width) ) return false;
-        if( channel < start.channel || channel >= (start.channel + shape.depth) ) return false;
-        return true;
-      }
+      /**
+       * Get an ImageVect representing the end coordinate of this image region.
+       * 
+       * If `inclusive` is `true`, the coordinates given are the last considered to be
+       * inside the region. Otherwise, the coordinates given are the smallest considered
+       * to be after the region.
+       */
+      ImageVect EndVect(bool inclusive = false) const;
 
-      int PixelCount() const
-      { return shape.height * shape.width; }
+      /**
+       * Test whether the specified coordinates are within this region.
+       */
+      bool Within(int row, int col, int channel) const;
 
-      int ElementCount() const
-      { return PixelCount() * shape.depth; }
+      /**
+       * The number of pixels within this region.
+       */
+      int PixelCount() const;
 
-      int ChannelOutputGroups(int output_channels_per_group) const
-      { return (shape.depth + (output_channels_per_group - 1)) / output_channels_per_group; }
+      /**
+       * The number of elements within this region.
+       */
+      int ElementCount() const;
+
+      /**
+       * Determine the number of channel output groups that this region spans.
+       * 
+       * `output_channels_per_group` is the number of channels per output channel group.
+       */
+      int ChannelOutputGroups(int output_channels_per_group) const;
 
   };
+
+
+
 
 
   inline std::ostream& operator<<(std::ostream &stream, const padding_t &pad){
@@ -138,7 +236,7 @@ namespace nn {
 
 
   inline std::ostream& operator<<(std::ostream &stream, const ImageRegion &r){
-    const auto end = r.endVect();
+    const auto end = r.EndVect();
     return stream << "{ [" << r.start.row << "," << end.row << "), "
                   <<   "[" << r.start.col << "," << end.col << "), "
                   <<   "[" << r.start.channel << "," << end.channel << ") }";

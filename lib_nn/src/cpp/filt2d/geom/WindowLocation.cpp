@@ -72,7 +72,7 @@ int WindowLocation::FilterIndex(const int filter_row,
 
   int dex = filter.window.shape.depth * (filter.window.shape.width * filter_row + filter_col) + filter_chan;
 
-  if (!filter.ModelIsDepthwise())
+  if (!filter.IsDepthwise())
     dex += filter.window.shape.imageElements() * this->output_coords.channel;
 
   return dex;

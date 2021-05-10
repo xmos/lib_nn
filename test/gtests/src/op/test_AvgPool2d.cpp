@@ -141,7 +141,9 @@ TEST(AvgPool2d_Generic_Test, CompareWithReference)
                                       
       auto ref_output = nn::test::ops::ref::AveragePoolReference(filter, &input_img[0]);
 
-      auto op_output = RunOperator_Generic(filter, filter.GetFullJob(), input_img);
+      auto full_job = nn::ImageRegion(0, 0, 0, filter.output.height, filter.output.width, filter.output.depth);
+
+      auto op_output = RunOperator_Generic(filter, full_job, input_img);
 
       // This is really unfortunate, but computing all the string stuff below for every output element 
       // REALLY slows everything down (by like an order of magnitude) even when the test case doesn't fail.
@@ -228,7 +230,8 @@ TEST(AvgPool2d_Valid_Test, CompareWithReference)
                                       
       auto ref_output = nn::test::ops::ref::AveragePoolReference(filter, &input_img[0]);
 
-      auto op_output = RunOperator_Valid(filter, filter.GetFullJob(), input_img);
+      auto full_job = nn::ImageRegion(0, 0, 0, filter.output.height, filter.output.width, filter.output.depth);
+      auto op_output = RunOperator_Valid(filter, full_job, input_img);
 
       // This is really unfortunate, but computing all the string stuff below for every output element 
       // REALLY slows everything down (by like an order of magnitude) even when the test case doesn't fail.

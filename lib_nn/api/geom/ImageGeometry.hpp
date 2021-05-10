@@ -31,17 +31,54 @@ namespace nn
           depth(chans),
           channel_depth(channel_depth_bytes) {}
 
+    /**
+     * The total number of pixels in the image
+     */
     int inline const imagePixels() const { return this->height * this->width; }
 
+    /**
+     * The number of image elements per pixel
+     */
     int inline const pixelElements() const { return this->depth; }
+
+    /**
+     * The number of image elements per row of the image
+     */
     int inline const rowElements() const { return this->width * this->pixelElements(); }
+    
+    /**
+     * The number of image elements per column of the image
+     */
     int inline const colElements() const { return this->height * this->pixelElements(); }
+
+    /**
+     * The total number of image elements
+     */
     int inline const imageElements() const { return this->height * this->rowElements(); }
+
+    /**
+     * The number of image pixels multiplied by the square of image depth
+     */
     int inline const volumeElements() const { return this->depth * this->imageElements(); }
 
+    /**
+     * The number of bytes per image pixel
+     */
     int inline const pixelBytes() const { return pixelElements() * channel_depth; }
+
+    /**
+     * The number of bytes per row of the image
+     */
     int inline const rowBytes() const { return rowElements() * channel_depth; }
+
+    /**
+     * The number of bytes per column of the image
+     */
     int inline const colBytes() const { return colElements() * channel_depth; }
+
+    /**
+     * The total number of bytes of the image
+     */
     int inline const imageBytes() const { return imageElements() * channel_depth; }
 
     /**
@@ -57,6 +94,10 @@ namespace nn
               const int col,
               const int channel) const;
 
+    /**
+     * Get the buffer index associated with the specified image coordinates, assuming the image is backed
+     * by a linear buffer.
+     */
     int Index(const ImageVect &input_coords) const;
 
     /**
@@ -134,6 +175,9 @@ namespace nn
      */
     bool operator==(ImageGeometry other) const;
   };
+
+
+
 
   template <typename T>
   T &ImageGeometry::Element(T *img_base,

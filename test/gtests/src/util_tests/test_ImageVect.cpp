@@ -11,6 +11,11 @@
 using namespace nn;
 using namespace nn::test;
 
+
+
+/////////////////////////////////////////////////////////////////////////
+//
+//
 TEST(ImageVect_Test, Constructor)
 {
   constexpr int ITER_COUNT = 1000;
@@ -23,17 +28,26 @@ TEST(ImageVect_Test, Constructor)
     const auto col = rng.rand<int>(-1000, 1000);
     const auto xan = rng.rand<int>(-1000, 1000);
   
-    auto vect = ImageVect(row, col, xan);
+    auto vect1 = ImageVect(row, col, xan);
+    ImageVect vect2 = {row, col, xan};
 
-    ASSERT_EQ(vect.row, row);
-    ASSERT_EQ(vect.col, col);
-    ASSERT_EQ(vect.channel, xan);
+    ASSERT_EQ(vect1.row, row);
+    ASSERT_EQ(vect1.col, col);
+    ASSERT_EQ(vect1.channel, xan);
+
+    ASSERT_EQ(vect2.row, row);
+    ASSERT_EQ(vect2.col, col);
+    ASSERT_EQ(vect2.channel, xan);
   }
 }
 
 
 
-TEST(ImageVect_Test, add)
+
+/////////////////////////////////////////////////////////////////////////
+//
+//
+TEST(ImageVect_Test, addition)
 {
   constexpr int ITER_COUNT = 1000;
 
@@ -41,24 +55,37 @@ TEST(ImageVect_Test, add)
 
   for(int iter = 0; iter < ITER_COUNT; iter++){
 
-    const auto row1 = rng.rand<int>(-1000, 1000);
-    const auto col1 = rng.rand<int>(-1000, 1000);
-    const auto xan1 = rng.rand<int>(-1000, 1000);
-    const auto row2 = rng.rand<int>(-1000, 1000);
-    const auto col2 = rng.rand<int>(-1000, 1000);
-    const auto xan2 = rng.rand<int>(-1000, 1000);
+    const auto rowA = rng.rand<int>(-1000, 1000);
+    const auto colA = rng.rand<int>(-1000, 1000);
+    const auto xanA = rng.rand<int>(-1000, 1000);
 
-    auto vect1 = ImageVect(row1, col1, xan1);
+    const auto rowB = rng.rand<int>(-1000, 1000);
+    const auto colB = rng.rand<int>(-1000, 1000);
+    const auto xanB = rng.rand<int>(-1000, 1000);
 
-    auto vect2 = vect1.add(row2, col2, xan2);
+    ImageVect vectA = {rowA, colA, xanA};
+    ImageVect vectB = {rowB, colB, xanB};
     
-    ASSERT_EQ(vect2.row, row1+row2);
-    ASSERT_EQ(vect2.col, col1+col2);
-    ASSERT_EQ(vect2.channel, xan1+xan2);
+    {
+      auto sum_vect = vectA.add(rowB, colB, xanB);
+      ASSERT_EQ(sum_vect.row,     rowA + rowB);
+      ASSERT_EQ(sum_vect.col,     colA + colB);
+      ASSERT_EQ(sum_vect.channel, xanA + xanB);
+    } {
+      auto sum_vect = vectA + vectB;
+      ASSERT_EQ(sum_vect.row,     rowA + rowB);
+      ASSERT_EQ(sum_vect.col,     colA + colB);
+      ASSERT_EQ(sum_vect.channel, xanA + xanB);
+    }
   }
 }
 
-TEST(ImageVect_Test, sub)
+
+
+/////////////////////////////////////////////////////////////////////////
+//
+//
+TEST(ImageVect_Test, subtraction)
 {
   constexpr int ITER_COUNT = 1000;
 
@@ -66,78 +93,38 @@ TEST(ImageVect_Test, sub)
 
   for(int iter = 0; iter < ITER_COUNT; iter++){
 
-    const auto row1 = rng.rand<int>(-1000, 1000);
-    const auto col1 = rng.rand<int>(-1000, 1000);
-    const auto xan1 = rng.rand<int>(-1000, 1000);
-    const auto row2 = rng.rand<int>(-1000, 1000);
-    const auto col2 = rng.rand<int>(-1000, 1000);
-    const auto xan2 = rng.rand<int>(-1000, 1000);
+    const auto rowA = rng.rand<int>(-1000, 1000);
+    const auto colA = rng.rand<int>(-1000, 1000);
+    const auto xanA = rng.rand<int>(-1000, 1000);
 
-    auto vect1 = ImageVect(row1, col1, xan1);
+    const auto rowB = rng.rand<int>(-1000, 1000);
+    const auto colB = rng.rand<int>(-1000, 1000);
+    const auto xanB = rng.rand<int>(-1000, 1000);
 
-    auto vect2 = vect1.sub(row2, col2, xan2);
+    ImageVect vectA = {rowA, colA, xanA};
+    ImageVect vectB = {rowB, colB, xanB};
     
-    ASSERT_EQ(vect2.row,     row1-row2);
-    ASSERT_EQ(vect2.col,     col1-col2);
-    ASSERT_EQ(vect2.channel, xan1-xan2);
-  }
-}
-
-TEST(ImageVect_Test, add_operator)
-{
-  constexpr int ITER_COUNT = 1000;
-
-  auto rng = Rand(4563456);
-
-  for(int iter = 0; iter < ITER_COUNT; iter++){
-
-    const auto row1 = rng.rand<int>(-1000, 1000);
-    const auto col1 = rng.rand<int>(-1000, 1000);
-    const auto xan1 = rng.rand<int>(-1000, 1000);
-    const auto row2 = rng.rand<int>(-1000, 1000);
-    const auto col2 = rng.rand<int>(-1000, 1000);
-    const auto xan2 = rng.rand<int>(-1000, 1000);
-
-    auto vect1 = ImageVect(row1, col1, xan1);
-    auto vect2 = ImageVect(row2, col2, xan2);
-
-    auto vect3 = vect1 + vect2;
-    
-    ASSERT_EQ(vect3.row,     row1+row2);
-    ASSERT_EQ(vect3.col,     col1+col2);
-    ASSERT_EQ(vect3.channel, xan1+xan2);
-  }
-}
-
-TEST(ImageVect_Test, sub_operator)
-{
-  constexpr int ITER_COUNT = 1000;
-
-  auto rng = Rand(4563456);
-
-  for(int iter = 0; iter < ITER_COUNT; iter++){
-
-    const auto row1 = rng.rand<int>(-1000, 1000);
-    const auto col1 = rng.rand<int>(-1000, 1000);
-    const auto xan1 = rng.rand<int>(-1000, 1000);
-    const auto row2 = rng.rand<int>(-1000, 1000);
-    const auto col2 = rng.rand<int>(-1000, 1000);
-    const auto xan2 = rng.rand<int>(-1000, 1000);
-
-    auto vect1 = ImageVect(row1, col1, xan1);
-    auto vect2 = ImageVect(row2, col2, xan2);
-
-    auto vect3 = vect1 - vect2;
-    
-    ASSERT_EQ(vect3.row,     row1-row2);
-    ASSERT_EQ(vect3.col,     col1-col2);
-    ASSERT_EQ(vect3.channel, xan1-xan2);
-
+    {
+      auto sum_vect = vectA.sub(rowB, colB, xanB);
+      ASSERT_EQ(sum_vect.row,     rowA - rowB);
+      ASSERT_EQ(sum_vect.col,     colA - colB);
+      ASSERT_EQ(sum_vect.channel, xanA - xanB);
+    } {
+      auto sum_vect = vectA - vectB;
+      ASSERT_EQ(sum_vect.row,     rowA - rowB);
+      ASSERT_EQ(sum_vect.col,     colA - colB);
+      ASSERT_EQ(sum_vect.channel, xanA - xanB);
+    }
   }
 }
 
 
-TEST(ImageVect_Test, eq_neq_operator)
+
+
+/////////////////////////////////////////////////////////////////////////
+//
+//
+TEST(ImageVect_Test, equality)
 {
   for(int row1 = -2; row1 <= 2; row1++){
     for(int col1 = -2; col1 <= 2; col1++){
