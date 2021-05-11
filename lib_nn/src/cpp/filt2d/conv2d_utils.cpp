@@ -89,7 +89,7 @@ static int64_t sumConv2dWeights_Deep(
     const unsigned output_channel)
 {
   // Each output channel has a full convolution window's worth of elements
-  const unsigned weight_count = filter.window.shape.imageElements();
+  const unsigned weight_count = filter.window.shape.ElementCount();
 
   // Channel cout's weights start cout windows into the array
   const int8_t *cout_weights = kernel_weights + weight_count * output_channel;
@@ -110,12 +110,12 @@ static int64_t sumConv2dWeights_Depthwise(
 {
   // Each output channel has a full convolution window's worth of pixels (not elements, because channels don't
   // interact with a depthwise convolution)
-  // const unsigned weight_count = filter.window.shape.imagePixels();
+  // const unsigned weight_count = filter.window.shape.PixelCount();
 
   // In a depthwise convolution, the output channel corresponds to the last axis of the weight vector, not the first
   int64_t acc = 0;
 
-  const auto weight_count = filter.window.shape.imageElements();
+  const auto weight_count = filter.window.shape.ElementCount();
 
   // Sum the weights
   for (int k = output_channel; k < weight_count; k += filter.output.depth)
@@ -153,7 +153,7 @@ static int32_t computeConv2dBias(
 {
 
   // Each output channel has a full convolution window's worth of elements
-  // const unsigned weight_count = filter.window.shape.imageElements();
+  // const unsigned weight_count = filter.window.shape.ElementCount();
 
   // Sum of weights
   int64_t acc = sumConv2dWeights(filter, kernel_weights, output_channel, is_depthwise);

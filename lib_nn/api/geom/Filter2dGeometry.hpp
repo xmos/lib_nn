@@ -122,7 +122,7 @@ namespace nn
     /// TODO: astew: Are these correct? Does the receptive volume of a depthwise filter get 
     ///       multiplied by the number of input channels? I suspect that the following functions
     ///       are unnecessary, as for a properly-speified filter geometry, these should be
-    ///       the same as `window.shape.imageElements()` or `window.shape.imageBytes()`.
+    ///       the same as `window.shape.ElementCount()` or `window.shape.ImageBytes()`.
     ///       `window.shape.depth` should be equal to `input.depth` for a "dense" filter, and
     ///       `window.shape.depth` should always be 1 for any depthwise filter (because in a 
     ///       depthwise filter, each output element is a function of exactly 
@@ -140,6 +140,7 @@ namespace nn
 
   };
 
+  /////////////////////////
   inline std::ostream &operator<<(std::ostream &stream, const Filter2dGeometry &filt)
   {
     return stream << "input{" << filt.input << "}, output{" << filt.output << "}, window{" << filt.window << "}";

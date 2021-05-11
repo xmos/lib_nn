@@ -37,7 +37,7 @@ std::vector<int8_t> nn::test::ops::ref::MaxPoolReference(
       { 1, (int) filter_geometry.output.height, (int) filter_geometry.output.width, (int) filter_geometry.output.depth };
 
 
-  auto result = std::vector<int8_t>(filter_geometry.output.imageElements());
+  auto result = std::vector<int8_t>(filter_geometry.output.ElementCount());
 
   tflite::reference_integer_ops::MaxPool(params, input_shape, input_img, output_shape, &result[0]);
 
@@ -72,7 +72,7 @@ std::vector<int8_t> nn::test::ops::ref::AveragePoolReference(
       { 1, (int) filter_geometry.output.height, (int) filter_geometry.output.width, (int) filter_geometry.output.depth };
 
 
-  auto result = std::vector<int8_t>(filter_geometry.output.imageElements());
+  auto result = std::vector<int8_t>(filter_geometry.output.ElementCount());
 
   tflite::reference_integer_ops::AveragePool(params, input_shape, input_img, output_shape, &result[0]);
 

@@ -55,7 +55,7 @@ std::vector<int8_t> nn::test::ops::ref::AddElementwiseReference(
   tf_params.quantized_activation_min = std::numeric_limits<int8_t>::min();
   tf_params.quantized_activation_max = std::numeric_limits<int8_t>::max();
 
-  auto result = std::vector<int8_t>( image_geometry.imageElements() );
+  auto result = std::vector<int8_t>( image_geometry.ElementCount() );
 
   tflite::reference_integer_ops::AddElementwise(result.size(), tf_params,
                                                 input_img0, input_img1, &result[0]);

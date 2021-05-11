@@ -21,25 +21,25 @@ int ImageGeometry::Index(const ImageVect &input_coords) const
   return this->Index(input_coords.row, input_coords.col, input_coords.channel);
 }
 
-mem_stride_t ImageGeometry::getStride(
+mem_stride_t ImageGeometry::GetStride(
     const ImageVect &vect) const
 {
-  return this->getStride(vect.row, vect.col, vect.channel);
+  return this->GetStride(vect.row, vect.col, vect.channel);
 }
 
-mem_stride_t ImageGeometry::getStride(
+mem_stride_t ImageGeometry::GetStride(
     const int rows,
     const int cols,
     const int chans) const
 {
-  return rows * this->rowBytes() + cols * this->pixelBytes() + chans * channel_depth;
+  return rows * this->RowBytes() + cols * this->PixelBytes() + chans * channel_depth;
 }
 
-mem_stride_t ImageGeometry::getStride(
+mem_stride_t ImageGeometry::GetStride(
     const ImageVect &from,
     const ImageVect &to) const
 {
-  return this->getStride(to.row - from.row, to.col - from.col, to.channel - from.channel);
+  return this->GetStride(to.row - from.row, to.col - from.col, to.channel - from.channel);
 }
 
 bool ImageGeometry::operator==(

@@ -16,8 +16,8 @@ DerefInputFn::Params::Params(const int32_t bytes_per_h_line,
 }
 
 DerefInputFn::Params::Params(const ImageGeometry &input, const WindowGeometry &window)
-    : bytes_per_h_line(input.getStride(window.stride.row, 0, 0)),
-      bytes_per_pixel(input.getStride(0, window.stride.col, 0))
+    : bytes_per_h_line(input.GetStride(window.stride.row, 0, 0)),
+      bytes_per_pixel(input.GetStride(0, window.stride.col, 0))
 {
 }
 
@@ -92,10 +92,10 @@ ImToColPadded::Params::Params(const ImageGeometry &X,
 
   padding_val = pad_val;
 
-  bytes_per_pixel = X.pixelBytes();
-  bytes_per_h_line = X.rowBytes();
+  bytes_per_pixel = X.PixelBytes();
+  bytes_per_h_line = X.RowBytes();
 
-  horizontal_mem_stride = X.rowBytes();
+  horizontal_mem_stride = X.RowBytes();
 
   //TODO
   // bytes_per_copy_per_channel = (input_ch_per_output *  X.bits_per_element) / CHAR_BIT;
@@ -125,10 +125,10 @@ ImToColPadded::Params::Params(const Filter2dGeometry &filter,
 
   padding_val = pad_val;
 
-  bytes_per_pixel = filter.input.pixelBytes();
-  bytes_per_h_line = filter.input.rowBytes();
+  bytes_per_pixel = filter.input.PixelBytes();
+  bytes_per_h_line = filter.input.RowBytes();
 
-  horizontal_mem_stride = filter.input.rowBytes();
+  horizontal_mem_stride = filter.input.RowBytes();
 
   /// NOTE: In a dense (non-depthwise) filter, the entirety of each input pixel goes into the
   ///       patch buffer, because the same input channels (all of them) are needed to compute
@@ -257,10 +257,10 @@ ImToColValid::Params::Params(const ImageGeometry &X, const WindowGeometry &K, co
   // int bytes_per_copy_per_channel = (input_ch_per_output *  X.bits_per_element) / CHAR_BIT;
   int bytes_per_copy_per_channel = (input_ch_per_output * CHAR_BIT) / CHAR_BIT;
 
-  bytes_per_pixel = X.pixelBytes();
-  bytes_per_h_line = X.rowBytes();
+  bytes_per_pixel = X.PixelBytes();
+  bytes_per_h_line = X.RowBytes();
 
-  assert(X.rowBytes() == X.width * bytes_per_pixel);
+  assert(X.RowBytes() == X.width * bytes_per_pixel);
 
   //This is the amount to copy in vpu words (round up)
   input_channel_groups = (bytes_per_copy_per_channel + XS3_VPU_VREG_WIDTH_BYTES - 1) / XS3_VPU_VREG_WIDTH_BYTES;

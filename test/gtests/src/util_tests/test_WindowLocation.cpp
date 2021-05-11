@@ -23,6 +23,11 @@ static nn::ff::FilterGeometryIterator filter_sets[] = {
 };
 
 
+
+
+/////////////////////////////////////////////////////////////////////////
+//
+//
 TEST(WindowLocation_Test, InputStart)
 {
   int total_iter = 0;
@@ -65,6 +70,9 @@ TEST(WindowLocation_Test, InputStart)
 }
 
 
+/////////////////////////////////////////////////////////////////////////
+//
+//
 TEST(WindowLocation_Test, InputEnd)
 {
   int total_iter = 0;
@@ -107,7 +115,9 @@ TEST(WindowLocation_Test, InputEnd)
 }
 
 
-
+/////////////////////////////////////////////////////////////////////////
+//
+//
 TEST(WindowLocation_Test, InputCoords)
 {
   int total_iter = 0;
@@ -170,6 +180,9 @@ TEST(WindowLocation_Test, InputCoords)
 }
 
 
+/////////////////////////////////////////////////////////////////////////
+//
+//
 TEST(WindowLocation_Test, Padding)
 {
   int total_iter = 0;
@@ -200,6 +213,52 @@ TEST(WindowLocation_Test, Padding)
 }
 
 
+/////////////////////////////////////////////////////////////////////////
+//
+//
+TEST(WindowLocation_Test, SignedPadding)
+{
+  auto rand = nn::test::Rand(981513);
+
+  int total_iter = 0;
+
+  for(auto filter_set : filter_sets) {
+    filter_set.Reset();
+    for(auto filter : filter_set) {
+
+      for(int yr = 0; yr < filter.output.height; yr++){
+        for(int yc = 0; yc < filter.output.width; yc++){
+            auto loc = WindowLocation(filter, ImageVect(yr,yc,0));
+
+            auto pad = loc.SignedPadding();
+
+            auto p = loc.InputStart();
+            ASSERT_TRUE( filter.input.IsWithinImage(p.add(pad.top - 0, 0, 0)));
+            ASSERT_FALSE(filter.input.IsWithinImage(p.add(pad.top - 1, 0, 0)));
+            
+            ASSERT_TRUE( filter.input.IsWithinImage(p.add(0, pad.left - 0, 0)));
+            ASSERT_FALSE(filter.input.IsWithinImage(p.add(0, pad.left - 1, 0)));
+
+            p = loc.InputEnd();
+            ASSERT_TRUE( filter.input.IsWithinImage(p.add( -pad.bottom + 0, 0, 0)));
+            ASSERT_FALSE(filter.input.IsWithinImage(p.add( -pad.bottom + 1, 0, 0)));
+            
+            ASSERT_TRUE( filter.input.IsWithinImage(p.add(0, -pad.right + 0, 0)));
+            ASSERT_FALSE(filter.input.IsWithinImage(p.add(0, -pad.right + 1, 0)));
+
+        }
+      }
+      total_iter++;
+    }
+  }
+
+  std::cout << "Count: " << total_iter << std::endl;
+}
+
+
+/////////////////////////////////////////////////////////////////////////
+//
+//
 TEST(WindowLocation_Test, IsPadding)
 {
   auto rand = nn::test::Rand(4564523);
@@ -210,7 +269,7 @@ TEST(WindowLocation_Test, IsPadding)
     filter_set.Reset();
     for(auto filter : filter_set) {
 
-      auto input_img = std::vector<int8_t>( filter.input.imageElements() );
+      auto input_img = std::vector<int8_t>( filter.input.ElementCount() );
 
       for(int k = 0; k < input_img.size(); k++){
         input_img[k] = rand.rand<int8_t>();
@@ -248,7 +307,9 @@ TEST(WindowLocation_Test, IsPadding)
 }
 
 
-
+/////////////////////////////////////////////////////////////////////////
+//
+//
 TEST(WindowLocation_Test, InputElement)
 {
   int total_iter = 0;
@@ -257,7 +318,7 @@ TEST(WindowLocation_Test, InputElement)
     filter_set.Reset();
     for(auto filter : filter_set) {
 
-      auto input_img = std::vector<int8_t>( filter.input.imageElements() );
+      auto input_img = std::vector<int8_t>( filter.input.ElementCount() );
 
       for(int yr = 0; yr < filter.output.height; yr++){
 
@@ -306,7 +367,9 @@ TEST(WindowLocation_Test, InputElement)
 }
 
 
-
+/////////////////////////////////////////////////////////////////////////
+//
+//
 TEST(WindowLocation_Test, GetInput)
 {
   auto rand = nn::test::Rand(754444);
@@ -317,7 +380,7 @@ TEST(WindowLocation_Test, GetInput)
     filter_set.Reset();
     for(auto filter : filter_set) {
 
-      auto input_img = std::vector<int8_t>( filter.input.imageElements() );
+      auto input_img = std::vector<int8_t>( filter.input.ElementCount() );
 
       for(int k = 0; k < input_img.size(); k++){
         input_img[k] = rand.rand<int8_t>();
@@ -365,13 +428,111 @@ TEST(WindowLocation_Test, GetInput)
 }
 
 
-// static auto simple_filters = ::testing::ValuesIn( nn::test::filt_gen::SimpleFilters() );
-// static auto padded_filters = ::testing::ValuesIn( nn::test::filt_gen::PaddedFilters() );
-// static auto dilated_filters = ::testing::ValuesIn( nn::test::filt_gen::DilatedFilters() );
+/////////////////////////////////////////////////////////////////////////
+//
+//
+TEST(WindowLocation_Test, InputIndex)
+{
+  auto rand = nn::test::Rand(7695699);
+
+  int total_iter = 0;
+
+  for(auto filter_set : filter_sets) {
+    filter_set.Reset();
+    for(auto filter : filter_set) {
+
+      auto input_img = std::vector<int8_t>( filter.input.ElementCount() );
+
+      for(int k = 0; k < input_img.size(); k++) {
+        input_img[k] = rand.rand<int8_t>();
+      }
+
+      for(int yr = 0; yr < filter.output.height; yr++){
+        for(int yc = 0; yc < filter.output.width; yc++){
+          for(int yx = 0; yx < filter.output.depth; yx++){
+
+            auto loc = WindowLocation(filter, ImageVect(yr,yc,yx));
+
+            for(int kr = 0; kr < filter.window.shape.height; kr++){
+              for(int kc = 0; kc < filter.window.shape.width; kc++){
+                for(int kx = 0; kx < filter.window.shape.depth; kx++){
+
+                  auto in_coords = loc.InputCoords(kr, kc, kx);
+                  auto offset = filter.input.GetStride(in_coords);
+                  auto index = loc.InputIndex(kr, kc, kx);
+                  EXPECT_EQ(offset, index);
+                  
+                }
+              }
+            }
+          }
+        }
+      }
+      total_iter++;
+    }
+  }
+
+  std::cout << "Count: " << total_iter << std::endl;
+}
 
 
-// INSTANTIATE_TEST_SUITE_P(Simple, WindowLocationTest, simple_filters);
-// INSTANTIATE_TEST_SUITE_P(Padded, WindowLocationTest, padded_filters);
-// INSTANTIATE_TEST_SUITE_P(Dilated, WindowLocationTest, dilated_filters);
 
+/////////////////////////////////////////////////////////////////////////
+//
+//
+TEST(WindowLocation_Test, Fold)
+{
+  auto rand = nn::test::Rand(4564523);
+
+  int total_iter = 0;
+
+  for(auto filter_set : filter_sets) {
+    filter_set.Reset();
+    for(auto filter : filter_set) {
+
+      auto input_img = std::vector<int8_t>( filter.input.ElementCount() );
+
+      for(int k = 0; k < input_img.size(); k++){
+        input_img[k] = rand.rand<int8_t>();
+      }
+
+      for(int yr = 0; yr < filter.output.height; yr++){
+        for(int yc = 0; yc < filter.output.width; yc++){
+          for(int yx = 0; yx < filter.output.depth; yx++){
+
+            auto loc = WindowLocation(filter, ImageVect(yr,yc,yx));
+
+            int32_t expected = 1234;
+
+            for(int kr = 0; kr < filter.window.shape.height; kr++){
+              for(int kc = 0; kc < filter.window.shape.width; kc++){
+                for(int kx = 0; kx < filter.window.shape.depth; kx++){
+                  auto input = loc.GetInput<int8_t>(&input_img[0], kr, kc, kx, 0);
+                  if(input == 0) expected++;
+                  else expected *= input;
+                }
+              }
+            }
+
+            auto lfunc = [](const ImageVect&, const ImageVect&,
+                            const int32_t acc,
+                            const int8_t elm,
+                            const bool) -> int32_t
+            {
+              if(elm == 0) return (acc + 1);
+              return acc * elm;
+            };
+
+            auto res = loc.Fold<int32_t, int8_t>(&input_img[0], lfunc, 1234, 0);
+
+            ASSERT_EQ(expected, res);
+          }
+        }
+      }
+      total_iter++;
+    }
+  }
+
+  std::cout << "Count: " << total_iter << std::endl;
+}
 

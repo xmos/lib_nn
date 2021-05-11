@@ -10,17 +10,33 @@
 namespace nn
 {
 
+  /**
+   * Represents the geometry of a 2D multi-channel image.
+   */
   class ImageGeometry
   {
 
   public:
-    int height;
-    int width;
-    int depth;
-    int channel_depth; //in bytes //asj:this might be better in bits
 
+    /// Height of image in rows
+    int height;
+    /// Width of image in columns
+    int width;
+    /// Depth of image in channels
+    int depth;
+    /// Number of bytes per image element
+    int channel_depth; //asj:this might be better in bits
+
+    /**
+     * Default Constructor
+     * 
+     * Dimensions are initialized to 0, with 1 byte per pixel.
+     */
     constexpr ImageGeometry() : height(0), width(0), depth(0), channel_depth(1) {}
 
+    /**
+     * Construct an ImageGeometry with the specified dimensions.
+     */
     constexpr ImageGeometry(
         int const rows,
         int const cols,
@@ -34,52 +50,52 @@ namespace nn
     /**
      * The total number of pixels in the image
      */
-    int inline const imagePixels() const { return this->height * this->width; }
+    int inline const PixelCount() const { return this->height * this->width; }
 
     /**
      * The number of image elements per pixel
      */
-    int inline const pixelElements() const { return this->depth; }
+    int inline const PixelElements() const { return this->depth; }
 
     /**
      * The number of image elements per row of the image
      */
-    int inline const rowElements() const { return this->width * this->pixelElements(); }
+    int inline const RowElements() const { return this->width * this->PixelElements(); }
     
     /**
      * The number of image elements per column of the image
      */
-    int inline const colElements() const { return this->height * this->pixelElements(); }
+    int inline const ColElements() const { return this->height * this->PixelElements(); }
 
     /**
      * The total number of image elements
      */
-    int inline const imageElements() const { return this->height * this->rowElements(); }
+    int inline const ElementCount() const { return this->height * this->RowElements(); }
 
     /**
      * The number of image pixels multiplied by the square of image depth
      */
-    int inline const volumeElements() const { return this->depth * this->imageElements(); }
+    int inline const VolumeElements() const { return this->depth * this->ElementCount(); }
 
     /**
      * The number of bytes per image pixel
      */
-    int inline const pixelBytes() const { return pixelElements() * channel_depth; }
+    int inline const PixelBytes() const { return PixelElements() * channel_depth; }
 
     /**
      * The number of bytes per row of the image
      */
-    int inline const rowBytes() const { return rowElements() * channel_depth; }
+    int inline const RowBytes() const { return RowElements() * channel_depth; }
 
     /**
      * The number of bytes per column of the image
      */
-    int inline const colBytes() const { return colElements() * channel_depth; }
+    int inline const ColBytes() const { return ColElements() * channel_depth; }
 
     /**
      * The total number of bytes of the image
      */
-    int inline const imageBytes() const { return imageElements() * channel_depth; }
+    int inline const ImageBytes() const { return ElementCount() * channel_depth; }
 
     /**
        * Get the flattened index of the specified image element.
@@ -103,19 +119,19 @@ namespace nn
     /**
      * Get the memory stride (in bytes) required to move by the specified amount within this geometry.
      */
-    mem_stride_t getStride(const int rows,
+    mem_stride_t GetStride(const int rows,
                            const int cols,
                            const int chans) const;
 
     /**
      * Get the memory stride (in bytes) required to move by the specified amount within this geometry.
      */
-    mem_stride_t getStride(const ImageVect &vect) const;
+    mem_stride_t GetStride(const ImageVect &vect) const;
 
     /**
      * Get the memory stride (in bytes) required to move between two locations within this geometry.
      */
-    mem_stride_t getStride(const ImageVect &from,
+    mem_stride_t GetStride(const ImageVect &from,
                            const ImageVect &to) const;
 
     /**
@@ -179,6 +195,7 @@ namespace nn
 
 
 
+  /////////////////////////
   template <typename T>
   T &ImageGeometry::Element(T *img_base,
                             const int row,
@@ -190,6 +207,7 @@ namespace nn
     return img_base[index];
   }
 
+  /////////////////////////
   template <typename T>
   T ImageGeometry::Get(const T *img_base,
                        const ImageVect coords,
@@ -198,6 +216,7 @@ namespace nn
     return Get<T>(img_base, coords.row, coords.col, coords.channel, pad_value);
   }
 
+  /////////////////////////
   template <typename T>
   T ImageGeometry::Get(const T *img_base,
                        const int row,
@@ -210,6 +229,7 @@ namespace nn
     return Element<T>(const_cast<T *>(img_base), row, col, channel);
   }
 
+  /////////////////////////
   template <typename T>
   void ImageGeometry::ApplyOperation(T *image_base,
                                      std::function<void(int, int, int, T &)> op) const
@@ -220,6 +240,7 @@ namespace nn
           op(row, col, channel, this->Element<T>(image_base, row, col, channel));
   }
 
+  /////////////////////////
   inline std::ostream &operator<<(std::ostream &stream, const ImageGeometry &image)
   {
     return stream << image.height << "," << image.width << ","

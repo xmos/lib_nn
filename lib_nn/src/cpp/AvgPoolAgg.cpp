@@ -26,7 +26,7 @@ AvgPoolPatchFn::Params::Params(const avgpool_patch_params& ap_params)
 AvgPoolPatchFn::Params::Params(const nn::WindowGeometry& filter,
                                const int8_t shift)
 {
-  this->ap_params.pixels = filter.shape.imagePixels();
+  this->ap_params.pixels = filter.shape.PixelCount();
 
   std::memset(&this->ap_params.scale[0], shift, sizeof(this->ap_params.scale));
 }
@@ -136,9 +136,9 @@ AvgPoolDirectValidFn::Params::Params(const nn::Filter2dGeometry& filter,
 {
   assert(filter.input.depth == filter.output.depth);
 
-  this->ap_params.col_stride = filter.input.pixelBytes() * filter.window.dilation.col;
+  this->ap_params.col_stride = filter.input.PixelBytes() * filter.window.dilation.col;
   this->ap_params.cols = filter.window.shape.width;
-  this->ap_params.row_stride = filter.input.getStride(filter.window.dilation.row, 
+  this->ap_params.row_stride = filter.input.GetStride(filter.window.dilation.row, 
                                                       -filter.window.shape.width * filter.window.dilation.col, 0);
   this->ap_params.rows = filter.window.shape.height;
 

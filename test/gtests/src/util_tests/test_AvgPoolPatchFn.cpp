@@ -54,7 +54,7 @@ TEST(AvgPoolPatchFn_Test, ConstructorA)
 
       ASSERT_TRUE( nn::AvgPool2d_Generic::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
 
-      const auto pixel_count = filter.window.shape.imagePixels();
+      const auto pixel_count = filter.window.shape.PixelCount();
 
       avgpool_patch_params ap_params;
       ap_params.pixels = pixel_count;
@@ -86,7 +86,7 @@ TEST(AvgPoolPatchFn_Test, ConstructorB)
 
       ASSERT_TRUE( nn::AvgPool2d_Generic::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
 
-      const auto pixel_count = filter.window.shape.imagePixels();
+      const auto pixel_count = filter.window.shape.PixelCount();
 
       AvgPoolPatchFn::Params params = AvgPoolPatchFn::Params( filter.window, 11 );
 
@@ -116,7 +116,7 @@ TEST(AvgPoolPatchFn_Test, Serialization)
       ASSERT_TRUE( nn::AvgPool2d_Generic::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
 
 
-      const auto pixel_count = filter.window.shape.imagePixels();
+      const auto pixel_count = filter.window.shape.PixelCount();
 
       AvgPoolPatchFn::Params params = AvgPoolPatchFn::Params( filter.window, 11 );
 
@@ -152,7 +152,7 @@ TEST(AvgPoolPatchFn_Test, aggregate_fn)
       ASSERT_TRUE( nn::AvgPool2d_Generic::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
 
 
-      const auto pixel_count = filter.window.shape.imagePixels();
+      const auto pixel_count = filter.window.shape.PixelCount();
 
       auto rand = nn::test::Rand( pixel_count * 87989 );
         

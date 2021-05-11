@@ -200,7 +200,7 @@ MatMulDirectFn::Params::Params(const ImageGeometry &X, const WindowGeometry &K, 
 
   bytes_per_kernel_channel = K.shape.height * K.shape.width * X.depth * VPU_INT16_EPV;
 
-  int bytes_per_pixel = X.pixelBytes();
+  int bytes_per_pixel = X.PixelBytes();
 
   inner_x_h_step = bytes_per_pixel * K.dilation.col - bytes_per_copy_per_channel;
   inner_x_v_step = bytes_per_pixel * (int)X.width * (int)K.dilation.row - (int)K.shape.width * bytes_per_pixel * (int)K.dilation.col;

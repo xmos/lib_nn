@@ -57,7 +57,7 @@ TEST(MaxPoolPatchFn_Test, ConstructorA)
 
       const int height = filter.window.shape.height;
       const int width  = filter.window.shape.width;
-      const auto pixel_count = filter.window.shape.imagePixels();
+      const auto pixel_count = filter.window.shape.PixelCount();
 
       MaxPoolPatchFn::Params params = MaxPoolPatchFn::Params( pixel_count );
 
@@ -85,7 +85,7 @@ TEST(MaxPoolPatchFn_Test, ConstructorB)
 
       const int height = filter.window.shape.height;
       const int width  = filter.window.shape.width;
-      const auto pixel_count = filter.window.shape.imagePixels();
+      const auto pixel_count = filter.window.shape.PixelCount();
 
       auto window = nn::WindowGeometry( height, width, VPU_INT8_EPV, 0, 0, 1, 1, 1);
       MaxPoolPatchFn::Params params = MaxPoolPatchFn::Params( window );
@@ -114,7 +114,7 @@ TEST(MaxPoolPatchFn_Test, ConstructorC)
 
       const int height = filter.window.shape.height;
       const int width  = filter.window.shape.width;
-      const auto pixel_count = filter.window.shape.imagePixels();
+      const auto pixel_count = filter.window.shape.PixelCount();
 
       auto stream = std::stringstream();
       stream.write(reinterpret_cast<const char*>(&pixel_count), sizeof(pixel_count));
@@ -146,7 +146,7 @@ TEST(MaxPoolPatchFn_Test, Serialize)
 
       const int height = filter.window.shape.height;
       const int width  = filter.window.shape.width;
-      const auto pixel_count = filter.window.shape.imagePixels();
+      const auto pixel_count = filter.window.shape.PixelCount();
 
       MaxPoolPatchFn::Params params = MaxPoolPatchFn::Params( pixel_count );
 
@@ -181,7 +181,7 @@ TEST(MaxPoolPatchFn_Test, aggregate_fn)
 
       const int height = filter.window.shape.height;
       const int width  = filter.window.shape.width;
-      const auto pixel_count = filter.window.shape.imagePixels();
+      const auto pixel_count = filter.window.shape.PixelCount();
 
       auto rand = nn::test::Rand( pixel_count * 34523 );
 
@@ -231,7 +231,7 @@ TEST(MaxPoolPatchFn_Test, maxpool_patch_ref_test)
 
       const int height = filter.window.shape.height;
       const int width  = filter.window.shape.width;
-      const auto pixel_count = filter.window.shape.imagePixels();
+      const auto pixel_count = filter.window.shape.PixelCount();
 
       auto rand = nn::test::Rand(4555 * pixel_count);
 

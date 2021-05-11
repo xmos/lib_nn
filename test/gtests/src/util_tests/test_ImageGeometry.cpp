@@ -48,34 +48,48 @@ class ImageGeometry_Test : public ::testing::TestWithParam<ImageGeometry> {};
  * Tests
  */
 
-TEST_P(ImageGeometry_Test, imagePixels)
+
+
+/////////////////////////////////////////////////////////////////////////
+//
+//
+TEST_P(ImageGeometry_Test, PixelCount)
 {
   auto img = GetParam();
-  ASSERT_EQ(img.width * img.height, img.imagePixels());
+  ASSERT_EQ(img.width * img.height, img.PixelCount());
 }
 
 
+/////////////////////////////////////////////////////////////////////////
+//
+//
 TEST_P(ImageGeometry_Test, ElementCounts)
 {
   auto img = GetParam();
-  ASSERT_EQ(img.depth, img.pixelElements());
-  ASSERT_EQ(img.depth * img.width, img.rowElements());
-  ASSERT_EQ(img.depth * img.height, img.colElements());
-  ASSERT_EQ(img.depth * img.width * img.height, img.imageElements());
-  ASSERT_EQ(img.depth * img.width * img.height * img.depth, img.volumeElements());
+  ASSERT_EQ(img.depth, img.PixelElements());
+  ASSERT_EQ(img.depth * img.width, img.RowElements());
+  ASSERT_EQ(img.depth * img.height, img.ColElements());
+  ASSERT_EQ(img.depth * img.width * img.height, img.ElementCount());
+  ASSERT_EQ(img.depth * img.width * img.height * img.depth, img.VolumeElements());
 }
 
 
-TEST_P(ImageGeometry_Test, pixelBytes)
+/////////////////////////////////////////////////////////////////////////
+//
+//
+TEST_P(ImageGeometry_Test, ByteCounts)
 {
   auto img = GetParam();
-  ASSERT_EQ(img.depth * img.channel_depth, img.pixelBytes());
-  ASSERT_EQ(img.depth * img.width * img.channel_depth, img.rowBytes());
-  ASSERT_EQ(img.depth * img.height * img.channel_depth, img.colBytes());
-  ASSERT_EQ(img.depth * img.width * img.height * img.channel_depth, img.imageBytes());
+  ASSERT_EQ(img.depth * img.channel_depth, img.PixelBytes());
+  ASSERT_EQ(img.depth * img.width * img.channel_depth, img.RowBytes());
+  ASSERT_EQ(img.depth * img.height * img.channel_depth, img.ColBytes());
+  ASSERT_EQ(img.depth * img.width * img.height * img.channel_depth, img.ImageBytes());
 }
 
 
+/////////////////////////////////////////////////////////////////////////
+//
+//
 TEST_P(ImageGeometry_Test, Index)
 {
   auto img = GetParam();
@@ -93,13 +107,15 @@ TEST_P(ImageGeometry_Test, Index)
 }
 
 
-
-TEST_P(ImageGeometry_Test, getStride)
+/////////////////////////////////////////////////////////////////////////
+//
+//
+TEST_P(ImageGeometry_Test, GetStride)
 {
   auto img = GetParam();
 
-  // imageBytes() so it is deterministic but not the same for every case
-  auto rng = nn::test::Rand(img.imageBytes());
+  // ImageBytes() so it is deterministic but not the same for every case
+  auto rng = nn::test::Rand(img.ImageBytes());
 
   for(int k = 0; k < 10; ++k){
 
@@ -113,15 +129,15 @@ TEST_P(ImageGeometry_Test, getStride)
     auto xans2 = rng.rand<unsigned>(0, img.depth -1);
     auto vect2 = ImageVect(rows2, cols2, xans2);
 
-    auto stride = img.getStride(rows1, cols1, xans1);
+    auto stride = img.GetStride(rows1, cols1, xans1);
 
     ASSERT_EQ(stride, (xans1 + cols1 * img.depth + rows1 * img.depth * img.width) * img.channel_depth);
 
-    stride = img.getStride(vect1);
+    stride = img.GetStride(vect1);
 
     ASSERT_EQ(stride, (xans1 + cols1 * img.depth + rows1 * img.depth * img.width) * img.channel_depth);
 
-    stride = img.getStride( vect1, vect2 );
+    stride = img.GetStride( vect1, vect2 );
 
     auto delta = vect2 - vect1;
 
@@ -130,7 +146,9 @@ TEST_P(ImageGeometry_Test, getStride)
 }
 
 
-
+/////////////////////////////////////////////////////////////////////////
+//
+//
 TEST_P(ImageGeometry_Test, IsWithinImage)
 {
   auto img = GetParam();
@@ -160,11 +178,15 @@ TEST_P(ImageGeometry_Test, IsWithinImage)
   }
 }
 
+
+/////////////////////////////////////////////////////////////////////////
+//
+//
 template <typename T_elm>
 static void _ElementTest(nn::ImageGeometry img)
 {
   img.channel_depth = sizeof(T_elm);
-  auto input = std::vector<T_elm>( img.imageElements() );
+  auto input = std::vector<T_elm>( img.ElementCount() );
   int k = 0;
   for(int row = 0; row < img.height; ++row){
     for(int col = 0; col < img.width; ++col){
@@ -191,13 +213,14 @@ TEST_P(ImageGeometry_Test, Element)
 }
 
 
-
-
+/////////////////////////////////////////////////////////////////////////
+//
+//
 template <typename T_elm>
 static void _GetTest(nn::ImageGeometry img)
 {
   img.channel_depth = sizeof(T_elm);
-  auto input = std::vector<T_elm>( img.imageElements() );
+  auto input = std::vector<T_elm>( img.ElementCount() );
   int k = 0;
   for(int row = -1; row <= img.height; ++row){
     for(int col = -1; col <= img.width; ++col){
@@ -224,6 +247,7 @@ static void _GetTest(nn::ImageGeometry img)
   }
 }
 
+
 TEST_P(ImageGeometry_Test, Get)
 {
   switch(GetParam().channel_depth){
@@ -235,11 +259,14 @@ TEST_P(ImageGeometry_Test, Get)
 }
 
 
+/////////////////////////////////////////////////////////////////////////
+//
+//
 template <typename T_elm>
 static void _ApplyOpTest(nn::ImageGeometry img)
 {
     img.channel_depth = sizeof(T_elm);
-    auto buff = std::vector<T_elm>( img.imageElements() );
+    auto buff = std::vector<T_elm>( img.ElementCount() );
     std::memset(&buff[0], 0, buff.size() * sizeof(T_elm));
 
     auto lam = [](const int row, const int col, const int chan, T_elm& elm) {

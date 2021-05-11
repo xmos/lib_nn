@@ -23,7 +23,7 @@ using namespace nn;
 static std::vector<int8_t> run_op(MaxPoolDirectValidFn::Params* params,
                                   const nn::Filter2dGeometry& filter)
 {
-  auto input = std::vector<int8_t>( filter.input.imageElements() );
+  auto input = std::vector<int8_t>( filter.input.ElementCount() );
   auto mp = MaxPoolDirectValidFn(params);
   vpu_ring_buffer_t acc;
 
@@ -63,13 +63,13 @@ TEST(MaxPoolDirectValidFn_Test, ConstructorA)
 
       ASSERT_TRUE( nn::MaxPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
 
-      auto rand = nn::test::Rand(filter.input.imageBytes() * 6632);
+      auto rand = nn::test::Rand(filter.input.ImageBytes() * 6632);
 
       maxpool_direct_valid_params mp_params;
       mp_params.rows = filter.window.shape.height;
       mp_params.cols = filter.window.shape.width;
-      mp_params.col_stride = filter.window.dilation.col * filter.input.pixelBytes();
-      mp_params.row_stride = (filter.window.dilation.row * filter.input.rowBytes())
+      mp_params.col_stride = filter.window.dilation.col * filter.input.PixelBytes();
+      mp_params.row_stride = (filter.window.dilation.row * filter.input.RowBytes())
                             - (filter.window.shape.width * mp_params.col_stride);
 
       auto params = MaxPoolDirectValidFn::Params(mp_params);
@@ -98,7 +98,7 @@ TEST(MaxPoolDirectValidFn_Test, ConstructorB)
 
       ASSERT_TRUE( nn::MaxPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
 
-      auto rand = nn::test::Rand(filter.input.imageBytes() * 6632);
+      auto rand = nn::test::Rand(filter.input.ImageBytes() * 6632);
 
       auto params = MaxPoolDirectValidFn::Params(filter.input, filter.window);
 
@@ -126,7 +126,7 @@ TEST(MaxPoolDirectValidFn_Test, Serialization)
 
       ASSERT_TRUE( nn::MaxPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
 
-      auto rand = nn::test::Rand(filter.input.imageBytes() * 6632);
+      auto rand = nn::test::Rand(filter.input.ImageBytes() * 6632);
 
       MaxPoolDirectValidFn::Params params = MaxPoolDirectValidFn::Params(filter.input, filter.window);
 
@@ -163,14 +163,14 @@ TEST(MaxPoolDirectValidFn_Test, aggregate_fn)
 
       ASSERT_TRUE( nn::MaxPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
 
-      const auto window_pixels = filter.window.shape.imagePixels();
+      const auto window_pixels = filter.window.shape.PixelCount();
 
       auto rand = nn::test::Rand(43242 * window_pixels );
 
       auto params = MaxPoolDirectValidFn::Params( filter.input, filter.window );
       auto op = MaxPoolDirectValidFn( &params );
 
-      auto input_img  = std::vector<int8_t>( filter.input.imageElements() );
+      auto input_img  = std::vector<int8_t>( filter.input.ElementCount() );
       auto in_start = filter.input.Index({filter.window.start.row, filter.window.start.col, 0});
       auto exp = std::vector<int8_t>( MaxPoolDirectValidFn::ChannelsPerOutputGroup );
 
@@ -223,7 +223,7 @@ TEST(MaxPoolDirectValidFn_Test, maxpool_direct_valid_ref_test)
 
       ASSERT_TRUE( nn::MaxPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
 
-      const auto window_pixels = filter.window.shape.imagePixels();
+      const auto window_pixels = filter.window.shape.PixelCount();
 
       auto rand = nn::test::Rand(4322 * window_pixels );
 
@@ -231,7 +231,7 @@ TEST(MaxPoolDirectValidFn_Test, maxpool_direct_valid_ref_test)
 
       int8_t exp[VPU_INT8_EPV];
 
-      auto input_img = std::vector<int8_t>( filter.input.imageElements() );
+      auto input_img = std::vector<int8_t>( filter.input.ElementCount() );
       auto in_start = filter.input.Index({filter.window.start.row, filter.window.start.col, 0});
 
       rand.rand_bytes( &input_img[0], sizeof(int8_t) * input_img.size() );

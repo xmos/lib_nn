@@ -26,7 +26,7 @@ static std::vector<int8_t> GenerateInputImage(
     const nn::Filter2dGeometry& filter,
     nn::test::Rand& rnd)
 {
-  std::vector<int8_t> input_img( filter.input.imageElements() );
+  std::vector<int8_t> input_img( filter.input.ElementCount() );
   rnd.rand_bytes( &input_img[0], input_img.size() * sizeof(int8_t) );
   return input_img;
 }
@@ -44,7 +44,7 @@ static std::vector<int8_t> RunOperator_Generic(
     const nn::ImageRegion& region,
     const std::vector<int8_t> input_img) 
 {
-  auto output_img = std::vector<int8_t>( filter.output.imageElements() );
+  auto output_img = std::vector<int8_t>( filter.output.ElementCount() );
 
   std:memset(&output_img[0], 0, output_img.size() * sizeof(int8_t));
 
@@ -86,7 +86,7 @@ static std::vector<int8_t> RunOperator_Valid(
     const nn::ImageRegion& region,
     const std::vector<int8_t> input_img) 
 {
-  auto output_img = std::vector<int8_t>( filter.output.imageElements() );
+  auto output_img = std::vector<int8_t>( filter.output.ElementCount() );
 
   std:memset(&output_img[0], 0, output_img.size() * sizeof(int8_t));
 
@@ -141,9 +141,9 @@ TEST(MaxPool2d_Generic_Test, CompareWithReference)
       continue;
     }
 
-    auto rand = nn::test::Rand(  (filter.input.imageBytes()+7) 
-                              * (filter.window.shape.imageBytes()+13)
-                              * (filter.output.imageBytes()+23) );
+    auto rand = nn::test::Rand(  (filter.input.ImageBytes()+7) 
+                              * (filter.window.shape.ImageBytes()+13)
+                              * (filter.output.ImageBytes()+23) );
 
     const auto cog_count = nn::MaxPool2d::OutputGroups( filter.output.depth );
 
@@ -227,9 +227,9 @@ TEST(MaxPool2d_Valid_Test, CompareWithReference)
       continue;
     }
 
-    auto rand = nn::test::Rand(  (filter.input.imageBytes()+7) 
-                              * (filter.window.shape.imageBytes()+13)
-                              * (filter.output.imageBytes()+23) );
+    auto rand = nn::test::Rand(  (filter.input.ImageBytes()+7) 
+                              * (filter.window.shape.ImageBytes()+13)
+                              * (filter.output.ImageBytes()+23) );
 
     const auto cog_count = nn::MaxPool2d::OutputGroups( filter.output.depth );
 

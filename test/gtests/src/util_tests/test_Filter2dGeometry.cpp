@@ -145,7 +145,7 @@ TEST(Filter2dGeometry_Test, getReceptiveVolume)
     filter_set.Reset();
     for(auto filter : filter_set) {
 
-      int input_elms = filter.window.shape.imagePixels() * (filter.IsDepthwise()? 1 : filter.input.depth);
+      int input_elms = filter.window.shape.PixelCount() * (filter.IsDepthwise()? 1 : filter.input.depth);
       
       ASSERT_EQ(input_elms, filter.getReceptiveVolumeElements()) << "Filter: " << filter;
       ASSERT_EQ(input_elms * filter.input.channel_depth, filter.getReceptiveVolumeBytes()) << "Filter: " << filter;

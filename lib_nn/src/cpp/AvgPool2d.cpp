@@ -37,7 +37,7 @@ void AvgPool2d::ComputeScaleShift(const WindowGeometry& window,
                                   int8_t& input_scale,
                                   int16_t& output_shift)
 {
-  ComputeScaleShift(window.shape.imagePixels(), input_scale, output_shift);
+  ComputeScaleShift(window.shape.PixelCount(), input_scale, output_shift);
 }
 
 void AvgPool2d::ComputeScaleShift(const int window_pixels,

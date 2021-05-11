@@ -89,9 +89,9 @@ TEST_P(AddElementwiseReferenceTest, AddElementwiseReference)
 
   auto rng = Rand(params.data_seed);
 
-  auto input0   = std::vector<int8_t>( params.image.imageElements() );
-  auto input1   = std::vector<int8_t>( params.image.imageElements() );
-  auto expected = std::vector<int8_t>( params.image.imageElements() );
+  auto input0   = std::vector<int8_t>( params.image.ElementCount() );
+  auto input1   = std::vector<int8_t>( params.image.ElementCount() );
+  auto expected = std::vector<int8_t>( params.image.ElementCount() );
 
   //fill images.
   for(int k = 0; k < input0.size(); k++) {

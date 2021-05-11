@@ -22,7 +22,7 @@ MaxPoolPatchFn::Params::Params(const int32_t pixel_count)
 }
 
 MaxPoolPatchFn::Params::Params(const nn::WindowGeometry& window)
-    : pixel_count(window.shape.imagePixels())
+    : pixel_count(window.shape.PixelCount())
 {
 }
 
@@ -97,9 +97,9 @@ MaxPoolDirectValidFn::Params::Params(const maxpool_direct_valid_params& mp_param
 MaxPoolDirectValidFn::Params::Params(const nn::ImageGeometry& input_img,
                                      const nn::WindowGeometry& window)
 {
-  this->mp_params.col_stride = input_img.pixelBytes() * window.dilation.col;
+  this->mp_params.col_stride = input_img.PixelBytes() * window.dilation.col;
   this->mp_params.cols = window.shape.width;
-  this->mp_params.row_stride = input_img.getStride( window.dilation.row, 
+  this->mp_params.row_stride = input_img.GetStride( window.dilation.row, 
                                                    -(window.shape.width) * window.dilation.col, 0);
   this->mp_params.rows = window.shape.height;
 }

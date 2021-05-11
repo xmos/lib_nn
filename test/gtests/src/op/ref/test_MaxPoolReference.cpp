@@ -42,8 +42,8 @@ TEST(MaxPoolReference_Test, SanityCheck)
     filter_set.Reset();
     for(auto geom : filter_set){
 
-      auto input = std::vector<int8_t>(geom.input.imageElements());
-      auto expected = std::vector<int8_t>(geom.output.imageElements());
+      auto input = std::vector<int8_t>(geom.input.ElementCount());
+      auto expected = std::vector<int8_t>(geom.output.ElementCount());
 
       for(int k = 0; k < input.size(); k++)
         input[k] = rng.rand<int8_t>();

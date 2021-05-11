@@ -10,35 +10,10 @@
 
 using namespace nn;
 
-static std::vector<WindowGeometry> TestGeometries(const int count_per_shape)
-{
-  auto r = nn::test::Rand();
 
-  const auto max_height = 4;
-  const auto max_width = 4;
-  const auto max_depth = 4;
-
-  auto res = std::vector<WindowGeometry>( );
-
-  for(int K_h = 1; K_h < max_height; K_h++) {
-    for(int K_w = 1; K_w < max_width; K_w++) {
-      for(int K_d = 1; K_d < max_depth; K_d++) {
-
-        for(int i = 0; i < count_per_shape; ++i){
-          auto g = WindowGeometry(K_h, K_w, K_d,
-                                  r.rand(1-K_h, K_h-1), r.rand(1-K_w, K_w-1),
-                                  r.rand(1, 3), r.rand(1, 3), r.rand(0,1),
-                                  r.rand(1, 3), r.rand(1, 3) );
-          res.push_back(g);
-        }
-      }
-    }
-  }
-  return res;
-}
-
-class WindowGeometryTest : public ::testing::TestWithParam<WindowGeometry> {};
-
+/////////////////////////////////////////////////////////////////////////
+//
+//
 TEST(WindowGeometry_Test, Constructor)
 {
   for(int iter = 0; iter < 100; iter++){
@@ -83,6 +58,9 @@ TEST(WindowGeometry_Test, Constructor)
 }
 
 
+/////////////////////////////////////////////////////////////////////////
+//
+//
 TEST(WindowGeometry_Test, UsesDilation)
 {
   auto r = nn::test::Rand();
@@ -114,8 +92,10 @@ TEST(WindowGeometry_Test, UsesDilation)
 }
 
 
-
-TEST(WindowGeometry_Test, WindowCoords)
+/////////////////////////////////////////////////////////////////////////
+//
+//
+TEST(WindowGeometry_Test, WindowOffset)
 {
   auto r = nn::test::Rand();
 
@@ -140,7 +120,7 @@ TEST(WindowGeometry_Test, WindowCoords)
             for(int j = 0; j < 10; ++j) {
               for(int k = 0; k < 10; ++k) {
                 auto out_v = ImageVect(i,j,k);
-                auto res_v = win.WindowCoords(out_v);
+                auto res_v = win.WindowOffset(out_v);
                 EXPECT_EQ(exp_v.row, res_v.row);
                 EXPECT_EQ(exp_v.col, res_v.col);
                 EXPECT_EQ(exp_v.channel, res_v.channel);

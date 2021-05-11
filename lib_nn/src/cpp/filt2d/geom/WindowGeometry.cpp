@@ -3,7 +3,7 @@
 
 using namespace nn;
 
-ImageVect WindowGeometry::WindowCoords(const ImageVect &output_coords) const
+ImageVect WindowGeometry::WindowOffset(const ImageVect &output_coords) const
 {
   auto out_row = start.row + output_coords.row * stride.row;
   auto out_col = start.col + output_coords.col * stride.col;

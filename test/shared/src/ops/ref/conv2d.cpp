@@ -66,7 +66,7 @@ std::vector<int8_t> nn::test::ops::ref::Conv2dDenseReference(
                   (int) filter_geometry.window.shape.width, (int) filter_geometry.input.depth },
   };
 
-  auto output_data = std::vector<int8_t>( filter_geometry.output.imageElements() );
+  auto output_data = std::vector<int8_t>( filter_geometry.output.ElementCount() );
 
   tflite::reference_integer_ops::ConvPerChannel(op_params, 
                               &output_mult[0], &output_shift[0],
@@ -139,7 +139,7 @@ std::vector<int8_t> nn::test::ops::ref::Conv2dDepthwiseReference(
                   (int) filter_geometry.window.shape.width, (int) filter_geometry.input.depth },
   };
 
-  auto output_data = std::vector<int8_t>( filter_geometry.output.imageElements() );
+  auto output_data = std::vector<int8_t>( filter_geometry.output.ElementCount() );
 
   tflite::reference_integer_ops::DepthwiseConvPerChannel(op_params, 
                               &output_mult[0], &output_shift[0],

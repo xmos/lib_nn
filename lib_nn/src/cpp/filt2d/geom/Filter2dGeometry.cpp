@@ -66,12 +66,12 @@ bool Filter2dGeometry::IsDepthwise() const
 
 int Filter2dGeometry::getReceptiveVolumeElements() const
 {
-  return window.shape.height * window.shape.width * input.pixelElements();
+  return window.shape.height * window.shape.width * input.PixelElements();
 }
 
 
 
 int Filter2dGeometry::getReceptiveVolumeBytes() const
 {
-  return window.shape.height * window.shape.width * input.pixelBytes();
+  return window.shape.height * window.shape.width * input.PixelBytes();
 }

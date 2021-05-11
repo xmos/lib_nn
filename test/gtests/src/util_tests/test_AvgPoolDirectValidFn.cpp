@@ -26,7 +26,7 @@ using namespace nn;
 static vpu_ring_buffer_t run_op(AvgPoolDirectValidFn::Params* params,
                                   const nn::Filter2dGeometry& filter)
 {
-  auto input = std::vector<int8_t>( filter.input.imageElements() );
+  auto input = std::vector<int8_t>( filter.input.ElementCount() );
   
   for(int r = 0; r < filter.input.height; r++)
     for(int c = 0; c < filter.input.width; c++)
@@ -60,13 +60,13 @@ TEST(AvgPoolDirectValidFn_Test, ConstructorA)
 
       ASSERT_TRUE( nn::AvgPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
 
-      const auto pixel_count = filter.window.shape.imagePixels();
+      const auto pixel_count = filter.window.shape.PixelCount();
 
       avgpool_direct_valid_params ap_params;
       ap_params.rows = filter.window.shape.height;
       ap_params.cols = filter.window.shape.width;
-      ap_params.col_stride = filter.window.dilation.col * filter.input.pixelBytes();
-      ap_params.row_stride = (filter.window.dilation.row * filter.input.rowBytes())
+      ap_params.col_stride = filter.window.dilation.col * filter.input.PixelBytes();
+      ap_params.row_stride = (filter.window.dilation.row * filter.input.RowBytes())
                             - (filter.window.shape.width * ap_params.col_stride);
       std::memset(ap_params.scale, 12, sizeof(ap_params.scale));
 
@@ -107,7 +107,7 @@ TEST(AvgPoolDirectValidFn_Test, ConstructorB)
 
       ASSERT_TRUE( nn::AvgPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
 
-      const auto pixel_count = filter.window.shape.imagePixels();
+      const auto pixel_count = filter.window.shape.PixelCount();
 
       AvgPoolDirectValidFn::Params params = AvgPoolDirectValidFn::Params( filter, 13 );
 
@@ -147,7 +147,7 @@ TEST(AvgPoolDirectValidFn_Test, Serialization)
 
       ASSERT_TRUE( nn::AvgPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
 
-      const auto pixel_count = filter.window.shape.imagePixels();
+      const auto pixel_count = filter.window.shape.PixelCount();
 
       AvgPoolDirectValidFn::Params params = AvgPoolDirectValidFn::Params( filter, 13 );
 
@@ -192,11 +192,11 @@ TEST(AvgPoolDirectValidFn_Test, aggregate_fn)
 
       ASSERT_TRUE( nn::AvgPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
 
-      const auto pixel_count = filter.window.shape.imagePixels();
+      const auto pixel_count = filter.window.shape.PixelCount();
 
       auto rand = nn::test::Rand( pixel_count * 87989 );
 
-      auto input_img = std::vector<int8_t>( filter.input.imageElements() );
+      auto input_img = std::vector<int8_t>( filter.input.ElementCount() );
         
       int32_t scale = rand.rand<int8_t>();
       AvgPoolDirectValidFn::Params params = AvgPoolDirectValidFn::Params( filter, int8_t(scale) );
@@ -261,9 +261,9 @@ TEST(AvgPoolDirectValidFn_Test, avgpool_direct_valid_ref)
 
       ASSERT_TRUE( nn::AvgPool2d_Valid::SupportsGeometry( filter ) ) << "Filter geometry not supported: " << filter;
 
-      auto rand = nn::test::Rand(8876 * filter.input.imageBytes() );
+      auto rand = nn::test::Rand(8876 * filter.input.ImageBytes() );
 
-      auto input_img = std::vector<int8_t>( filter.input.imageElements() );
+      auto input_img = std::vector<int8_t>( filter.input.ElementCount() );
       auto in_start = filter.input.Index({filter.window.start.row, filter.window.start.col, 0});
 
       const auto scale = rand.rand<int8_t>(1, INT8_MAX);
