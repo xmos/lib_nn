@@ -5,6 +5,7 @@
 #include <sstream>
 #include <cassert>
 #include <limits>
+#include <cmath>
 
 #include "AvgPool2d.hpp"
 
@@ -42,7 +43,7 @@ static std::vector<int8_t> RunOperator_Generic(
 {
   auto output_img = std::vector<int8_t>( filter.output.ElementCount() );
 
-  std:memset(&output_img[0], 0, output_img.size() * sizeof(int8_t));
+  std::memset(&output_img[0], 0, output_img.size() * sizeof(int8_t));
 
   nn::AvgPool2d_Generic::Params params( filter, region );
   
@@ -75,7 +76,7 @@ static std::vector<int8_t> RunOperator_Valid(
 {
   auto output_img = std::vector<int8_t>( filter.output.ElementCount() );
 
-  std:memset(&output_img[0], 0, output_img.size() * sizeof(int8_t));
+  std::memset(&output_img[0], 0, output_img.size() * sizeof(int8_t));
 
   nn::AvgPool2d_Valid::Params params( filter, region );
   

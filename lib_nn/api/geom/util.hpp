@@ -99,8 +99,8 @@ namespace nn {
        * 
        * The order of elements in `coords` is row, column, channel.
        */
-      constexpr ImageVect(const std::array<int,3> coords) noexcept
-          : ImageVect(coords[0], coords[1], coords[2]) { }
+      ImageVect(const std::array<int,3> coords) noexcept
+          : row(coords[0]), col(coords[1]), channel(coords[2]) { }
 
       /**
        * Add another ImageVect to this one.
@@ -179,8 +179,8 @@ namespace nn {
       /**
        * Construct an ImageRegion
        */
-      constexpr ImageRegion(const std::array<int,3> start,
-                            const std::array<int,3> shape) noexcept
+      ImageRegion(const std::array<int,3> start,
+                  const std::array<int,3> shape) noexcept
           : start{start[0], start[1], start[2]}, 
             shape{shape[0], shape[1], shape[2]} { }
 

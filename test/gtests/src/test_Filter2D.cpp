@@ -92,7 +92,7 @@ namespace nn
     int8_t *output_transform_fn(int8_t *Y, vpu_ring_buffer_t *A, int32_t output_channel_group)
     {
       this->calls.output_transform_fn.push_back({Y, A, output_channel_group});
-      int output_count = std::min(output_slice_channel_count - output_channel_group * VPU_INT16_EPV, (int)VPU_INT16_EPV);
+      int output_count = std::min<int>(output_slice_channel_count - output_channel_group * VPU_INT16_EPV, VPU_INT16_EPV);
       for (int ch = 0; ch < output_count; ++ch)
         Y[ch] = 1;
       return Y + output_count;
