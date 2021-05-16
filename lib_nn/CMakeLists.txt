@@ -31,6 +31,11 @@ set_target_properties(lib_nn PROPERTIES
 
 # compile flags
 target_compile_options( lib_nn PRIVATE
-                        -Wno-xcore-fptrgroup
                         -Wno-unused-variable
                         -Wno-missing-braces )
+
+if( ${CMAKE_SYSTEM_NAME} STREQUAL "XCORE" )
+  target_compile_options( lib_nn PRIVATE
+                            -Wno-xcore-fptrgroup )
+endif()
+

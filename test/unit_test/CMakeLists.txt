@@ -31,13 +31,15 @@ target_include_directories( unit_test PUBLIC
                                 ../deps/gemmlowp )
                           
 target_compile_options( unit_test PRIVATE
-                          -Wno-xcore-fptrgroup
                           -Wno-unused-variable
                           -Wno-missing-braces )
 
-
 if ( ${CMAKE_SYSTEM_NAME} STREQUAL "XCORE" )
+
   set_target_properties( unit_test PROPERTIES
                             SUFFIX ".xe"
                             LINK_FLAGS "-target=XCORE-AI-EXPLORER -report" )
+
+  target_compile_options( lib_nn PRIVATE
+                            -Wno-xcore-fptrgroup )
 endif()
