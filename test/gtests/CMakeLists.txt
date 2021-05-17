@@ -1,6 +1,6 @@
 
-
-set( APP_NAME  unit_test )
+# Needs to be different than "unit_test" because that's a different app
+set( APP_NAME  gtest_tests )
 
 file( GLOB_RECURSE C_SOURCES src/*.c )
 file( GLOB_RECURSE CPP_SOURCES src/*.cpp )
@@ -22,7 +22,7 @@ endif()
 
 add_executable( ${APP_NAME} ${SOURCES} )
 
-target_link_libraries( ${APP_NAME}    lib_nn Unity)
+target_link_libraries( ${APP_NAME}    lib_nn gtest)
 
 target_include_directories( ${APP_NAME} PUBLIC 
                                 ../shared/include

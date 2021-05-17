@@ -21,8 +21,11 @@ else()
 endif()
 
 
-
 add_subdirectory( lib_nn )
 add_subdirectory( test/etc/Unity )
 
+set( BUILD_GMOCK OFF )
+add_subdirectory( test/deps/googletest )
+
 add_subdirectory( test/unit_test )
+add_subdirectory( test/gtests )
