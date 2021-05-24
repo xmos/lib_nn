@@ -2,8 +2,8 @@
 #include <ostream>
 #include <cstring>
 
-#ifndef VPU_HPP_
-#define VPU_HPP_
+#ifndef LIB_NN_VPU_HPP_
+#define LIB_NN_VPU_HPP_
 
 #include "xs3_vpu.h"
 
@@ -50,4 +50,4 @@ inline std::ostream &operator<<(std::ostream &stream, const VPURingBuffer &buff)
   return stream;
 }
 
-#endif //VPU_HPP_
+#endif //LIB_NN_VPU_HPP_
