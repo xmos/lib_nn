@@ -20,8 +20,8 @@ PLATFORM_FLAGS := $(PLATFORM_FLAGS_DEFAULT) -DTF_LITE_DISABLE_X86_NEON
 
 
 CC := cc
-XCC := g++
-CXX := g++
+XCC := c++
+CXX := c++
 
 AR_FLAGS := -r
 CC_FLAGS  := -g -O3
