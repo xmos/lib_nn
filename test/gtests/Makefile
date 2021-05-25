@@ -243,7 +243,7 @@ $(APP_EXE_FILE):
 		$(OBJECT_FILES)                     \
 		$(XSCOPE_CONFIG)					\
 		-o $@                               \
-		$(REQUIRED_LIBRARIES)
+		$(REQUIRED_LIBRARIES) -pthread
 		
 
 # #######################################################
