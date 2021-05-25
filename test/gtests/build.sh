@@ -1,5 +1,5 @@
 cd ../deps/googletest
 mkdir -p build
 cd build
-cmake ../
+cmake CXXFLAGS="-pthreads" ../ 
 make all
