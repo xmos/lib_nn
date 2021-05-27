@@ -65,3 +65,6 @@ void vpu_sim_mem_print(void * address, vector_mode mode);
 int64_t vpu_saturate(
     const int64_t input,
     const unsigned bits);
+
+//Assert if the memory access is non-word aligned
+void assert_word_aligned(const void * address);
