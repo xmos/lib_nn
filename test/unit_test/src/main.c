@@ -1,7 +1,6 @@
 // Copyright 2020-2021 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
-
 #include <stdio.h>
 
 #include "unity.h"
@@ -19,7 +18,7 @@ int main(void) {
 
   CALL(test_vpu_memcpy);
   CALL(test_vpu_memset);
- 
+
 #ifndef MEMORY_SAFE
   CALL(test_nn_conv2d_hstrip_deep_padded);
   CALL(test_nn_conv2d_hstrip_deep);
