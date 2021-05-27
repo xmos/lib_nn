@@ -7,6 +7,10 @@
 #include <stdlib.h>
 
 
+void assert_word_aligned(const void * address){
+    assert(((int)address&0x3) == 0);
+}
+
 /**
  * vpu_saturate to the relevent bounds.
  */
@@ -104,30 +108,37 @@ void VCLRDR(xs3_vpu* vpu){
 }
 
 void VLDR(xs3_vpu* vpu, const void* addr){
+    assert_word_aligned(addr);
     memcpy(&vpu->vR.u8[0], addr, XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VLDD(xs3_vpu* vpu, const void* addr){
+    assert_word_aligned(addr);
     memcpy(&vpu->vD.u8[0], addr, XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VLDC(xs3_vpu* vpu, const void* addr){
+    assert_word_aligned(addr);
     memcpy(&vpu->vC.u8[0], addr, XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VSTR(const xs3_vpu* vpu, void* addr){
+    assert_word_aligned(addr);
     memcpy(addr, &vpu->vR.u8[0], XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VSTD(const xs3_vpu* vpu, void* addr){
+    assert_word_aligned(addr);
     memcpy(addr, &vpu->vD.u8[0], XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VSTC(const xs3_vpu* vpu, void* addr){
+    assert_word_aligned(addr);
     memcpy(addr, &vpu->vC.u8[0], XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VSTRPV(const xs3_vpu* vpu, void* addr, unsigned mask){
+    assert_word_aligned(addr);
     int8_t* addr8 = (int8_t*) addr;
 
     for(int i = 0; i < 32; i++){
@@ -141,6 +152,7 @@ void VLMACC(
     xs3_vpu* vpu,
     const void* addr)
 {
+    assert_word_aligned(addr);
     if(vpu->mode == MODE_S8){
         const int8_t* addr8 = (const int8_t*) addr;
 
@@ -177,6 +189,7 @@ void VLMACCR(
     xs3_vpu* vpu,
     const void* addr)
 {
+    assert_word_aligned(addr);
     if(vpu->mode == MODE_S8){
         const int8_t* addr8 = (const int8_t*) addr;
         int64_t acc = get_accumulator(vpu, VPU_INT8_ACC_PERIOD-1);
@@ -216,7 +229,7 @@ void VLMACCR1(
     xs3_vpu* vpu,
     const void* addr)
 {
-
+    assert_word_aligned(addr);
     const int32_t* addr32 = (const int32_t*) addr;
     int64_t acc = get_accumulator(vpu, VPU_BIN_ACC_PERIOD-1);
     
@@ -234,6 +247,7 @@ void VLSAT(
     xs3_vpu* vpu,
     const void* addr)
 {
+    assert_word_aligned(addr);
     if(vpu->mode == MODE_S8){
         const uint16_t* addr16 = (const uint16_t*) addr;
 
@@ -287,6 +301,7 @@ void VLASHR(
     const void* addr,
     const int32_t shr)
 {
+    assert_word_aligned(addr);
     if(vpu->mode == MODE_S8){
         const int8_t* addr8 = (const int8_t*) addr;
 
@@ -328,6 +343,7 @@ void VLADD(
     xs3_vpu* vpu, 
     const void* addr)
 {
+    assert_word_aligned(addr);
     if(vpu->mode == MODE_S8){
         const int8_t* addr8 = (const int8_t*) addr;
         for(int i = 0; i < VPU_INT8_EPV; i++){
@@ -357,6 +373,7 @@ void VLSUB(
     xs3_vpu* vpu, 
     const void* addr)
 {
+    assert_word_aligned(addr);
     if(vpu->mode == MODE_S8){
         const int8_t* addr8 = (const int8_t*) addr;
         for(int i = 0; i < VPU_INT8_EPV; i++){
@@ -385,6 +402,7 @@ void VLMUL(
     xs3_vpu* vpu, 
     const void* addr)
 {
+    assert_word_aligned(addr);
     if(vpu->mode == MODE_S8){
         const int8_t* addr8 = (const int8_t*) addr;
         for(int i = 0; i < VPU_INT8_EPV; i++){
