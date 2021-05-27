@@ -35,7 +35,10 @@ void fc_deepin_shallowout_16_ref(
 {
     assert(C_in % VPU_INT8_EPV == 0);
     assert(C_out <= 16);
-
+    assert_word_aligned((const void *)W);
+    assert_word_aligned((const void *)B);
+    assert_word_aligned((const void *)X);
+    assert_word_aligned((const void *)Y);
     const int row_vlmaccrs = C_in / VPU_INT8_EPV;
 
     //Compute outputs one at a time
@@ -90,6 +93,10 @@ void fc_deepin_shallowout_8_ref(
 {
     assert(C_in % VPU_INT8_EPV == 0);
     assert(C_out <= 16);
+    assert_word_aligned((const void *)W);
+    assert_word_aligned((const void *)B);
+    assert_word_aligned((const void *)X);
+    assert_word_aligned((const void *)Y);
 
     const int row_vlmaccrs = C_in / VPU_INT8_EPV;
 
@@ -147,6 +154,10 @@ void fully_connected_16_ref(
     xs3_vpu vpu;
     const unsigned ACCS = VPU_INT8_ACC_PERIOD;
 
+    assert_word_aligned((const void *)W);
+    assert_word_aligned((const void *)BSO);
+    assert_word_aligned((const void *)X);
+    assert_word_aligned((const void *)Y);
 
 
     Y = ADDR(Y, out_chan_start);
@@ -208,6 +219,10 @@ void fully_connected_8_ref(
     const unsigned ACCS = VPU_INT8_ACC_PERIOD;
 
 
+    assert_word_aligned((const void *)W);
+    assert_word_aligned((const void *)BSO);
+    assert_word_aligned((const void *)X);
+    assert_word_aligned((const void *)Y);
 
     Y = ADDR(Y, out_chan_start);
     W = ADDR(W, out_chan_start * C_in);
