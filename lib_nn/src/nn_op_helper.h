@@ -3,7 +3,7 @@
 
 #ifndef NN_OP_HELPER_H_
 #define NN_OP_HELPER_H_
-
+#include <stdint.h>
 #include "xs3_vpu.h"
 
 /** Get address of array element.

@@ -1,6 +1,9 @@
 // Copyright 2020-2021 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
+#include <stdint.h>
+
+#include "xs3_vpu.h"
 #include "nn_binary_structs.h"
 #include "nn_conv2d_structs.h"
 // Binary Conv2D
