@@ -163,7 +163,7 @@ class ImageGeometry {
    * is returned.
    */
   template <typename T>
-  T Get(const T *img_base, const ImageVect coords, const T pad_value = 0) const;
+  T Get(const T *img_base, const ImageVect &coords, const T pad_value = 0) const;
 
   /**
    * Get the value of the specified element from the provided image.
@@ -203,7 +203,7 @@ T &ImageGeometry::Element(T *img_base, const int row, const int col,
 
 /////////////////////////
 template <typename T>
-T ImageGeometry::Get(const T *img_base, const ImageVect coords,
+T ImageGeometry::Get(const T *img_base, const ImageVect &coords,
                      const T pad_value) const {
   return Get<T>(img_base, coords.row, coords.col, coords.channel, pad_value);
 }
