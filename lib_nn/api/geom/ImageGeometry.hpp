@@ -163,7 +163,8 @@ class ImageGeometry {
    * is returned.
    */
   template <typename T>
-  T Get(const T *img_base, const ImageVect &coords, const T pad_value = 0) const;
+  T Get(const T *img_base, const ImageVect &coords,
+        const T pad_value = 0) const;
 
   /**
    * Get the value of the specified element from the provided image.
