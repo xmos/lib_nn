@@ -2,41 +2,38 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #pragma once
 
-#include <stdint.h>
 #include <assert.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "nn_types.h"
 #include "xs3_vpu.h"
 
 typedef union {
-    uint8_t  u8[VPU_INT8_EPV];
-    int8_t   s8[VPU_INT8_EPV];
+  uint8_t u8[VPU_INT8_EPV];
+  int8_t s8[VPU_INT8_EPV];
 
-    uint16_t u16[VPU_INT16_EPV];
-    int16_t  s16[VPU_INT16_EPV];
+  uint16_t u16[VPU_INT16_EPV];
+  int16_t s16[VPU_INT16_EPV];
 
-    uint32_t u32[VPU_INT32_EPV];
-    int32_t  s32[VPU_INT32_EPV];
+  uint32_t u32[VPU_INT32_EPV];
+  int32_t s32[VPU_INT32_EPV];
 } vpu_vector_t;
 
 typedef enum {
-    MODE_S32 = 0x00,
-    MODE_S16 = 0x100,
-    MODE_S8  = 0x200,
+  MODE_S32 = 0x00,
+  MODE_S16 = 0x100,
+  MODE_S8 = 0x200,
 } vector_mode;
 
 typedef struct {
-    vector_mode mode;
-    vpu_vector_t vR;
-    vpu_vector_t vD;
-    vpu_vector_t vC;
+  vector_mode mode;
+  vpu_vector_t vR;
+  vpu_vector_t vD;
+  vpu_vector_t vC;
 } xs3_vpu;
 
-
-void VSETC(
-    xs3_vpu* vpu,
-    const vector_mode mode);
+void VSETC(xs3_vpu* vpu, const vector_mode mode);
 void VCLRDR(xs3_vpu* vpu);
 void VLDR(xs3_vpu* vpu, const void* addr);
 void VLDD(xs3_vpu* vpu, const void* addr);
@@ -59,12 +56,10 @@ void VDEPTH16(xs3_vpu* vpu);
 
 /** Print vector register contents based on current vector_mode **/
 void vpu_sim_print(xs3_vpu* vpu);
-void vpu_sim_mem_print(void * address, vector_mode mode);
+void vpu_sim_mem_print(void* address, vector_mode mode);
 
-//Function for implementing the saturation logic within the VPU.
-int64_t vpu_saturate(
-    const int64_t input,
-    const unsigned bits);
+// Function for implementing the saturation logic within the VPU.
+int64_t vpu_saturate(const int64_t input, const unsigned bits);
 
-//Assert if the memory access is non-word aligned
-void assert_word_aligned(const void * address);
+// Assert if the memory access is non-word aligned
+void assert_word_aligned(const void* address);

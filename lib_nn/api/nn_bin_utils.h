@@ -16,4 +16,4 @@ void pack_bits_b32(bnn_bool_t* unpacked_p, bnn_b32_t* packed_p, unsigned count,
 void pack_bits_b256(bnn_bool_t* unpacked_p, bnn_b256_t* packed_p,
                     unsigned count, unsigned channels);
 
-#endif //NN_BNN_UTILS_H
+#endif  // NN_BNN_UTILS_H

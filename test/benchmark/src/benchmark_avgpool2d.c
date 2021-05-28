@@ -1,15 +1,14 @@
 // Copyright 2020-2021 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
 #include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <syscall.h>
 
 #include "meas_common.h"
-
 #include "nn_operator.h"
 
 // void benchmark_avgpool2d_case(
@@ -20,7 +19,7 @@
 
 //     int8_t* X = (int8_t*) malloc(x->height * x->width * x->channels);
 //     int8_t* Y = (int8_t*) malloc(y->height * y->width * y->channels);
-    
+
 //     assert(X);
 //     assert(Y);
 
@@ -34,47 +33,48 @@
 //     free(Y);
 // }
 
+#define REQ_ARGS (7)
+void benchmark_avgpool2d(int argc, char** argv) {
+  /*
+      nn_window_op_config_t config;
+      nn_image_params_t x, y;
 
-#define REQ_ARGS    (7)
-void benchmark_avgpool2d(int argc, char** argv){
-/*
-    nn_window_op_config_t config;
-    nn_image_params_t x, y;
-    
-    memset(&config, 0, sizeof(config));
+      memset(&config, 0, sizeof(config));
 
-    config.output.stride.vertical.rows = 1;
-    config.output.stride.horizontal.cols = 1;
-    config.window.inner_stride.vertical.rows = 1;
-    config.window.inner_stride.horizontal.cols = 1;
+      config.output.stride.vertical.rows = 1;
+      config.output.stride.horizontal.cols = 1;
+      config.window.inner_stride.vertical.rows = 1;
+      config.window.inner_stride.horizontal.cols = 1;
 
-    while(argc >= REQ_ARGS){
+      while(argc >= REQ_ARGS){
 
-        int i = 0;
+          int i = 0;
 
-        config.output.shape.height = atoi((char*)argv[i++]);
-        config.output.shape.width = atoi((char*)argv[i++]);
-        config.output.shape.channels = atoi((char*)argv[i++]);
-        config.window.shape.height = atoi((char*)argv[i++]);
-        config.window.shape.width = atoi((char*)argv[i++]);
-        config.window.outer_stride.vertical.rows = atoi((char*)argv[i++]);
-        config.window.outer_stride.horizontal.cols = atoi((char*)argv[i++]);
-        
-        x.height = config.output.shape.height * config.window.outer_stride.vertical.rows 
-                    + config.window.shape.height ;
-        x.width = config.output.shape.width * config.window.outer_stride.horizontal.cols 
-                    + config.window.shape.width ;
-        x.channels = config.output.shape.channels;
-        y.height = config.output.shape.height;
-        y.width = config.output.shape.width;
-        y.channels = config.output.shape.channels;
+          config.output.shape.height = atoi((char*)argv[i++]);
+          config.output.shape.width = atoi((char*)argv[i++]);
+          config.output.shape.channels = atoi((char*)argv[i++]);
+          config.window.shape.height = atoi((char*)argv[i++]);
+          config.window.shape.width = atoi((char*)argv[i++]);
+          config.window.outer_stride.vertical.rows = atoi((char*)argv[i++]);
+          config.window.outer_stride.horizontal.cols = atoi((char*)argv[i++]);
+
+          x.height = config.output.shape.height *
+     config.window.outer_stride.vertical.rows
+                      + config.window.shape.height ;
+          x.width = config.output.shape.width *
+     config.window.outer_stride.horizontal.cols
+                      + config.window.shape.width ;
+          x.channels = config.output.shape.channels;
+          y.height = config.output.shape.height;
+          y.width = config.output.shape.width;
+          y.channels = config.output.shape.channels;
 
 
-        benchmark_avgpool2d_case(&x, &y, &config);
+          benchmark_avgpool2d_case(&x, &y, &config);
 
-        argc -= REQ_ARGS;
-        argv = &(argv[REQ_ARGS]);
-    }
+          argc -= REQ_ARGS;
+          argv = &(argv[REQ_ARGS]);
+      }
 
-*/
+  */
 }

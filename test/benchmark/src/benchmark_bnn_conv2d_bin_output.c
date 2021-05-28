@@ -1,16 +1,15 @@
 // Copyright 2020-2021 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
 #include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <syscall.h>
 #include <xccompat.h>
 
 #include "nn_operator.h"
-
 #include "xcore/hwtimer.h"
 
 #ifdef __xcore__
@@ -19,18 +18,16 @@
 #define WORD_ALIGNED
 #endif
 
-void bnn_conv2d_bin_out_asm(nn_bnn_conv2d_bin_out_asm_plan_t * plan);
+void bnn_conv2d_bin_out_asm(nn_bnn_conv2d_bin_out_asm_plan_t* plan);
 
 void bnn_conv2d_bin_out_asm_prepare(
     nn_bnn_conv2d_bin_out_asm_plan_t* plan, bnn_b32_t* Y_p,
     const bnn_b256_t* X_p, const bnn_b256_t* K_p, const int32_t* thresholds_p,
-    const nn_image_params_t* x, 
-    const nn_image_params_t* y,
-    const nn_window_params_t* k, 
-    const unsigned y_loc_width, const unsigned y_loc_height,
-    const unsigned y_sub_width, const unsigned y_sub_height,
-    const unsigned x_loc_width, const unsigned x_loc_height, 
-    const unsigned k_loc_x, const unsigned k_loc_y, 
+    const nn_image_params_t* x, const nn_image_params_t* y,
+    const nn_window_params_t* k, const unsigned y_loc_width,
+    const unsigned y_loc_height, const unsigned y_sub_width,
+    const unsigned y_sub_height, const unsigned x_loc_width,
+    const unsigned x_loc_height, const unsigned k_loc_x, const unsigned k_loc_y,
     const unsigned k_sub_width, const unsigned k_sub_height);
 
 unsigned run_config(bnn_b32_t* Y_p, bnn_b256_t* X_p, bnn_b256_t* K_p,
@@ -57,9 +54,9 @@ unsigned run_config(bnn_b32_t* Y_p, bnn_b256_t* X_p, bnn_b256_t* K_p,
   k.stride.vertical = v_stride;
 
   nn_bnn_conv2d_bin_out_asm_plan_t plan;
-  bnn_conv2d_bin_out_asm_prepare(&plan, (bnn_b32_t*)Y_p, (bnn_b256_t*)X_p,
-                                 (bnn_b256_t*)K_p, thresholds_p, &x, &y, &k,
-    0, 0,y_width, y_height, 0, 0, 0, 0, k_width, k_height);
+  bnn_conv2d_bin_out_asm_prepare(
+      &plan, (bnn_b32_t*)Y_p, (bnn_b256_t*)X_p, (bnn_b256_t*)K_p, thresholds_p,
+      &x, &y, &k, 0, 0, y_width, y_height, 0, 0, 0, 0, k_width, k_height);
 
   hwtimer_t t = hwtimer_alloc();
 
@@ -150,5 +147,4 @@ void benchmark_bnn_conv2d_bin_output(int argc, char** argv) {
   printf("cycles_executed: %f\n", cycles_executed);
   printf("macc_count:      %u\n", macc_count);
   printf("efficiency:      %f\n", efficiency);
-
 }

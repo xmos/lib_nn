@@ -3,8 +3,8 @@
 #include <assert.h>
 #include <string.h>
 
-#include "nn_operator.h"
 #include "nn_op_utils.h"
+#include "nn_operator.h"
 
 void pad_prepare(nn_pad_plan_t* plan, const padding_sizes_t* p,
                  const nn_image_params_t* x, const unsigned bytes_per_pixel) {
@@ -50,8 +50,8 @@ void pad_ref(void* y, void* x, const padding_sizes_t* p,
   char(*X)[xp->width][bytes_per_pixel] = (char(*)[xp->width][bytes_per_pixel])x;
 
   vpu_memset_32(y, pad_value,
-           (xp->width + left_pad + right_pad) *
-               (top_pad + bottom_pad + xp->height) * bytes_per_pixel / 4);
+                (xp->width + left_pad + right_pad) *
+                    (top_pad + bottom_pad + xp->height) * bytes_per_pixel / 4);
 
   for (unsigned h = 0; h < xp->height; h++) {
     for (unsigned w = 0; w < xp->width; w++) {
