@@ -1,6 +1,7 @@
 // Copyright 2020-2021 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include "nn_bin_types.h"
+#include "xs3_vpu.h"
 
 #define NN_BCONV2D_KERNEL_OVERRUN_WORDS 8
 

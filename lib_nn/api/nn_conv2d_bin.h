@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 
-#include "xs3_vpu.h"
 #include "nn_binary_structs.h"
 #include "nn_conv2d_structs.h"
 // Binary Conv2D
