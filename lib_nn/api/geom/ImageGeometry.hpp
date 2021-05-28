@@ -105,7 +105,7 @@ class ImageGeometry {
    *
    * The "flattened" index of an element is the index of the element when the
    * image is stored in a 1 dimensional array. This is ideal, for example, when
-   * the image image is backed by a `std::vector` object.
+   * the image is backed by a `std::vector` object.
    *
    * This function returns -1 if the specified coordinates refer to an element
    * in padding (i.e. beyond the bounds of the image).
