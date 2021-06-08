@@ -12,7 +12,7 @@
 #include <string.h>
 
 #include "../../../asm/asm_constants.h"
-#include "../../vpu_sim.h"
+#include "vpu_sim.h"
 #include "xs3_vpu.h"
 
 #if CONFIG_SYMMETRIC_SATURATION_conv2d_deep
