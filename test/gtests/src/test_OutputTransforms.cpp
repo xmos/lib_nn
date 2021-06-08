@@ -57,8 +57,13 @@ void pick_accu_range(std::vector<int32_t> &accu_min,
     }
   }
 
-  int32_t max_it = *std::max_element(std::begin(accu_min), std::end(accu_min));
-  int32_t min_it = *std::min_element(std::begin(accu_min), std::end(accu_min));
+  int32_t min_it = 0;
+  int32_t max_it = 0;
+  for (int32_t a : accu_min) {
+    min_it = std::min(min_it, a);
+    max_it = std::max(max_it, a);
+  }
+
   assert(std::abs((double)max_it / min_it) < 2);
 }
 

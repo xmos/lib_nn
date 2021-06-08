@@ -59,8 +59,9 @@ static int clrsbll(long long x) {
 
 template <class activationT>
 int get_max_exponent(std::vector<activationT> &arr) {
-  activationT min_arr = 0;
-  activationT max_arr = 0;
+  activationT min_arr = std::numeric_limits<activationT>::max();
+  activationT max_arr = std::numeric_limits<activationT>::min();
+
   for (activationT a : arr) {
     min_arr = std::min(min_arr, a);
     max_arr = std::max(max_arr, a);
