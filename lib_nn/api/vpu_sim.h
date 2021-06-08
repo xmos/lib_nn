@@ -111,4 +111,4 @@ class VPU {
 }  // namespace nn
 
 #endif
-#endif //LIB_NN_VPU_SIM_H_
+#endif  // LIB_NN_VPU_SIM_H_

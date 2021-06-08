@@ -2,8 +2,8 @@
 
 #include <algorithm>
 #include <cassert>
-#include <cstdint>
 #include <cmath>
+#include <cstdint>
 #include <tuple>
 
 #include "../src/asm/asm_constants.h"
@@ -77,6 +77,9 @@ static int64_t shl(int32_t v, int amount_to_shl) {
   }
 }
 static int count_bits(int64_t v) {
+#ifndef CHAR_BIT
+#define CHAR_BIT 8
+#endif
   return ((sizeof(int64_t) * CHAR_BIT) - clrsbll(v));
 }
 
