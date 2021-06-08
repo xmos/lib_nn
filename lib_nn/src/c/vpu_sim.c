@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void assert_word_aligned(const void* address) {
-  assert(((int)address & 0x3) == 0);
+void assert_word_aligned(const void *address) {
+  assert(((uintptr_t)address & 0x3) == 0);
 }
 
 /**
@@ -23,7 +23,7 @@ int64_t vpu_saturate(const int64_t input, const unsigned bits) {
 /**
  * Get the accumulator for the VPU's current mode
  */
-static int64_t get_accumulator(const xs3_vpu* vpu, unsigned index) {
+static int64_t GetAccuumulator(const xs3_vpu *vpu, unsigned index) {
   if (vpu->mode == MODE_S8 || vpu->mode == MODE_S16) {
     union {
       int16_t s16[2];
@@ -41,14 +41,13 @@ static int64_t get_accumulator(const xs3_vpu* vpu, unsigned index) {
 /**
  * Set the accumulator for the VPU's current mode
  */
-static void set_accumulator(xs3_vpu* vpu, unsigned index, int64_t acc) {
+static void SetAccuumulator(xs3_vpu *vpu, unsigned index, int64_t acc) {
   if (vpu->mode == MODE_S8 || vpu->mode == MODE_S16) {
     unsigned mask = (1 << VPU_INT8_ACC_VR_BITS) - 1;
     vpu->vR.s16[index] = (int16_t)((unsigned)acc & mask);
     mask = mask << VPU_INT8_ACC_VR_BITS;
     vpu->vD.s16[index] =
         (int16_t)(((unsigned)acc & mask) >> VPU_INT8_ACC_VR_BITS);
-
   } else {
     assert(0);  // TODO
   }
@@ -57,7 +56,7 @@ static void set_accumulator(xs3_vpu* vpu, unsigned index, int64_t acc) {
 /**
  * Rotate the accumulators following a VLMACCR
  */
-static void rotate_accumulators(xs3_vpu* vpu) {
+static void rotate_accumulators(xs3_vpu *vpu) {
   if (vpu->mode == MODE_S8 || vpu->mode == MODE_S16) {
     data16_t tmpD = vpu->vD.u16[VPU_INT8_ACC_PERIOD - 1];
     data16_t tmpR = vpu->vR.u16[VPU_INT8_ACC_PERIOD - 1];
@@ -81,46 +80,46 @@ static void rotate_accumulators(xs3_vpu* vpu) {
   }
 }
 
-void VSETC(xs3_vpu* vpu, const vector_mode mode) { vpu->mode = mode; }
+void VSETC(xs3_vpu *vpu, const vector_mode mode) { vpu->mode = mode; }
 
-void VCLRDR(xs3_vpu* vpu) {
+void VCLRDR(xs3_vpu *vpu) {
   memset(&vpu->vR.u8[0], 0, XS3_VPU_VREG_WIDTH_BYTES);
   memset(&vpu->vD.u8[0], 0, XS3_VPU_VREG_WIDTH_BYTES);
 }
 
-void VLDR(xs3_vpu* vpu, const void* addr) {
+void VLDR(xs3_vpu *vpu, const void *addr) {
   assert_word_aligned(addr);
   memcpy(&vpu->vR.u8[0], addr, XS3_VPU_VREG_WIDTH_BYTES);
 }
 
-void VLDD(xs3_vpu* vpu, const void* addr) {
+void VLDD(xs3_vpu *vpu, const void *addr) {
   assert_word_aligned(addr);
   memcpy(&vpu->vD.u8[0], addr, XS3_VPU_VREG_WIDTH_BYTES);
 }
 
-void VLDC(xs3_vpu* vpu, const void* addr) {
+void VLDC(xs3_vpu *vpu, const void *addr) {
   assert_word_aligned(addr);
   memcpy(&vpu->vC.u8[0], addr, XS3_VPU_VREG_WIDTH_BYTES);
 }
 
-void VSTR(const xs3_vpu* vpu, void* addr) {
+void VSTR(const xs3_vpu *vpu, void *addr) {
   assert_word_aligned(addr);
   memcpy(addr, &vpu->vR.u8[0], XS3_VPU_VREG_WIDTH_BYTES);
 }
 
-void VSTD(const xs3_vpu* vpu, void* addr) {
+void VSTD(const xs3_vpu *vpu, void *addr) {
   assert_word_aligned(addr);
   memcpy(addr, &vpu->vD.u8[0], XS3_VPU_VREG_WIDTH_BYTES);
 }
 
-void VSTC(const xs3_vpu* vpu, void* addr) {
+void VSTC(const xs3_vpu *vpu, void *addr) {
   assert_word_aligned(addr);
   memcpy(addr, &vpu->vC.u8[0], XS3_VPU_VREG_WIDTH_BYTES);
 }
 
-void VSTRPV(const xs3_vpu* vpu, void* addr, unsigned mask) {
+void VSTRPV(const xs3_vpu *vpu, void *addr, unsigned mask) {
   assert_word_aligned(addr);
-  int8_t* addr8 = (int8_t*)addr;
+  int8_t *addr8 = (int8_t *)addr;
 
   for (int i = 0; i < 32; i++) {
     if (mask & (1UL << i)) {
@@ -129,81 +128,81 @@ void VSTRPV(const xs3_vpu* vpu, void* addr, unsigned mask) {
   }
 }
 
-void VLMACC(xs3_vpu* vpu, const void* addr) {
+void VLMACC(xs3_vpu *vpu, const void *addr) {
   assert_word_aligned(addr);
   if (vpu->mode == MODE_S8) {
-    const int8_t* addr8 = (const int8_t*)addr;
+    const int8_t *addr8 = (const int8_t *)addr;
 
     for (int i = 0; i < VPU_INT8_VLMACC_ELMS; i++) {
-      int64_t acc = get_accumulator(vpu, i);
+      int64_t acc = GetAccuumulator(vpu, i);
       acc = acc + (((int32_t)vpu->vC.s8[i]) * addr8[i]);
 
-      set_accumulator(vpu, i, vpu_saturate(acc, 32));
+      SetAccuumulator(vpu, i, vpu_saturate(acc, 32));
     }
   } else if (vpu->mode == MODE_S16) {
-    const int16_t* addr16 = (const int16_t*)addr;
+    const int16_t *addr16 = (const int16_t *)addr;
 
     for (int i = 0; i < VPU_INT16_VLMACC_ELMS; i++) {
-      int64_t acc = get_accumulator(vpu, i);
+      int64_t acc = GetAccuumulator(vpu, i);
       acc = acc + (((int32_t)vpu->vC.s16[i]) * addr16[i]);
 
-      set_accumulator(vpu, i, vpu_saturate(acc, 32));
+      SetAccuumulator(vpu, i, vpu_saturate(acc, 32));
     }
   } else if (vpu->mode == MODE_S32) {
-    const int32_t* addr32 = (const int32_t*)addr;
+    const int32_t *addr32 = (const int32_t *)addr;
 
     for (int i = 0; i < VPU_INT32_VLMACC_ELMS; i++) {
-      int64_t acc = get_accumulator(vpu, i);
+      int64_t acc = GetAccuumulator(vpu, i);
       acc = acc + (((int64_t)vpu->vC.s32[i]) * addr32[i]);
 
-      set_accumulator(vpu, i, vpu_saturate(acc, 40));
+      SetAccuumulator(vpu, i, vpu_saturate(acc, 40));
     }
   } else {
     assert(0);  // How'd this happen?
   }
 }
 
-void VLMACCR(xs3_vpu* vpu, const void* addr) {
+void VLMACCR(xs3_vpu *vpu, const void *addr) {
   assert_word_aligned(addr);
   if (vpu->mode == MODE_S8) {
-    const int8_t* addr8 = (const int8_t*)addr;
-    int64_t acc = get_accumulator(vpu, VPU_INT8_ACC_PERIOD - 1);
+    const int8_t *addr8 = (const int8_t *)addr;
+    int64_t acc = GetAccuumulator(vpu, VPU_INT8_ACC_PERIOD - 1);
 
     for (int i = 0; i < VPU_INT8_EPV; i++)
       acc = acc + (((int32_t)vpu->vC.s8[i]) * addr8[i]);
 
     acc = vpu_saturate(acc, 32);
     rotate_accumulators(vpu);
-    set_accumulator(vpu, 0, acc);
+    SetAccuumulator(vpu, 0, acc);
   } else if (vpu->mode == MODE_S16) {
-    const int16_t* addr16 = (const int16_t*)addr;
-    int64_t acc = get_accumulator(vpu, VPU_INT16_ACC_PERIOD - 1);
+    const int16_t *addr16 = (const int16_t *)addr;
+    int64_t acc = GetAccuumulator(vpu, VPU_INT16_ACC_PERIOD - 1);
 
     for (int i = 0; i < VPU_INT16_EPV; i++)
       acc = acc + (((int32_t)vpu->vC.s16[i]) * addr16[i]);
 
     acc = vpu_saturate(acc, 32);
     rotate_accumulators(vpu);
-    set_accumulator(vpu, 0, acc);
+    SetAccuumulator(vpu, 0, acc);
   } else if (vpu->mode == MODE_S32) {
-    const int32_t* addr32 = (const int32_t*)addr;
-    int32_t acc = get_accumulator(vpu, VPU_INT32_ACC_PERIOD - 1);
+    const int32_t *addr32 = (const int32_t *)addr;
+    int32_t acc = GetAccuumulator(vpu, VPU_INT32_ACC_PERIOD - 1);
 
     for (int i = 0; i < VPU_INT32_EPV; i++)
       acc = acc + (((int32_t)vpu->vC.s32[i]) * addr32[i]);
 
     acc = vpu_saturate(acc, 40);
     rotate_accumulators(vpu);
-    set_accumulator(vpu, 0, acc);
+    SetAccuumulator(vpu, 0, acc);
   } else {
     assert(0);  // How'd this happen?
   }
 }
 
-void VLMACCR1(xs3_vpu* vpu, const void* addr) {
+void VLMACCR1(xs3_vpu *vpu, const void *addr) {
   assert_word_aligned(addr);
-  const int32_t* addr32 = (const int32_t*)addr;
-  int64_t acc = get_accumulator(vpu, VPU_BIN_ACC_PERIOD - 1);
+  const int32_t *addr32 = (const int32_t *)addr;
+  int64_t acc = GetAccuumulator(vpu, VPU_BIN_ACC_PERIOD - 1);
 
   for (int i = 0; i < VPU_INT32_EPV; i++) {
     int v = (((int32_t)vpu->vC.s32[i]) ^ addr32[i]);
@@ -212,16 +211,16 @@ void VLMACCR1(xs3_vpu* vpu, const void* addr) {
 
   acc = vpu_saturate(acc, 32);
   rotate_accumulators(vpu);
-  set_accumulator(vpu, 0, acc);
+  SetAccuumulator(vpu, 0, acc);
 }
 
-void VLSAT(xs3_vpu* vpu, const void* addr) {
+void VLSAT(xs3_vpu *vpu, const void *addr) {
   assert_word_aligned(addr);
   if (vpu->mode == MODE_S8) {
-    const uint16_t* addr16 = (const uint16_t*)addr;
+    const uint16_t *addr16 = (const uint16_t *)addr;
 
     for (int i = 0; i < VPU_INT8_ACC_PERIOD; i++) {
-      int32_t acc = get_accumulator(vpu, i);
+      int32_t acc = GetAccuumulator(vpu, i);
 
       if (addr16[i] != 0) acc = acc + (1 << (addr16[i] - 1));  // Round
       acc = acc >> addr16[i];                                  // Shift
@@ -232,10 +231,10 @@ void VLSAT(xs3_vpu* vpu, const void* addr) {
     memset(&vpu->vD.u8[0], 0, XS3_VPU_VREG_WIDTH_BYTES);
     memset(&vpu->vR.u8[VPU_INT8_ACC_PERIOD], 0, VPU_INT8_ACC_PERIOD);
   } else if (vpu->mode == MODE_S16) {
-    const uint16_t* addr16 = (const uint16_t*)addr;
+    const uint16_t *addr16 = (const uint16_t *)addr;
 
     for (int i = 0; i < VPU_INT16_ACC_PERIOD; i++) {
-      int32_t acc = get_accumulator(vpu, i);
+      int32_t acc = GetAccuumulator(vpu, i);
       if (addr16[i] != 0)
         acc = acc + (1 << ((int16_t)(addr16[i] - 1)));  // Round
 
@@ -245,12 +244,11 @@ void VLSAT(xs3_vpu* vpu, const void* addr) {
       vpu->vR.s16[i] = val;
     }
     memset(&vpu->vD.u8[0], 0, XS3_VPU_VREG_WIDTH_BYTES);
-
   } else if (vpu->mode == MODE_S32) {
-    const uint32_t* addr32 = (const uint32_t*)addr;
+    const uint32_t *addr32 = (const uint32_t *)addr;
 
     for (int i = 0; i < VPU_INT32_ACC_PERIOD; i++) {
-      int64_t acc = get_accumulator(vpu, i);
+      int64_t acc = GetAccuumulator(vpu, i);
       if (addr32[i] != 0) acc = acc + (1 << (addr32[i] - 1));  // Round
       acc = acc >> addr32[i];                                  // Shift
       int32_t val = vpu_saturate(acc, 32);                     // vpu_saturate
@@ -263,10 +261,10 @@ void VLSAT(xs3_vpu* vpu, const void* addr) {
   }
 }
 
-void VLASHR(xs3_vpu* vpu, const void* addr, const int32_t shr) {
+void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
   assert_word_aligned(addr);
   if (vpu->mode == MODE_S8) {
-    const int8_t* addr8 = (const int8_t*)addr;
+    const int8_t *addr8 = (const int8_t *)addr;
 
     for (int i = 0; i < VPU_INT8_EPV; i++) {
       int32_t val = addr8[i];
@@ -281,7 +279,7 @@ void VLASHR(xs3_vpu* vpu, const void* addr, const int32_t shr) {
       vpu->vR.s8[i] = vpu_saturate(val, 8);
     }
   } else if (vpu->mode == MODE_S16) {
-    const int16_t* addr16 = (const int16_t*)addr;
+    const int16_t *addr16 = (const int16_t *)addr;
 
     for (int i = 0; i < VPU_INT16_EPV; i++) {
       int32_t val = addr16[i];
@@ -294,7 +292,7 @@ void VLASHR(xs3_vpu* vpu, const void* addr, const int32_t shr) {
       vpu->vR.s16[i] = vpu_saturate(val, 16);
     }
   } else if (vpu->mode == MODE_S32) {
-    const int32_t* addr32 = (const int32_t*)addr;
+    const int32_t *addr32 = (const int32_t *)addr;
 
     for (int i = 0; i < VPU_INT32_EPV; i++) {
       int64_t val = addr32[i];
@@ -311,23 +309,23 @@ void VLASHR(xs3_vpu* vpu, const void* addr, const int32_t shr) {
   }
 }
 
-void VLADD(xs3_vpu* vpu, const void* addr) {
+void VLADD(xs3_vpu *vpu, const void *addr) {
   assert_word_aligned(addr);
   if (vpu->mode == MODE_S8) {
-    const int8_t* addr8 = (const int8_t*)addr;
+    const int8_t *addr8 = (const int8_t *)addr;
     for (int i = 0; i < VPU_INT8_EPV; i++) {
       int32_t val = addr8[i];
       vpu->vR.s8[i] = vpu_saturate((int32_t)vpu->vR.s8[i] + val, 8);
     }
   } else if (vpu->mode == MODE_S16) {
-    const int16_t* addr16 = (const int16_t*)addr;
+    const int16_t *addr16 = (const int16_t *)addr;
 
     for (int i = 0; i < VPU_INT16_EPV; i++) {
       int32_t val = addr16[i];
       vpu->vR.s16[i] = vpu_saturate((int32_t)vpu->vR.s16[i] + val, 16);
     }
   } else if (vpu->mode == MODE_S32) {
-    const int32_t* addr32 = (const int32_t*)addr;
+    const int32_t *addr32 = (const int32_t *)addr;
 
     for (int i = 0; i < VPU_INT32_EPV; i++) {
       int64_t val = addr32[i];
@@ -338,23 +336,23 @@ void VLADD(xs3_vpu* vpu, const void* addr) {
   }
 }
 
-void VLSUB(xs3_vpu* vpu, const void* addr) {
+void VLSUB(xs3_vpu *vpu, const void *addr) {
   assert_word_aligned(addr);
   if (vpu->mode == MODE_S8) {
-    const int8_t* addr8 = (const int8_t*)addr;
+    const int8_t *addr8 = (const int8_t *)addr;
     for (int i = 0; i < VPU_INT8_EPV; i++) {
       int32_t val = addr8[i];
       vpu->vR.s8[i] = vpu_saturate(val - (int32_t)vpu->vR.s8[i], 8);
     }
   } else if (vpu->mode == MODE_S16) {
-    const int16_t* addr16 = (const int16_t*)addr;
+    const int16_t *addr16 = (const int16_t *)addr;
 
     for (int i = 0; i < VPU_INT16_EPV; i++) {
       int32_t val = addr16[i];
       vpu->vR.s16[i] = vpu_saturate(val - (int32_t)vpu->vR.s16[i], 16);
     }
   } else if (vpu->mode == MODE_S32) {
-    const int32_t* addr32 = (const int32_t*)addr;
+    const int32_t *addr32 = (const int32_t *)addr;
 
     for (int i = 0; i < VPU_INT32_EPV; i++) {
       int64_t val = addr32[i];
@@ -364,17 +362,17 @@ void VLSUB(xs3_vpu* vpu, const void* addr) {
     assert(0);  // How'd this happen?
   }
 }
-void VLMUL(xs3_vpu* vpu, const void* addr) {
+void VLMUL(xs3_vpu *vpu, const void *addr) {
   assert_word_aligned(addr);
   if (vpu->mode == MODE_S8) {
-    const int8_t* addr8 = (const int8_t*)addr;
+    const int8_t *addr8 = (const int8_t *)addr;
     for (int i = 0; i < VPU_INT8_EPV; i++) {
       int32_t val = addr8[i];
       int32_t res = ((int32_t)vpu->vR.s8[i] * val) >> 6;  // TODO use macros
       vpu->vR.s8[i] = vpu_saturate(res, 8);
     }
   } else if (vpu->mode == MODE_S16) {
-    const int16_t* addr16 = (const int16_t*)addr;
+    const int16_t *addr16 = (const int16_t *)addr;
 
     for (int i = 0; i < VPU_INT16_EPV; i++) {
       int64_t val = addr16[i];
@@ -383,7 +381,7 @@ void VLMUL(xs3_vpu* vpu, const void* addr) {
       vpu->vR.s16[i] = vpu_saturate(res, 16);
     }
   } else if (vpu->mode == MODE_S32) {
-    const int32_t* addr32 = (const int32_t*)addr;
+    const int32_t *addr32 = (const int32_t *)addr;
 
     for (int i = 0; i < VPU_INT32_EPV; i++) {
       int64_t val = addr32[i];
@@ -395,7 +393,7 @@ void VLMUL(xs3_vpu* vpu, const void* addr) {
   }
 }
 
-void VDEPTH1(xs3_vpu* vpu) {
+void VDEPTH1(xs3_vpu *vpu) {
   uint32_t bits = 0;
 
   if (vpu->mode == MODE_S8) {
@@ -418,7 +416,7 @@ void VDEPTH1(xs3_vpu* vpu) {
   vpu->vR.s32[0] = bits;
 }
 
-void VDEPTH8(xs3_vpu* vpu) {
+void VDEPTH8(xs3_vpu *vpu) {
   vpu_vector_t vec_tmp;
   memcpy(&vec_tmp, &(vpu->vR), sizeof(vpu_vector_t));
   memset(&(vpu->vR), 0, sizeof(vpu_vector_t));
@@ -438,7 +436,7 @@ void VDEPTH8(xs3_vpu* vpu) {
   }
 }
 
-void VDEPTH16(xs3_vpu* vpu) {
+void VDEPTH16(xs3_vpu *vpu) {
   if (vpu->mode == MODE_S32) {
     for (int i = 0; i < VPU_INT32_EPV; i++) {
       int64_t elm = ((int64_t)vpu->vR.s32[i]) + (1 << 15);
@@ -455,10 +453,10 @@ void VDEPTH16(xs3_vpu* vpu) {
 
 static char signof(int x) { return (x >= 0 ? ' ' : '-'); }
 
-void vpu_sim_mem_print(void* address, vector_mode mode) {
-  int8_t* vC8 = (int8_t*)address;
-  int16_t* vC16 = (int16_t*)address;
-  int32_t* vC32 = (int32_t*)address;
+void vpu_sim_mem_print(void *address, vector_mode mode) {
+  int8_t *vC8 = (int8_t *)address;
+  int16_t *vC16 = (int16_t *)address;
+  int32_t *vC32 = (int32_t *)address;
   switch (mode) {
     case MODE_S8:
       printf("8-bit:\n");
@@ -491,18 +489,18 @@ void vpu_sim_mem_print(void* address, vector_mode mode) {
 
   printf("\n");
 }
-void vpu_sim_print(xs3_vpu* vpu) {
-  int8_t* vC8 = vpu->vC.s8;
-  int8_t* vR8 = vpu->vR.s8;
-  int8_t* vD8 = vpu->vD.s8;
+void vpu_sim_print(xs3_vpu *vpu) {
+  int8_t *vC8 = vpu->vC.s8;
+  int8_t *vR8 = vpu->vR.s8;
+  int8_t *vD8 = vpu->vD.s8;
 
-  int16_t* vC16 = vpu->vC.s16;
-  int16_t* vR16 = vpu->vR.s16;
-  int16_t* vD16 = vpu->vD.s16;
+  int16_t *vC16 = vpu->vC.s16;
+  int16_t *vR16 = vpu->vR.s16;
+  int16_t *vD16 = vpu->vD.s16;
 
-  int32_t* vC32 = vpu->vC.s32;
-  int32_t* vR32 = vpu->vR.s32;
-  int32_t* vD32 = vpu->vD.s32;
+  int32_t *vC32 = vpu->vC.s32;
+  int32_t *vR32 = vpu->vR.s32;
+  int32_t *vD32 = vpu->vD.s32;
   switch (vpu->mode) {
     case MODE_S8:
       printf("8-bit:     vC     \t  vR     \t   vD\n");
