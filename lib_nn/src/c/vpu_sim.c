@@ -23,7 +23,7 @@ int64_t vpu_saturate(const int64_t input, const unsigned bits) {
 /**
  * Get the accumulator for the VPU's current mode
  */
-static int64_t GetAccuumulator(const xs3_vpu *vpu, unsigned index) {
+static int64_t GetAccumulator(const xs3_vpu *vpu, unsigned index) {
   if (vpu->mode == MODE_S8 || vpu->mode == MODE_S16) {
     union {
       int16_t s16[2];
@@ -41,7 +41,7 @@ static int64_t GetAccuumulator(const xs3_vpu *vpu, unsigned index) {
 /**
  * Set the accumulator for the VPU's current mode
  */
-static void SetAccuumulator(xs3_vpu *vpu, unsigned index, int64_t acc) {
+static void SetAccumulator(xs3_vpu *vpu, unsigned index, int64_t acc) {
   if (vpu->mode == MODE_S8 || vpu->mode == MODE_S16) {
     unsigned mask = (1 << VPU_INT8_ACC_VR_BITS) - 1;
     vpu->vR.s16[index] = (int16_t)((unsigned)acc & mask);
@@ -134,28 +134,28 @@ void VLMACC(xs3_vpu *vpu, const void *addr) {
     const int8_t *addr8 = (const int8_t *)addr;
 
     for (int i = 0; i < VPU_INT8_VLMACC_ELMS; i++) {
-      int64_t acc = GetAccuumulator(vpu, i);
+      int64_t acc = GetAccumulator(vpu, i);
       acc = acc + (((int32_t)vpu->vC.s8[i]) * addr8[i]);
 
-      SetAccuumulator(vpu, i, vpu_saturate(acc, 32));
+      SetAccumulator(vpu, i, vpu_saturate(acc, 32));
     }
   } else if (vpu->mode == MODE_S16) {
     const int16_t *addr16 = (const int16_t *)addr;
 
     for (int i = 0; i < VPU_INT16_VLMACC_ELMS; i++) {
-      int64_t acc = GetAccuumulator(vpu, i);
+      int64_t acc = GetAccumulator(vpu, i);
       acc = acc + (((int32_t)vpu->vC.s16[i]) * addr16[i]);
 
-      SetAccuumulator(vpu, i, vpu_saturate(acc, 32));
+      SetAccumulator(vpu, i, vpu_saturate(acc, 32));
     }
   } else if (vpu->mode == MODE_S32) {
     const int32_t *addr32 = (const int32_t *)addr;
 
     for (int i = 0; i < VPU_INT32_VLMACC_ELMS; i++) {
-      int64_t acc = GetAccuumulator(vpu, i);
+      int64_t acc = GetAccumulator(vpu, i);
       acc = acc + (((int64_t)vpu->vC.s32[i]) * addr32[i]);
 
-      SetAccuumulator(vpu, i, vpu_saturate(acc, 40));
+      SetAccumulator(vpu, i, vpu_saturate(acc, 40));
     }
   } else {
     assert(0);  // How'd this happen?
@@ -166,34 +166,34 @@ void VLMACCR(xs3_vpu *vpu, const void *addr) {
   assert_word_aligned(addr);
   if (vpu->mode == MODE_S8) {
     const int8_t *addr8 = (const int8_t *)addr;
-    int64_t acc = GetAccuumulator(vpu, VPU_INT8_ACC_PERIOD - 1);
+    int64_t acc = GetAccumulator(vpu, VPU_INT8_ACC_PERIOD - 1);
 
     for (int i = 0; i < VPU_INT8_EPV; i++)
       acc = acc + (((int32_t)vpu->vC.s8[i]) * addr8[i]);
 
     acc = vpu_saturate(acc, 32);
     rotate_accumulators(vpu);
-    SetAccuumulator(vpu, 0, acc);
+    SetAccumulator(vpu, 0, acc);
   } else if (vpu->mode == MODE_S16) {
     const int16_t *addr16 = (const int16_t *)addr;
-    int64_t acc = GetAccuumulator(vpu, VPU_INT16_ACC_PERIOD - 1);
+    int64_t acc = GetAccumulator(vpu, VPU_INT16_ACC_PERIOD - 1);
 
     for (int i = 0; i < VPU_INT16_EPV; i++)
       acc = acc + (((int32_t)vpu->vC.s16[i]) * addr16[i]);
 
     acc = vpu_saturate(acc, 32);
     rotate_accumulators(vpu);
-    SetAccuumulator(vpu, 0, acc);
+    SetAccumulator(vpu, 0, acc);
   } else if (vpu->mode == MODE_S32) {
     const int32_t *addr32 = (const int32_t *)addr;
-    int32_t acc = GetAccuumulator(vpu, VPU_INT32_ACC_PERIOD - 1);
+    int32_t acc = GetAccumulator(vpu, VPU_INT32_ACC_PERIOD - 1);
 
     for (int i = 0; i < VPU_INT32_EPV; i++)
       acc = acc + (((int32_t)vpu->vC.s32[i]) * addr32[i]);
 
     acc = vpu_saturate(acc, 40);
     rotate_accumulators(vpu);
-    SetAccuumulator(vpu, 0, acc);
+    SetAccumulator(vpu, 0, acc);
   } else {
     assert(0);  // How'd this happen?
   }
@@ -202,7 +202,7 @@ void VLMACCR(xs3_vpu *vpu, const void *addr) {
 void VLMACCR1(xs3_vpu *vpu, const void *addr) {
   assert_word_aligned(addr);
   const int32_t *addr32 = (const int32_t *)addr;
-  int64_t acc = GetAccuumulator(vpu, VPU_BIN_ACC_PERIOD - 1);
+  int64_t acc = GetAccumulator(vpu, VPU_BIN_ACC_PERIOD - 1);
 
   for (int i = 0; i < VPU_INT32_EPV; i++) {
     int v = (((int32_t)vpu->vC.s32[i]) ^ addr32[i]);
@@ -211,7 +211,7 @@ void VLMACCR1(xs3_vpu *vpu, const void *addr) {
 
   acc = vpu_saturate(acc, 32);
   rotate_accumulators(vpu);
-  SetAccuumulator(vpu, 0, acc);
+  SetAccumulator(vpu, 0, acc);
 }
 
 void VLSAT(xs3_vpu *vpu, const void *addr) {
@@ -220,7 +220,7 @@ void VLSAT(xs3_vpu *vpu, const void *addr) {
     const uint16_t *addr16 = (const uint16_t *)addr;
 
     for (int i = 0; i < VPU_INT8_ACC_PERIOD; i++) {
-      int32_t acc = GetAccuumulator(vpu, i);
+      int32_t acc = GetAccumulator(vpu, i);
 
       if (addr16[i] != 0) acc = acc + (1 << (addr16[i] - 1));  // Round
       acc = acc >> addr16[i];                                  // Shift
@@ -234,7 +234,7 @@ void VLSAT(xs3_vpu *vpu, const void *addr) {
     const uint16_t *addr16 = (const uint16_t *)addr;
 
     for (int i = 0; i < VPU_INT16_ACC_PERIOD; i++) {
-      int32_t acc = GetAccuumulator(vpu, i);
+      int32_t acc = GetAccumulator(vpu, i);
       if (addr16[i] != 0)
         acc = acc + (1 << ((int16_t)(addr16[i] - 1)));  // Round
 
@@ -248,7 +248,7 @@ void VLSAT(xs3_vpu *vpu, const void *addr) {
     const uint32_t *addr32 = (const uint32_t *)addr;
 
     for (int i = 0; i < VPU_INT32_ACC_PERIOD; i++) {
-      int64_t acc = GetAccuumulator(vpu, i);
+      int64_t acc = GetAccumulator(vpu, i);
       if (addr32[i] != 0) acc = acc + (1 << (addr32[i] - 1));  // Round
       acc = acc >> addr32[i];                                  // Shift
       int32_t val = vpu_saturate(acc, 32);                     // vpu_saturate
