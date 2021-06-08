@@ -1,6 +1,8 @@
 // Copyright 2020 XMOS LIMITED. This Software is subject to the terms of the
 // XMOS Public License: Version 1
-#pragma once
+
+#ifndef LIB_NN_VPU_SIM_H_
+#define LIB_NN_VPU_SIM_H_
 
 #include <assert.h>
 #include <stdint.h>
@@ -109,3 +111,4 @@ class VPU {
 }  // namespace nn
 
 #endif
+#endif //LIB_NN_VPU_SIM_H_
