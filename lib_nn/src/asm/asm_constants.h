@@ -8,7 +8,6 @@
 
 #include "xs3_vpu.h"
 
-// astew: Deprecated. Some asm kernels still use this, though.
 typedef struct {
   // Word offset = 0
   int16_t vec_0x007F[VPU_INT8_ACC_PERIOD];
@@ -22,7 +21,6 @@ typedef struct {
 
 } vpu_constants_t;
 
-// astew: Deprecated. Some asm kernels still use this, though.
 extern const vpu_constants_t vpu_vects;
 
 extern const uint32_t vpu_vect_zero[VPU_INT32_EPV];
