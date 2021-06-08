@@ -1,5 +1,3 @@
-#pragma once
-
 #ifndef LIB_NN_OUTPUT_TRANSFORM_FN_H_
 #define LIB_NN_OUTPUT_TRANSFORM_FN_H_
 
