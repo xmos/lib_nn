@@ -59,8 +59,12 @@ static int clrsbll(long long x) {
 
 template <class activationT>
 int get_max_exponent(std::vector<activationT> &arr) {
-  auto min_arr = *std::min_element(std::begin(arr), std::end(arr));
-  auto max_arr = *std::max_element(std::begin(arr), std::end(arr));
+  auto min_arr = 0;
+  auto max_arr = 0;
+  for (auto a : arr) {
+    min_arr = std::min(min_arr, a);
+    max_arr = std::max(max_arr, a);
+  }
 
   int exp_of_min, exp_of_max;
   std::frexp(min_arr, &exp_of_min);
