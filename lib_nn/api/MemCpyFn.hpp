@@ -1,4 +1,6 @@
-#pragma once
+#ifndef LIB_NN_MEMCPY_FN_HPP_
+#define LIB_NN_MEMCPY_FN_HPP_
+
 #include "geom/Filter2dGeometry.hpp"
 
 namespace nn {
@@ -201,3 +203,4 @@ class ImToColValid : public MemCpyFn {
   int8_t *memcopy_fn(int8_t *T, int8_t *X, int32_t h, int32_t w, int32_t c);
 };
 }  // namespace nn
+#endif  // LIB_NN_MEMCPY_FN_HPP_

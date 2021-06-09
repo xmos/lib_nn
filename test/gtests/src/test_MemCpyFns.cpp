@@ -174,8 +174,9 @@ TEST_F(Test_ImToColPadded, BasicTest) {
                                                             // this is one less
                               int overread_bytes =
                                   cpy.get_overread_bytes();  // TODO add test
-                                                             // that crashes when
-                                                             // this is one less
+                                                             // that crashes
+                                                             // when this is one
+                                                             // less
 
                               int8_t T[scratch_bytes];
                               int8_t X_mem[x_height][x_width][x_channels];
