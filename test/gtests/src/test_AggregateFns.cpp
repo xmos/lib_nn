@@ -16,7 +16,7 @@ class Test_SimpleMatMulInt8 : public ::testing::Test {};
 TEST_F(Test_SimpleMatMulInt8, BasicTest) {
   const int vpu_ring_buffer_length = 16;
 
-  for (auto input_bytes = 1; input_bytes < 48; ++input_bytes) {
+  for (auto input_bytes = 4; input_bytes < 48; input_bytes += 4) {
     std::list<std::tuple<int8_t, int8_t> > args = {
         std::tuple<int8_t, int8_t>{1, 1},  std::tuple<int8_t, int8_t>{1, 0},
         std::tuple<int8_t, int8_t>{0, 1},  std::tuple<int8_t, int8_t>{-1, 1},
@@ -33,8 +33,8 @@ TEST_F(Test_SimpleMatMulInt8, BasicTest) {
         int kernel_bytes =
             MatMulInt8::get_kernel_size(input_bytes, output_channel_count);
 
-        int8_t K[kernel_bytes];
-        int8_t T[scratch_bytes];
+        alignas(4) int8_t K[kernel_bytes];
+        alignas(4) int8_t T[scratch_bytes];
 
         MatMulInt8::Params p(output_channel_count, input_bytes, (int8_t *)K);
         MatMulInt8 mm(&p);
@@ -46,7 +46,7 @@ TEST_F(Test_SimpleMatMulInt8, BasicTest) {
                         vpu_ring_buffer_length;
 
         for (int ocg = 0; ocg < ocg_count; ++ocg) {
-          VPURingBuffer A;
+          alignas(4) VPURingBuffer A;
           mm.aggregate_fn(&A, T, ocg);
 
           int c;
@@ -76,7 +76,7 @@ TEST_F(Test_MatMulInt8, BasicTest) {
   const int vpu_bytes = 32;
   const int vpu_ring_buffer_length = 16;
 
-  for (int input_bytes = 1; input_bytes < 128; ++input_bytes) {
+  for (int input_bytes = 4; input_bytes < 128; input_bytes+=4) {
     for (int output_channel_count = 1; output_channel_count < 48;
          ++output_channel_count) {
       int k_height = 1;
@@ -84,7 +84,7 @@ TEST_F(Test_MatMulInt8, BasicTest) {
 
       std::array<int, 4> shape = {output_channel_count, k_height, k_width,
                                   input_bytes};
-      int8_t raw_weights[output_channel_count][k_height][k_width][input_bytes];
+      alignas(4) int8_t raw_weights[output_channel_count][k_height][k_width][input_bytes];
       assert(sizeof raw_weights == input_bytes * output_channel_count);
 
       for (auto j = 0; j < sizeof raw_weights; ++j)
@@ -97,7 +97,7 @@ TEST_F(Test_MatMulInt8, BasicTest) {
       Conv2dReorderedWeights rw = MatMulInt8::reorder_kernel_weights(
           (int8_t *)raw_weights, shape, 8, pad_val);
 
-      int8_t T[scratch_bytes];
+      alignas(4) int8_t T[scratch_bytes];
 
       for (int j = 0; j < sizeof T; ++j) T[j] = rng.rand<int8_t>();
 
@@ -118,14 +118,17 @@ TEST_F(Test_MatMulInt8, BasicTest) {
         accu_modifier[i] = s;
       }
 
+      alignas(4) int8_t reordered_weights[rw.weights.size()];
+      std::memcpy(reordered_weights, rw.weights.data(), rw.weights.size());
+
       MatMulInt8::Params p(output_channel_count, input_bytes,
-                           rw.weights.data());
+                           reordered_weights);
       MatMulInt8 mm(&p);
       int ocg_count = (output_channel_count + vpu_ring_buffer_length - 1) /
                       vpu_ring_buffer_length;
 
       for (int ocg = 0; ocg < ocg_count; ++ocg) {
-        VPURingBuffer A;
+        alignas(4) VPURingBuffer A;
         mm.aggregate_fn(&A, T, ocg);
 
         int chs_in_group =
@@ -178,8 +181,8 @@ TEST_F(Test_Simple_MatMulDirectFn, BasicTest) {
                 ImageGeometry X_params(x_height, x_width, x_channels);
                 WindowGeometry K_params(k_height, k_width, 1, 1, 1, 1);
 
-                int8_t K[y_channels][k_height][k_width][x_channels];
-                int8_t T[x_height][x_width][x_channels];
+                alignas(4) int8_t K[y_channels][k_height][k_width][x_channels];
+                alignas(4) int8_t T[x_height][x_width][x_channels];
 
                 int8_t *weights =
                     (int8_t *)K;  // todo we will switch to usnig the boggler
@@ -198,7 +201,7 @@ TEST_F(Test_Simple_MatMulDirectFn, BasicTest) {
                 for (int x = 0; x < x_height - k_height + 1; ++x) {
                   for (int y = 0; y < x_width - k_width + 1; ++y) {
                     for (int ocg = 0; ocg < ocg_count; ++ocg) {
-                      VPURingBuffer A;
+                      alignas(4) VPURingBuffer A;
                       mmd.aggregate_fn(&A, (int8_t *)T, ocg);
 
                       for (int output_chan = 0;
@@ -271,13 +274,13 @@ TEST_F(Test_MatMulDirectFn, BasicTest) {
 
                         std::array<int, 4> shape = {output_channels, k_height,
                                                     k_width, x_channels};
-                        int8_t raw_weights[output_channels][k_height][k_width]
+                        alignas(4) int8_t raw_weights[output_channels][k_height][k_width]
                                           [x_channels];
 
                         for (int j = 0; j < sizeof raw_weights; ++j)
                           ((int8_t *)raw_weights)[j] = rng.rand<int8_t>();
 
-                        int8_t X_mem[x_height][x_width][x_channels];
+                        alignas(4) int8_t X_mem[x_height][x_width][x_channels];
 
                         for (int j = 0; j < sizeof X_mem; ++j)
                           ((int8_t *)X_mem)[j] = rng.rand<int8_t>();
@@ -299,7 +302,7 @@ TEST_F(Test_MatMulDirectFn, BasicTest) {
                             vpu_ring_buffer_length;
 
                         for (int ocg = 0; ocg < ocg_count; ++ocg) {
-                          VPURingBuffer A;
+                          alignas(4) VPURingBuffer A;
                           mmd.aggregate_fn(&A, (int8_t *)X_mem, ocg);
 
                           int chs_in_group = std::min(
