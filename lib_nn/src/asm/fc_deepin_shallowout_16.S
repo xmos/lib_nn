@@ -3,6 +3,7 @@
 
 #if defined(__XS3A__)
 
+#include "preload.h"
 
 /*  
 void fc_deepin_shallowout_16(
@@ -79,13 +80,16 @@ FUNCTION_NAME:
     
 .L_maccA:
     {   add r9, r9, _32                         ;   vldc r9[0]                          }
+    PRELOAD(r11, W)
     {   sub r10, r10, 1                         ;   vlmaccr W[0]                        }
     {   add W, W, _32                           ;   bt r10, .L_maccA                    }
 
 .L_maccA_end:
     {   shl r11, _32, 3                         ;   vadddr                              }
     {   ldc r10, 3                              ;   vsetc r11                           }
+    PRELOAD(r11, shifts)
     {   sub C_out, C_out, 1                     ;   vlsat shifts[0]                     }
+    PRELOAD(r11, scales)
     {                                            ;   vlmul scales[0]                     }
     vstrpv Y[0], r10
     {                                            ;   bf C_out, .Lfunc_end                }
@@ -104,14 +108,18 @@ FUNCTION_NAME:
     
 .L_maccB:
     {   add r9, r9, _32                         ;   vldc r9[0]                          }
+//    PRELOAD(r11, W)
     {   sub r10, r10, 1                         ;   vlmaccr W[0]                        }
     {   add W, W, _32                           ;   bt r10, .L_maccB                    }
 
 .L_maccB_end:
     {   ldc r10, 0xC                            ;   vadddr                              }
+//    PRELOAD(r11, r11)
     {   shl r11, _32, 3                         ;   vlmaccr r11[0]                      }
     {   sub C_out, C_out, 1                     ;   vsetc r11                           }
+    PRELOAD(r11, shifts)
     {   add shifts, shifts, 4                   ;   vlsat shifts[0]                     }
+    PRELOAD(r11, scales)
     {   add scales, scales, 4                   ;   vlmul scales[0]                     }
     vstrpv Y[0], r10
     {   add Y, Y, 4                             ;   bt C_out, .L_row_top_aligned        }

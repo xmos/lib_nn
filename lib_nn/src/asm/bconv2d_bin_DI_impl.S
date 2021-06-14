@@ -4,6 +4,8 @@
 
 .issue_mode  dual
 
+#include "preload.h"
+
 //Plan layout
 #define PLAN_OUTER_X_H_STEP        0
 #define PLAN_OC_LOOP_COUNTER       1
@@ -127,24 +129,40 @@ bnn_make_16_bit_output:
             bnn_ic_inner_loop:
                 {vldc X_p[0];      add X_p, X_p, r_256_bits}
 
+                PRELOAD(t, K_p)
                 {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                PRELOAD(t, K_p)
                 {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                PRELOAD(t, K_p)
                 {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
-                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
-
-                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
-                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
-                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
-                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
-
-                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
-                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
-                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                PRELOAD(t, K_p)
                 {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
 
+                PRELOAD(t, K_p)
                 {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                PRELOAD(t, K_p)
                 {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                PRELOAD(t, K_p)
                 {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                PRELOAD(t, K_p)
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+
+                PRELOAD(t, K_p)
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                PRELOAD(t, K_p)
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                PRELOAD(t, K_p)
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                PRELOAD(t, K_p)
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+
+                PRELOAD(t, K_p)
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                PRELOAD(t, K_p)
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                PRELOAD(t, K_p)
+                {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+                PRELOAD(t, K_p)
                 {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
 
             {bt ic_loop_counter, bnn_ic_inner_loop; sub ic_loop_counter, ic_loop_counter, 1}
@@ -228,19 +246,21 @@ FUNCTION_NAME:
                 {ldw X_p, sp[S_X_p]; ldc s, 32}
                 {bl bnn_make_16_bit_output ; mov t, threshold_current }
 
-                ldaw s, sp[S_THRESHOLDS_0_15]
                 ldaw t, sp[S_ZERO_256] //TODO use the constant pool
+                PRELOAD(s, t)
                 {vlsat t[0] ; nop}
                 {vdepth1; ldc t, 3}
+                ldaw s, sp[S_THRESHOLDS_0_15]
                 vstrpv s[0], t
 
                 {ldw X_p, sp[S_X_p]; ldc s, 32}
                 {bl bnn_make_16_bit_output ; mov t, threshold_current }
 
-                ldaw s, sp[S_THRESHOLDS_16_31] 
                 ldaw t, sp[S_ZERO_256] //TODO use the constant pool
+                PRELOAD(s, t)
                 {vlsat t[0] ; nop} 
                 {vdepth1; ldc t, 3}
+                ldaw s, sp[S_THRESHOLDS_16_31] 
                 vstrpv s[0], t
                 
                 //merge the two 16 bits together

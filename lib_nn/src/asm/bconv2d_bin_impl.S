@@ -3,6 +3,7 @@
 #if defined(__XS3A__)
 
 .issue_mode  dual
+#include "preload.h"
 
 //Plan layout
 #define PLAN_K_HEIGHT_LOOP_COUNTER 0
@@ -158,24 +159,40 @@ bnn_compute_patch:
 
     bnn_patch_loop:
         {vldc X_p[0];      add X_p, X_p, r_256_bits}
+        PRELOAD(s, K_p)
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        PRELOAD(s, K_p)
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        PRELOAD(s, K_p)
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
-        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
-
-        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
-        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
-        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
-        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
-
-        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
-        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
-        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        PRELOAD(s, K_p)
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
 
+        PRELOAD(s, K_p)
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        PRELOAD(s, K_p)
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        PRELOAD(s, K_p)
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        PRELOAD(s, K_p)
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+
+        PRELOAD(s, K_p)
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        PRELOAD(s, K_p)
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        PRELOAD(s, K_p)
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        PRELOAD(s, K_p)
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+
+        PRELOAD(s, K_p)
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        PRELOAD(s, K_p)
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        PRELOAD(s, K_p)
+        {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        PRELOAD(s, K_p)
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
         
     {bt t, bnn_patch_loop; sub t, t, 1}
@@ -188,24 +205,40 @@ bnn_compute_patch:
     ldw s, sp[S_K_ADJUST]
 
     {vldc X_p[0];     nop }
+    PRELOAD(t, K_p)
     {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    PRELOAD(t, K_p)
     {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    PRELOAD(t, K_p)
     {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
-
-    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
-
-    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
-    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    PRELOAD(t, K_p)
     {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
 
+    PRELOAD(t, K_p)
     {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    PRELOAD(t, K_p)
     {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    PRELOAD(t, K_p)
     {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    PRELOAD(t, K_p)
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+
+    PRELOAD(t, K_p)
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    PRELOAD(t, K_p)
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    PRELOAD(t, K_p)
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    PRELOAD(t, K_p)
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+
+    PRELOAD(t, K_p)
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    PRELOAD(t, K_p)
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    PRELOAD(t, K_p)
+    {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
+    PRELOAD(t, K_p)
     {vlmaccr1 K_p[0] ; add K_p, K_p, s}; 
     
     {retsp 0; nop}
@@ -276,18 +309,20 @@ FUNCTION_NAME:
             
                 {bl bnn_compute_patch ; mov t, threshold_current }
 
-                ldaw s, sp[S_THRESHOLDS_0_15]
                 ldaw t, sp[S_ZERO_256] //TODO use the constant pool
+                PRELOAD(s, t)
                 {vlsat t[0] ; nop}
                 {vdepth1; ldc t, 3}
+                ldaw s, sp[S_THRESHOLDS_0_15]
                 vstrpv s[0], t
 
                 {bl bnn_compute_patch ; mov t, threshold_current }
 
-                ldaw s, sp[S_THRESHOLDS_16_31] 
                 ldaw t, sp[S_ZERO_256] //TODO use the constant pool
+                PRELOAD(s, t)
                 {vlsat t[0] ; nop} 
                 {vdepth1; ldc t, 3}
+                ldaw s, sp[S_THRESHOLDS_16_31] 
                 vstrpv s[0], t
                 
                 //merge the two 16 bits together

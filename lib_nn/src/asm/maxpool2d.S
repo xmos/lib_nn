@@ -4,6 +4,7 @@
 #if defined(__XS3A__)
 
 #include "asm_constants.h"
+#include "preload.h"
 
 /*  
 void maxpool2d_ext(
@@ -231,6 +232,7 @@ FUNCTION_NAME:
                     //Inner col loop
                     .L_pool_col_loop:
                         {   ldaw tmp_B, sp[STACK_CURMAX_VEC]        ;   vldr r11[0]                             }   // vR[i] = X[i]
+                        PRELOAD(tmp_A, tmp_B)
                         {   ldaw tmp_B, sp[STACK_TMP_VEC]           ;   vlsub tmp_B[0]                          }   // vR[i] = CURMAX[i] - X[i]
                         {   add X, r11, C_in                        ;   vdepth1                                 }   // vR = bitmask[i] = CURMAX[i] < X[i]   
                         {   sub cols_left, cols_left, 1             ;   vstr tmp_B[0]                           }   // write bitmask to it can be loaded into a register

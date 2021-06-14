@@ -5,6 +5,7 @@
 
 #include "nn_config.h"
 #include "asm_constants.h"
+#include "preload.h"
 
 /*  
 void avgpool2d_2x2(
@@ -23,7 +24,7 @@ void avgpool2d_2x2(
   #define FUNCTION_NAME avgpool2d_2x2_asm
 #endif //NN_USE_REF
 
-#define NSTACKWORDS  (16+8*1)
+#define NSTACKWORDS  (18+8*1)
     
 .text
 .issue_mode  dual
@@ -71,6 +72,7 @@ void avgpool2d_2x2(
 #define STACK_OUT_COLS          13
 #define STACK_COG_LEFT          14
 #define STACK_TMP               15
+#define STACK_Y                 16
 
 
 #define Y                   r0
@@ -144,11 +146,16 @@ FUNCTION_NAME:
 #if CONFIG_SYMMETRIC_SATURATION_avgpool2d
 
             .L_col_loop:
-                {   ldaw r11, cp[VPU_VEC_0x0002]            ;   vclrdr                                  }
+                {   ldaw r11, cp[VPU_VEC_0x0002]            ;   vclrdr                                  } //[asj: this might fail at link time]
+                PRELOAD(tmp, X)
                 {   add X, X, XY_chans                      ;   vlmacc X[0]                             }
+                PRELOAD(tmp, X)
                 {   add X, X, pool_row_x                    ;   vlmacc X[0]                             }
+                PRELOAD(tmp, X)
                 {   add X, X, XY_chans                      ;   vlmacc X[0]                             }
+                PRELOAD(tmp, X)
                 {   sub X, X, pool_row_x                    ;   vlmacc X[0]                             }
+                PRELOAD(tmp, r11)
                 {   sub cols_left, cols_left, 1             ;   vlsat r11[0]                            }
                     vstrpv Y[0], write_mask
                 {   add Y, Y, XY_chans                      ;   bt cols_left, .L_col_loop               }
@@ -161,22 +168,31 @@ FUNCTION_NAME:
                     vstrpv Y[0], write_mask
                 {   sub cols_left, cols_left, 1             ;   vclrdr                                  }
 
+                PRELOAD(tmp, X)
                 {   add X, X, XY_chans                      ;   vlmacc X[0]                             }
+                PRELOAD(tmp, X)
                 {   add X, X, pool_row_x                    ;   vlmacc X[0]                             }
+                PRELOAD(tmp, X)
                 {   add X, X, XY_chans                      ;   vlmacc X[0]                             }
+                PRELOAD(tmp, X)
                 {   sub X, X, pool_row_x                    ;   vlmacc X[0]                             }
 
                 {   ldaw r11, cp[VPU_VEC_0x0002]            ;   vsetc r11       /* 16-bit mode */       }
+                PRELOAD(tmp, r11)
                 {   ldaw r11, sp[STACK_VEC_TMP]             ;   vlsat r11[0]                            }
                 {   ldaw r11, cp[VPU_VEC_0x007F]            ;   vstr r11[0]                             }
+                PRELOAD(tmp, r11)
                 {   ldaw r11, sp[STACK_TMP]                 ;   vladd r11[0]                            }
                 {   mkmsk tmp, 4                            ;   vdepth1                                 }
                     vstrpv r11[0], tmp
-                {   ldc tmp, 0                              ;                                           }
+                    
+                {   ldc tmp, 0                              ;   stw Y, sp[STACK_Y]                      }
                 {   ldaw r11, sp[STACK_VEC_TMP]             ;   sub tmp, tmp, 8                         }
+                PRELOAD(Y, r11)
                     vlashr r11[0], tmp
                 {   mov r11, write_mask                     ;   ldw tmp, sp[STACK_TMP]                  }
                 {   andnot r11, tmp                         ;   vdepth8                                 }
+                {   ldw Y, sp[STACK_Y]                      ;                                           }
                     vstrpv Y[0], r11
                     ldc r11, VPU_MODE_8BIT
                 {                                           ;   vsetc r11                               }

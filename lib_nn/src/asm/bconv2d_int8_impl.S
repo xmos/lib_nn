@@ -1,6 +1,7 @@
 // Copyright 2020-2021 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if defined(__XS3A__)
+#include "preload.h"
 
 .section        .cp.const32,"aMc",@progbits,32
 .cc_top VECT_INT16_MAX.data
@@ -221,9 +222,13 @@ bnn_compute_patch:
 
     bnn_patch_loop:
         {vldc X_p[0];      add X_p, X_p, r_256_bits}
+        PRELOAD(s, K_p)
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        PRELOAD(s, K_p)
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        PRELOAD(s, K_p)
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
+        PRELOAD(s, K_p)
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
 
         {vlmaccr1 K_p[0] ; add K_p, K_p, r_256_bits}; 
@@ -252,32 +257,47 @@ bnn_compute_patch:
 
     bnn_tail_loop:
 
+        PRELOAD(r, K_p)
         {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
+        PRELOAD(r, K_p)
         {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
+        PRELOAD(r, K_p)
         {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
+        PRELOAD(r, K_p)
         {vlmaccr1 K_p[0] ; add K_p, K_p, t}; 
         {bt s, bnn_tail_loop; sub s, s, 1}
 
     ldd s, t, sp[S_VLSAT_ASHR]
+    PRELOAD(r, t)
     {vlsat t[0]; ldaw t, sp[S_TEMP]}
 
     {vstr t[0]; nop}
+    PRELOAD(r, t)
     vlashr t[0], s
+    stw t, sp[S_1]
 
     ldw s, sp[S_CUR_QUANT_ACCU_MOD_P]
+    PRELOAD(r, s)
     {vladd s[0]; add s, s, r_256_bits}
     stw s, sp[S_CUR_QUANT_ACCU_MOD_P]
 
     {ldw s, sp[S_CLAMP_NEAR]; nop}
+    PRELOAD(r, s)
     {vlsub s[0]; nop}
+    PRELOAD(r, s)
     {vlsub s[0]; nop}
     {ldw s, sp[S_CLAMP_FAR_0]; nop}
-    {ldw r, sp[S_CLAMP_FAR_1]; nop}
+    PRELOAD(r, s)
     {vlsub s[0]; nop}
+    {ldw r, sp[S_CLAMP_FAR_1]; nop}
+    PRELOAD(t, r)
     {vlsub r[0]; nop}
+    PRELOAD(t, r)
     {vlsub r[0]; nop}
+    PRELOAD(r, s)
     {vlsub s[0]; nop}
 
+    ldw t, sp[S_1]
     {vstr t[0]; nop}
     {vclrdr; nop}
 
@@ -286,19 +306,26 @@ bnn_compute_patch:
 
     {ldw r, sp[S_BIAS_MULTIPLIER]; nop}
     {vldc t[0]; nop}
+    stw t, sp[S_1]
 
+    PRELOAD(t, r)
     {vlmacc r[0]; ldaw r, sp[S_TEMP]}
+
+    ldw t, sp[S_1]
     {vldc r[0]; add t, t, r_256_bits}
+    PRELOAD(r, s)
     {vlmacc s[0]; add s, s, r_256_bits}
 
     std t, s, sp[S_CUR_PA_MUL_p_CUR_PA_BIAS_p]
 
 
     ldw t, sp[S_FINAL_SHR]
+    PRELOAD(r, t)
     {vlsat t[0]; ldaw s, sp[S_TEMP]}
 
     ldaw t, cp[VECT_INT16_MAX]
     {vstr s[0]; nop}
+    PRELOAD(r, t)
     {vladd t[0]; nop}
     {vdepth1; mkmsk t, 4}
 

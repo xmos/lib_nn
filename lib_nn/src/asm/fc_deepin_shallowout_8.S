@@ -3,6 +3,7 @@
 
 #if defined(__XS3A__)
 
+#include "preload.h"
 
 /*  
 void fc_deepin_shallowout_8(
@@ -78,6 +79,7 @@ FUNCTION_NAME:
 #define DO_MACCS(TARGET)                                                                        \
     .align 4;                                                                                   \
     {   add r9, r9, _32                         ;   vldc r9[0]                          };      \
+    PRELOAD(r11, W);                                                                            \
     {   sub r10, r10, 1                         ;   vlmaccr W[0]                        };      \
     {   add W, W, _32                           ;   bt r10, TARGET                      }
 
@@ -87,7 +89,9 @@ FUNCTION_NAME:
     DO_MACCS(.L_macc0)
     {   shl r11, _32, 3                         ;   vadddr                              }
     {   ldc r10, 0x1                            ;   vsetc r11                           }
+    PRELOAD(r11, shifts)                                                                             
     {   sub C_out, C_out, 1                     ;   vlsat shifts[0]                     }
+    PRELOAD(r11, scales)                                                                             
     {                                           ;   vlmul scales[0]                     }
     {                                           ;   vdepth8                             }
     vstrpv Y[0], r10
@@ -101,11 +105,14 @@ FUNCTION_NAME:
 .L_macc1:
     DO_MACCS(.L_macc1)
     {   ldc r10, 0x2                            ;   vadddr                              }
+    PRELOAD(r10, r11)                                                                   
     {   shl r11, _32, 3                         ;   vlmaccr r11[0]                      }
     {   sub C_out, C_out, 1                     ;   vsetc r11                           }
+    PRELOAD(r11, shifts)                                                                   
     {   add shifts, shifts, 4                   ;   vlsat shifts[0]                     }
+    PRELOAD(r11, scales)                                                                   
     {   add scales, scales, 4                   ;   vlmul scales[0]                     }
-    {                                           ;   vdepth8                             }
+    {  ldc r10, 0x2                             ;   vdepth8                             }
     vstrpv Y[0], r10
     bf C_out, .Lfunc_end
     

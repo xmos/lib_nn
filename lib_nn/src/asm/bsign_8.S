@@ -4,6 +4,7 @@
 #if defined(__XS3A__)
 #include "nn_config.h"
 #include "xs3_vpu.h"
+#include "preload.h"
 
 /*
 void bsign_8(
@@ -63,6 +64,7 @@ FUNCTION_NAME:
 
 .L_loop_top:
     {   sub length, length, 1                   ;   vldr zero_pv[0]                         }
+//    PRELOAD(tmp, X)
     {   add X, X, _32                           ;   vlsub X[0]                              }
     {                                           ;   vdepth1                                 }
     {   vstrpv Y[0], tmp                        }
@@ -70,6 +72,7 @@ FUNCTION_NAME:
 .L_loop_end:
     {                                           ;   bf tail_mask, .Lfunc_end                }
     {                                           ;   vldr zero_pv[0]                         }
+    PRELOAD(tmp, X)
     {                                           ;   vlsub X[0]                              }
     {                                           ;   vdepth1                                 }
     {                                           ;   stw length, Y[0]                        } // Store 0 to upper bytes of tail

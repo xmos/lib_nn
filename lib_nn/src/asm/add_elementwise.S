@@ -4,6 +4,7 @@
 #if defined(__XS3A__)
 
 #include "nn_config.h"
+#include "preload.h"
 
 /*
 
@@ -149,15 +150,19 @@ FUNCTION_NAME:
     {   ldc tmp, 15                             ;   vclrdr                                  }
         ldap r11, vpu_vects_vec_0x01
     {   lsu chans, tmp, N                       ;   vldc r11[0]                             }
+    PRELOAD(r11, vec_tmp1)
     {   shl chans, chans, 4                     ;   vlmacc vec_tmp1[0]                      }
     {   mov tmp, N                              ;   vstr vec_tmp1[0]                        }
     {   zext tmp, 4                             ;   vclrdr                                  }
+    PRELOAD(r11, vec_tmp2)
     {   shr tmp, tmp, chans                     ;   vlmacc vec_tmp2[0]                      }
     {   shl r11, _32, 3                         ;   vstr vec_tmp2[0]                        }
     {   add chans, tmp, chans                   ;   vsetc r11                               }
-        vlashr vec_tmp1[0], X1_shr
+    PRELOAD(r11, vec_tmp1)
+    vlashr vec_tmp1[0], X1_shr
     {   add X1, X1, chans                       ;   vstr vec_tmp1[0]                        }
-        vlashr vec_tmp2[0], X2_shr
+    PRELOAD(r11, vec_tmp2)
+    vlashr vec_tmp2[0], X2_shr
     {   ldaw r11, dp[DP_VEC_BIAS_HI]            ;   vstr vec_tmp2[0]                        }
 
 #if !(CONFIG_SYMMETRIC_SATURATION_add_elementwise)
@@ -171,13 +176,16 @@ FUNCTION_NAME:
     {   ldaw r11, dp[DP_VEC_BIAS_LO]            ;   vldd r11[0]                             }
     {   ldaw r11, dp[DP_VEC_IN1_MULT]           ;   vldr r11[0]                             }
     {   add X2, X2, chans                       ;   vldc r11[0]                             }
+    PRELOAD(r11, vec_tmp1)
     {   ldaw r11, dp[DP_VEC_IN2_MULT]           ;   vlmacc vec_tmp1[0]                      }
     {   sub N, N, chans                         ;   vldc r11[0]                             }
+    PRELOAD(r11, vec_tmp2)
     {   shl r11, _32, 4                         ;   vlmacc vec_tmp2[0]                      }
 
 #if CONFIG_SYMMETRIC_SATURATION_add_elementwise
 
     {   ldaw r11, dp[DP_VEC_OUT_SHR]            ;   vsetc r11                               }
+    PRELOAD(tmp, r11)
     {   mkmsk tmp, chans                        ;   vlsat r11[0]                            }
         vstrpv Y[0], tmp
 
@@ -185,9 +193,12 @@ FUNCTION_NAME:
 
     {   ldaw r11, dp[DP_VEC_OUT_SHR]            ;   vstd vec_tmp2[0]                        }
     {                                           ;   vstr vec_tmp1[0]                        }
+    PRELOAD(tmp, r11)
     {                                           ;   vlsat r11[0]                            }
+    PRELOAD(r11, vec_tmp2)
     {                                           ;   vldd vec_tmp2[0]                        }
-        ldaw r11, cp[vpu_vects_vec_0x007F]
+    ldaw r11, cp[vpu_vects_vec_0x007F]
+    PRELOAD(tmp, r11)
     {                                           ;   vladd r11[0]                            }
     {   mkmsk tmp, chans                        ;   vdepth1                                 }
     {   mov r11, vec_tmp1                       ;   vstr vec_tmp2[0]                        }
@@ -196,6 +207,7 @@ FUNCTION_NAME:
     {   andnot tmp, vec_tmp2                    ;   vldr r11[0]                             }
     {   shl r11, _32, 4                         ;                                           }
     {   ldaw r11, dp[DP_VEC_OUT_SHR]            ;   vsetc r11                               }
+    PRELOAD(vec_tmp2, r11)
     {   ldaw vec_tmp2, sp[STACK_VEC_IN2]        ;   vlsat r11[0]                            }
         vstrpv Y[0], tmp
 
