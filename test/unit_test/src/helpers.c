@@ -3,9 +3,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+//https://en.wikipedia.org/wiki/Linear_congruential_generator
 int pseudo_rand(int *seed) {
-  const int a = 1013904223;
-  const int c = 1664525;
+  const int a = 1664525;
+  const int c = 1013904223;
   *seed = (int)((long long)a * *seed + c);
   return *seed;
 }
