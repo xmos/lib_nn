@@ -118,7 +118,6 @@ class Filter2dGeometry {
    * padding required if the input image is to _actually be padded in memmory_.
    */
   padding_t Padding() const;
-
 };
 
 /////////////////////////
