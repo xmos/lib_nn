@@ -431,4 +431,4 @@ void shift_int8_output_transform_ref(int8_t *output, const VPURingBuffer *acc,
                                      const int channel_count);
 
 }  // namespace nn
-#endif //LIB_NN_OUTPUT_TRANSFORM_FN_H_
+#endif  // LIB_NN_OUTPUT_TRANSFORM_FN_H_
