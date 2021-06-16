@@ -6,7 +6,7 @@
 #include "Utils.hpp"
 #include "geom/ImageGeometry.hpp"
 #include "vpu.hpp"
-#include "xs3_vpu.h"
+
 namespace nn {
 
 /**
@@ -14,33 +14,59 @@ namespace nn {
  *
  * Contains a single function, output_transform_fn() which converts a set of
  * 32-bit accumulators into a set of 8-bit outputs and writes them to the
- * specified output image.
+ * specified output image. The 32 bit accumulators will be passed to this class
+ * as a verbatim copy of the VPU ring buffer after the aggregate function has
+ * been performed. The ring buffer will then be transformed into an output
+ * number space and written to the output tensor (Y).
  */
 class OutputTransformFn {
  public:
+  /**
+   * @brief The method that will translate the accumulator into the output
+   * number space.
+   *
+   * @param Y Pointer to output tensor.
+   * @param A Pointer to a copy of the VPU ring buffer. This is where the output
+   * of an aggregate fn will be stored.
+   * @param output_channel_group Denotes which channel group will be computed.
+   * @return int8_t*
+   */
   virtual int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
                                       int32_t output_channel_group) = 0;
 };
 
 /**
- * these are in a protected order(internally)
+ * These are in a protected order(internally)
  */
 struct OutputTransformValues {
-  int16_t bias_multipler[VPU_INT16_EPV];
+  int16_t bias_multipler[VPU_INT16_EPV];  // The 16 bit bias will be multiplied
+                                          // by this to make it a 32 bit value
   int16_t final_shr[VPU_INT16_EPV];
   int16_t accu_shr[VPU_INT16_EPV];  // for the vlsat
   int32_t accu_shl;                 // for the vlashr
 };
 
+/**
+ * @brief When the output transform requires the raw accumulator value to be
+ * clamped between a min and a max then this structure is used to provide that
+ * functionality. The clamping is implemented by taking the accumulator (32 bit)
+ * and after shifting it into a 16 bit space
+ *    - adding a scalar, near, to the accumulator,
+ *    - subtracting near from the accumulator,
+ *    - adding a scalar, far_0, to the accumulator,
+ *    - adding a scalar, far_1, to the accumulator,
+ *    - subtracting near far_1 the accumulator,
+ *    - subtracting near far_0 the accumulator,
+ * Of these three values near represents the scalar that moves (and returns) the
+ * accumulator to it's nearest saturation point, i.e. INT16_MAX, and far_0 +
+ * far_1 moves (and returns) the accumulator to the farthest saturation point.
+ */
 struct OutputTransformValuesClamping : OutputTransformValues {
   int16_t clamp_near[VPU_INT16_EPV];
   int16_t clamp_far_0[VPU_INT16_EPV];
   int16_t clamp_far_1[VPU_INT16_EPV];
 };
 
-/**
- *
- */
 struct QuantisationParams {
   OutputTransformValues otv;
   std::vector<int16_t> biases;
@@ -54,6 +80,7 @@ class OutputTransformFnInt8 : public OutputTransformFn {
     std::vector<double> f_multipliers;
     std::vector<int32_t> accu_min;
     std::vector<int32_t> accu_max;
+
     CanonicalMulAndBias(int output_channels)
         : f_biases(output_channels, 0),
           f_multipliers(output_channels, 0),
@@ -100,6 +127,22 @@ class OutputTransformFnInt8 : public OutputTransformFn {
     return canonical_values;
   }
 
+  /**
+   * @brief This translates from the representation of:
+   *    output[ch] = min(max((accu[ch] * multipler[ch]) + bias[ch]), INT8_MIN),
+   * INT8_MAX) to a form that can be efficiently implemented on the VPU. The
+   * accu_min and accu_max allow the quantisiation logic to achieve maximum
+   * resolution on the quantised representations of the multipler and bias.
+   *
+   * @param output_transform_multiplier Vector of the multipier for each
+   * channel.
+   * @param output_transform_bias Vector of the bias for each channel.
+   * @param accu_min Vector of the minimum possible accumulator for each
+   * channel.
+   * @param accu_max Vector of the maximum possible accumulator for each
+   * channel.
+   * @return QuantisationParams
+   */
   static QuantisationParams quantise_activation(
       std::vector<double> &output_transform_multiplier,
       std::vector<double> &output_transform_bias,
@@ -107,16 +150,28 @@ class OutputTransformFnInt8 : public OutputTransformFn {
 };
 
 /**
+ * @brief Output Transform class to converting 32 bit accumulators to an 8 bit
+ * output space.
  *
  */
 class OT_int8 : public OutputTransformFnInt8 {
  public:
   struct Params {
-    int32_t output_slice_channel_count;  // TODO push into base class
+    int32_t output_slice_channel_count;
     OutputTransformValues *otv;
-    int16_t *biases;       //[output_slice_channel_count];
-    int16_t *multipliers;  //[output_slice_channel_count];
+    int16_t *biases;
+    int16_t *multipliers;
 
+    /**
+     * @brief Construct a new Params object
+     *
+     * @param output_slice_channel_count The count of output channels to be
+     * computed by this parameter set.
+     * @param otv Pointer to struct defining how the VPU will implement the the
+     * output transform.
+     * @param biases Pointer to the quantised biases.
+     * @param multipliers Pointer to the quantised multipliers.
+     */
     Params(int32_t output_slice_channel_count, OutputTransformValues *otv,
            int16_t *biases, int16_t *multipliers)
         : output_slice_channel_count(output_slice_channel_count),
@@ -126,6 +181,10 @@ class OT_int8 : public OutputTransformFnInt8 {
   };
 
  private:
+  /**
+   * @brief This describes the channels over which this class will perform its
+   * operation(OutputTransform) and how each channel will transformed.
+   */
   Params *params;
 
  public:
@@ -145,16 +204,50 @@ class OTBinary_int8 : public OutputTransformFnInt8 {
     int16_t *multipliers;    //[output_slice_channel_count];
     int16_t *accu_modifier;  //[output_slice_channel_count];
 
+    /**
+     * @brief Construct a new Params object
+     *
+     * @param output_slice_channel_count The count of output channels to be
+     * computed by this parameter set.
+     * @param otv Pointer to struct defining how the VPU will implement the the
+     * output transform.
+     * @param biases Pointer to the quantised biases.
+     * @param multipliers Pointer to the quantised multipliers.
+     * @param accu_modifier Pointer to a per channel accumulator modifier. This
+     * adjusts each channel by a fixed amount to compensate for channel overlap,
+     * allowing for dense weight packing.
+     */
     Params(int32_t output_slice_channel_count,
            OutputTransformValuesClamping *otv, int16_t *biases,
            int16_t *multipliers, int16_t *accu_modifier);
   };
 
+ private:
+  /**
+   * @brief This describes the channels over which this class will perform its
+   * operation(OutputTransform) and how each channel will transformed.
+   */
   Params *params;
 
  public:
   OTBinary_int8(Params *params) : params(params){};
 
+  /**
+   * @brief This translates from the representation of:
+   *    output[ch] = min(max((accu[ch] * multipler[ch]) + bias[ch]), INT8_MIN),
+   * INT8_MAX) to a form that can be efficiently implemented on the VPU. The
+   * accu_min and accu_max allow the quantisiation logic to achieve maximum
+   * resolution on the quantised representations of the multipler and bias.
+   *
+   * @param output_transform_multiplier Vector of the multipier for each
+   * channel.
+   * @param output_transform_bias Vector of the bias for each channel.
+   * @param accu_min Vector of the minimum possible accumulator for each
+   * channel.
+   * @param accu_max Vector of the maximum possible accumulator for each
+   * channel.
+   * @return QuantisationParams
+   */
   static QuantisationParams quantise_activation(
       std::vector<double> &output_transform_multiplier,
       std::vector<double> &output_transform_bias,
@@ -224,8 +317,10 @@ class DirectWriteOutputTransform
     void Serialize(std::ostream &stream) const;
   };
 
+ private:
   /**
-   * Parameters required by this output transform handler.
+   * @brief This describes the channels over which this class will perform its
+   * operation(OutputTransform) and how each channel will transformed.
    */
   const Params *params;
 
@@ -298,8 +393,10 @@ class ShiftInt8OutputTransform
     void Serialize(std::ostream &stream) const;
   };
 
+ private:
   /**
-   * Parameters required by this output transform handler.
+   * @brief This describes the channels over which this class will perform its
+   * operation(OutputTransform) and how each channel will transformed.
    */
   const Params *params;
 

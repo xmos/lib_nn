@@ -107,19 +107,6 @@ std::tuple<int, int> solve_for_constraint(std::vector<activationT> &multiplier,
   int max_multiplier_exponent = get_max_exponent(multiplier);
   int max_M = 15 - max_multiplier_exponent;
 
-  // printf("max_multiplier_exponent:%d\n", max_multiplier_exponent);
-  // find the largest exponent such that (bias * 2**B) fits in a 32 bit register
-  // int max_bias_exponent = get_max_exponent(bias);
-  // convert bias to a vector of int32_t such that there is no headroom
-  // int32_t q_bias[ch_count];
-  // int q_bias_exp_adjust = 31 - max_bias_exponent;
-  // for (auto ch = 0; ch < ch_count; ++ch)
-  // {
-  //   int64_t q = (int64_t)std::round(std::ldexp(bias[ch], q_bias_exp_adjust));
-  //   q_bias[ch] = std::max(std::min(q, (int64_t)INT32_MAX),
-  //   (int64_t)INT32_MIN);
-  // }
-
   int A = max_A;
   int M = max_M;
 
@@ -211,50 +198,6 @@ static void fill_array(T (&arr)[S], T v) {
   std::fill_n(arr, sizeof arr / sizeof(T), v);
 }
 
-void xor_popcount_to_vlmaccr1(std::vector<int32_t> &accu_min,
-                              std::vector<int32_t> &accu_max,
-                              std::vector<int32_t> &accu_overlaps,
-                              int32_t accu_clamp_min, int32_t accu_clamp_max) {}
-
-void calc_post_accumulation_clamps(std::vector<int32_t> &accu_min,
-                                   std::vector<int32_t> &accu_max,
-                                   std::vector<int32_t> &accu_overlaps,
-                                   int32_t accu_clamp_min,
-                                   int32_t accu_clamp_max, int accu_shr) {
-  // for (unsigned ch = 0; ch < chans_out; ch++){
-  //   if (chan_overlaps){
-  //     quantised_accu_modifier[ch] = ashr(chan_overlaps[ch], accu_shr);
-  //   } else {
-  //     quantised_accu_modifier[ch] = 0;
-  //   }
-  // }
-
-  // int32_t vpu_clamp_min; //TODO
-  // int32_t vpu_clamp_max;
-
-  // float min_shifted_accu = ldexp(vpu_clamp_min, - accu_shr);
-  // float max_shifted_accu = ldexp(vpu_clamp_max, - accu_shr);
-
-  // int32_t low_clamp_limit = -INT16_MAX * vpu_multipler;
-  // int32_t high_clamp_limit = INT16_MAX * vpu_multipler;
-
-  // int32_t t_low_clamp_offset  = (int32_t)((float)low_clamp_limit -
-  // min_shifted_accu); //round? int32_t t_high_clamp_offset =
-  // (int32_t)((float)high_clamp_limit - max_shifted_accu);
-
-  // int32_t t_clamp_near = t_low_clamp_offset, t_clamp_far_0 =
-  // t_high_clamp_offset; if (abs(t_clamp_near) >= abs(t_clamp_far_0)) {
-  //   t_clamp_near = t_high_clamp_offset;
-  //   t_clamp_far_0 = t_low_clamp_offset;
-  // }
-  // int32_t t_clamp_far_1 = t_clamp_far_0 / 2;
-  // t_clamp_far_0 -= t_clamp_far_1;
-
-  // *clamp_near = -t_clamp_near;
-  // *clamp_far_0 = -t_clamp_far_0;
-  // *clamp_far_1 = t_clamp_far_1;
-}
-
 int32_t round_away_from_zero(float x) {
   if (x > 0)
     return std::ceil(x);
@@ -317,9 +260,6 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
     mul_max_bits = std::max(mul_max_bits, count_bits(mul_q));
     mul_min_bits = std::min(mul_min_bits, count_bits(mul_q));
   }
-  // std::cout << bias_max_bits << " " << bias_min_bits << " " << mul_max_bits
-  // << " " << mul_min_bits << " " << bias_max_bits - bias_min_bits << " " <<
-  // mul_max_bits - mul_min_bits << std::endl;
 
   assert(bias_max_bits <=
          30);  // 30 bits is the most we can achieve with this method
@@ -340,8 +280,6 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
   // quantisation to 8 bit can deal with the asymertic rounding.
   int16_t final_shr = B - 8;
   assert(final_shr >= 0);
-  // std::cout << "bias_max_bits: " << bias_max_bits << " " << bias_max_bits -
-  // 16 - 8 << " final_shr: " << final_shr << std::endl;
 
   fill_array(q.otv.final_shr, final_shr);
 
@@ -357,7 +295,6 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
     q.biases.push_back((int16_t)pa_bias);
   }
 
-  // TODO think about what should own this
   // pad q.biases and  q.multipliers to a multiple of VPU_INT16_EPV
   int16_t pad_val = 0;  // this is arbitrary
   pad(q.biases, VPU_INT16_EPV, pad_val);
@@ -373,12 +310,6 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
     fill_array(q.otv.accu_shr, (int16_t)0);
     q.otv.accu_shl = accu_shr;
   }
-
-  // TODO put this else where
-  // int16_t no_clamp = 0;
-  // fill_array(q.otv.clamp_near, no_clamp);
-  // fill_array(q.otv.clamp_far_0, no_clamp);
-  // fill_array(q.otv.clamp_far_1, no_clamp);
 
   return q;
 }
@@ -397,7 +328,7 @@ int8_t *output_transform_fn_impl(const OT_int8::Params *params, int8_t *Y,
   int16_t *cur_post_activation_mul =
       params->multipliers + output_channel_group * VPU_INT16_EPV;
 
-  VSETC(vpu, MODE_S16);  // check this
+  VSETC(vpu, MODE_S16);
 
   VLDR(vpu, &A->vR);
   VLDD(vpu, &A->vD);
@@ -445,23 +376,6 @@ int8_t *output_transform_fn_impl(const OT_int8::Params *params, int8_t *Y,
 
 int8_t *OT_int8::output_transform_fn(int8_t *Y, VPURingBuffer *A,
                                      int32_t output_channel_group) {
-  // printf("this->params->biases %p\n", this->params->biases);
-  // printf("this->params->multipliers %p\n", this->params->multipliers);
-  // printf("this->params->otv %p\n", this->params->otv);
-  // printf("this->params->output_slice_channel_count %d\n",
-  // this->params->output_slice_channel_count);
-
-  // printf("this->params->otv->accu_shl %d\n", this->params->otv->accu_shl);
-  // printf("this->params->otv->bias_multipler %p\n",
-  // this->params->otv->bias_multipler); printf("this->params->otv->final_shr
-  // %p\n", this->params->otv->final_shr); printf("this->params->otv->accu_shr
-  // %p\n", this->params->otv->accu_shr);
-
-  // int16_t bias_multipler[VPU_INT16_EPV];
-  // int16_t final_shr[VPU_INT16_EPV];
-  // int16_t accu_shr[VPU_INT16_EPV]; //for the vlsat
-  // int32_t accu_shl;                //for the vlashr
-
 #ifdef NN_USE_REF
   return output_transform_fn_impl(this->params, Y, A, output_channel_group);
 #else
@@ -491,13 +405,12 @@ int8_t *output_transform_fn_impl(const OTBinary_int8::Params *params, int8_t *Y,
   int16_t *cur_post_activation_mul =
       params->multipliers + output_channel_group * VPU_INT16_EPV;
 
-  VSETC(vpu, MODE_S16);  // check this
+  VSETC(vpu, MODE_S16);
 
   VLDR(vpu, &A->vR);
   VLDD(vpu, &A->vD);
 
   vpu_vector_t temp_mem;
-  // memset(&temp_mem, 0, sizeof(temp_mem));
 
   // Reduce the accumulator to 16 bits
   VLSAT(vpu, params->otv->accu_shr);
@@ -565,7 +478,7 @@ int8_t *OTBinary_bin::output_transform_fn(int8_t *Y, VPURingBuffer *A,
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
 
-  VSETC(vpu, MODE_S16);  // check this - i dont think it's needed
+  VSETC(vpu, MODE_S16);
 
   VLDR(vpu, &A->vR);
   VLDD(vpu, &A->vD);
