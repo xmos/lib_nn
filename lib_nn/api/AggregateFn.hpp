@@ -13,13 +13,43 @@ namespace nn {
 
 class AggregateFn {
  public:
+  /**
+   * @brief Function to aggregate an input receptive field as defined by the
+   * operation it is performing, i.e. convolution, maximum, addition, etc.
+   * Arrgreation is preformed in batches of channel groups, each of the same
+   * size, with the final channel group possibly being of fewer output channels.
+   * A channel group is defined by the VPU ring buffer length of 16.
+   *
+   * @param A Pointer to enough memory to hold the VPU ring buffer.
+   * @param T Pointer to enough scratch memory to perform the aggregate
+   * function.
+   * @param output_channel_group Denotes which channel group will be computed.
+   */
   virtual void aggregate_fn(VPURingBuffer *A, int8_t *T,
                             int32_t output_channel_group) = 0;
 };
 
 struct Conv2dReorderedWeights {
+  /**
+   * @brief Byte vector of the weights in the order that the VPU can most
+   * efficiently execute.
+   *
+   */
   std::vector<int8_t> weights;
+
+  /**
+   * @brief vector of offsets into the weights. Each of the offsets represents
+   * the location that the VPU will load from in during the final load. The
+   * purpose of this vector is to allow the computation of an accumulator
+   * adjustment where nessessary. For example the final load might look like: |
+   * N bytes of weights | 32 - N bytes of unwanted weights | where N is between
+   * 1 and 32. Knowing the 32 - N bytes of unwanted weights coupled with the
+   * scratch memory padding value allows the computation of a statically
+   * knowable accumulator offset. This offset can then be included into the
+   * bias. This allows dense packing of weights.
+   */
   std::vector<int> final_vpu_load_addresses;
+
   Conv2dReorderedWeights(int channels)
       : weights(), final_vpu_load_addresses(channels, 0) {}
 };
@@ -32,21 +62,71 @@ class MatMulInt8 : public AggregateFn {
     const int32_t output_slice_channel_count;
     const int32_t bytes_per_kernel_channel;
 
+    /**
+     * @brief Construct a new Params object.
+     *
+     * @param output_slice_channel_count The count of output channels to be
+     * computed by this parameter set.
+     * @param bytes_per_kernel_channel The count of bytes per each channel of
+     * the kernel (weights).
+     * @param weights A Pointer to the begining of the reordered weights.
+     */
     Params(const int output_slice_channel_count,
            const int32_t bytes_per_kernel_channel, const int8_t *weights);
   };
+
+ protected:
+  /**
+   * @brief This describes the region over which this class will perform its
+   * operation(MatMul).
+   */
   Params *params;
 
  public:
   MatMulInt8(Params *params) : params(params){};
   void aggregate_fn(VPURingBuffer *A, int8_t *T, int32_t output_channel_group);
 
+  /**
+   * @brief Used to reorder the weights from their normal form ([OutputChannel,
+   * Height, Width, InputChannel]) to a form conducive to the VPU efficiently
+   * loading and multiplying them.
+   *
+   * @param raw_weights Pointer to the raw weights.
+   * @param shape [OutputChannels, Height, Width, InputChannels]
+   * @param bits_per_element The count of bits per element, i.e. int8 is 8,
+   * binary is 1.
+   * @param pad_value The value used for padding to achieve alignment where
+   * nessessary. This is not window padding. It can effect the accumulator
+   * result and must be compensated for where nessessary, i.e. padding with zero
+   * will not effect an int8, int16 or int32 matmul, padding with
+   * zeros(representing 1) will effect a binary matmul.
+   * @return Conv2dReorderedWeights
+   */
   static Conv2dReorderedWeights reorder_kernel_weights(
       int8_t *raw_weights, std::array<int, 4> &shape, int bits_per_element,
       int8_t pad_value);
 
-  static int get_kernel_size(int input_bytes, int output_channel_count);
-  static int get_scratch_size(int input_bytes);
+  /**
+   * @brief Get the required size of the weights array. This is a non-trivial
+   * computation as it accounts for how the VPU will access the weights array.
+   *
+   * @param input_bytes The count of bytes in a single channel.
+   * @param output_channel_count The number of output channels that these
+   * weights will compute.
+   * @return The size in bytes that will hold the weights and guarentee no OOB
+   * accesses.
+   */
+  static int get_weights_bytes(int input_bytes, int output_channel_count);
+
+  /**
+   * @brief Get the required size of the scratch array. This is a non-trivial
+   * computation as it accounts for how the VPU will access the scratch array.
+   *
+   * @param input_bytes The count of bytes in a single channel.
+   * @return The size in bytes that will hold the copy of the current patch and
+   * guarentee no OOB accesses.
+   */
+  static int get_scratch_mem_bytes(int input_bytes);
 };
 
 class MatMulDirectFn : public AggregateFn {
@@ -65,15 +145,33 @@ class MatMulDirectFn : public AggregateFn {
     int32_t inner_x_h_step;
     int32_t inner_x_v_step;
 
+    /**
+     * @brief Construct a new Params object
+     *
+     * @param X Class describing the properties of the input the convolution
+     * will be performed over.
+     * @param K Class describing the properties of the convolution to be
+     * preformed.
+     * @param input_ch_per_output The count of input channeks that contribute to
+     * an output channel. For example, a depthwise convolution will have one
+     * input channel per output channel whereas a Conv2D will most likely have
+     * the input tensors channel count.
+     * @param weights A Pointer to the begining of the reordered weights.
+     */
     Params(const ImageGeometry &X, const WindowGeometry &K,
            const int input_ch_per_output, const int8_t *weights);
   };
 
  protected:
+  /**
+   * @brief This describes the region over which this class will perform its
+   * operation(MatMul).
+   */
   Params *params;
 
  public:
   MatMulDirectFn(Params *params) : params(params){};
+
   void aggregate_fn(VPURingBuffer *A, int8_t *T, int32_t output_channel_group);
 };
 
