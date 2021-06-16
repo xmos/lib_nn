@@ -11,7 +11,9 @@ using namespace nn;
 #define CHAR_BIT (sizeof(char) * 8)
 #endif
 
-int8_t *deref2d(int8_t *p, int p_w, int h, int w) { return p + h * p_w + w; }
+static int8_t *deref2d(int8_t *p, int p_w, int h, int w) {
+  return p + h * p_w + w;
+}
 
 Conv2dReorderedWeights MatMulInt8::reorder_kernel_weights(
     int8_t *raw_weights, std::array<int, 4> &shape, int bits_per_element,
@@ -28,7 +30,7 @@ Conv2dReorderedWeights MatMulInt8::reorder_kernel_weights(
       (shape[1] * shape[2] * shape[3] * bits_per_element) / 8;
 
   int kernel_size =
-      get_kernel_size(bytes_per_output_channel, output_channel_count);
+      get_weights_bytes(bytes_per_output_channel, output_channel_count);
 
   // For each output channel keep a record of the final vpu load
   // so the overlap betweek the desired channel and the next can
@@ -83,7 +85,7 @@ Conv2dReorderedWeights MatMulInt8::reorder_kernel_weights(
   return reordered_weights;
 }
 
-int MatMulInt8 ::get_scratch_size(int input_bytes) {
+int MatMulInt8 ::get_scratch_mem_bytes(int input_bytes) {
   const int vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
   return ((input_bytes + vpu_bytes - 1) / vpu_bytes) * vpu_bytes;
 }
@@ -92,7 +94,7 @@ int MatMulInt8 ::get_scratch_size(int input_bytes) {
 input_bytes is the number of bytes a single output channel of the kernel
 requires output_channel_count obvs
 */
-int MatMulInt8::get_kernel_size(int input_bytes, int output_channel_count) {
+int MatMulInt8::get_weights_bytes(int input_bytes, int output_channel_count) {
   const int vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
   const int vpu_ring_buffer_length = VPU_INT16_EPV;
 

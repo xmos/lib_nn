@@ -29,9 +29,9 @@ TEST_F(Test_SimpleMatMulInt8, BasicTest) {
 
       for (int output_channel_count = 1; output_channel_count < 48;
            ++output_channel_count) {
-        int scratch_bytes = MatMulInt8::get_scratch_size(input_bytes);
+        int scratch_bytes = MatMulInt8::get_scratch_mem_bytes(input_bytes);
         int kernel_bytes =
-            MatMulInt8::get_kernel_size(input_bytes, output_channel_count);
+            MatMulInt8::get_weights_bytes(input_bytes, output_channel_count);
 
         alignas(4) int8_t K[kernel_bytes];
         alignas(4) int8_t T[scratch_bytes];
@@ -76,7 +76,7 @@ TEST_F(Test_MatMulInt8, BasicTest) {
   const int vpu_bytes = 32;
   const int vpu_ring_buffer_length = 16;
 
-  for (int input_bytes = 4; input_bytes < 128; input_bytes+=4) {
+  for (int input_bytes = 4; input_bytes < 128; input_bytes += 4) {
     for (int output_channel_count = 1; output_channel_count < 48;
          ++output_channel_count) {
       int k_height = 1;
@@ -84,13 +84,14 @@ TEST_F(Test_MatMulInt8, BasicTest) {
 
       std::array<int, 4> shape = {output_channel_count, k_height, k_width,
                                   input_bytes};
-      alignas(4) int8_t raw_weights[output_channel_count][k_height][k_width][input_bytes];
+      alignas(4) int8_t raw_weights[output_channel_count][k_height][k_width]
+                                   [input_bytes];
       assert(sizeof raw_weights == input_bytes * output_channel_count);
 
       for (auto j = 0; j < sizeof raw_weights; ++j)
         ((int8_t *)raw_weights)[j] = rng.rand<int8_t>();
 
-      int scratch_bytes = MatMulInt8::get_scratch_size(input_bytes);
+      int scratch_bytes = MatMulInt8::get_scratch_mem_bytes(input_bytes);
 
       int8_t pad_val = rng.rand<int8_t>();
 
@@ -274,8 +275,8 @@ TEST_F(Test_MatMulDirectFn, BasicTest) {
 
                         std::array<int, 4> shape = {output_channels, k_height,
                                                     k_width, x_channels};
-                        alignas(4) int8_t raw_weights[output_channels][k_height][k_width]
-                                          [x_channels];
+                        alignas(4) int8_t raw_weights[output_channels][k_height]
+                                                     [k_width][x_channels];
 
                         for (int j = 0; j < sizeof raw_weights; ++j)
                           ((int8_t *)raw_weights)[j] = rng.rand<int8_t>();
