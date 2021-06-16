@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LIB_NN_OUTPUT_TRANSFORM_FN_H_
+#define LIB_NN_OUTPUT_TRANSFORM_FN_H_
 
 #include <cstdint>
 #include <vector>
@@ -430,3 +431,4 @@ void shift_int8_output_transform_ref(int8_t *output, const VPURingBuffer *acc,
                                      const int channel_count);
 
 }  // namespace nn
+#endif //LIB_NN_OUTPUT_TRANSFORM_FN_H_
