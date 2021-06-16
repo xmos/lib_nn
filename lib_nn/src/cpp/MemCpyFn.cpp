@@ -43,8 +43,8 @@ void DerefInputFn::Params::Serialize(std::ostream &stream) const {
 #undef WRITE_MEMBER
 }
 
-size_t DerefInputFn::get_scratch_bytes() { return 0; }
-size_t DerefInputFn::get_overread_bytes() { return 0; }
+int DerefInputFn::get_scratch_bytes() { return 0; }
+int DerefInputFn::get_overread_bytes() { return 0; }
 
 int8_t *DerefInputFn::memcopy_fn(int8_t *T, int8_t *X, int32_t output_v_coord,
                                  int32_t output_h_coord,
@@ -53,13 +53,13 @@ int8_t *DerefInputFn::memcopy_fn(int8_t *T, int8_t *X, int32_t output_v_coord,
                    output_h_coord * params->bytes_per_pixel + output_c_coord);
 }
 
-size_t ImToColPadded::get_scratch_bytes() {
+int ImToColPadded::get_scratch_bytes() {
   return params->kernel_height * params->kernel_width *
              params->bytes_per_copy_per_channel +
          XS3_VPU_VREG_WIDTH_BYTES;
 }
 
-size_t ImToColPadded::get_overread_bytes() {
+int ImToColPadded::get_overread_bytes() {
   return XS3_VPU_VREG_WIDTH_BYTES;  // TODO this will be defined by the
                                     // implementation of memcpy
 }
@@ -282,14 +282,14 @@ ImToColValid::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
   bytes_per_pixel *= K.stride.col;
 }
 
-size_t ImToColValid::get_scratch_bytes() {
+int ImToColValid::get_scratch_bytes() {
   return (params->input_height + 1) * (params->input_width + 1) *
              ((params->input_channel_groups + 1) * XS3_VPU_VREG_WIDTH_BYTES -
               params->T_rewind) +
          XS3_VPU_VREG_WIDTH_BYTES;
 }
 
-size_t ImToColValid::get_overread_bytes() { return params->T_rewind; }
+int ImToColValid::get_overread_bytes() { return params->T_rewind; }
 
 int8_t *ImToColValid::memcopy_fn_impl(int8_t *T, int8_t *X,
                                       int32_t output_v_coord,

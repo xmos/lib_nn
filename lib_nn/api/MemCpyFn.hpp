@@ -42,14 +42,24 @@ class MemCpyFn {
                              int32_t c = 0) = 0;
 
   /**
+   * @brief Get the number of bytes required for the scratch memory to hold the
+   * result of the mem copy. This accounts for the VPU memory read and write
+   * limitations.
    *
+   * @return int
    */
-  virtual size_t get_scratch_bytes() = 0;
+  virtual int get_scratch_bytes() = 0;
 
   /**
+   * @brief Get the number of bytes that VPU will overread from source tensor.
+   * This is to account for vector reads being used where a sub-vector read is
+   * required. This is used to prevent OOB memory accesses, i.e. if a memory
+   * location within this much beyond the end of an input tensor is invalid then
+   * it should be handled gracefully.
    *
+   * @return int
    */
-  virtual size_t get_overread_bytes() = 0;
+  virtual int get_overread_bytes() = 0;
 };
 
 /**
@@ -62,24 +72,49 @@ class DerefInputFn : public MemCpyFn {
     int32_t bytes_per_h_line;
     int32_t bytes_per_pixel;
 
+    /**
+     * @brief Construct a new Params object
+     *
+     * @param bytes_per_h_line Count of bytes in a horizontal line of the input
+     * tensor.
+     * @param bytes_per_pixel Count of bytes in a pixel of the input tensor.
+     */
     Params(int32_t bytes_per_h_line, int32_t bytes_per_pixel);
 
+    /**
+     * @brief Construct a new Params object
+     *
+     * @param X Class describing the properties of the input tensor over which
+     * the convolution will be performed over.
+     * @param K Class describing the properties of the convolution to be
+     * performed.
+     */
     Params(const ImageGeometry &X, const WindowGeometry &K);
 
+    /**
+     * @brief Construct a new Params object
+     *
+     * @param filter_geometry Class representing the properties of the input
+     * tensor and convolution properties over which the convolution will be
+     * performed.
+     */
     Params(const Filter2dGeometry &filter_geometry);
 
     Params(std::istream &stream);
 
     void Serialize(std::ostream &stream) const;
   };
-
+  /**
+   * @brief This describes the region over which this class will perform its
+   * operation(Memcopy).
+   */
   Params *params;
 
  public:
   DerefInputFn(Params *params) : params(params){};
   int8_t *memcopy_fn(int8_t *T, int8_t *X, int32_t h, int32_t w, int32_t c);
-  size_t get_scratch_bytes();
-  size_t get_overread_bytes();
+  int get_scratch_bytes();
+  int get_overread_bytes();
 };
 
 /**
@@ -113,32 +148,62 @@ class ImToColPadded : public MemCpyFn {
     int32_t horizontal_stride;
 
    public:
+    /**
+     * @brief Construct a new Params object
+     *
+     * @param X Class describing the properties of the input tensor over which
+     * the convolution will be performed over.
+     * @param K Class describing the properties of the convolution to be
+     * performed.
+     * @param padding Struct describing the padding to be applied during the
+     * copy.
+     * @param input_ch_per_output The count of input channeks that contribute to
+     * an output channel. For example, a depthwise convolution will have one
+     * input channel per output channel whereas a Conv2D will most likely have
+     * the input tensors channel count.
+     * @param padding_value The value to insert for the padding.
+     */
     Params(const ImageGeometry &X, const WindowGeometry &K,
            const padding_t &padding, const int input_ch_per_output,
-           const int8_t pad_val);
+           const int8_t padding_value);
 
+    /**
+     * @brief Construct a new Params object
+     *
+     * @param filter_geometry Class representing the properties of the input
+     * tensor and convolution properties over which the convolution will be
+     * performed.
+     * @param padding_value The value to insert for the padding.
+     * @param input_ch_per_output The count of input channeks that contribute to
+     * an output channel. For example, a depthwise convolution will have one
+     * input channel per output channel whereas a Conv2D will most likely have
+     * the input tensors channel count.
+     */
     Params(const Filter2dGeometry &filter_geometry, const int8_t padding_value,
-           const int channels_per_output);
+           const int input_ch_per_output);
 
     Params(std::istream &stream);
 
     void Serialize(std::ostream &stream) const;
   };
 
+  /**
+   * @brief This describes the region over which this class will perform its
+   * operation(Memcopy).
+   */
   Params *params;
 
  public:
   ImToColPadded(Params *p) : params(p) {}
+  int8_t *memcopy_fn(int8_t *T, int8_t *X, int32_t h, int32_t w, int32_t c);
+  int get_scratch_bytes();
+  int get_overread_bytes();
+
+ private:
   int8_t *memcopy_fn_impl(int8_t *T, int8_t *X, int32_t h, int32_t w,
                           int32_t c);
-  int8_t *memcopy_fn(int8_t *T, int8_t *X, int32_t h, int32_t w, int32_t c);
-  size_t get_scratch_bytes();
-  size_t get_overread_bytes();
 };
 
-/**
- *
- */
 class ImToColValid : public MemCpyFn {
  public:
   struct Params {
@@ -184,10 +249,26 @@ class ImToColValid : public MemCpyFn {
     // i.e. from X[h][w + kernel_width - 1] to X[h+1][w].
     int32_t vertical_mem_stride;
 
+    /**
+     * @brief Construct a new Params object
+     *
+     * @param X Class describing the properties of the input tensor over which
+     * the convolution will be performed over.
+     * @param K Class describing the properties of the convolution to be
+     * performed.
+     * @param input_ch_per_output The count of input channeks that contribute to
+     * an output channel. For example, a depthwise convolution will have one
+     * input channel per output channel whereas a Conv2D will most likely have
+     * the input tensors channel count.
+     */
     Params(const ImageGeometry &X, const WindowGeometry &K,
            const int input_ch_per_output);
   };
 
+  /**
+   * @brief This describes the region over which this class will perform its
+   * operation(Memcopy).
+   */
   Params *params;
 
  public:
@@ -195,12 +276,14 @@ class ImToColValid : public MemCpyFn {
   // scratch
   ImToColValid(Params *params) : params(params){};
 
-  size_t get_scratch_bytes();
-  size_t get_overread_bytes();
+  int get_scratch_bytes();
+  int get_overread_bytes();
 
+  int8_t *memcopy_fn(int8_t *T, int8_t *X, int32_t h, int32_t w, int32_t c);
+
+ private:
   int8_t *memcopy_fn_impl(int8_t *T, int8_t *X, int32_t h, int32_t w,
                           int32_t c);
-  int8_t *memcopy_fn(int8_t *T, int8_t *X, int32_t h, int32_t w, int32_t c);
 };
 }  // namespace nn
 #endif  // LIB_NN_MEMCPY_FN_HPP_
