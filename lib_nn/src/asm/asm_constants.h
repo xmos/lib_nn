@@ -23,6 +23,12 @@ typedef struct {
 
 extern const vpu_constants_t vpu_vects;
 
+extern const uint32_t vpu_vect_zero[VPU_INT32_EPV];
+extern const int16_t vpu_vect_0x007F[VPU_INT16_EPV];
+extern const int8_t vpu_vect_0x01[VPU_INT8_EPV];
+extern const int8_t vpu_vect_0x02[VPU_INT8_EPV];
+extern const int8_t vpu_vect_0x80[VPU_INT8_EPV];
+
 #endif  // __ASSEMBLER__
 
 #define VPU_MODE_32BIT 0x0000
