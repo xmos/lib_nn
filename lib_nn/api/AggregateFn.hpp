@@ -16,7 +16,7 @@ class AggregateFn {
   /**
    * @brief Function to aggregate an input receptive field as defined by the
    * operation it is performing, i.e. convolution, maximum, addition, etc.
-   * Arrgreation is preformed in batches of channel groups, each of the same
+   * Aggregation is performed in batches of channel groups, each of the same
    * size, with the final channel group possibly being of fewer output channels.
    * A channel group is defined by the VPU ring buffer length of 16.
    *
