@@ -187,6 +187,7 @@ class ImToColPadded : public MemCpyFn {
     void Serialize(std::ostream &stream) const;
   };
 
+ private:
   /**
    * @brief This describes the region over which this class will perform its
    * operation(Memcopy).
@@ -265,6 +266,7 @@ class ImToColValid : public MemCpyFn {
            const int input_ch_per_output);
   };
 
+ private:
   /**
    * @brief This describes the region over which this class will perform its
    * operation(Memcopy).
