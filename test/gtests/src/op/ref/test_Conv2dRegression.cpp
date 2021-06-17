@@ -68,10 +68,10 @@ KernelStimulus create_simple_stimulus(Filter2dGeometry &geom) {
 TEST_F(Conv2dPaddedIndirectRegression, BasicTest) {
   for (int x_height = 1; x_height <= 2; ++x_height) {
     for (int x_width = 1; x_width <= 2; ++x_width) {
-      for (int x_channels = 1; x_channels <= 16; x_channels += 1) {
+      for (int x_channels = 4; x_channels <= 16; x_channels += 4) {
         for (int k_height = 1; k_height <= x_height; ++k_height) {
           for (int k_width = 1; k_width <= x_width; ++k_width) {
-            for (int k_depth = 1; k_depth <= x_channels; k_depth += 1) {
+            for (int k_depth = 4; k_depth <= x_channels; k_depth += 4) {
               for (int k_h_dilation = 1; k_h_dilation <= 2; ++k_h_dilation) {
                 for (int k_v_dilation = 1; k_v_dilation <= 2; ++k_v_dilation) {
                   for (int k_h_stride = 1; k_h_stride <= 2; ++k_h_stride) {
@@ -178,8 +178,9 @@ TEST_F(Conv2dPaddedIndirectRegression, BasicTest) {
                               Conv2dPaddedInDirect conv2d(
                                   &akp, &memcpy, &aggregator, &ot, &T[0]);
 
-                              auto output = std::vector<int8_t>(
-                                  Y.height * Y.width * Y.depth);
+                              // auto output = std::vector<int8_t>(
+                              //     Y.height * Y.width * Y.depth);
+                              alignas(4) int8_t output[Y.height * Y.width * Y.depth];
 
                               conv2d.execute(&output[0], &input[0]);
 
@@ -236,10 +237,10 @@ class Conv2dValidIndirectRegression : public ::testing::Test {};
 TEST_F(Conv2dValidIndirectRegression, BasicTest) {
   for (int x_height = 1; x_height <= 5; ++x_height) {
     for (int x_width = 1; x_width <= 5; ++x_width) {
-      for (int x_channels = 1; x_channels <= 16; x_channels += 1) {
+      for (int x_channels = 4; x_channels <= 16; x_channels += 4) {
         for (int k_height = 1; k_height <= x_height; ++k_height) {
           for (int k_width = 1; k_width <= x_width; ++k_width) {
-            for (int k_depth = 1; k_depth <= x_channels; k_depth += 1) {
+            for (int k_depth = 4; k_depth <= x_channels; k_depth += 4) {
               for (int k_h_dilation = 1; k_h_dilation <= 2; ++k_h_dilation) {
                 for (int k_v_dilation = 1; k_v_dilation <= 2; ++k_v_dilation) {
                   for (int k_h_stride = 1; k_h_stride <= 2; ++k_h_stride) {
