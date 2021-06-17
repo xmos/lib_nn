@@ -1,3 +1,4 @@
+#include <cstring>
 #include <vector>
 
 #include "Filter2D.hpp"
