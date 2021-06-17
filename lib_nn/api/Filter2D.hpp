@@ -106,13 +106,11 @@ class Filter2D_DW : public AbstractKernel {
   OutputTransformFn *ot_handler;
 
   int output_channels_per_group;  //[asj] should this go in the
-                                  //AbstractKernelParams??
+                                  // AbstractKernelParams??
 
   /**
    * A pointer to a scratch memory buffer. Required when im2col-like patch
    * handlers are used.
-   *
-   * @TODO: Where should the size of this buffer come from?
    */
   int8_t *scratch_mem;
 
@@ -127,7 +125,8 @@ class Filter2D_DW : public AbstractKernel {
 
  public:
   /**
-   * Construct a filter using the provided component handlers.
+   * Construct a filter using the provided component handlers. This flavour is
+   * specifically for depthwise variants.
    */
   Filter2D_DW(AbstractKernel::Params *kparams, MemCpyFn *memcpy_handler,
               AggregateFn *aggregate_handler, OutputTransformFn *ot_handler,
