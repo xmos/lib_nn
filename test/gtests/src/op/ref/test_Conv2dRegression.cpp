@@ -180,7 +180,8 @@ TEST_F(Conv2dPaddedIndirectRegression, BasicTest) {
 
                               // auto output = std::vector<int8_t>(
                               //     Y.height * Y.width * Y.depth);
-                              alignas(4) int8_t output[Y.height * Y.width * Y.depth];
+                              alignas(4)
+                                  int8_t output[Y.height * Y.width * Y.depth];
 
                               conv2d.execute(&output[0], &input[0]);
 
