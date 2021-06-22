@@ -1,7 +1,5 @@
-#pragma once
-
-// #include <cstdint>
-// #include <cstring>
+#ifndef LIB_NN_FILTER2D_HPP_
+#define LIB_NN_FILTER2D_HPP_
 
 #include "AbstractKernel.hpp"
 #include "AggregateFn.hpp"
@@ -66,7 +64,7 @@ class Filter2D : public AbstractKernel {
  public:
   Filter2D(ImageGeometry &Y, ImageRegion &r, MemCpyFn *memcpy_handler,
            AggregateFn *aggregate_handler, OutputTransformFn *ot_handler,
-           int8_t *scratch_mem = 0);
+           int8_t *scratch_mem = nullptr);
 
   /**
    * Construct a filter using the provided component handlers.
@@ -135,3 +133,5 @@ class Filter2D_DW : public AbstractKernel {
 };
 
 }  // namespace nn
+
+#endif // LIB_NN_FILTER2D_HPP_
