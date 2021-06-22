@@ -1,4 +1,3 @@
-
 #include "conv2d_utils.hpp"
 
 #include <algorithm>

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LIB_NN_CONV2D_UTILS_HPP_
+#define LIB_NN_CONV2D_UTILS_HPP_
 
 #include <cstdint>
 #include <vector>
@@ -42,3 +43,5 @@ class TfLiteConverter {
 }  // namespace util
 }  // namespace conv2d
 }  // namespace nn
+
+#endif // LIB_NN_CONV2D_UTILS_HPP_
