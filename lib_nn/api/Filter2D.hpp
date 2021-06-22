@@ -21,6 +21,12 @@ namespace nn {
  */
 class Filter2D : public AbstractKernel {
  public:
+  /**
+   * @brief Denotes if the class uses a memcpy that copies a channel group at a
+   * time, i.e. the aggregate function doesnt require all input channels to
+   * compute its output (such as a depthwise conv2d), or uses a single memcpy
+   * copying all input channels at once.
+   */
   static constexpr bool UsesPerGroupMemCopy = false;
 
  protected:
@@ -134,4 +140,4 @@ class Filter2D_DW : public AbstractKernel {
 
 }  // namespace nn
 
-#endif // LIB_NN_FILTER2D_HPP_
+#endif  // LIB_NN_FILTER2D_HPP_
