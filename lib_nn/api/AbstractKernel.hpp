@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LIB_NN_ABSTRACT_KERNEL_HPP_
+#define LIB_NN_ABSTRACT_KERNEL_HPP_
 
 #include "geom/Filter2dGeometry.hpp"
 
@@ -39,15 +40,15 @@ class AbstractKernel {
      */
     int32_t output_channel_group_count;
 
-    // Used for setting the first channels slice, i.e. rather than writing to
-    // slice 0-31 by offsetting it we can address slice 32 - 63, etc.
-
     /**
      * The first output channel to be processed when this filter is executed.
      *
      * This filter will process output channels in the range:
      *  [`output_channel_slice_offset`, `output_channel_slice_offset` +
      * `output_channel_group_count` * `channels_per_output_group`)
+     *
+     * Used for setting the first channels slice, i.e. rather than writing to
+     * slice 0-31 by offsetting it we can address slice 32 - 63, etc.
      *
      * @TODO: astew: Why not just have c_begin and c_end like with the rows and
      * columns handled by this filter?
@@ -142,3 +143,5 @@ class AbstractKernel {
 };
 
 }  // namespace nn
+
+#endif  // LIB_NN_ABSTRACT_KERNEL_HPP_
