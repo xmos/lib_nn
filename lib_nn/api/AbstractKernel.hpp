@@ -93,7 +93,7 @@ class AbstractKernel {
 
   virtual void calc_output_pixel_slice(int8_t *output_image,
                                        int8_t *input_image, int32_t output_row,
-                                       int32_t output_col) = 0;
+                                       int32_t output_col, int8_t *scratch) = 0;
 
  public:
   /**
@@ -122,7 +122,7 @@ class AbstractKernel {
    * @param [in] Y  Pointer to the output image.
    * @param [in] X  Pointer to the input image.
    */
-  void execute(int8_t *Y, int8_t *X) {
+  void execute(int8_t *Y, int8_t *X, int8_t *scratch = nullptr) {
     int bytes_per_row =
         kparams->output_h_mem_stride +
         (kparams->w_end - kparams->w_begin) * kparams->output_w_mem_stride;
@@ -134,7 +134,7 @@ class AbstractKernel {
 
     for (int32_t h = kparams->h_begin; h < kparams->h_end; h++) {
       for (int32_t w = kparams->w_begin; w < kparams->w_end; w++) {
-        this->calc_output_pixel_slice(Y, X, h, w);
+        this->calc_output_pixel_slice(Y, X, h, w, scratch);
         Y += kparams->output_w_mem_stride;
       }
       Y += kparams->output_h_mem_stride;

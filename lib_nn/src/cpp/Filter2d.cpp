@@ -9,12 +9,11 @@ constexpr bool Filter2D_DW::UsesPerGroupMemCopy;
 
 Filter2D::Filter2D(AbstractKernel::Params *kparams, MemCpyFn *memcpy_handler,
                    AggregateFn *aggregate_handler,
-                   OutputTransformFn *ot_handler, int8_t *scratch_mem)
+                   OutputTransformFn *ot_handler)
     : AbstractKernel(kparams),
       memcpy_handler(memcpy_handler),
       aggregate_handler(aggregate_handler),
-      ot_handler(ot_handler),
-      scratch_mem(scratch_mem) {}
+      ot_handler(ot_handler) {}
 
 /*
   This is going to compute the output for output_channel_group_count channel
@@ -23,7 +22,7 @@ Filter2D::Filter2D(AbstractKernel::Params *kparams, MemCpyFn *memcpy_handler,
   regions.
 */
 void Filter2D::calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h,
-                                       int32_t w) {
+                                       int32_t w, int8_t *scratch_mem) {
   int8_t *input_img = memcpy_handler->memcopy_fn(
       scratch_mem, X, h,
       w);  // copy all input channels, channel start is implicitly 0.
@@ -41,18 +40,17 @@ void Filter2D::calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h,
 Filter2D_DW::Filter2D_DW(AbstractKernel::Params *kparams,
                          MemCpyFn *memcpy_handler,
                          AggregateFn *aggregate_handler,
-                         OutputTransformFn *ot_handler, int8_t *scratch_mem,
+                         OutputTransformFn *ot_handler,
                          int output_channels_per_group)
     : AbstractKernel(kparams),
       memcpy_handler(memcpy_handler),
       aggregate_handler(aggregate_handler),
       ot_handler(ot_handler),
-      output_channels_per_group(output_channels_per_group),
-      scratch_mem(scratch_mem) {}
+      output_channels_per_group(output_channels_per_group) {}
 
 // This is an example of a depthwise conv or max pool
 void Filter2D_DW::calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h,
-                                          int32_t w) {
+                                          int32_t w, int8_t *scratch_mem) {
   const auto output_groups = this->kparams->output_channel_group_count;
 
   for (int32_t chan_group = 0; chan_group < output_groups; chan_group++) {
@@ -63,7 +61,7 @@ void Filter2D_DW::calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h,
 
     // This will know how many channels it is copying
     int8_t *input_img =
-        this->memcpy_handler->memcopy_fn(this->scratch_mem, X, h, w, c);
+        this->memcpy_handler->memcopy_fn(scratch_mem, X, h, w, c);
 
     this->aggregate_handler->aggregate_fn(&A, input_img, chan_group);
 

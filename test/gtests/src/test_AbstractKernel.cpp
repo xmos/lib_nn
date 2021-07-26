@@ -18,7 +18,8 @@ class MockAbstractKernel : public AbstractKernel {
         output_slice_channel_count(output_slice_channel_count) {}
 
   void calc_output_pixel_slice(int8_t *output_image, int8_t *input_image,
-                               int32_t output_row, int32_t output_col) {
+                               int32_t output_row, int32_t output_col,
+                               int8_t *scratch) {
     std::memset(output_image, 1, sizeof(int8_t) * output_slice_channel_count);
   }
 };
