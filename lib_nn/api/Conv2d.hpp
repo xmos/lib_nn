@@ -20,8 +20,8 @@ class Conv2dValidIndirect : public Filter2D {
   // Valid only
   // Arbitrary input + output channel count
   Conv2dValidIndirect(AbstractKernel::Params *akp, ImToColValid *memcpy,
-                      MatMulInt8 *aggregator, OT_int8 *ot, int8_t *scratch)
-      : Filter2D(akp, memcpy, aggregator, ot, scratch) {}
+                      MatMulInt8 *aggregator, OT_int8 *ot)
+      : Filter2D(akp, memcpy, aggregator, ot) {}
 };
 
 class Conv2dPaddedInDirect : public Filter2D {
@@ -29,8 +29,8 @@ class Conv2dPaddedInDirect : public Filter2D {
   // Padded
   // Arbitrary input + output channel count
   Conv2dPaddedInDirect(AbstractKernel::Params *akp, ImToColPadded *memcpy,
-                       MatMulInt8 *aggregator, OT_int8 *ot, int8_t *scratch)
-      : Filter2D(akp, memcpy, aggregator, ot, scratch) {}
+                       MatMulInt8 *aggregator, OT_int8 *ot)
+      : Filter2D(akp, memcpy, aggregator, ot) {}
 };
 
 class Conv2dDepthwiseValidDirect : public Filter2D_DW {
@@ -48,8 +48,8 @@ class Conv2dDepthwiseValidIndirect : public Filter2D_DW {
   // Arbitrary input + output channel count
   Conv2dDepthwiseValidIndirect(AbstractKernel::Params *akp,
                                ImToColValid *memcpy, MatMulInt8 *aggregator,
-                               OT_int8 *ot, int8_t *scratch)
-      : Filter2D_DW(akp, memcpy, aggregator, ot, scratch) {}
+                               OT_int8 *ot)
+      : Filter2D_DW(akp, memcpy, aggregator, ot) {}
 };
 
 class Conv2dDepthwisePaddedInDirect : public Filter2D_DW {
@@ -58,7 +58,7 @@ class Conv2dDepthwisePaddedInDirect : public Filter2D_DW {
   // Arbitrary input + output channel count
   Conv2dDepthwisePaddedInDirect(AbstractKernel::Params *akp,
                                 ImToColPadded *memcpy, MatMulInt8 *aggregator,
-                                OT_int8 *ot, int8_t *scratch)
-      : Filter2D_DW(akp, memcpy, aggregator, ot, scratch) {}
+                                OT_int8 *ot)
+      : Filter2D_DW(akp, memcpy, aggregator, ot) {}
 };
 }  // namespace nn

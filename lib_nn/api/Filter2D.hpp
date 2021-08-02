@@ -57,7 +57,7 @@ class Filter2D : public AbstractKernel {
    *
    * @TODO: Where should the size of this buffer come from?
    */
-  int8_t *scratch_mem;
+  //   int8_t *scratch_mem;
 
  protected:
   /**
@@ -65,19 +65,17 @@ class Filter2D : public AbstractKernel {
    * `kparams`
    */
   virtual void calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h,
-                                       int32_t w) override;
+                                       int32_t w, int8_t *scratch_mem) override;
 
  public:
   Filter2D(ImageGeometry &Y, ImageRegion &r, MemCpyFn *memcpy_handler,
-           AggregateFn *aggregate_handler, OutputTransformFn *ot_handler,
-           int8_t *scratch_mem = nullptr);
+           AggregateFn *aggregate_handler, OutputTransformFn *ot_handler);
 
   /**
    * Construct a filter using the provided component handlers.
    */
   Filter2D(AbstractKernel::Params *kparams, MemCpyFn *memcpy_handler,
-           AggregateFn *aggregate_handler, OutputTransformFn *ot_handler,
-           int8_t *scratch_mem = nullptr);
+           AggregateFn *aggregate_handler, OutputTransformFn *ot_handler);
 };
 
 /**
@@ -116,7 +114,7 @@ class Filter2D_DW : public AbstractKernel {
    * A pointer to a scratch memory buffer. Required when im2col-like patch
    * handlers are used.
    */
-  int8_t *scratch_mem;
+  //   int8_t *scratch_mem;
 
  protected:
   /**
@@ -125,7 +123,8 @@ class Filter2D_DW : public AbstractKernel {
    */
   virtual void calc_output_pixel_slice(int8_t *output_image,
                                        int8_t *input_image, int32_t output_row,
-                                       int32_t output_col) override;
+                                       int32_t output_col,
+                                       int8_t *scratch_mem) override;
 
  public:
   /**
@@ -134,7 +133,6 @@ class Filter2D_DW : public AbstractKernel {
    */
   Filter2D_DW(AbstractKernel::Params *kparams, MemCpyFn *memcpy_handler,
               AggregateFn *aggregate_handler, OutputTransformFn *ot_handler,
-              int8_t *scratch_mem = nullptr,
               int output_channels_per_group = VPU_INT8_ACC_PERIOD);
 };
 
