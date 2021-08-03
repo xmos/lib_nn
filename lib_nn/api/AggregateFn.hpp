@@ -4,6 +4,7 @@
 #include <array>
 #include <vector>
 
+#include "Serialisable.hpp"
 #include "Utils.hpp"
 #include "geom/Filter2dGeometry.hpp"
 #include "vpu.hpp"
@@ -56,7 +57,7 @@ struct Conv2dReorderedWeights {
 
 class MatMulInt8 : public AggregateFn {
  public:
-  class Params {
+  class Params : public Serialisable {
    public:
     const int8_t *weights;
     const int32_t output_slice_channel_count;
@@ -131,7 +132,7 @@ class MatMulInt8 : public AggregateFn {
 
 class MatMulDirectFn : public AggregateFn {
  public:
-  class Params {
+  class Params : public Serialisable {
    public:
     const int8_t *weights;
 

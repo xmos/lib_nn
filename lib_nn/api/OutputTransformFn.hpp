@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "Serialisable.hpp"
 #include "Utils.hpp"
 #include "geom/ImageGeometry.hpp"
 #include "vpu.hpp"
@@ -157,12 +158,14 @@ class OutputTransformFnInt8 : public OutputTransformFn {
  */
 class OT_int8 : public OutputTransformFnInt8 {
  public:
-  struct Params {
+  class Params : public Serialisable {
+   public:
     int32_t output_slice_channel_count;
     OutputTransformValues *otv;
     int16_t *biases;
     int16_t *multipliers;
 
+   public:
     /**
      * @brief Construct a new Params object
      *
@@ -174,11 +177,39 @@ class OT_int8 : public OutputTransformFnInt8 {
      * @param multipliers Pointer to the quantised multipliers.
      */
     Params(int32_t output_slice_channel_count, OutputTransformValues *otv,
-           int16_t *biases, int16_t *multipliers)
+           std::vector<int16_t> &biases, std::vector<int16_t> &multipliers)
         : output_slice_channel_count(output_slice_channel_count),
           otv(otv),
-          biases(biases),
-          multipliers(multipliers) {}
+          biases(biases.data()),
+          multipliers(multipliers.data()) {
+      // [asj]TODO pass biases and  multipliers as vectors to verify that they
+      // are output_slice_channel_count in length.
+      // assert(output_slice_channel_count == );
+    }
+
+    template <class T>
+    std::string serialise() {
+      std::string s =
+          std::string((char *)this, (char *)(this + sizeof(T))) +
+          std::string((char *)otv,
+                      (char *)((char *)otv + sizeof(OutputTransformValues))) +
+          std::string((char *)biases,
+                      (char *)(biases + output_slice_channel_count)) +
+          std::string((char *)multipliers,
+                      (char *)(multipliers + output_slice_channel_count));
+
+      return s;
+    }
+
+    template <class T>
+    static T *deserialise(const char *buf) {
+      Params *t = (Params *)buf;
+      int output_slice_channel_count = t->output_slice_channel_count;
+      t->otv = (OutputTransformValues *)((char *)buf + sizeof(Params));
+      t->biases = (int16_t *)(t->otv + sizeof(OutputTransformValues));
+      t->multipliers = (int16_t *)(t->biases + output_slice_channel_count);
+      return t;
+    }
   };
 
  private:

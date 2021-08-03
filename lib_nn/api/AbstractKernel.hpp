@@ -1,6 +1,7 @@
 #ifndef LIB_NN_ABSTRACT_KERNEL_HPP_
 #define LIB_NN_ABSTRACT_KERNEL_HPP_
 
+#include "Serialisable.hpp"
 #include "geom/Filter2dGeometry.hpp"
 
 namespace nn {
@@ -18,7 +19,7 @@ class AbstractKernel {
    *
    * @see AbstractKernel
    */
-  class Params {
+  class Params : public Serialisable {
    public:
     /**
      * The first (`h_begin`; inclusive) and final (`h_end`; exclusive) rows of
@@ -68,6 +69,16 @@ class AbstractKernel {
      * to the adjecent pixel to the right.
      */
     int32_t output_w_mem_stride;
+
+    Params()
+        : h_begin(0),
+          h_end(0),
+          w_begin(0),
+          w_end(0),
+          output_channel_group_count(0),
+          output_channel_slice_offset(0),
+          output_h_mem_stride(0),
+          output_w_mem_stride(0) {}
 
     Params(const ImageGeometry &output_image, const ImageRegion &output_region,
            const int channels_per_group)
