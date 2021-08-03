@@ -70,16 +70,6 @@ class AbstractKernel {
      */
     int32_t output_w_mem_stride;
 
-    Params()
-        : h_begin(0),
-          h_end(0),
-          w_begin(0),
-          w_end(0),
-          output_channel_group_count(0),
-          output_channel_slice_offset(0),
-          output_h_mem_stride(0),
-          output_w_mem_stride(0) {}
-
     Params(const ImageGeometry &output_image, const ImageRegion &output_region,
            const int channels_per_group)
         : h_begin(output_region.start.row),
