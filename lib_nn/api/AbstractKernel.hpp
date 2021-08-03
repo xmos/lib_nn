@@ -1,6 +1,7 @@
 #ifndef LIB_NN_ABSTRACT_KERNEL_HPP_
 #define LIB_NN_ABSTRACT_KERNEL_HPP_
 
+#include "Serialisable.hpp"
 #include "geom/Filter2dGeometry.hpp"
 
 namespace nn {
@@ -18,7 +19,7 @@ class AbstractKernel {
    *
    * @see AbstractKernel
    */
-  class Params {
+  class Params : public Serialisable {
    public:
     /**
      * The first (`h_begin`; inclusive) and final (`h_end`; exclusive) rows of

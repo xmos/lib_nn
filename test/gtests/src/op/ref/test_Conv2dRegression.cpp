@@ -165,9 +165,9 @@ TEST_F(Conv2dPaddedIndirectRegression, BasicTest) {
                                       canonical_values.f_biases,
                                       canonical_values.accu_min,
                                       canonical_values.accu_max);
-                              OT_int8::Params ot_params(
-                                  (int32_t)k_depth, &qp.otv, qp.biases.data(),
-                                  qp.multipliers.data());
+                              OT_int8::Params ot_params((int32_t)k_depth,
+                                                        &qp.otv, qp.biases,
+                                                        qp.multipliers);
 
                               OT_int8 ot(&ot_params);
                               auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
@@ -340,9 +340,9 @@ TEST_F(Conv2dValidIndirectRegression, BasicTest) {
                                       canonical_values.f_biases,
                                       canonical_values.accu_min,
                                       canonical_values.accu_max);
-                              OT_int8::Params ot_params(
-                                  (int32_t)k_depth, &qp.otv, qp.biases.data(),
-                                  qp.multipliers.data());
+                              OT_int8::Params ot_params((int32_t)k_depth,
+                                                        &qp.otv, qp.biases,
+                                                        qp.multipliers);
 
                               OT_int8 ot(&ot_params);
                               auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
@@ -507,9 +507,9 @@ TEST_F(Conv2dValidDirectRegression, BasicTest) {
                                       canonical_values.f_biases,
                                       canonical_values.accu_min,
                                       canonical_values.accu_max);
-                              OT_int8::Params ot_params(
-                                  (int32_t)k_depth, &qp.otv, qp.biases.data(),
-                                  qp.multipliers.data());
+                              OT_int8::Params ot_params((int32_t)k_depth,
+                                                        &qp.otv, qp.biases,
+                                                        qp.multipliers);
                               OT_int8 ot(&ot_params);
                               auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
                                                     Y.depth);

@@ -86,8 +86,8 @@ TEST_F(Test_OT_int8, BasicTest) {
       QuantisationParams qp = OutputTransformFnInt8::quantise_activation(
           f_multipliers, f_biases, accu_min, accu_max);
 
-      OT_int8::Params p((int32_t)output_ch_count, &qp.otv, qp.biases.data(),
-                        qp.multipliers.data());
+      OT_int8::Params p((int32_t)output_ch_count, &qp.otv, qp.biases,
+                        qp.multipliers);
 
       OT_int8 ot(&p);
 

@@ -1,6 +1,7 @@
 #ifndef LIB_NN_MEMCPY_FN_HPP_
 #define LIB_NN_MEMCPY_FN_HPP_
 
+#include "Serialisable.hpp"
 #include "geom/Filter2dGeometry.hpp"
 
 namespace nn {
@@ -67,7 +68,7 @@ class MemCpyFn {
  */
 class DerefInputFn : public MemCpyFn {
  public:
-  class Params {
+  class Params : public Serialisable {
    public:
     int32_t bytes_per_h_line;
     int32_t bytes_per_pixel;
@@ -122,7 +123,7 @@ class DerefInputFn : public MemCpyFn {
  */
 class ImToColPadded : public MemCpyFn {
  public:
-  class Params {
+  class Params : public Serialisable {
    public:
     int32_t kernel_height;
     int32_t input_v_length;
@@ -207,7 +208,8 @@ class ImToColPadded : public MemCpyFn {
 
 class ImToColValid : public MemCpyFn {
  public:
-  struct Params {
+  class Params : public Serialisable {
+   public:
     /**
      * Bytes per row of the input image
      */
@@ -250,6 +252,7 @@ class ImToColValid : public MemCpyFn {
     // i.e. from X[h][w + kernel_width - 1] to X[h+1][w].
     int32_t vertical_mem_stride;
 
+   public:
     /**
      * @brief Construct a new Params object
      *
