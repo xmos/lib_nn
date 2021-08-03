@@ -101,3 +101,43 @@ TEST_F(Test_OT_int8Params, BasicTest) {
     }
   }
 }
+
+class Test_OT_int8Params2 : public ::testing::Test {};
+
+TEST_F(Test_OT_int8Params2, BasicTest) {
+  int8_t d[sizeof(OT_int8::Params)];
+  std::string s;
+
+  {
+    int output_slice_channel_count = 16;
+    std::vector<int16_t> biases(output_slice_channel_count);
+    std::vector<int16_t> multipliers(output_slice_channel_count);
+    OutputTransformValues otv;
+
+    for (int idx = 0; idx < output_slice_channel_count; ++idx) {
+      biases[idx] = -30720;
+      multipliers[idx] = -12000;
+    }
+    for (int idx = 0; idx < sizeof(OutputTransformValues); ++idx) {
+      ((int8_t *)&otv)[idx] = 10;
+    }
+
+    OT_int8::Params p(output_slice_channel_count, &otv, biases, multipliers);
+    s = p.template serialise<OT_int8::Params>();
+  }
+
+  {
+    OT_int8::Params *q = Serialisable::deserialise<OT_int8::Params>(s.c_str());
+
+    EXPECT_EQ(16, q->output_slice_channel_count);
+
+    for (size_t i = 0; i < sizeof(OutputTransformValues); i++) {
+      EXPECT_EQ(10, ((int8_t *)q->otv)[i]);
+    }
+
+    for (size_t i = 0; i < q->output_slice_channel_count; i++) {
+      EXPECT_EQ(-30720, q->biases[i]);
+      EXPECT_EQ(-12000, q->multipliers[i]);
+    }
+  }
+}
