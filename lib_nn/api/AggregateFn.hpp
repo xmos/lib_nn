@@ -59,10 +59,10 @@ class MatMulInt8 : public AggregateFn {
  public:
   class Params : public Serialisable {
    public:
-    const int8_t *weights;
-    const int32_t output_slice_channel_count;
-    const int32_t bytes_per_kernel_channel;
+    int32_t output_slice_channel_count;
+    int32_t bytes_per_kernel_channel;
 
+    int8_t *weights;
     /**
      * @brief Construct a new Params object.
      *
@@ -72,8 +72,31 @@ class MatMulInt8 : public AggregateFn {
      * the kernel (weights).
      * @param weights A Pointer to the begining of the reordered weights.
      */
-    Params(const int output_slice_channel_count,
-           const int32_t bytes_per_kernel_channel, const int8_t *weights);
+    Params( int output_slice_channel_count,
+            int32_t bytes_per_kernel_channel, int8_t *weights);
+
+    template <class T>
+    std::string serialise() {
+      int weight_bytes = MatMulInt8::get_weights_bytes(
+          bytes_per_kernel_channel, output_slice_channel_count);
+      std::string s =
+          std::string((char *)this, (char *)&(weights)) + 
+          std::string((char *)weights, (char *)(weights + weight_bytes));
+      return s;
+    }
+
+    template <class T>
+    static T *deserialise(char * allocated_memory, const char *buf){
+      Params *t = (Params *)allocated_memory;
+      size_t const_size_stuff =  (char * )&(t->weights) - (char * )t;
+      std::memcpy(t, buf, const_size_stuff);
+
+      int weight_bytes = MatMulInt8::get_weights_bytes(
+          t->bytes_per_kernel_channel, t->output_slice_channel_count);
+      t->weights = (int8_t *)(allocated_memory + sizeof(Params));
+      std::memcpy(t->weights, buf + const_size_stuff, weight_bytes);
+      return t;
+    }
   };
 
  protected:
@@ -134,7 +157,6 @@ class MatMulDirectFn : public AggregateFn {
  public:
   class Params : public Serialisable {
    public:
-    const int8_t *weights;
 
     // This has been scaled by VPU_INT16_EPV (bytes_per_kernel_channel_group?)
     int32_t bytes_per_kernel_channel;
@@ -145,7 +167,9 @@ class MatMulDirectFn : public AggregateFn {
 
     int32_t inner_x_h_step;
     int32_t inner_x_v_step;
+    int32_t weights_bytes;
 
+    int8_t *weights;
     /**
      * @brief Construct a new Params object
      *
@@ -160,7 +184,26 @@ class MatMulDirectFn : public AggregateFn {
      * @param weights A Pointer to the begining of the reordered weights.
      */
     Params(const ImageGeometry &X, const WindowGeometry &K,
-           const int input_ch_per_output, const int8_t *weights);
+                               const int input_ch_per_output,
+                              int8_t *weights, int weights_bytes);
+
+    template <class T>
+    std::string serialise() {
+      std::string s =
+          std::string((char *)this, (char *)&(weights)) + 
+          std::string((char *)weights, (char *)(weights + weights_bytes));
+      return s;
+    }
+
+    template <class T>
+    static T *deserialise(char * allocated_memory, const char *buf){
+      Params *t = (Params *)allocated_memory;
+      size_t const_size_stuff =  (char * )&(t->weights) - (char * )t;
+      memcpy(t, buf, const_size_stuff);
+      t->weights = (int8_t *)(allocated_memory + sizeof(Params));
+      memcpy(t->weights, buf + const_size_stuff, t->weights_bytes);
+      return t;
+    }
   };
 
  protected:

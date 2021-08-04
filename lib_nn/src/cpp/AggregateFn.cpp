@@ -120,12 +120,12 @@ int MatMulInt8::get_weights_bytes(int input_bytes, int output_channel_count) {
   return kernel_bytes;
 }
 
-MatMulInt8::Params::Params(const int output_slice_channel_count,
-                           const int32_t bytes_per_kernel_channel,
-                           const int8_t *weights)
-    : weights(weights),
-      output_slice_channel_count(output_slice_channel_count),
-      bytes_per_kernel_channel(bytes_per_kernel_channel) {
+MatMulInt8::Params::Params(int output_slice_channel_count,
+                          int32_t bytes_per_kernel_channel,
+                          int8_t *weights)
+    : output_slice_channel_count(output_slice_channel_count),
+      bytes_per_kernel_channel(bytes_per_kernel_channel),
+      weights(weights) {
   // maybe compute k_p_adjust and input_channel_group_count
 }
 
@@ -196,8 +196,10 @@ void mat_mul_int8_generic_impl(MatMulInt8::Params *params, VPURingBuffer *A,
 
 MatMulDirectFn::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
                                const int input_ch_per_output,
-                               const int8_t *weights)
-    : weights(weights) {
+                              int8_t *weights, int weights_bytes)
+  {
+  this->weights_bytes = weights_bytes;
+  this->weights = weights;
   // TODO X.bits_per_element
   // int bytes_per_copy_per_channel = (input_ch_per_output * X.bits_per_element)
   // / CHAR_BIT;

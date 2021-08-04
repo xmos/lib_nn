@@ -186,13 +186,6 @@ std::tuple<int, int> solve_for_constraint(std::vector<activationT> &multiplier,
   return std::make_tuple(A, M);
 }
 
-template <class T>
-void pad(std::vector<T> &vec, int pad_boundary, T pad_val) {
-  vec.resize(
-      vec.size() + (pad_boundary - vec.size() % pad_boundary) % pad_boundary,
-      pad_val);
-}
-
 template <class T, std::size_t S>
 static void fill_array(T (&arr)[S], T v) {
   std::fill_n(arr, sizeof arr / sizeof(T), v);
@@ -294,11 +287,6 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
     pa_bias = std::min((int32_t)INT16_MAX, pa_bias);
     q.biases.push_back((int16_t)pa_bias);
   }
-
-  // pad q.biases and  q.multipliers to a multiple of VPU_INT16_EPV
-  int16_t pad_val = 0;  // this is arbitrary
-  pad(q.biases, VPU_INT16_EPV, pad_val);
-  pad(q.multipliers, (int)VPU_INT16_EPV, pad_val);
 
   int16_t accu_shr = -A;
   if (accu_shr > 0) {
