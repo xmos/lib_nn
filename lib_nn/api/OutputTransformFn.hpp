@@ -200,8 +200,8 @@ class OT_int8 : public OutputTransformFnInt8 {
       assert(biases_v.size() == multipliers_v.size());
     }
 
-    int get_stuff(){
-      return mul_and_bias_size*2 *sizeof(int16_t);
+    int get_allocation_byte_count(){
+      return sizeof(OT_int8::Params) + sizeof(OutputTransformValues) + mul_and_bias_size * 2 *sizeof(int16_t);
     }
 
     template <class T>

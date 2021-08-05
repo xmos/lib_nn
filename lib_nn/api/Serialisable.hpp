@@ -17,17 +17,6 @@ class Serialisable {
   std::string serialise() {
     return std::string((char*)this, (char*)(this + sizeof(T)));
   }
-
-  /**
-   * @brief Get the variable allocation byte count. The number of bytes to allocate
-   * will be all the constant size objects + this much.
-   * 
-   * @param input_buffer 
-   * @return int 
-   */
-  int get_variable_allocation_byte_count(const char* input_buffer){
-    return 0;
-  }
   
   /**
    * @brief Deserialise the input_buffer into the allocated_memory.

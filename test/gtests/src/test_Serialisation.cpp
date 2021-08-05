@@ -86,7 +86,8 @@ TEST_F(Test_MatMulInt8Params, BasicTest) {
 
     std::string s = p->template serialise<MatMulInt8::Params>();
 
-    char * allocated_memory = (char *)std::malloc(sizeof(MatMulInt8::Params) + weight_count);
+    int allocation_byte_count = p->get_allocation_byte_count();
+    char * allocated_memory = (char *)std::malloc(allocation_byte_count);
 
     MatMulInt8::Params *q =
         MatMulInt8::Params::deserialise<MatMulInt8::Params>(allocated_memory, s.c_str());
@@ -127,7 +128,8 @@ TEST_F(Test_MatMulDirectFnParams, BasicTest) {
 
     std::string s = p->template serialise<MatMulDirectFn::Params>();
 
-    char * allocated_memory = (char *)std::malloc(sizeof(MatMulDirectFn::Params) + weight_bytes);
+    int allocation_byte_count = p->get_allocation_byte_count();
+    char * allocated_memory = (char *)std::malloc(allocation_byte_count);
 
     MatMulDirectFn::Params *q =
         MatMulDirectFn::Params::deserialise<MatMulDirectFn::Params>(allocated_memory, s.c_str());
@@ -169,9 +171,9 @@ TEST_F(Test_OT_int8Params, BasicTest) {
     OT_int8::Params p(output_slice_channel_count, &otv, biases, multipliers);
     std::string s = p.template serialise<OT_int8::Params>();
 
-    int extra_bytes = p.get_stuff();
+    int allocation_byte_count = p.get_allocation_byte_count();
 
-    char * allocated_memory = (char *)std::malloc(sizeof(OT_int8::Params) + sizeof(OutputTransformValues) + extra_bytes);
+    char * allocated_memory = (char *)std::malloc(allocation_byte_count);
 
     OT_int8::Params *q = OT_int8::Params::deserialise<OT_int8::Params>(allocated_memory, s.c_str());
 

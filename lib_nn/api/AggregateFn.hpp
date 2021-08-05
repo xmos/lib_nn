@@ -75,6 +75,13 @@ class MatMulInt8 : public AggregateFn {
     Params( int output_slice_channel_count,
             int32_t bytes_per_kernel_channel, int8_t *weights);
 
+    int get_allocation_byte_count(){
+
+      int weight_bytes = MatMulInt8::get_weights_bytes(
+          bytes_per_kernel_channel, output_slice_channel_count);
+      return sizeof(MatMulInt8::Params) + weight_bytes;
+    }
+
     template <class T>
     std::string serialise() {
       int weight_bytes = MatMulInt8::get_weights_bytes(
@@ -186,6 +193,10 @@ class MatMulDirectFn : public AggregateFn {
     Params(const ImageGeometry &X, const WindowGeometry &K,
                                const int input_ch_per_output,
                               int8_t *weights, int weights_bytes);
+
+    int get_allocation_byte_count(){
+      return sizeof(MatMulDirectFn::Params) + weights_bytes;
+    }
 
     template <class T>
     std::string serialise() {
