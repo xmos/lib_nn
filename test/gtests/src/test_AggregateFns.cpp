@@ -188,8 +188,9 @@ TEST_F(Test_Simple_MatMulDirectFn, BasicTest) {
                 int8_t *weights =
                     (int8_t *)K;  // todo we will switch to usnig the boggler
 
-                MatMulDirectFn::Params p(X_params, K_params, x_channels,
-                                         weights);
+                MatMulDirectFn::Params p(
+                    X_params, K_params, x_channels, weights,
+                    (int)(y_channels * k_height * k_width * x_channels));
                 MatMulDirectFn mmd(&p);
 
                 std::fill_n((int8_t *)K, sizeof K, kernel_fill);
@@ -295,7 +296,8 @@ TEST_F(Test_MatMulDirectFn, BasicTest) {
                                 (int8_t *)raw_weights, shape, 8, pad_val);
 
                         MatMulDirectFn::Params p(X, K, input_ch_per_output,
-                                                 rw.weights.data());
+                                                 rw.weights.data(),
+                                                 rw.weights.size());
                         MatMulDirectFn mmd(&p);
 
                         int ocg_count =

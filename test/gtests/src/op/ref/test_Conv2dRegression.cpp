@@ -165,6 +165,16 @@ TEST_F(Conv2dPaddedIndirectRegression, BasicTest) {
                                       canonical_values.f_biases,
                                       canonical_values.accu_min,
                                       canonical_values.accu_max);
+
+                              // pad q.biases and  q.multipliers to a multiple
+                              // of VPU_INT16_EPV this is to work around array
+                              // over reads
+                              int16_t pad_val = 0;  // this is arbitrary
+                              OutputTransformFn::pad(qp.biases, VPU_INT16_EPV,
+                                                     pad_val);
+                              OutputTransformFn::pad(
+                                  qp.multipliers, (int)VPU_INT16_EPV, pad_val);
+
                               OT_int8::Params ot_params((int32_t)k_depth,
                                                         &qp.otv, qp.biases,
                                                         qp.multipliers);
@@ -340,6 +350,16 @@ TEST_F(Conv2dValidIndirectRegression, BasicTest) {
                                       canonical_values.f_biases,
                                       canonical_values.accu_min,
                                       canonical_values.accu_max);
+
+                              // pad q.biases and  q.multipliers to a multiple
+                              // of VPU_INT16_EPV this is to work around array
+                              // over reads
+                              int16_t pad_val = 0;  // this is arbitrary
+                              OutputTransformFn::pad(qp.biases, VPU_INT16_EPV,
+                                                     pad_val);
+                              OutputTransformFn::pad(
+                                  qp.multipliers, (int)VPU_INT16_EPV, pad_val);
+
                               OT_int8::Params ot_params((int32_t)k_depth,
                                                         &qp.otv, qp.biases,
                                                         qp.multipliers);
@@ -491,7 +511,8 @@ TEST_F(Conv2dValidDirectRegression, BasicTest) {
                                       kernel_pad_val);
 
                               MatMulDirectFn::Params p(X, K, x_channels,
-                                                       rw.weights.data());
+                                                       rw.weights.data(),
+                                                       (int)rw.weights.size());
                               MatMulDirectFn aggregator(&p);
 
                               OutputTransformFnInt8::CanonicalMulAndBias
@@ -507,6 +528,16 @@ TEST_F(Conv2dValidDirectRegression, BasicTest) {
                                       canonical_values.f_biases,
                                       canonical_values.accu_min,
                                       canonical_values.accu_max);
+
+                              // pad q.biases and  q.multipliers to a multiple
+                              // of VPU_INT16_EPV this is to work around array
+                              // over reads
+                              int16_t pad_val = 0;  // this is arbitrary
+                              OutputTransformFn::pad(qp.biases, VPU_INT16_EPV,
+                                                     pad_val);
+                              OutputTransformFn::pad(
+                                  qp.multipliers, (int)VPU_INT16_EPV, pad_val);
+
                               OT_int8::Params ot_params((int32_t)k_depth,
                                                         &qp.otv, qp.biases,
                                                         qp.multipliers);

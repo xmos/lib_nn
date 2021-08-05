@@ -1,6 +1,11 @@
 #pragma once
-
+#include <cstdint>
 namespace nn {
+
+inline bool is_aligned(const void* ptr, std::uintptr_t alignment) noexcept {
+  auto iptr = reinterpret_cast<std::uintptr_t>(ptr);
+  return !(iptr % alignment);
+}
 
 /**
  * This class ultimately just decorates subclasses with some static fields and

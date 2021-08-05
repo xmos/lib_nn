@@ -44,4 +44,4 @@ class TfLiteConverter {
 }  // namespace conv2d
 }  // namespace nn
 
-#endif // LIB_NN_CONV2D_UTILS_HPP_
+#endif  // LIB_NN_CONV2D_UTILS_HPP_

@@ -86,6 +86,12 @@ TEST_F(Test_OT_int8, BasicTest) {
       QuantisationParams qp = OutputTransformFnInt8::quantise_activation(
           f_multipliers, f_biases, accu_min, accu_max);
 
+      // pad q.biases and  q.multipliers to a multiple of VPU_INT16_EPV
+      // this is to work around array over reads
+      int16_t pad_val = 0;  // this is arbitrary
+      OutputTransformFn::pad(qp.biases, VPU_INT16_EPV, pad_val);
+      OutputTransformFn::pad(qp.multipliers, (int)VPU_INT16_EPV, pad_val);
+
       OT_int8::Params p((int32_t)output_ch_count, &qp.otv, qp.biases,
                         qp.multipliers);
 

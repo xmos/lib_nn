@@ -23,6 +23,12 @@ namespace nn {
  */
 class OutputTransformFn {
  public:
+  template <class T>
+  static void pad(std::vector<T> &vec, int pad_boundary, T pad_val) {
+    vec.resize(
+        vec.size() + (pad_boundary - vec.size() % pad_boundary) % pad_boundary,
+        pad_val);
+  }
   /**
    * @brief The method that will translate the accumulator into the output
    * number space.
@@ -161,6 +167,7 @@ class OT_int8 : public OutputTransformFnInt8 {
   class Params : public Serialisable {
    public:
     int32_t output_slice_channel_count;
+    int32_t mul_and_bias_size;
     OutputTransformValues *otv;
     int16_t *biases;
     int16_t *multipliers;
@@ -177,37 +184,73 @@ class OT_int8 : public OutputTransformFnInt8 {
      * @param multipliers Pointer to the quantised multipliers.
      */
     Params(int32_t output_slice_channel_count, OutputTransformValues *otv,
-           std::vector<int16_t> &biases, std::vector<int16_t> &multipliers)
+           std::vector<int16_t> &biases_v, std::vector<int16_t> &multipliers_v)
         : output_slice_channel_count(output_slice_channel_count),
+          mul_and_bias_size(biases_v.size()),
           otv(otv),
-          biases(biases.data()),
-          multipliers(multipliers.data()) {
-      // [asj]TODO pass biases and  multipliers as vectors to verify that they
-      // are output_slice_channel_count in length.
-      // assert(output_slice_channel_count == );
+          biases(biases_v.data()),
+          multipliers(multipliers_v.data()) {
+      assert(is_aligned(biases, 4));
+      assert(is_aligned(multipliers, 4));
+
+      // [asj] when we are not padding to protect again out of bounds memory
+      // then mul_and_bias_size == output_slice_channel_count.
+      assert(biases_v.size() == multipliers_v.size());
+    }
+
+    static int get_allocation_byte_count(const char *buf) {
+      return *(int *)buf;
     }
 
     template <class T>
     std::string serialise() {
+      int allocation_byte_count = sizeof(OutputTransformValues) +
+                                  mul_and_bias_size * 2 * sizeof(int16_t);
       std::string s =
-          std::string((char *)this, (char *)(this + sizeof(T))) +
+          std::string((char *)&allocation_byte_count,
+                      (char *)&allocation_byte_count + sizeof(int)) +
+          std::string((char *)this, (char *)&(otv)) +
           std::string((char *)otv,
-                      (char *)((char *)otv + sizeof(OutputTransformValues))) +
-          std::string((char *)biases,
-                      (char *)(biases + output_slice_channel_count)) +
-          std::string((char *)multipliers,
-                      (char *)(multipliers + output_slice_channel_count));
+                      (char *)((char *)otv + sizeof(OutputTransformValues)));
+
+      if (mul_and_bias_size > 0) {
+        assert(biases != nullptr);
+        assert(multipliers != nullptr);
+
+        std::string bias_string =
+            std::string((char *)biases, (char *)(biases + mul_and_bias_size));
+        std::string multipliers_string = std::string(
+            (char *)multipliers, (char *)(multipliers + mul_and_bias_size));
+        s += bias_string + multipliers_string;
+      }
 
       return s;
     }
 
     template <class T>
-    static T *deserialise(const char *buf) {
-      Params *t = (Params *)buf;
-      int output_slice_channel_count = t->output_slice_channel_count;
-      t->otv = (OutputTransformValues *)((char *)buf + sizeof(Params));
-      t->biases = (int16_t *)(t->otv + sizeof(OutputTransformValues));
-      t->multipliers = (int16_t *)(t->biases + output_slice_channel_count);
+    static T *deserialise(char *allocated_memory, const char *buf) {
+      Params *t = (Params *)allocated_memory;
+      size_t const_size_stuff = (char *)&(t->otv) - (char *)t;
+      char *p = (char *)buf + sizeof(int);
+
+      memcpy(t, p, const_size_stuff);
+      p += const_size_stuff;
+
+      t->otv = (OutputTransformValues *)(allocated_memory + sizeof(Params));
+
+      memcpy(t->otv, p, sizeof(OutputTransformValues));
+      p += sizeof(OutputTransformValues);
+
+      size_t s = sizeof(int16_t) * t->mul_and_bias_size;
+      t->biases = (int16_t *)(allocated_memory + sizeof(Params) +
+                              sizeof(OutputTransformValues));
+      memcpy(t->biases, p, s);
+      p += s;
+
+      t->multipliers = (int16_t *)(allocated_memory + sizeof(Params) +
+                                   sizeof(OutputTransformValues) + s);
+      memcpy(t->multipliers, p, s);
+
       return t;
     }
   };
