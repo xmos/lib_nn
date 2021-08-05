@@ -1,6 +1,7 @@
 #ifndef LIB_NN_SERIALISABLE_HPP_
 #define LIB_NN_SERIALISABLE_HPP_
 
+#include <cstring>
 #include <string>
 
 class Serialisable {
