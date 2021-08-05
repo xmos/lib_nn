@@ -23,8 +23,6 @@ namespace nn {
  */
 class OutputTransformFn {
  public:
-
-   
   template <class T>
   static void pad(std::vector<T> &vec, int pad_boundary, T pad_val) {
     vec.resize(
@@ -192,49 +190,46 @@ class OT_int8 : public OutputTransformFnInt8 {
           otv(otv),
           biases(biases_v.data()),
           multipliers(multipliers_v.data()) {
-      assert (is_aligned(biases, 4));
-      assert (is_aligned(multipliers, 4));
+      assert(is_aligned(biases, 4));
+      assert(is_aligned(multipliers, 4));
 
       // [asj] when we are not padding to protect again out of bounds memory
       // then mul_and_bias_size == output_slice_channel_count.
       assert(biases_v.size() == multipliers_v.size());
     }
 
-    int get_allocation_byte_count(){
-      return sizeof(OT_int8::Params) + sizeof(OutputTransformValues) + mul_and_bias_size * 2 *sizeof(int16_t);
+    int get_allocation_byte_count() {
+      return sizeof(OT_int8::Params) + sizeof(OutputTransformValues) +
+             mul_and_bias_size * 2 * sizeof(int16_t);
     }
 
     template <class T>
     std::string serialise() {
       std::string s =
-          std::string((char *)this, (char *)&(otv)) + 
+          std::string((char *)this, (char *)&(otv)) +
           std::string((char *)otv,
                       (char *)((char *)otv + sizeof(OutputTransformValues)));
 
-      if(mul_and_bias_size > 0){
-
+      if (mul_and_bias_size > 0) {
         assert(biases != nullptr);
         assert(multipliers != nullptr);
 
-        std::string bias_string = 
-            std::string((char *)biases,
-                        (char *)(biases + mul_and_bias_size)) ;
-        std::string multipliers_string = 
-            std::string((char *)multipliers,
-                        (char *)(multipliers + mul_and_bias_size)) ;
+        std::string bias_string =
+            std::string((char *)biases, (char *)(biases + mul_and_bias_size));
+        std::string multipliers_string = std::string(
+            (char *)multipliers, (char *)(multipliers + mul_and_bias_size));
         s += bias_string + multipliers_string;
-        
       }
 
       return s;
     }
 
     template <class T>
-    static T *deserialise(char * allocated_memory,const char *buf) {
+    static T *deserialise(char *allocated_memory, const char *buf) {
       Params *t = (Params *)allocated_memory;
-      size_t const_size_stuff =  (char * )&(t->otv) - (char * )t;
-      char * p = (char*)buf;
-      
+      size_t const_size_stuff = (char *)&(t->otv) - (char *)t;
+      char *p = (char *)buf;
+
       memcpy(t, buf, const_size_stuff);
       p += const_size_stuff;
 
@@ -243,14 +238,15 @@ class OT_int8 : public OutputTransformFnInt8 {
       memcpy(t->otv, p, sizeof(OutputTransformValues));
       p += sizeof(OutputTransformValues);
 
-      size_t s =sizeof(int16_t) * t->mul_and_bias_size;
-      t->biases = (int16_t*)(allocated_memory + sizeof(Params) + sizeof(OutputTransformValues));
+      size_t s = sizeof(int16_t) * t->mul_and_bias_size;
+      t->biases = (int16_t *)(allocated_memory + sizeof(Params) +
+                              sizeof(OutputTransformValues));
       memcpy(t->biases, p, s);
       p += s;
-      
-      t->multipliers = (int16_t*)(allocated_memory + sizeof(Params) + sizeof(OutputTransformValues) + s);
-      memcpy(t->multipliers, p, s);
 
+      t->multipliers = (int16_t *)(allocated_memory + sizeof(Params) +
+                                   sizeof(OutputTransformValues) + s);
+      memcpy(t->multipliers, p, s);
 
       return t;
     }

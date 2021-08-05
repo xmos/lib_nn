@@ -1,12 +1,12 @@
 #include <cstring>
 #include <vector>
 
-#include "Serialisable.hpp"
 #include "AbstractKernel.hpp"
 #include "AggregateFn.hpp"
 #include "MemCpyFn.hpp"
 #include "OutputTransformFn.hpp"
 #include "Rand.hpp"
+#include "Serialisable.hpp"
 #include "gtest/gtest.h"
 
 using namespace nn;
@@ -25,14 +25,14 @@ void test_serialisation() {
     T *p = (T *)d;
     std::string s = p->template serialise<T>();
 
-    char * allocated_memory = (char *)std::malloc(sizeof(T));
+    char *allocated_memory = (char *)std::malloc(sizeof(T));
 
     T *q = Serialisable::deserialise<T>(allocated_memory, s.c_str());
 
     for (size_t i = 0; i < sizeof(T); i++) {
       EXPECT_EQ(((int8_t *)p)[i], ((int8_t *)q)[i]);
     }
-    free (allocated_memory);
+    free(allocated_memory);
   }
 }
 
@@ -63,19 +63,18 @@ TEST_F(Test_DerefInputFnParams, BasicTest) {
 class Test_MatMulInt8Params : public ::testing::Test {};
 
 TEST_F(Test_MatMulInt8Params, BasicTest) {
-
   int8_t d[sizeof(MatMulInt8::Params)];
 
   for (int t = 0; t < test_count; ++t) {
-
     for (int idx = 0; idx < sizeof(d); ++idx) d[idx] = rng.rand<int8_t>();
 
     MatMulInt8::Params *p = (MatMulInt8::Params *)d;
-    
+
     p->bytes_per_kernel_channel = (int)rng.rand<uint8_t>();
     p->output_slice_channel_count = (int)rng.rand<uint8_t>();
 
-    int weight_count = MatMulInt8::get_weights_bytes(p->bytes_per_kernel_channel, p->output_slice_channel_count);
+    int weight_count = MatMulInt8::get_weights_bytes(
+        p->bytes_per_kernel_channel, p->output_slice_channel_count);
 
     std::vector<int8_t> weights(weight_count);
 
@@ -87,10 +86,10 @@ TEST_F(Test_MatMulInt8Params, BasicTest) {
     std::string s = p->template serialise<MatMulInt8::Params>();
 
     int allocation_byte_count = p->get_allocation_byte_count();
-    char * allocated_memory = (char *)std::malloc(allocation_byte_count);
+    char *allocated_memory = (char *)std::malloc(allocation_byte_count);
 
-    MatMulInt8::Params *q =
-        MatMulInt8::Params::deserialise<MatMulInt8::Params>(allocated_memory, s.c_str());
+    MatMulInt8::Params *q = MatMulInt8::Params::deserialise<MatMulInt8::Params>(
+        allocated_memory, s.c_str());
 
     EXPECT_NE(p, q);
     EXPECT_EQ(p->output_slice_channel_count, q->output_slice_channel_count);
@@ -99,16 +98,13 @@ TEST_F(Test_MatMulInt8Params, BasicTest) {
     for (size_t i = 0; i < weight_count; i++) {
       EXPECT_EQ(p->weights[i], q->weights[i]);
     }
-    free (allocated_memory);
+    free(allocated_memory);
   }
 }
-
-
 
 class Test_MatMulDirectFnParams : public ::testing::Test {};
 
 TEST_F(Test_MatMulDirectFnParams, BasicTest) {
-
   int8_t d[sizeof(MatMulDirectFn::Params)];
 
   for (int t = 0; t < test_count; ++t) {
@@ -125,14 +121,14 @@ TEST_F(Test_MatMulDirectFnParams, BasicTest) {
     p->weights = (int8_t *)weights.data();
     p->weights_bytes = weight_bytes;
 
-
     std::string s = p->template serialise<MatMulDirectFn::Params>();
 
     int allocation_byte_count = p->get_allocation_byte_count();
-    char * allocated_memory = (char *)std::malloc(allocation_byte_count);
+    char *allocated_memory = (char *)std::malloc(allocation_byte_count);
 
     MatMulDirectFn::Params *q =
-        MatMulDirectFn::Params::deserialise<MatMulDirectFn::Params>(allocated_memory, s.c_str());
+        MatMulDirectFn::Params::deserialise<MatMulDirectFn::Params>(
+            allocated_memory, s.c_str());
 
     EXPECT_NE(p, q);
     EXPECT_EQ(p->bytes_per_kernel_channel, q->bytes_per_kernel_channel);
@@ -146,14 +142,13 @@ TEST_F(Test_MatMulDirectFnParams, BasicTest) {
     for (size_t i = 0; i < weight_bytes; i++) {
       EXPECT_EQ(p->weights[i], q->weights[i]);
     }
-    free (allocated_memory);
+    free(allocated_memory);
   }
 }
 
 class Test_OT_int8Params : public ::testing::Test {};
 
 TEST_F(Test_OT_int8Params, BasicTest) {
-
   for (int t = 1; t < test_count; ++t) {
     int output_slice_channel_count = t;
     std::vector<int16_t> biases(output_slice_channel_count);
@@ -173,9 +168,10 @@ TEST_F(Test_OT_int8Params, BasicTest) {
 
     int allocation_byte_count = p.get_allocation_byte_count();
 
-    char * allocated_memory = (char *)std::malloc(allocation_byte_count);
+    char *allocated_memory = (char *)std::malloc(allocation_byte_count);
 
-    OT_int8::Params *q = OT_int8::Params::deserialise<OT_int8::Params>(allocated_memory, s.c_str());
+    OT_int8::Params *q = OT_int8::Params::deserialise<OT_int8::Params>(
+        allocated_memory, s.c_str());
 
     EXPECT_EQ(p.output_slice_channel_count, q->output_slice_channel_count);
     EXPECT_EQ(p.mul_and_bias_size, q->mul_and_bias_size);

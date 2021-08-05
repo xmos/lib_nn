@@ -72,11 +72,10 @@ class MatMulInt8 : public AggregateFn {
      * the kernel (weights).
      * @param weights A Pointer to the begining of the reordered weights.
      */
-    Params( int output_slice_channel_count,
-            int32_t bytes_per_kernel_channel, int8_t *weights);
+    Params(int output_slice_channel_count, int32_t bytes_per_kernel_channel,
+           int8_t *weights);
 
-    int get_allocation_byte_count(){
-
+    int get_allocation_byte_count() {
       int weight_bytes = MatMulInt8::get_weights_bytes(
           bytes_per_kernel_channel, output_slice_channel_count);
       return sizeof(MatMulInt8::Params) + weight_bytes;
@@ -87,15 +86,15 @@ class MatMulInt8 : public AggregateFn {
       int weight_bytes = MatMulInt8::get_weights_bytes(
           bytes_per_kernel_channel, output_slice_channel_count);
       std::string s =
-          std::string((char *)this, (char *)&(weights)) + 
+          std::string((char *)this, (char *)&(weights)) +
           std::string((char *)weights, (char *)(weights + weight_bytes));
       return s;
     }
 
     template <class T>
-    static T *deserialise(char * allocated_memory, const char *buf){
+    static T *deserialise(char *allocated_memory, const char *buf) {
       Params *t = (Params *)allocated_memory;
-      size_t const_size_stuff =  (char * )&(t->weights) - (char * )t;
+      size_t const_size_stuff = (char *)&(t->weights) - (char *)t;
       std::memcpy(t, buf, const_size_stuff);
 
       int weight_bytes = MatMulInt8::get_weights_bytes(
@@ -164,7 +163,6 @@ class MatMulDirectFn : public AggregateFn {
  public:
   class Params : public Serialisable {
    public:
-
     // This has been scaled by VPU_INT16_EPV (bytes_per_kernel_channel_group?)
     int32_t bytes_per_kernel_channel;
 
@@ -191,25 +189,24 @@ class MatMulDirectFn : public AggregateFn {
      * @param weights A Pointer to the begining of the reordered weights.
      */
     Params(const ImageGeometry &X, const WindowGeometry &K,
-                               const int input_ch_per_output,
-                              int8_t *weights, int weights_bytes);
+           const int input_ch_per_output, int8_t *weights, int weights_bytes);
 
-    int get_allocation_byte_count(){
+    int get_allocation_byte_count() {
       return sizeof(MatMulDirectFn::Params) + weights_bytes;
     }
 
     template <class T>
     std::string serialise() {
       std::string s =
-          std::string((char *)this, (char *)&(weights)) + 
+          std::string((char *)this, (char *)&(weights)) +
           std::string((char *)weights, (char *)(weights + weights_bytes));
       return s;
     }
 
     template <class T>
-    static T *deserialise(char * allocated_memory, const char *buf){
+    static T *deserialise(char *allocated_memory, const char *buf) {
       Params *t = (Params *)allocated_memory;
-      size_t const_size_stuff =  (char * )&(t->weights) - (char * )t;
+      size_t const_size_stuff = (char *)&(t->weights) - (char *)t;
       memcpy(t, buf, const_size_stuff);
       t->weights = (int8_t *)(allocated_memory + sizeof(Params));
       memcpy(t->weights, buf + const_size_stuff, t->weights_bytes);

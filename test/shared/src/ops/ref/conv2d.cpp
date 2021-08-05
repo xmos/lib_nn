@@ -48,7 +48,8 @@ std::vector<int8_t> nn::test::ops::ref::Conv2dDenseReference(
 
   op_params.quantized_activation_min =
       -128;  // ref_params.output.activation.min;
-  op_params.quantized_activation_max = 127;  // ref_params.output.activation.max;
+  op_params.quantized_activation_max =
+      127;  // ref_params.output.activation.max;
 
   struct {
     tflite::RuntimeShape input, output, bias, filter;
@@ -120,7 +121,8 @@ std::vector<int8_t> nn::test::ops::ref::Conv2dDepthwiseReference(
 
   op_params.quantized_activation_min =
       -128;  // ref_params.output.activation.min;
-  op_params.quantized_activation_max = 127;  // ref_params.output.activation.max;
+  op_params.quantized_activation_max =
+      127;  // ref_params.output.activation.max;
 
   struct {
     tflite::RuntimeShape input, output, bias, filter;
