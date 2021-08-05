@@ -4,6 +4,8 @@
 #include <cstring>
 #include <string>
 
+namespace nn {
+
 class Serialisable {
  public:
   /**
@@ -33,4 +35,5 @@ class Serialisable {
   }
 };
 
+}  // namespace nn
 #endif  // LIB_NN_SERIALISABLE_HPP_
