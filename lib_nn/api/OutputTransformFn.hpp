@@ -198,14 +198,17 @@ class OT_int8 : public OutputTransformFnInt8 {
       assert(biases_v.size() == multipliers_v.size());
     }
 
-    int get_allocation_byte_count() {
-      return sizeof(OT_int8::Params) + sizeof(OutputTransformValues) +
-             mul_and_bias_size * 2 * sizeof(int16_t);
+    static int get_allocation_byte_count(const char *buf) {
+      return *(int *)buf;
     }
 
     template <class T>
     std::string serialise() {
+      int allocation_byte_count = sizeof(OutputTransformValues) +
+                                  mul_and_bias_size * 2 * sizeof(int16_t);
       std::string s =
+          std::string((char *)&allocation_byte_count,
+                      (char *)&allocation_byte_count + sizeof(int)) +
           std::string((char *)this, (char *)&(otv)) +
           std::string((char *)otv,
                       (char *)((char *)otv + sizeof(OutputTransformValues)));
@@ -228,9 +231,9 @@ class OT_int8 : public OutputTransformFnInt8 {
     static T *deserialise(char *allocated_memory, const char *buf) {
       Params *t = (Params *)allocated_memory;
       size_t const_size_stuff = (char *)&(t->otv) - (char *)t;
-      char *p = (char *)buf;
+      char *p = (char *)buf + sizeof(int);
 
-      memcpy(t, buf, const_size_stuff);
+      memcpy(t, p, const_size_stuff);
       p += const_size_stuff;
 
       t->otv = (OutputTransformValues *)(allocated_memory + sizeof(Params));
