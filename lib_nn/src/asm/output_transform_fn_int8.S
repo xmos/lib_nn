@@ -34,9 +34,10 @@ VECT_INT8_MIN:
 .issue_mode  dual
 
 #define PARAMS_output_slice_channel_count 0
-#define PARAMS_otv_p 1
-#define PARAMS_biases 2
-#define PARAMS_multipliers 3
+#define PARAMS_mul_and_bias_size 1
+#define PARAMS_otv_p 2
+#define PARAMS_biases 3
+#define PARAMS_multipliers 4
 
 //OutputTransformValues
 #define OTV_bias_multipler 0

@@ -4,13 +4,15 @@
 
 .issue_mode  dual
 
-#define PARAMS_weights 0
-#define PARAMS_bytes_per_kernel_channel 1
-#define PARAMS_k_height_loop_counter 2
-#define PARAMS_k_width_loop_counter 3
-#define PARAMS_input_channel_loop_counter 4
-#define PARAMS_inner_x_h_step 5
-#define PARAMS_inner_x_v_step 6
+#define PARAMS_bytes_per_kernel_channel 0
+#define PARAMS_k_height_loop_counter 1
+#define PARAMS_k_width_loop_counter 2
+#define PARAMS_input_channel_loop_counter 3
+#define PARAMS_inner_x_h_step 4
+#define PARAMS_inner_x_v_step 5
+#define PARAMS_weights_bytes 6
+#define PARAMS_weights 7
+
 
 //Registers
 

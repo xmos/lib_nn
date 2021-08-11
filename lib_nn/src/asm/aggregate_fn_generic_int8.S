@@ -4,9 +4,9 @@
 
 .issue_mode  dual
 
-#define PARAMS_weights 0
-#define PARAMS_output_slice_channel_count 1
-#define PARAMS_bytes_per_kernel_channel 2
+#define PARAMS_output_slice_channel_count 0
+#define PARAMS_bytes_per_kernel_channel 1
+#define PARAMS_weights 2
 
 
 //Registers
