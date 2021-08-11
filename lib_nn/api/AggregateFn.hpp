@@ -221,6 +221,11 @@ class MatMulDirectFn : public AggregateFn {
       char *p = (char *)buf + sizeof(int);
       memcpy(t, p, const_size_stuff);
       p += const_size_stuff;
+      // TODO: Super hack, deserialization breaks on device without this
+      // Put all variable data as tensors and point instead
+      #ifndef NN_USE_REF
+      p = p + sizeof(int);
+      #endif
       t->weights = (int8_t *)(allocated_memory + sizeof(Params));
       memcpy(t->weights, p, t->weights_bytes);
       return t;
