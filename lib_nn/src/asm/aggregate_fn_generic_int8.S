@@ -57,7 +57,7 @@ FUNCTION_NAME:
     {vsetc t; nop}
 
     {ldw step, params_p[PARAMS_output_slice_channel_count]; ldc thirty_two, 15}
-    {ldw K_p_adjust, params_p[PARAMS_bytes_per_kernel_channel]; shr output_channel_group, output_channel_group, 4}
+    {ldw K_p_adjust, params_p[PARAMS_bytes_per_kernel_channel]; shl output_channel_group, output_channel_group, 4}
     
     mul t, K_p_adjust, output_channel_group
     {ldw K_p, params_p[PARAMS_weights]; sub step, step, output_channel_group}
