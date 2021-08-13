@@ -4,10 +4,25 @@ VERSION = 0.0.0
 # DEPENDENT_MODULES = 
 
 MODULE_XCC_XC_FLAGS = $(XCC_XC_FLAGS)
-MODULE_XCC_FLAGS = -g -Os
+MODULE_XCC_C_FLAGS = -g -Os
+MODULE_XCC_CPP_FLAGS = -g -Os -std=c++11
 
 INCLUDE_DIRS = api/
 
-# SOURCE_DIRS = 
+SOURCE_DIRS = src
+SOURCE_DIRS += src/c
+SOURCE_DIRS += src/c/util
+SOURCE_DIRS += src/c/util/shallow
+SOURCE_DIRS += src/c/util/deep
+SOURCE_DIRS += src/c/util/depthwise
+SOURCE_DIRS += src/c/util/binary
+SOURCE_DIRS += src/asm
+SOURCE_DIRS += src/asm/util
+SOURCE_DIRS += src/asm/util/shallow
+SOURCE_DIRS += src/asm/util/deep
+SOURCE_DIRS += src/asm/util/depthwise
+SOURCE_DIRS += src/cpp
+SOURCE_DIRS += src/cpp/filt2d
+SOURCE_DIRS += src/cpp/filt2d/geom/
 
 # OPTIONAL_HEADERS =
