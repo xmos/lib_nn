@@ -217,16 +217,15 @@ class MatMulDirectFn : public AggregateFn {
     template <class T>
     static T *deserialise(char *allocated_memory, const char *buf) {
       Params *t = (Params *)allocated_memory;
+      assert(is_aligned(allocated_memory, 4));
       size_t const_size_stuff = (char *)&(t->weights) - (char *)t;
       char *p = (char *)buf + sizeof(int);
       memcpy(t, p, const_size_stuff);
       p += const_size_stuff;
-      // TODO: Super hack, deserialization breaks on device without this
-      // Put all variable data as tensors and point instead
-      #ifndef NN_USE_REF
-      p = p + sizeof(int);
-      #endif
+
       t->weights = (int8_t *)(allocated_memory + sizeof(Params));
+
+      assert(is_aligned(t->weights, 4));
       memcpy(t->weights, p, t->weights_bytes);
       return t;
     }
