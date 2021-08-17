@@ -236,25 +236,25 @@ class MatMulDirectFn : public AggregateFn {
 
       char *p = (char *)buf + sizeof(int32_t);
 
-      memcpy(&t->bytes_per_kernel_channel, p, sizeof(int32_t));
+      std::memcpy(&t->bytes_per_kernel_channel, p, sizeof(int32_t));
       p += sizeof(int32_t);
-      memcpy(&t->k_height_loop_counter, p, sizeof(int32_t));
+      std::memcpy(&t->k_height_loop_counter, p, sizeof(int32_t));
       p += sizeof(int32_t);
-      memcpy(&t->k_width_loop_counter, p, sizeof(int32_t));
+      std::memcpy(&t->k_width_loop_counter, p, sizeof(int32_t));
       p += sizeof(int32_t);
-      memcpy(&t->input_channel_loop_counter, p, sizeof(int32_t));
+      std::memcpy(&t->input_channel_loop_counter, p, sizeof(int32_t));
       p += sizeof(int32_t);
-      memcpy(&t->inner_x_h_step, p, sizeof(int32_t));
+      std::memcpy(&t->inner_x_h_step, p, sizeof(int32_t));
       p += sizeof(int32_t);
-      memcpy(&t->inner_x_v_step, p, sizeof(int32_t));
+      std::memcpy(&t->inner_x_v_step, p, sizeof(int32_t));
       p += sizeof(int32_t);
-      memcpy(&t->weights_bytes, p, sizeof(int32_t));
+      std::memcpy(&t->weights_bytes, p, sizeof(int32_t));
       p += sizeof(int32_t);
 
       t->weights = (int8_t *)(allocated_memory + sizeof(Params));
 
       assert(is_aligned(t->weights, 4));
-      memcpy(t->weights, p, t->weights_bytes);
+      std::memcpy(t->weights, p, t->weights_bytes);
       return t;
     }
   };
