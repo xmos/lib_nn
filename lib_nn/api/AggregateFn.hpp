@@ -205,11 +205,26 @@ class MatMulDirectFn : public AggregateFn {
 
     template <class T>
     std::string serialise() {
-      int allocation_byte_count = weights_bytes;
+      int32_t allocation_byte_count = weights_bytes;
       std::string s =
           std::string((char *)&allocation_byte_count,
-                      (char *)&allocation_byte_count + sizeof(int)) +
-          std::string((char *)this, (char *)&(weights)) +
+                      (char *)&allocation_byte_count + sizeof(int32_t)) +
+          std::string(
+              (char *)&this->bytes_per_kernel_channel,
+              (char *)&this->bytes_per_kernel_channel + sizeof(int32_t)) +
+          std::string((char *)&this->k_height_loop_counter,
+                      (char *)&this->k_height_loop_counter + sizeof(int32_t)) +
+          std::string((char *)&this->k_width_loop_counter,
+                      (char *)&this->k_width_loop_counter + sizeof(int32_t)) +
+          std::string(
+              (char *)&this->input_channel_loop_counter,
+              (char *)&this->input_channel_loop_counter + sizeof(int32_t)) +
+          std::string((char *)&this->inner_x_h_step,
+                      (char *)&this->inner_x_h_step + sizeof(int32_t)) +
+          std::string((char *)&this->inner_x_v_step,
+                      (char *)&this->inner_x_v_step + sizeof(int32_t)) +
+          std::string((char *)&this->weights_bytes,
+                      (char *)&this->weights_bytes + sizeof(int32_t)) +
           std::string((char *)weights, (char *)(weights + weights_bytes));
       return s;
     }
@@ -217,12 +232,29 @@ class MatMulDirectFn : public AggregateFn {
     template <class T>
     static T *deserialise(char *allocated_memory, const char *buf) {
       Params *t = (Params *)allocated_memory;
-      size_t const_size_stuff = (char *)&(t->weights) - (char *)t;
-      char *p = (char *)buf + sizeof(int);
-      memcpy(t, p, const_size_stuff);
-      p += const_size_stuff;
+      assert(is_aligned(allocated_memory, 4));
+
+      char *p = (char *)buf + sizeof(int32_t);
+
+      std::memcpy(&t->bytes_per_kernel_channel, p, sizeof(int32_t));
+      p += sizeof(int32_t);
+      std::memcpy(&t->k_height_loop_counter, p, sizeof(int32_t));
+      p += sizeof(int32_t);
+      std::memcpy(&t->k_width_loop_counter, p, sizeof(int32_t));
+      p += sizeof(int32_t);
+      std::memcpy(&t->input_channel_loop_counter, p, sizeof(int32_t));
+      p += sizeof(int32_t);
+      std::memcpy(&t->inner_x_h_step, p, sizeof(int32_t));
+      p += sizeof(int32_t);
+      std::memcpy(&t->inner_x_v_step, p, sizeof(int32_t));
+      p += sizeof(int32_t);
+      std::memcpy(&t->weights_bytes, p, sizeof(int32_t));
+      p += sizeof(int32_t);
+
       t->weights = (int8_t *)(allocated_memory + sizeof(Params));
-      memcpy(t->weights, p, t->weights_bytes);
+
+      assert(is_aligned(t->weights, 4));
+      std::memcpy(t->weights, p, t->weights_bytes);
       return t;
     }
   };
