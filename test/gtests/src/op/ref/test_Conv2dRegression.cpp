@@ -23,6 +23,7 @@ static auto rng = Rand(69);
 
 class Conv2dPaddedIndirectRegression : public ::testing::Test {};
 
+const int max_k_channels = 64;
 struct KernelStimulus {
   std::vector<int8_t> weights;
   std::vector<int32_t> bias;
@@ -71,7 +72,7 @@ TEST_F(Conv2dPaddedIndirectRegression, BasicTest) {
       for (int x_channels = 4; x_channels <= 16; x_channels += 4) {
         for (int k_height = 1; k_height <= x_height; ++k_height) {
           for (int k_width = 1; k_width <= x_width; ++k_width) {
-            for (int k_depth = 4; k_depth <= x_channels; k_depth += 4) {
+            for (int k_depth = 4; k_depth <= max_k_channels; k_depth += 4) {
               for (int k_h_dilation = 1; k_h_dilation <= 2; ++k_h_dilation) {
                 for (int k_v_dilation = 1; k_v_dilation <= 2; ++k_v_dilation) {
                   for (int k_h_stride = 1; k_h_stride <= 2; ++k_h_stride) {
@@ -251,7 +252,7 @@ TEST_F(Conv2dValidIndirectRegression, BasicTest) {
       for (int x_channels = 4; x_channels <= 16; x_channels += 4) {
         for (int k_height = 1; k_height <= x_height; ++k_height) {
           for (int k_width = 1; k_width <= x_width; ++k_width) {
-            for (int k_depth = 4; k_depth <= x_channels; k_depth += 4) {
+            for (int k_depth = 4; k_depth <= max_k_channels; k_depth += 4) {
               for (int k_h_dilation = 1; k_h_dilation <= 2; ++k_h_dilation) {
                 for (int k_v_dilation = 1; k_v_dilation <= 2; ++k_v_dilation) {
                   for (int k_h_stride = 1; k_h_stride <= 2; ++k_h_stride) {
@@ -434,7 +435,7 @@ TEST_F(Conv2dValidDirectRegression, BasicTest) {
       for (int x_channels = 32; x_channels <= 64; x_channels += 32) {
         for (int k_height = 1; k_height <= x_height; ++k_height) {
           for (int k_width = 1; k_width <= x_width; ++k_width) {
-            for (int k_depth = 16; k_depth <= x_channels; k_depth += 16) {
+            for (int k_depth = 16; k_depth <= max_k_channels; k_depth += 16) {
               for (int k_h_dilation = 1; k_h_dilation <= 2; ++k_h_dilation) {
                 for (int k_v_dilation = 1; k_v_dilation <= 2; ++k_v_dilation) {
                   for (int k_h_stride = 1; k_h_stride <= 2; ++k_h_stride) {
