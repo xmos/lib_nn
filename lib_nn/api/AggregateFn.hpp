@@ -82,7 +82,7 @@ class MatMulInt8 : public AggregateFn {
     }
 
     static int get_allocation_byte_count(const char *buf) {
-      return *(int *)buf;
+      return fetch_int(buf);
     }
 
     template <class T>
@@ -200,7 +200,7 @@ class MatMulDirectFn : public AggregateFn {
            const int input_ch_per_output, int8_t *weights, int weights_bytes);
 
     static int get_allocation_byte_count(const char *buf) {
-      return *(int *)buf;
+      return fetch_int(buf);
     }
 
     template <class T>

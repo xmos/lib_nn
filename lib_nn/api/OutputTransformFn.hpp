@@ -199,7 +199,7 @@ class OT_int8 : public OutputTransformFnInt8 {
     }
 
     static int get_allocation_byte_count(const char *buf) {
-      return *(int *)buf;
+      return fetch_int(buf);
     }
 
     template <class T>
