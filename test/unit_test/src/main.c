@@ -15,6 +15,9 @@ int main(void) {
   UNITY_BEGIN();
 
   CALL(test_conv2d_regression);
+  CALL(test_output_transforms);
+  CALL(test_aggregate_fns);
+  CALL(test_mem_cpy_fns);
 
   CALL(test_vpu_memcpy);
   CALL(test_vpu_memset);
