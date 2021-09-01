@@ -12,9 +12,9 @@
   } while (0)
 
 int main(void) {
-  int ret_val;
-
   UNITY_BEGIN();
+
+  CALL(test_conv2d_regression);
 
   CALL(test_vpu_memcpy);
   CALL(test_vpu_memset);
@@ -53,6 +53,5 @@ int main(void) {
   CALL(test_bnn_conv2d_bin);
   CALL(test_bnn_conv2d_int8);
   CALL(test_bnn_conv2d_quant);
-
   return UNITY_END();
 }
