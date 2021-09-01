@@ -75,7 +75,7 @@ void Test_OT_int8() {
   const int vpu_ring_buffer_length = VPU_INT16_EPV;
 
   for (int output_ch_count = 1; output_ch_count <= 64; ++output_ch_count) {
-    for (int itt = 0; itt < 1 << 8; itt++) {
+    for (int itt = 0; itt < 1 << 3; itt++) {
       std::vector<double> f_biases(output_ch_count, 0);
       std::vector<double> f_multipliers(output_ch_count, 0);
       std::vector<int32_t> accu_min(output_ch_count, 0);
