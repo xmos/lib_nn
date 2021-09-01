@@ -1,5 +1,8 @@
 #pragma once
 #include <cstdint>
+
+#define fetch_int(buf)  (((uint8_t)buf[3] << 24) + ((uint8_t)buf[2] <<16) + ((uint8_t)buf[1] <<8) + ((uint8_t)buf[0] <<0))
+
 namespace nn {
 
 inline bool is_aligned(const void* ptr, std::uintptr_t alignment) noexcept {
