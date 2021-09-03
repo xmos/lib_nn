@@ -54,17 +54,21 @@ VECT_INT8_MIN:
 #define output_channel_group r3
 #define output_count output_channel_group
 #define s                    r4
+
+#ifdef USE_DDR_FIX
+#define ddr_spill            r5
+#endif
 #define t                    r11 
 
 #define S_R4    0
-#define S_MASK  1
-#define S_TEMP_VECTOR 2
+#define S_MASK  2
+#define S_TEMP_VECTOR 3
 
 #define FUNCTION_NAME output_transform_fn_impl_asm
 
 //int8_t *OT_int8::output_transform_fn(int8_t *Y, VPURingBuffer *A, int32_t output_channel_group)
 
-#define NSTACKWORDS  63
+#define NSTACKWORDS  64 // ??
     
 .text
 .issue_mode  dual
@@ -76,7 +80,11 @@ VECT_INT8_MIN:
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
 
+    #ifdef USE_DDR_FIX
+    std r4, r5, sp[0]
+    #else
     stw r4, sp[0]
+    #endif
 
     {ldc A_p, 32; mov t, A_p}
     {vldr t[0]; add t, A_p, t}
@@ -86,9 +94,17 @@ FUNCTION_NAME:
     {ldw otv_p, params_p[PARAMS_otv_p]; ldc t, OTV_accu_shr}
     ldaw t, otv_p[t]
 
+    #ifdef USE_DDR_FIX
+    {ldw  s, t[0]; nop}
+    #endif
+
     {vlsat t[0]; ldaw s, sp[S_TEMP_VECTOR]}
     {vstr s[0]; ldc t, OTV_accu_shl}
     {ldw t, otv_p[t]; nop}
+
+    #ifdef USE_DDR_FIX
+    {ldw  ddr_spill, s[0]; nop}
+    #endif
     vlashr s[0], t
     {vstr s[0]; nop}
 
@@ -96,13 +112,25 @@ FUNCTION_NAME:
     {vclrdr; add t, t, output_channel_group}
     {vldc t[0]; nop}
     ldaw t, otv_p[OTV_bias_multipler]
+
+    #ifdef USE_DDR_FIX
+    {ldw  ddr_spillt, t[0]; nop}   ////////////////////
+    #endif
     {vlmacc t[0]; nop}
 
     {ldw t, params_p[PARAMS_multipliers]; nop}
     {vldc s[0]; add t, t, output_channel_group}
+
+    #ifdef USE_DDR_FIX
+    {ldw  ddr_spill, t[0]; nop}
+    #endif
     {vlmacc t[0]; nop}
 
     ldaw t, otv_p[OTV_final_shr]
+
+    #ifdef USE_DDR_FIX
+    {ldw  ddr_spill, t[0]; nop}
+    #endif
     {vlsat t[0];shr output_channel_group, output_channel_group, 1 }
 
     {ldw t, params_p[PARAMS_output_slice_channel_count]; ldaw s, sp[S_TEMP_VECTOR]}
@@ -116,6 +144,10 @@ FUNCTION_NAME:
     {vstr s[0]; nop}             //store off the unmodified vector
 
     ldaw t, cp[VECT_INT16_MAX]
+
+    #ifdef USE_DDR_FIX
+    {ldw  ddr_spill, t[0]; nop}
+    #endif
     {vladd t[0]; mkmsk t, 2}
     {vdepth1; ldaw s, sp[S_MASK]}
 
@@ -132,8 +164,14 @@ FUNCTION_NAME:
     {vdepth8; andnot t, s}
     vstrpv Y_p[0], t
 
-    {ldw r4, sp[0];add Y_p, Y_p, output_count}
-    {retsp NSTACKWORDS; mov r0, Y_p}
+
+    #ifdef USE_DDR_FIX
+    ldd r4, r5, sp[0]
+    #else
+    ldw r4, sp[0]
+    #endif
+    add r0, Y_p, output_count
+    retsp NSTACKWORDS
 
     .cc_bottom FUNCTION_NAME.function
     .set FUNCTION_NAME.nstackwords,NSTACKWORDS

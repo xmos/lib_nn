@@ -78,22 +78,70 @@ FUNCTION_NAME:
 
         {vldc X_p[0]; add X_p, X_p, thirty_two}
         
+        #ifdef USE_DDR_FIX
+        {ldw  t, K_p[0]; nop}
+        #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+        #ifdef USE_DDR_FIX
+        {ldw  t, K_p[0]; nop}
+        #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+        #ifdef USE_DDR_FIX
+        {ldw  t, K_p[0]; nop}
+        #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+        #ifdef USE_DDR_FIX
+        {ldw  t, K_p[0]; nop}
+        #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+        #ifdef USE_DDR_FIX
+        {ldw  t, K_p[0]; nop}
+        #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+        #ifdef USE_DDR_FIX
+        {ldw  t, K_p[0]; nop}
+        #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+        #ifdef USE_DDR_FIX
+        {ldw  t, K_p[0]; nop}
+        #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+        #ifdef USE_DDR_FIX
+        {ldw  t, K_p[0]; nop}
+        #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+        #ifdef USE_DDR_FIX
+        {ldw  t, K_p[0]; nop}
+        #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+        #ifdef USE_DDR_FIX
+        {ldw  t, K_p[0]; nop}
+        #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+        #ifdef USE_DDR_FIX
+        {ldw  t, K_p[0]; nop}
+        #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+        #ifdef USE_DDR_FIX
+        {ldw  t, K_p[0]; nop}
+        #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+        #ifdef USE_DDR_FIX
+        {ldw  t, K_p[0]; nop}
+        #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+        #ifdef USE_DDR_FIX
+        {ldw  t, K_p[0]; nop}
+        #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+        #ifdef USE_DDR_FIX
+        {ldw  t, K_p[0]; nop}
+        #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
 
+        #ifdef USE_DDR_FIX
+        {ldw  t, K_p[0]; nop}
+        #endif
         {vlmaccr K_p[0]; add K_p, K_p, step}
 
     {bt ic_group_count, input_channel_loop_asm; sub ic_group_count, ic_group_count, 1}
@@ -106,6 +154,9 @@ FUNCTION_NAME:
 
     {vldc X_p[0]; nop}
     tail_loop_asm:
+        #ifdef USE_DDR_FIX
+        {ldw  t, K_p[0]; nop}
+        #endif
         {vlmaccr K_p[0]; add K_p, K_p, K_p_adjust}
     {bt step, tail_loop_asm; sub step, step, 1}
 
