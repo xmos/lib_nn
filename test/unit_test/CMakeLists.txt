@@ -7,7 +7,6 @@ set( APP_NAME  unit_test )
 
 include( ${CMAKE_CURRENT_SOURCE_DIR}/../etc/Unity/Unity.cmake )
 include( ${CMAKE_CURRENT_SOURCE_DIR}/../../lib_nn/lib_nn.cmake )
-# include( ${CMAKE_CURRENT_SOURCE_DIR}/../etc/Unity/Unity.cmake )
 
 ## Depends on libraries
 list( APPEND  DEP_LIBS_XCORE  ""  )
