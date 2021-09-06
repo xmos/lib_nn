@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../src/nn_op_helper.h"
+#include "nn_op_helper.h"
 #include "nn_operator.h"
 #include "tst_common.h"
 #include "xs3_vpu.h"
