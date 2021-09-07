@@ -21,8 +21,8 @@
 #define thirty_two        r6
 #define step              r7
 
+#define ddr_spill         r8
 #define t                 r11
-
 
 /*
 extern "C" void mat_mul_impl_asm(MatMulInt8::Params *params, VPURingBuffer *A, int8_t *X, int32_t output_channel_group);
@@ -79,68 +79,68 @@ FUNCTION_NAME:
         {vldc X_p[0]; add X_p, X_p, thirty_two}
         
         #ifdef USE_DDR_FIX
-        {ldw  t, K_p[0]; nop}
+        {ldw  ddr_spill, K_p[0]; nop}
         #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
         #ifdef USE_DDR_FIX
-        {ldw  t, K_p[0]; nop}
+        {ldw  ddr_spill, K_p[0]; nop}
         #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
         #ifdef USE_DDR_FIX
-        {ldw  t, K_p[0]; nop}
+        {ldw  ddr_spill, K_p[0]; nop}
         #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
         #ifdef USE_DDR_FIX
-        {ldw  t, K_p[0]; nop}
+        {ldw  ddr_spill, K_p[0]; nop}
         #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
         #ifdef USE_DDR_FIX
-        {ldw  t, K_p[0]; nop}
+        {ldw  ddr_spill, K_p[0]; nop}
         #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
         #ifdef USE_DDR_FIX
-        {ldw  t, K_p[0]; nop}
+        {ldw  ddr_spill, K_p[0]; nop}
         #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
         #ifdef USE_DDR_FIX
-        {ldw  t, K_p[0]; nop}
+        {ldw  ddr_spill, K_p[0]; nop}
         #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
         #ifdef USE_DDR_FIX
-        {ldw  t, K_p[0]; nop}
+        {ldw  ddr_spill, K_p[0]; nop}
         #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
         #ifdef USE_DDR_FIX
-        {ldw  t, K_p[0]; nop}
+        {ldw  ddr_spill, K_p[0]; nop}
         #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
         #ifdef USE_DDR_FIX
-        {ldw  t, K_p[0]; nop}
+        {ldw  ddr_spill, K_p[0]; nop}
         #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
         #ifdef USE_DDR_FIX
-        {ldw  t, K_p[0]; nop}
+        {ldw  ddr_spill, K_p[0]; nop}
         #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
         #ifdef USE_DDR_FIX
-        {ldw  t, K_p[0]; nop}
+        {ldw  ddr_spill, K_p[0]; nop}
         #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
         #ifdef USE_DDR_FIX
-        {ldw  t, K_p[0]; nop}
+        {ldw  ddr_spill, K_p[0]; nop}
         #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
         #ifdef USE_DDR_FIX
-        {ldw  t, K_p[0]; nop}
+        {ldw  ddr_spill, K_p[0]; nop}
         #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
         #ifdef USE_DDR_FIX
-        {ldw  t, K_p[0]; nop}
+        {ldw  ddr_spill, K_p[0]; nop}
         #endif
         {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
 
         #ifdef USE_DDR_FIX
-        {ldw  t, K_p[0]; nop}
+        {ldw  ddr_spill, K_p[0]; nop}
         #endif
         {vlmaccr K_p[0]; add K_p, K_p, step}
 
@@ -155,7 +155,7 @@ FUNCTION_NAME:
     {vldc X_p[0]; nop}
     tail_loop_asm:
         #ifdef USE_DDR_FIX
-        {ldw  t, K_p[0]; nop}
+        {ldw  ddr_spill, K_p[0]; nop}
         #endif
         {vlmaccr K_p[0]; add K_p, K_p, K_p_adjust}
     {bt step, tail_loop_asm; sub step, step, 1}

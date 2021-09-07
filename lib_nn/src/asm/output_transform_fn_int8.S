@@ -56,11 +56,14 @@ VECT_INT8_MIN:
 #define s                    r4
 
 #ifdef USE_DDR_FIX
+#warning ddr fix in use
 #define ddr_spill            r5
+#else
 #endif
 #define t                    r11 
 
 #define S_R4    0
+#define S_R5    1
 #define S_MASK  2
 #define S_TEMP_VECTOR 3
 
@@ -68,7 +71,7 @@ VECT_INT8_MIN:
 
 //int8_t *OT_int8::output_transform_fn(int8_t *Y, VPURingBuffer *A, int32_t output_channel_group)
 
-#define NSTACKWORDS  64 // ??
+#define NSTACKWORDS  (S_TEMP_VECTOR + 1 + 8)
     
 .text
 .issue_mode  dual
@@ -78,13 +81,9 @@ VECT_INT8_MIN:
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
 FUNCTION_NAME:
-    dualentsp NSTACKWORDS
+    {dualentsp NSTACKWORDS; nop}
 
-    #ifdef USE_DDR_FIX
     std r4, r5, sp[0]
-    #else
-    stw r4, sp[0]
-    #endif
 
     {ldc A_p, 32; mov t, A_p}
     {vldr t[0]; add t, A_p, t}
@@ -114,7 +113,7 @@ FUNCTION_NAME:
     ldaw t, otv_p[OTV_bias_multipler]
 
     #ifdef USE_DDR_FIX
-    {ldw  ddr_spillt, t[0]; nop}   ////////////////////
+    {ldw  ddr_spill, t[0]; nop}  
     #endif
     {vlmacc t[0]; nop}
 
@@ -164,13 +163,8 @@ FUNCTION_NAME:
     {vdepth8; andnot t, s}
     vstrpv Y_p[0], t
 
-
-    #ifdef USE_DDR_FIX
-    ldd r4, r5, sp[0]
-    #else
-    ldw r4, sp[0]
-    #endif
     add r0, Y_p, output_count
+    ldd r4, r5, sp[0]
     retsp NSTACKWORDS
 
     .cc_bottom FUNCTION_NAME.function
@@ -187,6 +181,5 @@ FUNCTION_NAME:
     .issue_mode  single
 
 #endif
-
 
 
