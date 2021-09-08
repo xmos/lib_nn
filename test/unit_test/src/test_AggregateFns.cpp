@@ -236,8 +236,8 @@ void Test_MatMulDirectFn() {
   const int vpu_ring_buffer_length = 16;
 
   // TODO replace 16 and 32
-  for (int x_height = 1; x_height <= 5; ++x_height) {
-    for (int x_width = 1; x_width <= 5; ++x_width) {
+  for (int x_height = 1; x_height <= 3; ++x_height) {
+    for (int x_width = 1; x_width <= 3; ++x_width) {
       for (int x_channels = 32; x_channels <= 32 * 3; x_channels += 32) {
         for (int k_height = 1; k_height <= x_height; ++k_height) {
           for (int k_width = 1; k_width <= x_width; ++k_width) {

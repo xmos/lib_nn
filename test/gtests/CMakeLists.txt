@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 
-set(APP_NAME unit_test)
+set(APP_NAME gtests)
 
 include(${CMAKE_CURRENT_LIST_DIR}/../etc/Unity/Unity.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/../../../ai_deployment_framework.cmake)
@@ -52,6 +52,7 @@ target_include_directories(
   PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../deps/tensorflow
   PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../deps/ruy
   PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../deps/gemmlowp
+  PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../deps/googletest/googletest/include
   PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../deps/flatbuffers/include
   PRIVATE ${LIB_NN_ALT_INCLUDE_DIR}
   PRIVATE ${LIB_NN_TESTS_SHARED_INCLUDE_DIR})

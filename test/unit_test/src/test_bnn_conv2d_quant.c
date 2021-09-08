@@ -9,15 +9,15 @@
 #include "unity.h"
 
 int clrsb(int x) {
-#if defined(__XS3A__)
+  #if defined(__XS3A__)
   for (unsigned i = 0; i < 32; i++) {
     int y = (x << i) >> i;
     if (y != x) return (i - 1);
   }
   return 32;
-#else
-  return __builtin_clrsb(x);
-#endif
+  #else
+    return __builtin_clrsb(x);
+  #endif
 }
 
 static void measure_quantisation(
