@@ -5,11 +5,18 @@ enable_language( C CXX ASM )
 project(xmos-lib_nn)
 
 # Build flags
-#set(BUILD_FLAGS "-g -DTF_LITE_DISABLE_X86_NEON -O3 -DNN_USE_REF")
 set(BUILD_FLAGS "-g")
 list(APPEND BUILD_FLAGS "-DTF_LITE_DISABLE_X86_NEON" )
 list(APPEND BUILD_FLAGS "-O3" )
 list(APPEND BUILD_FLAGS "-DNN_USE_REF" )
+
+#list(APPEND BUILD_FLAGS "-Wall" )
+#list(APPEND BUILD_FLAGS "-fsanitize=undefined" )
+#list(APPEND BUILD_FLAGS "-fsanitize=integer" )
+#list(APPEND BUILD_FLAGS "-fsanitize=implicit-conversion" )
+#list(APPEND BUILD_FLAGS "-fsanitize=address" )
+#list(APPEND BUILD_FLAGS "-fsanitize-recover=address" )
+
 set(BUILD_FLAGS_XCORE "-march=xs3a")
 list(APPEND   BUILD_FLAGS ${BUILD_FLAGS_${CMAKE_SYSTEM_NAME}} )
 list(JOIN BUILD_FLAGS " " BUILD_FLAGS)
@@ -19,11 +26,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS ${BUILD_FLAGS})
 
 set(CMAKE_C_FLAGS_X86 "-std=c99")
-#set(CMAKE_C_FLAGS_XCORE "-march=xs3a")
 
 set(CMAKE_C_FLAGS "${BUILD_FLAGS}")
 list(APPEND   CMAKE_C_FLAGS ${CMAKE_C_FLAGS_${CMAKE_SYSTEM_NAME}} )
-#list(APPEND   CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS_${CMAKE_SYSTEM_NAME}} )
 
 list(JOIN CMAKE_CXX_FLAGS " " CMAKE_CXX_FLAGS)
 list(JOIN CMAKE_C_FLAGS " " CMAKE_C_FLAGS)
@@ -56,4 +61,9 @@ set(LIB_NN_TESTS_SHARED_INCLUDE_DIR
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test/shared)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test/unit_test)
-#add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test/gtests)
+
+option(BUILD_GTESTS "Builds the googletests test suite" OFF)
+
+if(BUILD_GTESTS)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test/gtests)
+endif()
