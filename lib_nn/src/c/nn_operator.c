@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../nn_op_helper.h"
+#include "nn_op_helper.h"
 #include "xs3_vpu.h"
 
 // Note: There currently is no assembly implementation.

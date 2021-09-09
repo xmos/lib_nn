@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../nn_op_helper.h"
+#include "nn_op_helper.h"
 #include "nn_operator.h"
 
 static inline int min(int a, int b) { return (a < b) ? a : b; }

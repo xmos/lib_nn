@@ -8,10 +8,10 @@
 #include <string.h>
 
 #include "../../tst_common.h"
-#include "nn_op_helper.h"
 #include "nn_operator.h"
 #include "unity.h"
 #include "xs3_vpu.h"
+#include "nn_op_helper.h"
 
 #define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
