@@ -99,6 +99,7 @@ MaxPool2d_Generic::MaxPool2d_Generic(AbstractKernel::Params* ak_params,
                                      ImToColPadded* memcopy_handler,
                                      MaxPoolPatchFn* aggregate_handler,
                                      DirectWriteOutputTransform* ot_handler)
+
     : Filter2D_DW(ak_params, memcopy_handler, aggregate_handler, ot_handler,
                   ChannelsPerOutputGroup) {}
 
