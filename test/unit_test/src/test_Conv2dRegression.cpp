@@ -1,5 +1,3 @@
-
-
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -12,18 +10,20 @@
 #include "RefOps.hpp"
 #include "geom/Filter2dGeometry.hpp"
 #include "geom/util.hpp"
-#include "gtest/gtest.h"
 #include "nn_types.h"
-#include "ref_tests.hpp"
+
+extern "C" {
+#include "tst_common.h"
+#include "unity.h"
+}
 
 using namespace nn;
 using namespace nn::test;
 
 static auto rng = Rand(69);
 
-class Conv2dPaddedIndirectRegression : public ::testing::Test {};
+const int max_k_channels = 32;
 
-const int max_k_channels = 64;
 struct KernelStimulus {
   std::vector<int8_t> weights;
   std::vector<int32_t> bias;
@@ -66,7 +66,7 @@ KernelStimulus create_simple_stimulus(Filter2dGeometry &geom) {
   return ks;
 }
 
-TEST_F(Conv2dPaddedIndirectRegression, BasicTest) {
+void test_Conv2dPaddedIndirectRegression() {
   for (int x_height = 1; x_height <= 2; ++x_height) {
     for (int x_width = 1; x_width <= 2; ++x_width) {
       for (int x_channels = 4; x_channels <= 16; x_channels += 4) {
@@ -142,8 +142,8 @@ TEST_F(Conv2dPaddedIndirectRegression, BasicTest) {
                               int8_t kernel_pad_val =
                                   rng.rand<int8_t>();  // This can be anything,
                                                        // 0 in pratice.
-                              std::array<int, 4> shape = {k_depth, k_height,
-                                                          k_width, x_channels};
+                              std::array<int, 4> shape = {
+                                  {k_depth, k_height, k_width, x_channels}};
                               Conv2dReorderedWeights rw =
                                   MatMulInt8::reorder_kernel_weights(
                                       (int8_t *)weights.data(), shape, 8,
@@ -204,27 +204,10 @@ TEST_F(Conv2dPaddedIndirectRegression, BasicTest) {
                                     // std::cout << "tflite: " <<
                                     // (int)expected[idx] << " xcore: " <<
                                     // (int)output[idx] << std::endl;
-                                    EXPECT_NEAR((int)expected[idx],
-                                                (int)output[idx], 1)
-                                        << "tflite: " << (int)expected[idx]
-                                        << " xcore: " << (int)output[idx]
-                                        << " test seed: " << test_seed
-                                        << " eff_mult[yd] : " << eff_mult[yd]
-                                        << " x_height : " << x_height
-                                        << " x_width : " << x_width
-                                        << " x_channels : " << x_channels
-                                        << " k_height : " << k_height
-                                        << " k_width : " << k_width
-                                        << " k_depth : " << k_depth
-                                        << " k_h_dilation : " << k_h_dilation
-                                        << " k_v_dilation : " << k_v_dilation
-                                        << " k_h_stride : " << k_h_stride
-                                        << " k_v_stride : " << k_v_stride
-                                        << " top_pad : " << top_pad
-                                        << " left_pad : " << left_pad
-                                        << " right_pad : " << right_pad
-                                        << " bottom_pad : " << bottom_pad
-                                        << std::endl;
+
+                                    TEST_ASSERT_INT32_WITHIN(1,
+                                                             (int)expected[idx],
+                                                             (int)output[idx]);
                                   }
                                 }
                               }
@@ -244,9 +227,7 @@ TEST_F(Conv2dPaddedIndirectRegression, BasicTest) {
   }
 }
 
-class Conv2dValidIndirectRegression : public ::testing::Test {};
-
-TEST_F(Conv2dValidIndirectRegression, BasicTest) {
+void test_Conv2dValidIndirectRegression() {
   for (int x_height = 1; x_height <= 5; ++x_height) {
     for (int x_width = 1; x_width <= 5; ++x_width) {
       for (int x_channels = 4; x_channels <= 16; x_channels += 4) {
@@ -327,8 +308,8 @@ TEST_F(Conv2dValidIndirectRegression, BasicTest) {
 
                               int8_t kernel_pad_val = rng.rand<int8_t>();
 
-                              std::array<int, 4> shape = {k_depth, k_height,
-                                                          k_width, x_channels};
+                              std::array<int, 4> shape = {
+                                  {k_depth, k_height, k_width, x_channels}};
                               Conv2dReorderedWeights rw =
                                   MatMulInt8::reorder_kernel_weights(
                                       (int8_t *)weights.data(), shape, 8,
@@ -387,27 +368,10 @@ TEST_F(Conv2dValidIndirectRegression, BasicTest) {
                                     // std::cout << "tflite: " <<
                                     // (int)expected[idx] << " xcore: " <<
                                     // (int)output[idx] << std::endl;
-                                    EXPECT_NEAR((int)expected[idx],
-                                                (int)output[idx], 1)
-                                        << "tflite: " << (int)expected[idx]
-                                        << " xcore: " << (int)output[idx]
-                                        << " test seed: " << test_seed
-                                        << " eff_mult[yd] : " << eff_mult[yd]
-                                        << " x_height : " << x_height
-                                        << " x_width : " << x_width
-                                        << " x_channels : " << x_channels
-                                        << " k_height : " << k_height
-                                        << " k_width : " << k_width
-                                        << " k_depth : " << k_depth
-                                        << " k_h_dilation : " << k_h_dilation
-                                        << " k_v_dilation : " << k_v_dilation
-                                        << " k_h_stride : " << k_h_stride
-                                        << " k_v_stride : " << k_v_stride
-                                        << " top_pad : " << top_pad
-                                        << " left_pad : " << left_pad
-                                        << " right_pad : " << right_pad
-                                        << " bottom_pad : " << bottom_pad
-                                        << std::endl;
+
+                                    TEST_ASSERT_INT32_WITHIN(1,
+                                                             (int)expected[idx],
+                                                             (int)output[idx]);
                                   }
                                 }
                               }
@@ -427,11 +391,9 @@ TEST_F(Conv2dValidIndirectRegression, BasicTest) {
   }
 }
 
-class Conv2dValidDirectRegression : public ::testing::Test {};
-
-TEST_F(Conv2dValidDirectRegression, BasicTest) {
-  for (int x_height = 1; x_height <= 5; ++x_height) {
-    for (int x_width = 1; x_width <= 5; ++x_width) {
+void test_Conv2dValidDirectRegression() {
+  for (int x_height = 1; x_height <= 3; ++x_height) {
+    for (int x_width = 1; x_width <= 3; ++x_width) {
       for (int x_channels = 32; x_channels <= 64; x_channels += 32) {
         for (int k_height = 1; k_height <= x_height; ++k_height) {
           for (int k_width = 1; k_width <= x_width; ++k_width) {
@@ -504,8 +466,8 @@ TEST_F(Conv2dValidDirectRegression, BasicTest) {
 
                               int8_t kernel_pad_val = rng.rand<int8_t>();
 
-                              std::array<int, 4> shape = {k_depth, k_height,
-                                                          k_width, x_channels};
+                              std::array<int, 4> shape = {
+                                  {k_depth, k_height, k_width, x_channels}};
                               Conv2dReorderedWeights rw =
                                   MatMulInt8::reorder_kernel_weights(
                                       (int8_t *)weights.data(), shape, 8,
@@ -561,30 +523,9 @@ TEST_F(Conv2dValidDirectRegression, BasicTest) {
                                   for (int yd = 0; yd < Y.depth; yd++) {
                                     int idx = yh * (Y.width * Y.depth) +
                                               yw * Y.depth + yd;
-                                    // std::cout << "tflite: " <<
-                                    // (int)expected[idx] << " xcore: " <<
-                                    // (int)output[idx] << std::endl;
-                                    EXPECT_NEAR((int)expected[idx],
-                                                (int)output[idx], 1)
-                                        << "tflite: " << (int)expected[idx]
-                                        << " xcore: " << (int)output[idx]
-                                        << " test seed: " << test_seed
-                                        << " eff_mult[yd] : " << eff_mult[yd]
-                                        << " x_height : " << x_height
-                                        << " x_width : " << x_width
-                                        << " x_channels : " << x_channels
-                                        << " k_height : " << k_height
-                                        << " k_width : " << k_width
-                                        << " k_depth : " << k_depth
-                                        << " k_h_dilation : " << k_h_dilation
-                                        << " k_v_dilation : " << k_v_dilation
-                                        << " k_h_stride : " << k_h_stride
-                                        << " k_v_stride : " << k_v_stride
-                                        << " top_pad : " << top_pad
-                                        << " left_pad : " << left_pad
-                                        << " right_pad : " << right_pad
-                                        << " bottom_pad : " << bottom_pad
-                                        << std::endl;
+                                    TEST_ASSERT_INT32_WITHIN(1,
+                                                             (int)expected[idx],
+                                                             (int)output[idx]);
                                   }
                                 }
                               }
@@ -602,4 +543,12 @@ TEST_F(Conv2dValidDirectRegression, BasicTest) {
       }
     }
   }
+}
+
+extern "C" void test_conv2d_regression();
+void test_conv2d_regression() {
+  UNITY_SET_FILE();
+  RUN_TEST(test_Conv2dPaddedIndirectRegression);
+  RUN_TEST(test_Conv2dValidDirectRegression);
+  RUN_TEST(test_Conv2dValidIndirectRegression);
 }

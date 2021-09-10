@@ -38,6 +38,8 @@ FLAT_BUFFERS_PATH := $(DEPS_PATH)/flatbuffers
 RUY_PATH := $(DEPS_PATH)/ruy
 TENSORFLOW_PATH := $(DEPS_PATH)/tensorflow
 GEMMLOWP_PATH := $(DEPS_PATH)/gemmlowp
+# SHARED_TESTING_PATH := $(NN_PATH)/test/shared
+SHARED_TESTING_PATH := ../shared
 
 BUILD_DIR := .build
 BIN_DIR := bin
@@ -56,7 +58,7 @@ ifneq ($(VERBOSE),$(EMPTY_STR))
 endif
 
 INCLUDES := $(NN_PATH)/api $(NN_PATH)/src $(UNITY_PATH)/src $(COMPUTE_ENGINE_PATH) $(FLAT_BUFFERS_PATH)/include
-INCLUDES += $(RUY_PATH) $(TENSORFLOW_PATH) $(GEMMLOWP_PATH)
+INCLUDES += $(RUY_PATH) $(TENSORFLOW_PATH) $(GEMMLOWP_PATH) $(SHARED_TESTING_PATH)/include 
 SOURCE_DIRS := src 
 SOURCE_FILE_EXTENSIONS := c cpp
 
@@ -152,9 +154,13 @@ $(OBJECT_FILES):
 
 # Libraries are built using a recursive make call.
 UNITY_STATIC_LIB := $(LIB_DIR)/unity.a
-DEPENDENCY_LIBS = $(UNITY_STATIC_LIB)
+SHARED_STATIC_LIB := $(LIB_DIR)/shared.a
+DEPENDENCY_LIBS = $(UNITY_STATIC_LIB) $(SHARED_STATIC_LIB) 
 
 LIB_MAKE_OPTS := VERBOSE=$(VERBOSE) BUILD_DIR=$(abspath $(BUILD_DIR)/lib_nn) LIB_DIR=$(abspath $(LIB_DIR)) \
+                 PLATFORM=$(PLATFORM) TARGET_DEVICE=$(TARGET_DEVICE)
+
+SHARED_MAKE_OPTS := VERBOSE=$(VERBOSE) OBJ_DIR=$(abspath $(OBJ_DIR)) BUILD_DIR=$(abspath $(BUILD_DIR)/shared) LIB_DIR=$(abspath $(LIB_DIR)) \
                  PLATFORM=$(PLATFORM) TARGET_DEVICE=$(TARGET_DEVICE)
 
 DEP_MAKE_OPTS := VERBOSE=$(VERBOSE) OBJ_DIR=$(abspath $(OBJ_DIR)) PLATFORM=$(PLATFORM) \
@@ -165,6 +171,9 @@ force_look:
 
 $(LIB_NN_FILE): force_look
 	@$(MAKE) -C $(NN_PATH) $(abspath $@ ) $(LIB_MAKE_OPTS)
+
+$(SHARED_STATIC_LIB): force_look
+	@$(MAKE) -C ../etc/shared $(abspath $@ ) $(DEP_MAKE_OPTS)
 
 $(UNITY_STATIC_LIB): force_look
 	@$(MAKE) -C ../etc/Unity $(abspath $@ ) $(DEP_MAKE_OPTS)
