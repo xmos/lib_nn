@@ -55,11 +55,15 @@ VECT_INT8_MIN:
 #define output_count output_channel_group
 #define s                    r4
 
+
 #ifdef USE_DDR_FIX
+#define OPTIONAL_DDR_SPILL(x) { ldw ddr_spill, x[0]; nop}
 #warning ddr fix in use
 #define ddr_spill            r5
 #else
+#define OPTIONAL_DDR_SPILL(x) /* */
 #endif
+
 #define t                    r11 
 
 #define S_R4    0
@@ -93,17 +97,12 @@ FUNCTION_NAME:
     {ldw otv_p, params_p[PARAMS_otv_p]; ldc t, OTV_accu_shr}
     ldaw t, otv_p[t]
 
-    #ifdef USE_DDR_FIX
-    {ldw  s, t[0]; nop}
-    #endif
-
+    OPTIONAL_DDR_SPILL(t)
     {vlsat t[0]; ldaw s, sp[S_TEMP_VECTOR]}
     {vstr s[0]; ldc t, OTV_accu_shl}
     {ldw t, otv_p[t]; nop}
 
-    #ifdef USE_DDR_FIX
-    {ldw  ddr_spill, s[0]; nop}
-    #endif
+    OPTIONAL_DDR_SPILL(s)
     vlashr s[0], t
     {vstr s[0]; nop}
 
@@ -112,24 +111,18 @@ FUNCTION_NAME:
     {vldc t[0]; nop}
     ldaw t, otv_p[OTV_bias_multipler]
 
-    #ifdef USE_DDR_FIX
-    {ldw  ddr_spill, t[0]; nop}  
-    #endif
+    OPTIONAL_DDR_SPILL(t)
     {vlmacc t[0]; nop}
 
     {ldw t, params_p[PARAMS_multipliers]; nop}
     {vldc s[0]; add t, t, output_channel_group}
 
-    #ifdef USE_DDR_FIX
-    {ldw  ddr_spill, t[0]; nop}
-    #endif
+    OPTIONAL_DDR_SPILL(t)
     {vlmacc t[0]; nop}
 
     ldaw t, otv_p[OTV_final_shr]
 
-    #ifdef USE_DDR_FIX
-    {ldw  ddr_spill, t[0]; nop}
-    #endif
+    OPTIONAL_DDR_SPILL(t)
     {vlsat t[0];shr output_channel_group, output_channel_group, 1 }
 
     {ldw t, params_p[PARAMS_output_slice_channel_count]; ldaw s, sp[S_TEMP_VECTOR]}
@@ -144,9 +137,7 @@ FUNCTION_NAME:
 
     ldaw t, cp[VECT_INT16_MAX]
 
-    #ifdef USE_DDR_FIX
-    {ldw  ddr_spill, t[0]; nop}
-    #endif
+    OPTIONAL_DDR_SPILL(t)
     {vladd t[0]; mkmsk t, 2}
     {vdepth1; ldaw s, sp[S_MASK]}
 
