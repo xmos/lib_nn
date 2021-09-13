@@ -4,11 +4,12 @@ enable_language( C CXX ASM )
 
 project(xmos-lib_nn)
 
+option(BUILD_DDR_FIX "Build XCore binary with DDR fix enabled" OFF)
+
 # Build flags
 set(BUILD_FLAGS "-g")
 list(APPEND BUILD_FLAGS "-DTF_LITE_DISABLE_X86_NEON" )
 list(APPEND BUILD_FLAGS "-O3" )
-list(APPEND BUILD_FLAGS "-DNN_USE_REF" )
 
 #list(APPEND BUILD_FLAGS "-Wall" )
 #list(APPEND BUILD_FLAGS "-fsanitize=undefined" )
@@ -17,7 +18,11 @@ list(APPEND BUILD_FLAGS "-DNN_USE_REF" )
 #list(APPEND BUILD_FLAGS "-fsanitize=address" )
 #list(APPEND BUILD_FLAGS "-fsanitize-recover=address" )
 
+set(BUILD_FLAGS_X86 "-DNN_USE_REF")
 set(BUILD_FLAGS_XCORE "-march=xs3a")
+if(BUILD_DDR_FIX)
+  list(APPEND BUILD_FLAGS_XCORE "-DUSE_DDR_FIX")
+endif(BUILD_TESTS)
 list(APPEND   BUILD_FLAGS ${BUILD_FLAGS_${CMAKE_SYSTEM_NAME}} )
 list(JOIN BUILD_FLAGS " " BUILD_FLAGS)
 
@@ -33,7 +38,9 @@ list(APPEND   CMAKE_C_FLAGS ${CMAKE_C_FLAGS_${CMAKE_SYSTEM_NAME}} )
 list(JOIN CMAKE_CXX_FLAGS " " CMAKE_CXX_FLAGS)
 list(JOIN CMAKE_C_FLAGS " " CMAKE_C_FLAGS)
 list(APPEND   COMPILE_FLAGS_XCORE  -march=xs3a   )
+# list(APPEND   COMPILE_FLAGS_XCORE  "-DUSE_DDR_FIX"   )
 list(APPEND   COMPILE_FLAGS ${COMPILE_FLAGS_${CMAKE_SYSTEM_NAME}} )
+# list(JOIN COMPILE_FLAGS " " COMPILE_FLAGS)
 
 
 # Target name
