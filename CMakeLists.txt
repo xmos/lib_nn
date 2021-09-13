@@ -4,6 +4,8 @@ enable_language( C CXX ASM )
 
 project(xmos-lib_nn)
 
+option(BUILD_DDR_FIX "Build XCore binary with DDR fix enabled" OFF)
+
 # Build flags
 set(BUILD_FLAGS "-g")
 list(APPEND BUILD_FLAGS "-DTF_LITE_DISABLE_X86_NEON" )
@@ -18,7 +20,9 @@ list(APPEND BUILD_FLAGS "-O3" )
 
 set(BUILD_FLAGS_X86 "-DNN_USE_REF")
 set(BUILD_FLAGS_XCORE "-march=xs3a")
-# list(APPEND BUILD_FLAGS_XCORE "-DUSE_DDR_FIX")
+if(BUILD_DDR_FIX)
+  list(APPEND BUILD_FLAGS_XCORE "-DUSE_DDR_FIX")
+endif(BUILD_TESTS)
 list(APPEND   BUILD_FLAGS ${BUILD_FLAGS_${CMAKE_SYSTEM_NAME}} )
 list(JOIN BUILD_FLAGS " " BUILD_FLAGS)
 
