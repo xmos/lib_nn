@@ -57,7 +57,8 @@ VECT_INT8_MIN:
 
 
 #ifdef USE_DDR_FIX
-#define OPTIONAL_DDR_SPILL(x) { ldw ddr_spill, x[0]; nop}
+#define OPTIONAL_DDR_SPILL(x) { ldw ddr_spill, x[8]; nop} ; \
+                              { ldw ddr_spill, x[0]; nop}
 #warning ddr fix in use
 #define ddr_spill            r5
 #else

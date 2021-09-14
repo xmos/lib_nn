@@ -32,7 +32,8 @@ extern "C" void mat_mul_impl_asm(MatMulInt8::Params *params, VPURingBuffer *A, i
 
 
 #ifdef USE_DDR_FIX
-#define OPTIONAL_DDR_SPILL(x) { ldw ddr_spill, x[0]; nop}
+#define OPTIONAL_DDR_SPILL(x) { ldw ddr_spill, x[8]; nop} ;\
+                              { ldw ddr_spill, x[0]; nop}
 #else
 #define OPTIONAL_DDR_SPILL(x) /* */
 #endif
