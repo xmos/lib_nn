@@ -59,10 +59,6 @@ Conv2dReorderedWeights MatMulDirectFn_DW::reorder_kernel_weights(
   if (remaining_output_channels) {
     for (int h = 0; h < k_height; ++h) {
       for (int w = 0; w < k_width; ++w) {
-        // copy(raw_weights[h][w][complete_channel_groups * 16],
-        //      remaining_output_channels);
-        // copy(0, vpu_ring_buffer_length - remaining_output_channels);
-
         int8_t *src = raw_weights + complete_channel_groups * 16 +
                       (w * output_channel_count) +
                       h * (output_channel_count * k_width);
@@ -148,31 +144,14 @@ void mat_mul_direct_dw_impl(MatMulDirectFn_DW::Params *params, VPURingBuffer *A,
   VSETC(vpu, MODE_S8);
   VCLRDR(vpu);
 
-  // std::cout << " params->k_height_loop_counter: "
-  //           << params->k_height_loop_counter
-  //           << " params->k_width_loop_counter: " <<
-  //           params->k_width_loop_counter
-  //           << " params->bytes_per_kernel_channel_group: "
-  //           << params->bytes_per_kernel_channel_group
-  //           << " params->inner_x_v_step: " << params->inner_x_v_step
-  //           << " params->inner_x_h_step: " << params->inner_x_h_step
-  //           << std::endl;
-
-  // int8_t *X_cur_p =
-  //     X + params->bytes_per_kernel_channel_group * output_channel_group;
-  int8_t *X_cur_p = X;
+  int8_t *X_cur_p = X + 16 * output_channel_group;
   int8_t *K_p = (int8_t *)params->weights +
                 params->bytes_per_kernel_channel_group * output_channel_group;
 
   for (int kh = params->k_height_loop_counter; kh >= 0; kh--) {
     for (int kw = params->k_width_loop_counter; kw >= 0; kw--) {
       VLDC(vpu, X_cur_p);
-      // vpu_sim_mem_print(X_cur_p, vpu->mode);
-      // std::cout << "MACC " << K_p << std::endl;
       VLMACC(vpu, K_p);
-      // vpu_sim_mem_print(K_p, vpu->mode);
-
-      // exit(1);
       K_p += VPU_INT16_VLMACC_ELMS;
 
       X_cur_p += params->inner_x_h_step;

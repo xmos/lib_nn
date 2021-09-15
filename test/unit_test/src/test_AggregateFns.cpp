@@ -463,21 +463,23 @@ void Test_MatMulDirectFn_DW() {
   // TODO replace 16 and 32
   for (int x_height = 1; x_height <= 4; ++x_height) {
     for (int x_width = 1; x_width <= 4; ++x_width) {
-      for (int x_channels = 4; x_channels <= 16; x_channels += 4) {
+      for (int x_channels = 4; x_channels <= 32 + 4; x_channels += 4) {
         for (int k_height = 1; k_height <= x_height; ++k_height) {
           for (int k_width = 1; k_width <= x_width; ++k_width) {
             for (int k_h_dilation = 1; k_h_dilation <= 3; ++k_h_dilation) {
               for (int k_v_dilation = 1; k_v_dilation <= 3; ++k_v_dilation) {
                 for (int k_h_stride = 1; k_h_stride <= 3; ++k_h_stride) {
                   for (int k_v_stride = 1; k_v_stride <= 3; ++k_v_stride) {
-                    std::cout
-                        << " x_height: " << x_height << " x_width: " << x_width
-                        << " x_channels: " << x_channels
-                        << " k_height: " << k_height << " k_width: " << k_width
-                        << " k_h_dilation: " << k_h_dilation
-                        << " k_v_dilation: " << k_v_dilation
-                        << " k_h_stride: " << k_h_stride
-                        << " k_v_stride: " << k_v_stride << std::endl;
+                    // std::cout
+                    //     << " x_height: " << x_height << " x_width: " <<
+                    //     x_width
+                    //     << " x_channels: " << x_channels
+                    //     << " k_height: " << k_height << " k_width: " <<
+                    //     k_width
+                    //     << " k_h_dilation: " << k_h_dilation
+                    //     << " k_v_dilation: " << k_v_dilation
+                    //     << " k_h_stride: " << k_h_stride
+                    //     << " k_v_stride: " << k_v_stride << std::endl;
                     // gap
                     int output_height = CONV2D_OUTPUT_LENGTH(
                         x_height, k_height, k_v_dilation, k_v_stride);
@@ -508,28 +510,11 @@ void Test_MatMulDirectFn_DW() {
                     for (int j = 0; j < sizeof X_mem; ++j)
                       ((int8_t *)X_mem)[j] = rng.rand<int8_t>();
 
-                    // std::cout << "X:";
-                    // for (int j = 0; j < sizeof X_mem; ++j)
-                    //   std::cout << (int)((int8_t *)X_mem)[j] << " ";
-                    // std::cout << std::endl;
-
-                    // std::cout << "raw_weights:";
-                    // for (int j = 0; j < sizeof raw_weights; ++j)
-                    //   std::cout << (int)((int8_t *)raw_weights)[j] << " ";
-                    // std::cout << std::endl;
-
                     int8_t pad_val = rng.rand<int8_t>();  // this should be
                                                           // unused in this case
-
-                    // std::cout << "pad_val: " << (int)pad_val << std::endl;
                     Conv2dReorderedWeights rw =
                         MatMulDirectFn_DW::reorder_kernel_weights(
                             (int8_t *)raw_weights, shape, 8, pad_val);
-
-                    // std::cout << "raw_weights:";
-                    // for (int j = 0; j < rw.weights.size(); ++j)
-                    //   std::cout << (int)rw.weights[j] << " ";
-                    // std::cout << std::endl;
 
                     MatMulDirectFn_DW::Params p(X, K, rw.weights.data(),
                                                 rw.weights.size());
@@ -546,9 +531,6 @@ void Test_MatMulDirectFn_DW() {
                           std::min(x_channels - vpu_ring_buffer_length * ocg,
                                    vpu_ring_buffer_length);
 
-                      // std::cout << "chs_in_group: " << chs_in_group
-                      //           << std::endl;
-
                       for (int output_chan = 0; output_chan < chs_in_group;
                            ++output_chan) {
                         int actual_output_channel =
@@ -558,13 +540,6 @@ void Test_MatMulDirectFn_DW() {
 
                         for (int h = 0; h < k_height; ++h) {
                           for (int w = 0; w < k_width; ++w) {
-                            // int8_t X_mem[x_height][x_width][x_channels];
-                            // int8_t
-                            // raw_weights[k_height][k_width][x_channels]; int x
-                            // = X_mem      [k_v_dilation * h][k_h_dilation *
-                            // w][actual_output_channel]; int t =
-                            // raw_weights[h][w][actual_output_channel];
-
                             int x =
                                 *(X_mem + actual_output_channel +
                                   (k_h_dilation * w * x_channels) +
@@ -573,7 +548,6 @@ void Test_MatMulDirectFn_DW() {
                             int t =
                                 *(raw_weights + actual_output_channel +
                                   w * x_channels + h * x_channels * k_width);
-                            // std::cout << x << " " << t << std::endl;
                             expected_sum += x * t;
                           }
                         }
@@ -625,7 +599,7 @@ void test_aggregate_fns() {
   // RUN_TEST(Test_Simple_MatMulDirectFn);
   // RUN_TEST(Test_MatMulDirectFn);
   // RUN_TEST(Test_Kernel_Reordering);
-  // RUN_TEST(Test_Simple_MatMulDirectFn_DW);
+  RUN_TEST(Test_Simple_MatMulDirectFn_DW);
   RUN_TEST(Test_MatMulDirectFn_DW);
-  // RUN_TEST(Test_Kernel_Reordering_DW);
+  RUN_TEST(Test_Kernel_Reordering_DW);
 }
