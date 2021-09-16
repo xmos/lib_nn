@@ -42,7 +42,8 @@ extern "C" void mat_mul_impl_asm(void *params, VPURingBuffer *A, int8_t *X, int3
 #define FUNCTION_NAME mat_mul_direct_impl_asm
 
 #ifdef USE_DDR_FIX
-#define OPTIONAL_DDR_SPILL(x) { ldw ddr_spill, x[0]; nop}
+#define OPTIONAL_DDR_SPILL(x) { ldw ddr_spill, x[8]; nop} ;\
+                              { ldw ddr_spill, x[0]; nop}
 #define NSTACKWORDS  8
 #else
 #define OPTIONAL_DDR_SPILL(x) /* */
