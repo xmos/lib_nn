@@ -26,7 +26,7 @@ Conv2dReorderedWeights MatMulDirectFn_DW::reorder_kernel_weights(
 
   Conv2dReorderedWeights reordered_weights(output_channel_count);
 
-  const int vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
+  // const int vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
 
   const int vpu_ring_buffer_length = VPU_INT16_EPV;
 
@@ -144,7 +144,7 @@ void mat_mul_direct_dw_impl(MatMulDirectFn_DW::Params *params, VPURingBuffer *A,
   VSETC(vpu, MODE_S8);
   VCLRDR(vpu);
 
-  int8_t *X_cur_p = X + 16 * output_channel_group;
+  int8_t *X_cur_p = X;
   int8_t *K_p = (int8_t *)params->weights +
                 params->bytes_per_kernel_channel_group * output_channel_group;
 

@@ -422,7 +422,8 @@ void Test_Simple_MatMulDirectFn_DW() {
                 for (int y = 0; y < x_width - k_width + 1; ++y) {
                   for (int ocg = 0; ocg < ocg_count; ++ocg) {
                     alignas(4) VPURingBuffer A;
-                    mmd.aggregate_fn(&A, (int8_t *)T, ocg);
+                    int8_t *X_mem_ch_grp = T + ocg * 16;
+                    mmd.aggregate_fn(&A, X_mem_ch_grp, ocg);
 
                     for (int output_chan = 0;
                          output_chan < vpu_ring_buffer_length; ++output_chan) {
@@ -480,7 +481,6 @@ void Test_MatMulDirectFn_DW() {
                     //     << " k_v_dilation: " << k_v_dilation
                     //     << " k_h_stride: " << k_h_stride
                     //     << " k_v_stride: " << k_v_stride << std::endl;
-                    // gap
                     int output_height = CONV2D_OUTPUT_LENGTH(
                         x_height, k_height, k_v_dilation, k_v_stride);
                     int output_width = CONV2D_OUTPUT_LENGTH(
@@ -525,7 +525,11 @@ void Test_MatMulDirectFn_DW() {
 
                     for (int ocg = 0; ocg < ocg_count; ++ocg) {
                       alignas(4) VPURingBuffer A;
-                      mmd.aggregate_fn(&A, (int8_t *)X_mem, ocg);
+
+                      // We need to dereference the pointer here so as to test
+                      // the correct ocg
+                      int8_t *X_mem_ch_grp = X_mem + ocg * 16;
+                      mmd.aggregate_fn(&A, (int8_t *)X_mem_ch_grp, ocg);
 
                       int chs_in_group =
                           std::min(x_channels - vpu_ring_buffer_length * ocg,
@@ -594,11 +598,11 @@ void Test_Kernel_Reordering_DW() {
 extern "C" void test_aggregate_fns();
 void test_aggregate_fns() {
   UNITY_SET_FILE();
-  // RUN_TEST(Test_SimpleMatMulInt8);
-  // RUN_TEST(Test_MatMulInt8);
-  // RUN_TEST(Test_Simple_MatMulDirectFn);
-  // RUN_TEST(Test_MatMulDirectFn);
-  // RUN_TEST(Test_Kernel_Reordering);
+  RUN_TEST(Test_SimpleMatMulInt8);
+  RUN_TEST(Test_MatMulInt8);
+  RUN_TEST(Test_Simple_MatMulDirectFn);
+  RUN_TEST(Test_MatMulDirectFn);
+  RUN_TEST(Test_Kernel_Reordering);
   RUN_TEST(Test_Simple_MatMulDirectFn_DW);
   RUN_TEST(Test_MatMulDirectFn_DW);
   RUN_TEST(Test_Kernel_Reordering_DW);
