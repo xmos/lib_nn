@@ -36,29 +36,20 @@ class Conv2dPaddedInDirect : public Filter2D {
 class Conv2dDepthwiseValidDirect : public Filter2D_DW {
  public:
   // Valid only
-  // Multiple of 32 input and 16 output channels
+  // Multiple of 4 input and 4 output channels
   Conv2dDepthwiseValidDirect(AbstractKernel::Params *akp, DerefInputFn *memcpy,
-                             MatMulDirectFn *aggregator, OT_int8 *ot)
+                             MatMulDirectFn_DW *aggregator, OT_int8 *ot)
       : Filter2D_DW(akp, memcpy, aggregator, ot) {}
 };
 
-class Conv2dDepthwiseValidIndirect : public Filter2D_DW {
+class Conv2dDepthwisePaddedIndirect : public Filter2D_DW {
  public:
   // Valid only
-  // Arbitrary input + output channel count
-  Conv2dDepthwiseValidIndirect(AbstractKernel::Params *akp,
-                               ImToColValid *memcpy, MatMulInt8 *aggregator,
-                               OT_int8 *ot)
+  // Multiple of 4 input and 4 output channels
+  Conv2dDepthwisePaddedIndirect(AbstractKernel::Params *akp,
+                                ImToColPadded *memcpy,
+                                MatMulDirectFn_DW *aggregator, OT_int8 *ot)
       : Filter2D_DW(akp, memcpy, aggregator, ot) {}
 };
 
-class Conv2dDepthwisePaddedInDirect : public Filter2D_DW {
- public:
-  // Padded
-  // Arbitrary input + output channel count
-  Conv2dDepthwisePaddedInDirect(AbstractKernel::Params *akp,
-                                ImToColPadded *memcpy, MatMulInt8 *aggregator,
-                                OT_int8 *ot)
-      : Filter2D_DW(akp, memcpy, aggregator, ot) {}
-};
 }  // namespace nn

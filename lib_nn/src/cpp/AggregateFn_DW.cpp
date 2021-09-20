@@ -44,6 +44,9 @@ Conv2dReorderedWeights MatMulDirectFn_DW::reorder_kernel_weights(
 
   // raw_weights[0][height][width][channels]
 
+  // printf("complete_channel_groups:%d\n", complete_channel_groups);
+  // printf("remaining_output_channels:%d\n", remaining_output_channels);
+
   for (int ocg = 0; ocg < complete_channel_groups; ++ocg) {
     for (int h = 0; h < k_height; ++h) {
       for (int w = 0; w < k_width; ++w) {
@@ -117,6 +120,14 @@ int MatMulDirectFn_DW::get_weights_bytes(int input_bytes,
 
   return kernel_bytes;
 }
+
+int MatMulDirectFn_DW::get_scratch_mem_bytes(int input_bytes) {
+  // TODO fix me - this could be a few bytes lower but it would need the count
+  // of input channels.
+  const int vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;  // this is safe though
+  return input_bytes + vpu_bytes;
+}
+
 MatMulDirectFn_DW::Params::Params(const ImageGeometry &X,
                                   const WindowGeometry &K, int8_t *weights,
                                   int weights_bytes) {
@@ -136,6 +147,26 @@ MatMulDirectFn_DW::Params::Params(const ImageGeometry &X,
                    (int)K.shape.width * bytes_per_pixel * (int)K.dilation.col;
 }
 
+/*
+This is the constructor for when the input has been flattened to a single
+vector, i.e. for when we are using im2col (padding) then multiplying depthwise
+with the scrach
+*/
+MatMulDirectFn_DW::Params::Params(const WindowGeometry &K, int8_t *weights,
+                                  int weights_bytes) {
+  this->weights_bytes = weights_bytes;
+  this->weights = weights;
+
+  k_height_loop_counter = 0;
+  k_width_loop_counter = K.shape.height * K.shape.width - 1;
+
+  bytes_per_kernel_channel_group =
+      K.shape.height * K.shape.width * VPU_INT16_VLMACC_ELMS;
+
+  inner_x_h_step = 0;
+  inner_x_v_step = VPU_INT16_VLMACC_ELMS;
+}
+
 void mat_mul_direct_dw_impl(MatMulDirectFn_DW::Params *params, VPURingBuffer *A,
                             int8_t *X, int32_t output_channel_group) {
   xs3_vpu vpu_mem;
@@ -150,8 +181,11 @@ void mat_mul_direct_dw_impl(MatMulDirectFn_DW::Params *params, VPURingBuffer *A,
 
   for (int kh = params->k_height_loop_counter; kh >= 0; kh--) {
     for (int kw = params->k_width_loop_counter; kw >= 0; kw--) {
+      // printf("kh %d kw:%d X_cur_p:%p K_p:%p\n", kh, kw, X_cur_p, K_p);
       VLDC(vpu, X_cur_p);
+      // vpu_sim_mem_print(X_cur_p, vpu->mode);
       VLMACC(vpu, K_p);
+      // vpu_sim_mem_print(K_p, vpu->mode);
       K_p += VPU_INT16_VLMACC_ELMS;
 
       X_cur_p += params->inner_x_h_step;

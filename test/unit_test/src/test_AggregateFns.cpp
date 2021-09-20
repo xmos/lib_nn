@@ -495,11 +495,9 @@ void Test_MatMulDirectFn_DW() {
                     std::array<int, 4> shape = {
                         {1, k_height, k_width, x_channels}};
 
-                    int weight_tensor_overread = 32;
                     int input_tensor_overread = 32;
                     alignas(4)
-                        int8_t raw_weights[k_height * k_width * x_channels +
-                                           weight_tensor_overread];
+                        int8_t raw_weights[k_height][k_width][x_channels];
 
                     for (int j = 0; j < sizeof raw_weights; ++j)
                       ((int8_t *)raw_weights)[j] = rng.rand<int8_t>();
@@ -512,6 +510,7 @@ void Test_MatMulDirectFn_DW() {
 
                     int8_t pad_val = rng.rand<int8_t>();  // this should be
                                                           // unused in this case
+
                     Conv2dReorderedWeights rw =
                         MatMulDirectFn_DW::reorder_kernel_weights(
                             (int8_t *)raw_weights, shape, 8, pad_val);
@@ -550,8 +549,7 @@ void Test_MatMulDirectFn_DW() {
                                   (k_v_dilation * h * x_channels * x_width));
 
                             int t =
-                                *(raw_weights + actual_output_channel +
-                                  w * x_channels + h * x_channels * k_width);
+                                (int)raw_weights[h][w][actual_output_channel];
                             expected_sum += x * t;
                           }
                         }

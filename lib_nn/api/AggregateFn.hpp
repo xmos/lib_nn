@@ -317,6 +317,8 @@ class MatMulDirectFn_DW : public AggregateFn {
     Params(const ImageGeometry &X, const WindowGeometry &K, int8_t *weights,
            int weights_bytes);
 
+    Params(const WindowGeometry &K, int8_t *weights, int weights_bytes);
+
     static int get_allocation_byte_count(const char *buf) {
       return fetch_int(buf);
     }

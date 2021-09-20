@@ -96,12 +96,12 @@ void Test_ImToColValid() {
                                                          x_channels +
                                                      kc + output_c];
 
-                                  // EXPECT_EQ(t, x);
+                                  TEST_ASSERT_EQUAL(t, x);
                                 }
                               }
                             }
                             for (; t_idx < scratch_bytes; ++t_idx) {
-                              // EXPECT_EQ(0, T[t_idx]);
+                              TEST_ASSERT_EQUAL(0, T[t_idx]);
                             }
                           }
                         }
@@ -244,12 +244,12 @@ void Test_ImToColPadded() {
                                               [kw * k_h_dilation +
                                                k_h_stride * output_w]
                                               [kc + output_c];
-                                          // EXPECT_EQ(t, x);
+                                          TEST_ASSERT_EQUAL(t, x);
                                         }
                                       }
                                     }
                                     for (; t_idx < scratch_bytes; ++t_idx) {
-                                      // EXPECT_EQ(0, T[t_idx]);
+                                      TEST_ASSERT_EQUAL(0, T[t_idx]);
                                     }
                                   }
                                 }
@@ -305,7 +305,7 @@ void Test_DerefInputFn() {
                     for (int c = 0; c < x_channels; ++c) {
                       int8_t *p = deref.memcopy_fn(0, (int8_t *)X_mem, h, w, c);
                       int x = (int)X_mem[k_v_stride * h][k_h_stride * w][c];
-                      // EXPECT_EQ((int)*p, x);
+                      TEST_ASSERT_EQUAL((int)*p, x);
                     }
                   }
                 }
