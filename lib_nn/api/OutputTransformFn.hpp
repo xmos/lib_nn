@@ -98,8 +98,8 @@ class OutputTransformFnInt8 : public OutputTransformFn {
 
   static CanonicalMulAndBias canonicalise_mul_and_bias(
       const std::vector<float> &eff_mult, const std::vector<int32_t> &bias,
-      const std::vector<int8_t> &weights, int input_zero_point, int output_zero_point,
-      int output_channels) {
+      const std::vector<int8_t> &weights, int input_zero_point,
+      int output_zero_point, int output_channels) {
     CanonicalMulAndBias canonical_values(output_channels);
 
     int elements_per_channel = weights.size() / output_channels;
@@ -399,6 +399,7 @@ class DirectWriteOutputTransform
    */
   const Params *params;
 
+ public:
   /**
    * Construct a DirectWriteOutputTransform using the specified params.
    */
@@ -475,6 +476,7 @@ class ShiftInt8OutputTransform
    */
   const Params *params;
 
+ public:
   /**
    * Construct a ShiftInt8OutputTransform using the specified params.
    */
