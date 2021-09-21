@@ -98,7 +98,7 @@ void test_requantize_16_to_8_case1() {
 
   const unsigned N_casses = sizeof(casses) / sizeof(test_case_t);
 
-  const int8_t XXX = 0xCC;
+  const int8_t XXX = (int8_t)0xCC;
 
   for (int v = first_case; v < N_casses && v <= last_case; v++) {
     test_case_t* casse = &casses[v];
@@ -149,7 +149,7 @@ void test_requantize_16_to_8_case2() {
 
   int16_t WORD_ALIGNED x_orig[MAX_LEN];
 
-  const int8_t XXX = 0xCC;
+  const int8_t XXX = (int8_t)0xCC;
 
   for (int v = 0; v < REPS; v++) {
     PRINTF("\t\trep %d...\n", v);
@@ -202,7 +202,7 @@ void test_requantize_16_to_8_case3() {
 
   int16_t WORD_ALIGNED x_orig[MAX_LEN];
 
-  const int8_t XXX = 0xCC;
+  const int8_t XXX = (int8_t)0xCC;
 
   for (int v = 0; v < REPS; v++) {
     PRINTF("\t\trep %d...\n", v);
@@ -222,7 +222,7 @@ void test_requantize_16_to_8_case3() {
     requantize_16_to_8(y, x, job_start, N);
 
     for (int i = 0; i < MAX_LEN; i++) {
-      int8_t exp_val = 0xCC;
+      int8_t exp_val = (int8_t)0xCC;
 
       if (i >= job_start && i < job_start + N) {
         exp_val = vdepth8_single_s16(x_orig[i]);

@@ -173,7 +173,6 @@ static void conv2d_depthwise_prepare(nn_conv2d_depthwise_job_t* job,
 
   const unsigned x_row_bytes = x_params->width * x_params->channels;
   const unsigned y_row_bytes = y_params->width * y_params->channels;
-  const unsigned k_row_bytes = conv_window->shape.width * y_params->channels;
 
   job->stride.row.X =
       x_row_bytes - x_params->channels * conv_window->shape.width;

@@ -84,8 +84,8 @@ void Test_MatMulInt8() {
       int k_height = 1;
       int k_width = 1;  // to make things easy
 
-      std::array<int, 4> shape = {output_channel_count, k_height, k_width,
-                                  input_bytes};
+      std::array<int, 4> shape = {
+          {output_channel_count, k_height, k_width, input_bytes}};
       alignas(4) int8_t raw_weights[output_channel_count][k_height][k_width]
                                    [input_bytes];
       assert(sizeof raw_weights == input_bytes * output_channel_count);
@@ -264,8 +264,8 @@ void Test_MatMulDirectFn() {
                                          k_h_stride, 0, k_v_dilation,
                                          k_h_dilation);
 
-                        std::array<int, 4> shape = {output_channels, k_height,
-                                                    k_width, x_channels};
+                        std::array<int, 4> shape = {
+                            {output_channels, k_height, k_width, x_channels}};
                         alignas(4) int8_t raw_weights[output_channels][k_height]
                                                      [k_width][x_channels];
 

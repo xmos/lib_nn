@@ -119,7 +119,6 @@ void fully_connected_16_ref(int16_t* Y, const int8_t* W, const int8_t* X,
                             const channel_count_t C_in,
                             const channel_count_t out_chan_start,
                             const channel_count_t out_chan_count) {
-  xs3_vpu vpu;
   const unsigned ACCS = VPU_INT8_ACC_PERIOD;
 
   assert_word_aligned((const void*)W);
@@ -177,7 +176,6 @@ void fully_connected_8_ref(int8_t* Y, const int8_t* W, const int8_t* X,
                            const channel_count_t C_in,
                            const channel_count_t out_chan_start,
                            const channel_count_t out_chan_count) {
-  xs3_vpu vpu;
   const unsigned ACCS = VPU_INT8_ACC_PERIOD;
 
   assert_word_aligned((const void*)W);

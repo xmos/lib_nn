@@ -91,18 +91,6 @@ static int clrsb(int x) {
 #endif
 }
 
-static int clrsbll(long long x) {
-#if defined(__XS3A__)
-  for (unsigned i = 0; i < 64; i++) {
-    int y = (x << i) >> i;
-    if (y != x) return (i - 1);
-  }
-  return 64;
-#else
-  return __builtin_clrsbll(x);
-#endif
-}
-
 // This puts upper and lower limits on the range of A
 // A must reduce the vpu accumulator to 16 bit
 // A must not remove all the imformation from the vpu accumulator

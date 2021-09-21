@@ -20,8 +20,10 @@ void impl_vpu_memcpy_directed(size_t atom_bytes, int atom_count, int alignment,
   int8_t* src_unaligned = (int8_t*)malloc(byte_count + alignment);
   int8_t* dst_unaligned = (int8_t*)malloc(byte_count + alignment);
 
-  int8_t* src = src_unaligned + alignment - ((int)src_unaligned % alignment);
-  int8_t* dst = dst_unaligned + alignment - ((int)dst_unaligned % alignment);
+  int8_t* src =
+      src_unaligned + alignment - ((int64_t)src_unaligned % alignment);
+  int8_t* dst =
+      dst_unaligned + alignment - ((int64_t)dst_unaligned % alignment);
 
   int seed = 69;
 
@@ -46,8 +48,10 @@ void impl_vpu_memcpy_pseudo_random(size_t src_pointer_inc,
   int8_t* src_unaligned = (int8_t*)malloc(byte_count + alignment);
   int8_t* dst_unaligned = (int8_t*)malloc(byte_count + alignment);
 
-  int8_t* src = src_unaligned + alignment - ((int)src_unaligned % alignment);
-  int8_t* dst = dst_unaligned + alignment - ((int)dst_unaligned % alignment);
+  int8_t* src =
+      src_unaligned + alignment - ((int64_t)src_unaligned % alignment);
+  int8_t* dst =
+      dst_unaligned + alignment - ((int64_t)dst_unaligned % alignment);
 
   int seed = 69;
 

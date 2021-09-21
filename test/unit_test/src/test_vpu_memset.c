@@ -36,7 +36,7 @@ void impl_vpu_memset_32_pseudo_random(int pointer_inc, int set_words_inc,
   int32_t *dst = (int32_t *)malloc(bytes_per_vpu_word * max_test_vpu_words + 1);
 
   // align the dst pointer
-  dst = (int32_t *)((char *)dst + (4 - (int)dst & 3));
+  dst = (int32_t *)((char *)dst + (4 - (int64_t)dst & 3));
 
   int seed = 69;
 
@@ -89,7 +89,7 @@ void impl_vpu_memset_vector_pseudo_random(int pointer_inc, int set_vectors_inc,
       (int32_t *)malloc(bytes_per_vpu_vector * max_test_vpu_vectors + 1);
 
   // align the dst pointer
-  dst = (int32_t *)((char *)dst + (4 - (int)dst & 3));
+  dst = (int32_t *)((char *)dst + (4 - (int64_t)dst & 3));
 
   int seed = 69;
 
