@@ -43,19 +43,19 @@ int main(void) {
   //   CALL(test_fully_connected_8);
   // #endif
 
-  // CALL(test_maxpool2d);
-  // CALL(test_avgpool2d);
-  // CALL(test_avgpool2d_global);
+  CALL(test_maxpool2d);
+  CALL(test_avgpool2d);
+  CALL(test_avgpool2d_global);
 
-  // CALL(test_requantize_16_to_8);
-  // CALL(test_lookup8);
+  CALL(test_requantize_16_to_8);
+  CALL(test_lookup8);
 
-  // CALL(test_add_elementwise);
+  CALL(test_add_elementwise);
 
-  // CALL(test_bsign_8);
-  // CALL(test_pad);
-  // CALL(test_bnn_conv2d_bin);
-  // CALL(test_bnn_conv2d_int8);
-  // CALL(test_bnn_conv2d_quant);
+  CALL(test_bsign_8);
+  CALL(test_pad);
+  CALL(test_bnn_conv2d_bin);
+  CALL(test_bnn_conv2d_int8);
+  CALL(test_bnn_conv2d_quant);
   return UNITY_END();
 }

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <valarray>
 #include <vector>
 
 #include "Conv2d.hpp"
@@ -50,36 +51,33 @@ struct DWKernelStimulus {
 DWKernelStimulus create_simple_stimulus_dw(Filter2dGeometry &geom) {
   DWKernelStimulus ks(geom);
 
-  for (int idx = 0; idx < ks.weights.size(); ++idx) ks.weights[idx] = 2;
-  rng.rand<int8_t>();
+  for (int idx = 0; idx < ks.weights.size(); ++idx)
+    ks.weights[idx] = rng.rand<int8_t>();
 
-  for (int idx = 0; idx < ks.input.size(); ++idx) ks.input[idx] = 3;
-  rng.rand<int8_t>();
-  // int n = geom.input.height * geom.input.width * geom.input.depth;
-  // for (int idx = 0; idx < n; ++idx) ks.input[idx] = rng.rand<int8_t>();
-  // for (int idx = n; idx < ks.input.size(); ++idx) ks.input[idx] = 1;
+  for (int idx = 0; idx < ks.input.size(); ++idx)
+    ks.input[idx] = rng.rand<int8_t>();
 
-  ks.input_zero_point = rng.rand<int8_t>() % 4;
-  ks.output_zero_point = rng.rand<int8_t>() % 4;
-  // ks.input_zero_point = 0;
-  // ks.output_zero_point = 0;
+  ks.input_zero_point = rng.rand<int8_t>() % 8;
+  ks.output_zero_point = rng.rand<int8_t>() % 8;
 
-  // for (int ch = 0; ch < geom.output.depth; ch++) {
-  //   while (ks.eff_mult[ch] < (1.0 / 256)) ks.eff_mult[ch] =
-  //   rng.rand<float>(); ks.bias[ch] = rng.rand<int8_t>() % 512;
-  // }
-  // float eff_mult_scalar = 1.0 / 32;
-  // for (int ch = 0; ch < geom.output.depth; ch++) {
-  //   ks.eff_mult[ch] *= eff_mult_scalar;
-  // }
   for (int ch = 0; ch < geom.output.depth; ch++) {
-    ks.eff_mult[ch] = 1;
-    ks.bias[ch] = 0.0;
+    while (ks.eff_mult[ch] < (1.0 / 2)) ks.eff_mult[ch] = rng.rand<float>();
+    int n = (1 << 14);
+    ks.bias[ch] = (rng.rand<int32_t>() % n) - (rng.rand<int32_t>() % n);
+  }
+  float eff_mult_scalar = 1.0 / 256;
+  for (int ch = 0; ch < geom.output.depth; ch++) {
+    ks.eff_mult[ch] *= eff_mult_scalar;
   }
   return ks;
 }
 
 void test_Conv2dValidDirectDWRegression() {
+  /*
+  This is an array of counters to record that all outputs are getting hit
+  */
+  int output_count[256] = {0};
+
   for (int x_height = 1; x_height <= 3; ++x_height) {
     for (int x_width = 1; x_width <= 3; ++x_width) {
       for (int x_channels = 4; x_channels <= 32 + 4; x_channels += 4) {
@@ -136,9 +134,6 @@ void test_Conv2dValidDirectDWRegression() {
                                              -padding.top, -padding.left,
                                              k_v_stride, k_h_stride, 1,
                                              k_v_dilation, k_h_dilation);
-                            // WindowGeometry K(k_height, k_width, 0, 0, 0,
-                            //                  k_v_stride, k_h_stride, 0,
-                            //                  k_v_dilation, k_h_dilation);
 
                             Filter2dGeometry geom(X, Y, K);
 
@@ -190,7 +185,8 @@ void test_Conv2dValidDirectDWRegression() {
                             // pad q.biases and  q.multipliers to a multiple
                             // of VPU_INT16_EPV this is to work around array
                             // over reads
-                            int16_t pad_val = 0;  // this is arbitrary
+                            int16_t pad_val =
+                                rng.rand<int8_t>();  // this is arbitrary
                             OutputTransformFn::pad(qp.biases, VPU_INT16_EPV,
                                                    pad_val);
                             OutputTransformFn::pad(qp.multipliers,
@@ -221,6 +217,7 @@ void test_Conv2dValidDirectDWRegression() {
 
                                   TEST_ASSERT_INT32_WITHIN(
                                       1, (int)expected[idx], (int)output[idx]);
+                                  output_count[(int)expected[idx] - INT8_MIN]++;
                                 }
                               }
                             }
@@ -237,22 +234,30 @@ void test_Conv2dValidDirectDWRegression() {
       }
     }
   }
+  std::valarray<int> oc_(output_count, 256);
+  float dynamic_range = (float)oc_.max() / (float)oc_.min();
+  TEST_ASSERT_FLOAT_WITHIN(128.0, 0, dynamic_range);
 }
 
 void test_Conv2dPaddedIndirectDWRegression() {
+  /*
+  This is an array of counters to record that all outputs are getting hit
+  */
+  int output_count[256] = {0};
+
   for (int x_height = 1; x_height <= 3; ++x_height) {
     for (int x_width = 1; x_width <= 3; ++x_width) {
       for (int x_channels = 4; x_channels <= 32 + 4; x_channels += 4) {
         for (int k_height = 1; k_height <= x_height; ++k_height) {
           for (int k_width = 1; k_width <= x_width; ++k_width) {
-            for (int k_h_dilation = 1; k_h_dilation <= 1; ++k_h_dilation) {
-              for (int k_v_dilation = 1; k_v_dilation <= 1; ++k_v_dilation) {
-                for (int k_h_stride = 1; k_h_stride <= 1; ++k_h_stride) {
-                  for (int k_v_stride = 1; k_v_stride <= 1; ++k_v_stride) {
-                    for (int top_pad = 0; top_pad <= 0; ++top_pad) {
-                      for (int left_pad = 0; left_pad <= 0; ++left_pad) {
-                        for (int right_pad = 0; right_pad <= 0; ++right_pad) {
-                          for (int bottom_pad = 0; bottom_pad <= 0;
+            for (int k_h_dilation = 1; k_h_dilation <= 3; ++k_h_dilation) {
+              for (int k_v_dilation = 1; k_v_dilation <= 3; ++k_v_dilation) {
+                for (int k_h_stride = 1; k_h_stride <= 3; ++k_h_stride) {
+                  for (int k_v_stride = 1; k_v_stride <= 3; ++k_v_stride) {
+                    for (int top_pad = 0; top_pad <= 1; ++top_pad) {
+                      for (int left_pad = 0; left_pad <= 1; ++left_pad) {
+                        for (int right_pad = 0; right_pad <= 1; ++right_pad) {
+                          for (int bottom_pad = 0; bottom_pad <= 1;
                                ++bottom_pad) {
                             padding_t padding = {
                                 (int16_t)top_pad, (int16_t)left_pad,
@@ -270,20 +275,20 @@ void test_Conv2dPaddedIndirectDWRegression() {
 
                             int test_seed = rng.getSeed();
 
-                            std::cout << " x_height:" << x_height
-                                      << " x_width:" << x_width
-                                      << " x_channels:" << x_channels
-                                      << " k_height:" << k_height
-                                      << " k_width:" << k_width
-                                      << " k_h_dilation:" << k_h_dilation
-                                      << " k_v_dilation:" << k_v_dilation
-                                      << " k_h_stride:" << k_h_stride
-                                      << " k_v_stride:" << k_v_stride
-                                      << " top_pad:" << top_pad
-                                      << " left_pad:" << left_pad
-                                      << " right_pad:" << right_pad
-                                      << " bottom_pad:" << bottom_pad
-                                      << std::endl;
+                            // std::cout << " x_height:" << x_height
+                            //           << " x_width:" << x_width
+                            //           << " x_channels:" << x_channels
+                            //           << " k_height:" << k_height
+                            //           << " k_width:" << k_width
+                            //           << " k_h_dilation:" << k_h_dilation
+                            //           << " k_v_dilation:" << k_v_dilation
+                            //           << " k_h_stride:" << k_h_stride
+                            //           << " k_v_stride:" << k_v_stride
+                            //           << " top_pad:" << top_pad
+                            //           << " left_pad:" << left_pad
+                            //           << " right_pad:" << right_pad
+                            //           << " bottom_pad:" << bottom_pad
+                            //           << std::endl;
 
                             // here output_height + width muct match the
                             // allocated memory for y
@@ -292,12 +297,9 @@ void test_Conv2dPaddedIndirectDWRegression() {
 
                             ImageGeometry X(x_height, x_width, x_channels);
 
-                            // WindowGeometry K(k_height, k_width, x_channels,
-                            //                  -padding.top, -padding.left,
-                            //                  k_v_stride, k_h_stride, 1,
-                            //                  k_v_dilation, k_h_dilation);
-                            WindowGeometry K(k_height, k_width, 0, 0, 0,
-                                             k_v_stride, k_h_stride, 0,
+                            WindowGeometry K(k_height, k_width, x_channels,
+                                             -padding.top, -padding.left,
+                                             k_v_stride, k_h_stride, 1,
                                              k_v_dilation, k_h_dilation);
 
                             Filter2dGeometry geom(X, Y, K);
@@ -329,6 +331,7 @@ void test_Conv2dPaddedIndirectDWRegression() {
 
                             std::vector<int8_t> T(scratch_bytes, 0);
 
+                            // Result should be uneffected by kernel pad value
                             int8_t kernel_pad_val = rng.rand<int8_t>();
 
                             std::array<int, 4> shape = {
@@ -360,7 +363,8 @@ void test_Conv2dPaddedIndirectDWRegression() {
                             // pad q.biases and  q.multipliers to a multiple
                             // of VPU_INT16_EPV this is to work around array
                             // over reads
-                            int16_t pad_val = 0;  // this is arbitrary
+                            int16_t pad_val =
+                                rng.rand<int8_t>();  // this is arbitrary
                             OutputTransformFn::pad(qp.biases, VPU_INT16_EPV,
                                                    pad_val);
                             OutputTransformFn::pad(qp.multipliers,
@@ -394,25 +398,12 @@ void test_Conv2dPaddedIndirectDWRegression() {
                                   if (delta < 0) delta = -delta;
                                   failed |= (delta > 1);
 
-                                  // TEST_ASSERT_INT32_WITHIN(
-                                  //     1, (int)expected[idx],
-                                  //     (int)output[idx]);
-                                }
-                              }
-                            }
-                            if (failed) {
-                              for (int yh = 0; yh < Y.height; yh++) {
-                                for (int yw = 0; yw < Y.width; yw++) {
-                                  for (int yd = 0; yd < Y.depth; yd++) {
-                                    int idx = yh * (Y.width * Y.depth) +
-                                              yw * Y.depth + yd;
+                                  TEST_ASSERT_INT32_WITHIN(
+                                      1, (int)expected[idx], (int)output[idx]);
 
-                                    std::cout << (int)expected[idx] << " "
-                                              << (int)output[idx] << std::endl;
-                                  }
+                                  output_count[(int)expected[idx] - INT8_MIN]++;
                                 }
                               }
-                              TEST_ASSERT_EQUAL(69, 42);
                             }
                           }
                         }
@@ -427,11 +418,15 @@ void test_Conv2dPaddedIndirectDWRegression() {
       }
     }
   }
+
+  std::valarray<int> oc_(output_count, 256);
+  float dynamic_range = (float)oc_.max() / (float)oc_.min();
+  TEST_ASSERT_FLOAT_WITHIN(128.0, 0, dynamic_range);
 }
 
 extern "C" void test_conv2d_dw_regression();
 void test_conv2d_dw_regression() {
   UNITY_SET_FILE();
-  // RUN_TEST(test_Conv2dPaddedIndirectDWRegression);
   RUN_TEST(test_Conv2dValidDirectDWRegression);
+  RUN_TEST(test_Conv2dPaddedIndirectDWRegression);
 }

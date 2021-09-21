@@ -163,8 +163,8 @@ MatMulDirectFn_DW::Params::Params(const WindowGeometry &K, int8_t *weights,
   bytes_per_kernel_channel_group =
       K.shape.height * K.shape.width * VPU_INT16_VLMACC_ELMS;
 
-  inner_x_h_step = 0;
-  inner_x_v_step = VPU_INT16_VLMACC_ELMS;
+  inner_x_h_step = VPU_INT16_VLMACC_ELMS;
+  inner_x_v_step = 0;
 }
 
 void mat_mul_direct_dw_impl(MatMulDirectFn_DW::Params *params, VPURingBuffer *A,
