@@ -11,8 +11,7 @@ using namespace nn;
 #endif
 
 Conv2dReorderedWeights MatMulDirectFn_DW::reorder_kernel_weights(
-    int8_t *raw_weights, std::array<int, 4> &shape, int bits_per_element,
-    int8_t pad_value) {
+    int8_t *raw_weights, std::array<int, 4> &shape, int8_t pad_value) {
   int k_height = shape[1];
   int k_width = shape[2];
   int input_channel_count = shape[3];
@@ -35,9 +34,7 @@ Conv2dReorderedWeights MatMulDirectFn_DW::reorder_kernel_weights(
       output_channel_count - (complete_channel_groups * vpu_ring_buffer_length);
 
   // The number of bytes in the kernel for each output channel
-  const int bits_per_byte = 8;
-  int bytes_per_output_channel =
-      (k_height * k_width * bits_per_element) / bits_per_byte;
+  int bytes_per_output_channel = k_height * k_width;
 
   int kernel_size =
       get_weights_bytes(bytes_per_output_channel, output_channel_count);

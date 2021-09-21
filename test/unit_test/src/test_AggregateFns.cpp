@@ -400,7 +400,7 @@ void Test_Simple_MatMulDirectFn_DW() {
               int8_t pad_val = 0;
               Conv2dReorderedWeights rw =
                   MatMulDirectFn_DW::reorder_kernel_weights((int8_t *)K, shape,
-                                                            8, pad_val);
+                                                            pad_val);
 
               int8_t *weights = rw.weights.data();
 
@@ -490,7 +490,7 @@ void Test_MatMulDirectFn_DW() {
 
                     Conv2dReorderedWeights rw =
                         MatMulDirectFn_DW::reorder_kernel_weights(
-                            (int8_t *)raw_weights, shape, 8, pad_val);
+                            (int8_t *)raw_weights, shape, pad_val);
 
                     MatMulDirectFn_DW::Params p(X, K, rw.weights.data(),
                                                 rw.weights.size());
@@ -556,15 +556,13 @@ void Test_Kernel_Reordering_DW() {
 
         std::array<int, 4> shape = {{1, k_height, k_width, x_channels}};
 
-        int bits_per_element = 8;
-
         memset(raw_weights, 0, sizeof raw_weights);
 
         for (int i = 0; i < sizeof raw_weights; ++i)
           ((int8_t *)raw_weights)[i] = rng.rand<int8_t>();
 
         Conv2dReorderedWeights rw = MatMulDirectFn_DW::reorder_kernel_weights(
-            (int8_t *)raw_weights, shape, bits_per_element, 0);
+            (int8_t *)raw_weights, shape, 0);
       }
     }
   }

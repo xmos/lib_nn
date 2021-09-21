@@ -161,7 +161,7 @@ void test_Conv2dValidDirectDWRegression() {
 
                             Conv2dReorderedWeights rw =
                                 MatMulDirectFn_DW::reorder_kernel_weights(
-                                    (int8_t *)weights.data(), shape, 8,
+                                    (int8_t *)weights.data(), shape,
                                     kernel_pad_val);
 
                             MatMulDirectFn_DW::Params p(X, K, rw.weights.data(),
@@ -337,7 +337,7 @@ void test_Conv2dPaddedIndirectDWRegression() {
 
                             Conv2dReorderedWeights rw =
                                 MatMulDirectFn_DW::reorder_kernel_weights(
-                                    (int8_t *)weights.data(), weights_shape, 8,
+                                    (int8_t *)weights.data(), weights_shape,
                                     kernel_pad_val);
 
                             MatMulDirectFn_DW::Params p(K, rw.weights.data(),

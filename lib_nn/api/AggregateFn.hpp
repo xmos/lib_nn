@@ -291,7 +291,6 @@ class MatMulDirectFn_DW : public AggregateFn {
     /*
      The count of bytes that a channel group contains. It is used to dereference
      the weights pointer to the correct channel group start, i.e.
-
       int8_t *K_p = params->weights + bytes_per_kernel_channel_group *
      output_channel_group;
     */
@@ -306,17 +305,28 @@ class MatMulDirectFn_DW : public AggregateFn {
 
     int8_t *weights;
     /**
-     * @brief Construct a new Params object
+     * @brief Construct a new Params object for direct application to the input
+     * tensor
      *
      * @param X Class describing the properties of the input the convolution
      * will be performed over.
      * @param K Class describing the properties of the convolution to be
      * preformed.
      * @param weights A Pointer to the begining of the reordered weights.
+     * @param weights_bytes Count of bytes in the weights array.
      */
     Params(const ImageGeometry &X, const WindowGeometry &K, int8_t *weights,
            int weights_bytes);
 
+    /**
+     * @brief Construct a new Params object for indirect application to the
+     * input tensor via a scratch array.
+     *
+     * @param K Class describing the properties of the convolution to be
+     * preformed.
+     * @param weights A Pointer to the begining of the reordered weights.
+     * @param weights_bytes Count of bytes in the weights array.
+     */
     Params(const WindowGeometry &K, int8_t *weights, int weights_bytes);
 
     static int get_allocation_byte_count(const char *buf) {
@@ -403,8 +413,7 @@ class MatMulDirectFn_DW : public AggregateFn {
    * @return Conv2dReorderedWeights
    */
   static Conv2dReorderedWeights reorder_kernel_weights(
-      int8_t *raw_weights, std::array<int, 4> &shape, int bits_per_element,
-      int8_t pad_value);
+      int8_t *raw_weights, std::array<int, 4> &shape, int8_t pad_value);
 
   /**
    * @brief Get the required size of the weights array. This is a non-trivial
