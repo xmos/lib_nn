@@ -26,8 +26,6 @@ Conv2dReorderedWeights MatMulDirectFn_DW::reorder_kernel_weights(
 
   Conv2dReorderedWeights reordered_weights(output_channel_count);
 
-  // const int vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
-
   const int vpu_ring_buffer_length = VPU_INT16_EPV;
 
   int complete_channel_groups = output_channel_count / vpu_ring_buffer_length;
@@ -37,24 +35,21 @@ Conv2dReorderedWeights MatMulDirectFn_DW::reorder_kernel_weights(
       output_channel_count - (complete_channel_groups * vpu_ring_buffer_length);
 
   // The number of bytes in the kernel for each output channel
-  int bytes_per_output_channel = (k_height * k_width * bits_per_element) / 8;
+  const int bits_per_byte = 8;
+  int bytes_per_output_channel =
+      (k_height * k_width * bits_per_element) / bits_per_byte;
 
   int kernel_size =
       get_weights_bytes(bytes_per_output_channel, output_channel_count);
 
-  // raw_weights[0][height][width][channels]
-
-  // printf("complete_channel_groups:%d\n", complete_channel_groups);
-  // printf("remaining_output_channels:%d\n", remaining_output_channels);
-
   for (int ocg = 0; ocg < complete_channel_groups; ++ocg) {
     for (int h = 0; h < k_height; ++h) {
       for (int w = 0; w < k_width; ++w) {
-        // copy(raw_weights[h][w][ocg * 16], 16);
-        int8_t *src = raw_weights + ocg * 16 + (w * output_channel_count) +
+        int8_t *src = raw_weights + ocg * VPU_INT16_VLMACC_ELMS +
+                      (w * output_channel_count) +
                       h * (output_channel_count * k_width);
         reordered_weights.weights.insert(reordered_weights.weights.end(), src,
-                                         src + 16);
+                                         src + VPU_INT16_VLMACC_ELMS);
       }
     }
   }
@@ -62,33 +57,28 @@ Conv2dReorderedWeights MatMulDirectFn_DW::reorder_kernel_weights(
   if (remaining_output_channels) {
     for (int h = 0; h < k_height; ++h) {
       for (int w = 0; w < k_width; ++w) {
-        int8_t *src = raw_weights + complete_channel_groups * 16 +
-                      (w * output_channel_count) +
-                      h * (output_channel_count * k_width);
+        int8_t *src =
+            raw_weights + complete_channel_groups * VPU_INT16_VLMACC_ELMS +
+            (w * output_channel_count) + h * (output_channel_count * k_width);
 
         reordered_weights.weights.insert(reordered_weights.weights.end(), src,
                                          src + remaining_output_channels);
-        int pad_len = 16 - remaining_output_channels;
+        int pad_len = VPU_INT16_VLMACC_ELMS - remaining_output_channels;
         reordered_weights.weights.resize(
             reordered_weights.weights.size() + pad_len, pad_value);
       }
     }
   }
 
-  assert(kernel_size == reordered_weights.weights.size() + 16);
+  assert(kernel_size ==
+         reordered_weights.weights.size() + VPU_INT16_VLMACC_ELMS);
 
-  // finally, pad with the required amount to ensure no reading of bad data
+  // Finally, pad with the required amount to ensure no reading of bad data
   reordered_weights.weights.resize(kernel_size, pad_value);
 
   return reordered_weights;
 }
 
-/*
-input_bytes is the number of bytes a single output channel of the kernel
-requires, i.e. kernel height x kernel width x 1.
-
-output_channel_count obvs.
-*/
 int MatMulDirectFn_DW::get_weights_bytes(int input_bytes,
                                          int output_channel_count) {
   // TODO consider these defines
@@ -121,11 +111,9 @@ int MatMulDirectFn_DW::get_weights_bytes(int input_bytes,
   return kernel_bytes;
 }
 
-int MatMulDirectFn_DW::get_scratch_mem_bytes(int input_bytes) {
-  // TODO fix me - this could be a few bytes lower but it would need the count
-  // of input channels.
-  const int vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;  // this is safe though
-  return input_bytes + vpu_bytes;
+int MatMulDirectFn_DW::get_scratch_mem_bytes(std::array<int, 4> &shape) {
+  assert(shape[0] == 1);
+  return shape[1] * shape[2] * VPU_INT16_VLMACC_ELMS + XS3_VPU_VREG_WIDTH_BYTES;
 }
 
 MatMulDirectFn_DW::Params::Params(const ImageGeometry &X,
@@ -181,13 +169,9 @@ void mat_mul_direct_dw_impl(MatMulDirectFn_DW::Params *params, VPURingBuffer *A,
 
   for (int kh = params->k_height_loop_counter; kh >= 0; kh--) {
     for (int kw = params->k_width_loop_counter; kw >= 0; kw--) {
-      // printf("kh %d kw:%d X_cur_p:%p K_p:%p\n", kh, kw, X_cur_p, K_p);
       VLDC(vpu, X_cur_p);
-      // vpu_sim_mem_print(X_cur_p, vpu->mode);
       VLMACC(vpu, K_p);
-      // vpu_sim_mem_print(K_p, vpu->mode);
       K_p += VPU_INT16_VLMACC_ELMS;
-
       X_cur_p += params->inner_x_h_step;
     }
     X_cur_p += params->inner_x_v_step;

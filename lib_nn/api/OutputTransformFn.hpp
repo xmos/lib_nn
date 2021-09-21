@@ -101,22 +101,22 @@ class OutputTransformFnInt8 : public OutputTransformFn {
       int input_zero_point, int output_zero_point, int output_channels) {
     CanonicalMulAndBias canonical_values(output_channels);
 
+    assert(shape[0] == 1);
+
     int elements_per_channel = weights.size() / output_channels;
     assert((weights.size() % output_channels) == 0);
 
-    // printf("elements_per_channel: %d\n", elements_per_channel);
     for (int out_chan = 0; out_chan < output_channels; out_chan++) {
       int32_t max_accu_sum = 0;
       int32_t min_accu_sum = 0;
 
       int32_t coefs_sum = 0;
-      // printf("out_chan: %d\n", out_chan);
+
       for (int e = 0; e < elements_per_channel; e++) {
         int idx = out_chan + output_channels * e;
+
         int32_t coef = (int32_t)weights[idx];
         coefs_sum += coef;
-
-        // printf("%d\n", coef);
 
         if (coef > 0) {
           max_accu_sum += coef * (int32_t)INT8_MAX;
@@ -152,7 +152,8 @@ class OutputTransformFnInt8 : public OutputTransformFn {
 
       int32_t coefs_sum = 0;
       for (int e = 0; e < elements_per_channel; e++) {
-        int32_t coef = (int32_t)weights[out_chan * elements_per_channel + e];
+        int idx = out_chan * elements_per_channel + e;
+        int32_t coef = (int32_t)weights[idx];
         coefs_sum += coef;
 
         if (coef > 0) {

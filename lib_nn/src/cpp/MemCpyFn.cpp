@@ -237,7 +237,7 @@ int8_t *ImToColPadded::memcopy_fn_impl(int8_t *T, int8_t *X,
   }
 
   // Write padding to the tail, zeros is fastest
-  memset(T, 0, 32);
+  memset(T, 0, XS3_VPU_VREG_WIDTH_BYTES);
 
   return T_in;
 }

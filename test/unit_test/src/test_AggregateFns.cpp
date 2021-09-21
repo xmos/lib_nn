@@ -382,13 +382,6 @@ void Test_Simple_MatMulDirectFn_DW() {
         for (int x_channels = 4; x_channels <= 32 * 3; x_channels += 4) {
           for (int k_height = 1; k_height <= x_height; ++k_height) {
             for (int k_width = 1; k_width <= x_width; ++k_width) {
-              // std::cout << " x_height:" << x_height << " x_width:" << x_width
-              //           << " x_channels:" << x_channels
-              //           << " x_height:" << x_height << " k_height:" <<
-              //           k_height
-              //           << " k_width:" << k_width << " x_height:" << x_height
-              //           << std::endl;
-
               std::array<int, 4> shape = {{1, k_height, k_width, x_channels}};
               ImageGeometry X_params(x_height, x_width, x_channels);
               WindowGeometry K_params(k_height, k_width, 1, 1, 1, 1);
@@ -429,17 +422,11 @@ void Test_Simple_MatMulDirectFn_DW() {
                          output_chan < vpu_ring_buffer_length; ++output_chan) {
                       int actual_ch = output_chan + ocg * 16;
 
-                      // std::cout << "actual_ch: " << actual_ch << std::endl;
                       if (actual_ch >= x_channels) continue;
 
                       int32_t v;
                       ((int16_t *)&v)[0] = A.vR[output_chan];
                       ((int16_t *)&v)[1] = A.vD[output_chan];
-
-                      // std::cout
-                      //     << k_width * k_height * (kernel_fill *
-                      //     scratch_fill)
-                      //     << " " << v << std::endl;
 
                       TEST_ASSERT_EQUAL(
                           k_width * k_height * (kernel_fill * scratch_fill), v);
@@ -471,16 +458,6 @@ void Test_MatMulDirectFn_DW() {
               for (int k_v_dilation = 1; k_v_dilation <= 3; ++k_v_dilation) {
                 for (int k_h_stride = 1; k_h_stride <= 3; ++k_h_stride) {
                   for (int k_v_stride = 1; k_v_stride <= 3; ++k_v_stride) {
-                    // std::cout
-                    //     << " x_height: " << x_height << " x_width: " <<
-                    //     x_width
-                    //     << " x_channels: " << x_channels
-                    //     << " k_height: " << k_height << " k_width: " <<
-                    //     k_width
-                    //     << " k_h_dilation: " << k_h_dilation
-                    //     << " k_v_dilation: " << k_v_dilation
-                    //     << " k_h_stride: " << k_h_stride
-                    //     << " k_v_stride: " << k_v_stride << std::endl;
                     int output_height = CONV2D_OUTPUT_LENGTH(
                         x_height, k_height, k_v_dilation, k_v_stride);
                     int output_width = CONV2D_OUTPUT_LENGTH(

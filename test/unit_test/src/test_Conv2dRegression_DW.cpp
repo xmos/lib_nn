@@ -323,23 +323,21 @@ void test_Conv2dPaddedIndirectDWRegression() {
 
                             ImToColPadded memcpy(&im_to_col_params);
 
-                            int input_bytes = geom.window.shape.height *
-                                              geom.window.shape.width * 16;
+                            std::array<int, 4> weights_shape = {
+                                {1, k_height, k_width, x_channels}};
+
                             int scratch_bytes =
                                 MatMulDirectFn_DW::get_scratch_mem_bytes(
-                                    input_bytes);
+                                    weights_shape);
 
                             std::vector<int8_t> T(scratch_bytes, 0);
 
                             // Result should be uneffected by kernel pad value
                             int8_t kernel_pad_val = rng.rand<int8_t>();
 
-                            std::array<int, 4> shape = {
-                                {1, k_height, k_width, x_channels}};
-
                             Conv2dReorderedWeights rw =
                                 MatMulDirectFn_DW::reorder_kernel_weights(
-                                    (int8_t *)weights.data(), shape, 8,
+                                    (int8_t *)weights.data(), weights_shape, 8,
                                     kernel_pad_val);
 
                             MatMulDirectFn_DW::Params p(K, rw.weights.data(),
@@ -349,7 +347,7 @@ void test_Conv2dPaddedIndirectDWRegression() {
                             OutputTransformFnInt8::CanonicalMulAndBias
                                 canonical_values = OutputTransformFnInt8::
                                     canonicalise_mul_and_bias_dw(
-                                        eff_mult, bias, weights, shape,
+                                        eff_mult, bias, weights, weights_shape,
                                         ks.input_zero_point,
                                         ks.output_zero_point, x_channels);
 

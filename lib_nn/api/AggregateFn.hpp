@@ -410,7 +410,8 @@ class MatMulDirectFn_DW : public AggregateFn {
    * @brief Get the required size of the weights array. This is a non-trivial
    * computation as it accounts for how the VPU will access the weights array.
    *
-   * @param input_bytes The count of bytes in a single channel.
+   * @param input_bytes The number of bytes a single output channel of the
+   kernel requires, i.e. kernel height x kernel width.
    * @param output_channel_count The number of output channels that these
    * weights will compute.
    * @return The size in bytes that will hold the weights and guarentee no OOB
@@ -422,11 +423,12 @@ class MatMulDirectFn_DW : public AggregateFn {
    * @brief Get the required size of the scratch array. This is a non-trivial
    * computation as it accounts for how the VPU will access the scratch array.
    *
-   * @param input_bytes The count of bytes in a single channel.
+   * @param kernel_shape The shape of the kernel. It should look like: [1,
+   * k_height, k_width, input channels]
    * @return The size in bytes that will hold the copy of the current patch and
    * guarentee no OOB accesses.
    */
-  static int get_scratch_mem_bytes(int input_bytes);
+  static int get_scratch_mem_bytes(std::array<int, 4> &kernel_shape);
 };
 
 /**
