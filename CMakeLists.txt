@@ -24,7 +24,7 @@ list(APPEND BUILD_FLAGS_Darwin "-fsanitize-recover=address" )
 set(BUILD_FLAGS_XCORE "-march=xs3a")
 if(BUILD_DDR_FIX)
   list(APPEND BUILD_FLAGS_XCORE "-DUSE_DDR_FIX")
-endif(BUILD_TESTS)
+endif(BUILD_DDR_FIX)
     
 list(APPEND   BUILD_FLAGS ${BUILD_FLAGS_${CMAKE_SYSTEM_NAME}} )
 # list(JOIN BUILD_FLAGS " " BUILD_FLAGS)
