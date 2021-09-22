@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 3.14)
 set(APP_NAME unit_test)
 
 include(${CMAKE_CURRENT_LIST_DIR}/../etc/Unity/Unity.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/../../../ai_deployment_framework.cmake)
 
 # Depends on libraries
 list(APPEND DEP_LIBS_XCORE "")
