@@ -281,6 +281,165 @@ class MatMulBinaryDirectFn : public MatMulDirectFn {
                            int32_t output_channel_group);
 };
 
+// Depthwise below here
+// ////////////////////////////////////////////////////////////////////////////
+
+class MatMulDirectFn_DW : public AggregateFn {
+ public:
+  class Params : public Serialisable {
+   public:
+    /*
+     The count of bytes that a channel group contains. It is used to dereference
+     the weights pointer to the correct channel group start, i.e.
+      int8_t *K_p = params->weights + bytes_per_kernel_channel_group *
+     output_channel_group;
+    */
+    int32_t bytes_per_kernel_channel_group;
+
+    int32_t k_height_loop_counter;
+    int32_t k_width_loop_counter;
+
+    int32_t inner_x_h_step;
+    int32_t inner_x_v_step;
+    int32_t weights_bytes;
+
+    int8_t *weights;
+    /**
+     * @brief Construct a new Params object for direct application to the input
+     * tensor
+     *
+     * @param X Class describing the properties of the input the convolution
+     * will be performed over.
+     * @param K Class describing the properties of the convolution to be
+     * preformed.
+     * @param weights A Pointer to the begining of the reordered weights.
+     * @param weights_bytes Count of bytes in the weights array.
+     */
+    Params(const ImageGeometry &X, const WindowGeometry &K, int8_t *weights,
+           int weights_bytes);
+
+    /**
+     * @brief Construct a new Params object for indirect application to the
+     * input tensor via a scratch array.
+     *
+     * @param K Class describing the properties of the convolution to be
+     * preformed.
+     * @param weights A Pointer to the begining of the reordered weights.
+     * @param weights_bytes Count of bytes in the weights array.
+     */
+    Params(const WindowGeometry &K, int8_t *weights, int weights_bytes);
+
+    static int get_allocation_byte_count(const char *buf) {
+      return fetch_int(buf);
+    }
+
+    template <class T>
+    std::string serialise() {
+      int32_t allocation_byte_count = weights_bytes;
+      std::string s =
+          std::string((char *)&allocation_byte_count,
+                      (char *)&allocation_byte_count + sizeof(int32_t)) +
+          std::string(
+              (char *)&this->bytes_per_kernel_channel_group,
+              (char *)&this->bytes_per_kernel_channel_group + sizeof(int32_t)) +
+          std::string((char *)&this->k_height_loop_counter,
+                      (char *)&this->k_height_loop_counter + sizeof(int32_t)) +
+          std::string((char *)&this->k_width_loop_counter,
+                      (char *)&this->k_width_loop_counter + sizeof(int32_t)) +
+          std::string((char *)&this->inner_x_h_step,
+                      (char *)&this->inner_x_h_step + sizeof(int32_t)) +
+          std::string((char *)&this->inner_x_v_step,
+                      (char *)&this->inner_x_v_step + sizeof(int32_t)) +
+          std::string((char *)&this->weights_bytes,
+                      (char *)&this->weights_bytes + sizeof(int32_t)) +
+          std::string((char *)weights, (char *)(weights + weights_bytes));
+      return s;
+    }
+
+    template <class T>
+    static T *deserialise(char *allocated_memory, const char *buf) {
+      Params *t = (Params *)allocated_memory;
+      assert(is_aligned(allocated_memory, 4));
+
+      char *p = (char *)buf + sizeof(int32_t);
+
+      std::memcpy(&t->bytes_per_kernel_channel_group, p, sizeof(int32_t));
+      p += sizeof(int32_t);
+      std::memcpy(&t->k_height_loop_counter, p, sizeof(int32_t));
+      p += sizeof(int32_t);
+      std::memcpy(&t->k_width_loop_counter, p, sizeof(int32_t));
+      p += sizeof(int32_t);
+      std::memcpy(&t->inner_x_h_step, p, sizeof(int32_t));
+      p += sizeof(int32_t);
+      std::memcpy(&t->inner_x_v_step, p, sizeof(int32_t));
+      p += sizeof(int32_t);
+      std::memcpy(&t->weights_bytes, p, sizeof(int32_t));
+      p += sizeof(int32_t);
+
+      t->weights = (int8_t *)(allocated_memory + sizeof(Params));
+
+      assert(is_aligned(t->weights, 4));
+      std::memcpy(t->weights, p, t->weights_bytes);
+      return t;
+    }
+  };
+
+ protected:
+  /**
+   * @brief This describes the region over which this class will perform its
+   * operation(MatMul).
+   */
+  Params *params;
+
+ public:
+  MatMulDirectFn_DW(Params *params) : params(params){};
+
+  void aggregate_fn(VPURingBuffer *A, int8_t *T, int32_t output_channel_group);
+
+  /**
+   * @brief Used to reorder the weights from their normal form ([OutputChannel,
+   * Height, Width, InputChannel]) to a form conducive to the VPU efficiently
+   * loading and multiplying them.
+   *
+   * @param raw_weights Pointer to the raw weights.
+   * @param shape [OutputChannels, Height, Width, InputChannels]
+   * @param bits_per_element The count of bits per element, i.e. int8 is 8,
+   * binary is 1.
+   * @param pad_value The value used for padding to achieve alignment where
+   * nessessary. This is not window padding. It can effect the accumulator
+   * result and must be compensated for where nessessary, i.e. padding with zero
+   * will not effect an int8, int16 or int32 matmul, padding with
+   * zeros(representing 1) will effect a binary matmul.
+   * @return Conv2dReorderedWeights
+   */
+  static Conv2dReorderedWeights reorder_kernel_weights(
+      int8_t *raw_weights, std::array<int, 4> &shape, int8_t pad_value);
+
+  /**
+   * @brief Get the required size of the weights array. This is a non-trivial
+   * computation as it accounts for how the VPU will access the weights array.
+   *
+   * @param input_bytes The number of bytes a single output channel of the
+   kernel requires, i.e. kernel height x kernel width.
+   * @param output_channel_count The number of output channels that these
+   * weights will compute.
+   * @return The size in bytes that will hold the weights and guarentee no OOB
+   * accesses.
+   */
+  static int get_weights_bytes(int input_bytes, int output_channel_count);
+
+  /**
+   * @brief Get the required size of the scratch array. This is a non-trivial
+   * computation as it accounts for how the VPU will access the scratch array.
+   *
+   * @param kernel_shape The shape of the kernel. It should look like: [1,
+   * k_height, k_width, input channels]
+   * @return The size in bytes that will hold the copy of the current patch and
+   * guarentee no OOB accesses.
+   */
+  static int get_scratch_mem_bytes(std::array<int, 4> &kernel_shape);
+};
+
 /**
  * Aggregator for performing maxpool on a contiguous sequence of 32-channel
  * pixels.

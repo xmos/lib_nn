@@ -144,6 +144,7 @@ void test_Conv2dPaddedIndirectRegression() {
                                                        // 0 in pratice.
                               std::array<int, 4> shape = {
                                   {k_depth, k_height, k_width, x_channels}};
+
                               Conv2dReorderedWeights rw =
                                   MatMulInt8::reorder_kernel_weights(
                                       (int8_t *)weights.data(), shape, 8,
@@ -170,7 +171,8 @@ void test_Conv2dPaddedIndirectRegression() {
                               // pad q.biases and  q.multipliers to a multiple
                               // of VPU_INT16_EPV this is to work around array
                               // over reads
-                              int16_t pad_val = 0;  // this is arbitrary
+                              int16_t pad_val =
+                                  rng.rand<int16_t>();  // this is arbitrary
                               OutputTransformFn::pad(qp.biases, VPU_INT16_EPV,
                                                      pad_val);
                               OutputTransformFn::pad(
@@ -188,9 +190,6 @@ void test_Conv2dPaddedIndirectRegression() {
 
                               Conv2dPaddedInDirect conv2d(&akp, &memcpy,
                                                           &aggregator, &ot);
-
-                              // auto output = std::vector<int8_t>(
-                              //     Y.height * Y.width * Y.depth);
                               alignas(4)
                                   int8_t output[Y.height * Y.width * Y.depth];
 
@@ -201,9 +200,6 @@ void test_Conv2dPaddedIndirectRegression() {
                                   for (int yd = 0; yd < Y.depth; yd++) {
                                     int idx = yh * (Y.width * Y.depth) +
                                               yw * Y.depth + yd;
-                                    // std::cout << "tflite: " <<
-                                    // (int)expected[idx] << " xcore: " <<
-                                    // (int)output[idx] << std::endl;
 
                                     TEST_ASSERT_INT32_WITHIN(1,
                                                              (int)expected[idx],
@@ -336,7 +332,8 @@ void test_Conv2dValidIndirectRegression() {
                               // pad q.biases and  q.multipliers to a multiple
                               // of VPU_INT16_EPV this is to work around array
                               // over reads
-                              int16_t pad_val = 0;  // this is arbitrary
+                              int16_t pad_val =
+                                  rng.rand<int16_t>();  // this is arbitrary
                               OutputTransformFn::pad(qp.biases, VPU_INT16_EPV,
                                                      pad_val);
                               OutputTransformFn::pad(
@@ -495,7 +492,8 @@ void test_Conv2dValidDirectRegression() {
                               // pad q.biases and  q.multipliers to a multiple
                               // of VPU_INT16_EPV this is to work around array
                               // over reads
-                              int16_t pad_val = 0;  // this is arbitrary
+                              int16_t pad_val =
+                                  rng.rand<int16_t>();  // this is arbitrary
                               OutputTransformFn::pad(qp.biases, VPU_INT16_EPV,
                                                      pad_val);
                               OutputTransformFn::pad(
