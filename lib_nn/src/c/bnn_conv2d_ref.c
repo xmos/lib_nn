@@ -52,7 +52,7 @@ static int64_t ashr(int64_t value, int shr) {
   if (shr > 0) {
     return (value + (1 << (shr - 1))) >> shr;
   } else {
-    return (uint64_t)value << (-shr);
+    return (uint64_t)(uint32_t)value << (-shr);
   }
 }
 
@@ -277,7 +277,7 @@ void bnn_quantise_activation(
 
   for (unsigned ch = 0; ch < chans_out; ch++) {
     if (chan_overlaps) {
-      quantised_accu_modifier[ch] = ashr(chan_overlaps[ch], *accu_shr);
+      quantised_accu_modifier[ch] = (int16_t)ashr(chan_overlaps[ch], *accu_shr);
     } else {
       quantised_accu_modifier[ch] = 0;
     }

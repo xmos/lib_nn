@@ -81,10 +81,6 @@ bool MaxPool2d_Valid::SupportsGeometry(const Filter2dGeometry& filter) {
   // supported by MaxPool2d_Generic
   if (!MaxPool2d_Generic::SupportsGeometry(filter)) return false;
 
-  const auto& input = filter.input;
-  const auto& output = filter.output;
-  const auto& window = filter.window;
-
   // Padding is not supported
   if (filter.Padding().HasPadding()) return false;
 
