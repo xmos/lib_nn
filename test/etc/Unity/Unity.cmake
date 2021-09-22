@@ -1,7 +1,7 @@
 
 function(add_unity_to_target target_name)
 
-  set(UNITY_PATH ${CMAKE_CURRENT_LIST_DIR}/../deps/unity)
+  set(UNITY_PATH ${CMAKE_CURRENT_LIST_DIR}/../deps/Unity)
 
   unset(UNITY_SOURCES)
   list(APPEND UNITY_SOURCES "${UNITY_PATH}/src/unity.c")
