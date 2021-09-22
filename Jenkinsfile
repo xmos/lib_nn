@@ -65,10 +65,12 @@ pipeline {
         stage("Build") {
             steps {
                 // below is how we can activate the tools, NOTE: xTIMEcomposer -> XTC at tools 15.0.5
-                // sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv && // 
-                // sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
-                //       . activate ./lib_nn_venv &&
-                //       cd test/unit_test && make all && make all PLATFORM=x86 MEMORY_SAFE=true"""
+                sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
+                      . activate ./lib_nn_venv && mkdir -p build_xcore && cd build_xcore && 
+                      cmake -DCMAKE_TOOLCHAIN_FILE=../etc/xmos_toolchain.cmake .. && make"""
+                sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
+                      . activate ./lib_nn_venv && mkdir -p build_x86 && cd build_x86 && 
+                      cmake .. && make"""
                 sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
                       . activate ./lib_nn_venv &&
                       cd test/gtests && ./build.sh && make all PLATFORM=x86"""
@@ -76,7 +78,7 @@ pipeline {
          }
          stage("Test") {
              steps {
-                //  sh "cd test/unit_test && ./bin/x86/unit_test"
+                 sh "./build_x86/test/unit_test/unit_test"
                  sh "cd test/gtests && ./bin/x86/unit_test"
             }
         }
