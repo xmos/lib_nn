@@ -4,11 +4,6 @@
 #include "vpu_sim.h"
 
 using namespace nn;
-// TODO: [astew] CHAR_BIT not defined if I build with Cygwin or gcc+Ubuntu+WSL.
-// Not in <limits> either. [asj] this should be in limits.h
-#ifndef CHAR_BIT
-#define CHAR_BIT (sizeof(char) * 8)
-#endif
 
 Conv2dReorderedWeights MatMulDirectFn_DW::reorder_kernel_weights(
     int8_t *raw_weights, std::array<int, 4> &shape, int8_t pad_value) {
