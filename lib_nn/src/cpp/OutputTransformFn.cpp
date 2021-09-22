@@ -76,7 +76,7 @@ int get_max_exponent(std::vector<activationT> &arr) {
 
 static int64_t shl(int32_t v, int amount_to_shl) {
   if (amount_to_shl >= 0) {
-    return ((uint64_t)(uint32_t)v << amount_to_shl);
+    return ((uint64_t)v) << amount_to_shl;
   } else {
     return ((int64_t)v) >> (-amount_to_shl);
   }
