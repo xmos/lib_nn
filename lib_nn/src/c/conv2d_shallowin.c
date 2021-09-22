@@ -167,8 +167,6 @@ void conv2d_shallowin_prepare(nn_conv2d_shallowin_job_t* job,
     }
   }
 
-  const unsigned k_array_width = VPU_INT8_EPV / x_params->channels;
-
   const unsigned x_row_bytes = x_params->width * x_params->channels;
   const unsigned y_row_bytes = y_params->width * y_params->channels;
 

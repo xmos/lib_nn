@@ -163,9 +163,6 @@ static void avgpool2d_prepare(nn_avgpool2d_job_t* job,
   const int32_t x_row_bytes = x_params->width * x_params->channels;
   const int32_t y_row_bytes = y_params->width * y_params->channels;
 
-  const int32_t win_start_pix = pooling_window->start.row * x_params->width +
-                                pooling_window->start.column;
-
   const mem_stride_t win_hstride_from_prev_start =
       pooling_window->stride.horizontal * x_params->channels;
   const mem_stride_t win_vstride_from_prev_start =
@@ -178,7 +175,8 @@ static void avgpool2d_prepare(nn_avgpool2d_job_t* job,
   // The X pointer will be pointing at the start of the first row *not* inside
   // the window when doing an hstride
   job->stride.window.col =
-      win_hstride_from_prev_start - pooling_window->shape.height * x_row_bytes;
+      win_hstride_from_prev_start -
+      (mem_stride_t)(pooling_window->shape.height * x_row_bytes);
 
   // The X pointer will be pointing at the start of the first patch *after* the
   // job's output columns when doing a vstride.

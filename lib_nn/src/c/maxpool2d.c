@@ -111,7 +111,7 @@ void maxpool2d_ext_ref(nn_image_t* Y, const nn_image_t* X,
     const int32_t y_row_bytes = y_params->width * y_params->channels;
 
     const mem_stride_t win_hstride_from_prev_start =
-        pooling_window->stride.horizontal * x_params->channels;
+        (mem_stride_t)(pooling_window->stride.horizontal * x_params->channels);
     const mem_stride_t win_vstride_from_prev_start =
         pooling_window->stride.vertical * x_row_bytes;
 
@@ -121,13 +121,15 @@ void maxpool2d_ext_ref(nn_image_t* Y, const nn_image_t* X,
 
     // The X pointer will be pointing at the start of the first row *not* inside
     // the window when doing an hstride
-    stride_window_col = win_hstride_from_prev_start -
-                        pooling_window->shape.height * x_row_bytes;
+    stride_window_col =
+        win_hstride_from_prev_start -
+        (mem_stride_t)(pooling_window->shape.height * x_row_bytes);
 
     // The X pointer will be pointing at the start of the first patch *after*
     // the job's output columns when doing a vstride.
-    stride_window_row = win_vstride_from_prev_start -
-                        win_hstride_from_prev_start * job_params->size.cols;
+    stride_window_row =
+        win_vstride_from_prev_start -
+        (mem_stride_t)(win_hstride_from_prev_start * job_params->size.cols);
 
     // For a channel group stride, move back to start of job and add 32
     stride_X_cog =

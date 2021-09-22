@@ -35,8 +35,6 @@ void nn_conv2d_hstrip_deep_ref(
   uint8_t tmp_vec[2 * XS3_VPU_VREG_WIDTH_BYTES] = {0};
   uint8_t* mask_vec = ADDR(tmp_vec, XS3_VPU_VREG_WIDTH_BYTES);
 
-  int8_t zero_tail[XS3_VPU_VREG_WIDTH_BYTES] = {0};
-
   // Number of C_in_groups
   const unsigned C_in_groups = C_in >> VPU_INT8_EPV_LOG2;
   const unsigned C_in_tail = C_in % VPU_INT8_EPV;

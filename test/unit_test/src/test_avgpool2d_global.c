@@ -146,7 +146,8 @@ void test_avgpool2d_global_case1() {
     uint16_t shift;
     compute_scale_shift(&scale, &shift, &x_params);
 
-    int32_t bias = casse->bias * x_params.height * x_params.width * scale;
+    int32_t bias =
+        casse->bias * (int32_t)(x_params.height * x_params.width) * scale;
 
     memset(Y, 0xCC, sizeof(Y));
     avgpool2d_global(Y, (nn_image_t*)X, bias, scale, shift, &x_params);
@@ -155,7 +156,7 @@ void test_avgpool2d_global_case1() {
       for (unsigned col = 0; col < y_params.width; col++) {
         int32_t y_base = IMG_ADDRESS_VECT(&y_params, row, col, 0);
 
-        for (unsigned chn = 0; chn < y_params.channels; chn++) {
+        for (int chn = 0; chn < y_params.channels; chn++) {
           int8_t y_exp = 24 + chn + casse->bias;
 
           int8_t y = ((int8_t*)Y)[y_base + chn];
@@ -207,8 +208,8 @@ void test_avgpool2d_global_case2() {
   avgpool2d_global_ext(Y, (nn_image_t*)X, bias, scale, shift, &x_params, 16, 20,
                        AVGPOOL2D_GLOBAL_FLAG_NONE);
 
-  for (unsigned chn = 0; chn < y_params.channels; chn++) {
-    int8_t y_exp = (chn >= 16 && chn < (16 + 20)) ? 123 : 0xCC;
+  for (int chn = 0; chn < y_params.channels; chn++) {
+    int8_t y_exp = (int8_t)((chn >= 16 && chn < (16 + 20)) ? 123 : 0xCC);
 
     TEST_ASSERT_EQUAL(y_exp, Y[chn]);
   }

@@ -11,7 +11,6 @@ void set_bit_b32(bnn_b32_t* x, unsigned ch, bnn_bool_t val) {
 void set_bit_b256(bnn_b256_t* x, unsigned ch, bnn_bool_t val) {
   unsigned bytes_per_vector_subword = sizeof(((bnn_b256_t*)0)->d[0]);
   unsigned vector_bytes = sizeof(((bnn_b256_t*)0)->d);
-  unsigned vector_subword_count = vector_bytes / bytes_per_vector_subword;
 
   unsigned vector_word = ch / (vector_bytes * 8);
   unsigned vector_subword = ch / (bytes_per_vector_subword * 8);
@@ -33,7 +32,6 @@ bnn_bool_t get_bit_b32(bnn_b32_t* x, unsigned ch) {
 bnn_bool_t get_bit_b256(bnn_b256_t* x, unsigned ch) {
   unsigned bytes_per_vector_subword = sizeof(((bnn_b256_t*)0)->d[0]);
   unsigned vector_bytes = sizeof(((bnn_b256_t*)0)->d);
-  unsigned vector_subword_count = vector_bytes / bytes_per_vector_subword;
 
   unsigned vector_word = ch / (vector_bytes * 8);
   unsigned vector_subword = ch / (bytes_per_vector_subword * 8);

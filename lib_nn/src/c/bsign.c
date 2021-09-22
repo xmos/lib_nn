@@ -43,7 +43,8 @@ void bsign_8_ref(bnn_b32_t* y, const int8_t* x, const int8_t* zero_point_vect,
     // of the tail word
     if (shift == 0) y[output_idx] = 0;
 
-    if (x[input_idx] < zero_point_vect[shift]) y[output_idx] |= (1 << shift);
+    if (x[input_idx] < zero_point_vect[shift])
+      y[output_idx] |= (bnn_b32_t)((uint32_t)1 << shift);
   }
 }
 
