@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 3.14)
 
 set(LIB_NAME test_shared)
 
-include(${CMAKE_CURRENT_LIST_DIR}/../../../ai_deployment_framework.cmake)
+set(GEMMLOWP_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/../deps/gemmlowp")
+set(TENSORFLOW_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/../deps/tensorflow")
+
 
 file(GLOB_RECURSE SHARED_SOURCES_C ${CMAKE_CURRENT_LIST_DIR}/*.c)
 file(GLOB_RECURSE SHARED_SOURCES_CPP ${CMAKE_CURRENT_LIST_DIR}/*.cpp)
