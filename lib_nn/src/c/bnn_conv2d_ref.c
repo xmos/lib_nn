@@ -52,7 +52,9 @@ static int64_t ashr(int64_t value, int shr) {
   if (shr > 0) {
     return (value + (1 << (shr - 1))) >> shr;
   } else {
-    return (uint64_t)value << (-shr);
+    uint64_t mask = ~0;
+    mask >>= (-shr);
+    return ((uint64_t)value & mask) << (-shr);
   }
 }
 
