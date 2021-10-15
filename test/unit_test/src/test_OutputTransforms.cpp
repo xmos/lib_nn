@@ -1,5 +1,6 @@
 #include <cmath>
 #include <random>
+#include <algorithm>
 
 #include "OutputTransformFn.hpp"
 #include "Rand.hpp"
@@ -242,5 +243,5 @@ extern "C" void test_output_transforms();
 void test_output_transforms() {
   UNITY_SET_FILE();
   RUN_TEST(Test_OT_int8_directed);
-  // RUN_TEST(Test_OT_int8);
+  RUN_TEST(Test_OT_int8);
 }
