@@ -123,7 +123,7 @@ void Test_OT_int8() {
           for (int output_chan = 0; output_chan < chs_in_group; ++output_chan) {
             int64_t range =
                 (int64_t)accu_max[output_chan] - (int64_t)accu_min[output_chan];
-            // ASSERT_NE(0, range);
+            TEST_ASSERT_NOT_EQUAL(0, range);
             int32_t v =
                 (int64_t)accu_min[output_chan] + (rng.rand<unsigned>()) % range;
 
@@ -143,7 +143,7 @@ void Test_OT_int8() {
                               f_biases[actual_output_channel];
             double f_expected = std::round(std::min(
                 std::max(expected, (double)INT8_MIN), (double)INT8_MAX));
-            // EXPECT_NEAR((int)f_expected, (int)Y[actual_output_channel], 1);
+            TEST_ASSERT_INT32_WITHIN(1, (int)f_expected, (int)Y[actual_output_channel]);
           }
         }
         y = next_y;
@@ -152,8 +152,94 @@ void Test_OT_int8() {
   }
 }
 
+void Test_OT_int8_directed() {
+  const int vpu_ring_buffer_length = VPU_INT16_EPV;
+
+  for (int itt=0;itt<1<<3;++itt){
+    for (int output_ch_count = 1; output_ch_count <= 64; ++output_ch_count) {
+        
+
+        std::vector<int32_t> accu_min(output_ch_count, 0);
+        std::vector<int32_t> accu_max(output_ch_count, 0);
+
+        pick_accu_range(accu_min, accu_max);
+        
+        double bias =0.0;
+
+        while(bias > *std::min_element(accu_min.begin(), accu_min.end()) && bias < *std::max_element(accu_max.begin(), accu_max.end()))
+          bias = rng.rand<double>() * INT32_MAX;
+
+        std::vector<double> f_biases(output_ch_count, bias);
+        std::vector<double> f_multipliers(output_ch_count, 1.0);
+        QuantisationParams qp = OutputTransformFnInt8::quantise_activation(
+            f_multipliers, f_biases, accu_min, accu_max);
+
+        // pad q.biases and  q.multipliers to a multiple of VPU_INT16_EPV
+        // this is to work around array over reads
+        int16_t pad_val = 0;  // this is arbitrary
+        OutputTransformFn::pad(qp.biases, VPU_INT16_EPV, pad_val);
+        OutputTransformFn::pad(qp.multipliers, (int)VPU_INT16_EPV, pad_val);
+
+        OT_int8::Params p((int32_t)output_ch_count, &qp.otv, qp.biases,
+                          qp.multipliers);
+
+        OT_int8 ot(&p);
+
+        int8_t Y[output_ch_count];
+        memset(Y, 0, sizeof Y);
+
+        int ocg_count = (output_ch_count + vpu_ring_buffer_length - 1) /
+                        vpu_ring_buffer_length;
+
+        int8_t *y = (int8_t *)Y;
+
+        for (int ocg = 0; ocg < ocg_count; ++ocg) {
+          int chs_in_group =
+              std::min(output_ch_count - vpu_ring_buffer_length * ocg,
+                      vpu_ring_buffer_length);
+
+          VPURingBuffer A;
+
+          int8_t *next_y;
+          for (int t = 0; t < 1 << 10; t++) {
+            memset(&A, 0, sizeof A);
+
+            int32_t accu_values[chs_in_group];
+            // fill A with random value between accu_max and accu_min
+            for (int output_chan = 0; output_chan < chs_in_group; ++output_chan) {
+              int64_t range =
+                  (int64_t)accu_max[output_chan] - (int64_t)accu_min[output_chan];
+              TEST_ASSERT_NOT_EQUAL(0, range);
+              int32_t v =
+                  (int64_t)accu_min[output_chan] + (rng.rand<unsigned>()) % range;
+
+              accu_values[output_chan] = v;
+              A.vR[output_chan] = ((int16_t *)&v)[0];
+              A.vD[output_chan] = ((int16_t *)&v)[1];
+            }
+
+            next_y = ot.output_transform_fn(y, &A, ocg);
+
+            for (int output_chan = 0; output_chan < chs_in_group; ++output_chan) {
+              int actual_output_channel =
+                  output_chan + ocg * vpu_ring_buffer_length;
+
+              int32_t v = accu_values[output_chan];
+              double expected = (float)v * f_multipliers[actual_output_channel] +
+                                f_biases[actual_output_channel];
+              double f_expected = std::round(std::min(
+                  std::max(expected, (double)INT8_MIN), (double)INT8_MAX));
+              TEST_ASSERT_INT32_WITHIN(1, (int)f_expected, (int)Y[actual_output_channel]);
+            }
+          }
+          y = next_y;
+        }
+    }
+  }
+}
 extern "C" void test_output_transforms();
 void test_output_transforms() {
   UNITY_SET_FILE();
-  RUN_TEST(Test_OT_int8);
+  RUN_TEST(Test_OT_int8_directed);
+  // RUN_TEST(Test_OT_int8);
 }
