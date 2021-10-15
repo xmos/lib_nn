@@ -96,9 +96,9 @@ static bool check_val_fits(int64_t v, int bit_count) {
 // ((accu * 2**A) * (mul * 2**M) + bias*2**B) gives the most precision
 template <class activationT>
 std::tuple<int, int> solve_for_constraints(std::vector<activationT> &multiplier,
-                                          std::vector<activationT> &bias,
-                                          std::vector<int32_t> &accu_min,
-                                          std::vector<int32_t> &accu_max) {
+                                           std::vector<activationT> &bias,
+                                           std::vector<int32_t> &accu_min,
+                                           std::vector<int32_t> &accu_max) {
   int ch_count = accu_min.size();
 
   // These could(and should) be refined by inspecting accu_min, accu_max
@@ -199,7 +199,7 @@ int32_t round_away_from_zero(float x) {
 }
 
 template <class T>
-void recitfy_min_max(T &v_min, T &v_max){
+void recitfy_min_max(T &v_min, T &v_max) {
   T actual_max = std::max(v_min, v_max);
   v_min = std::min(v_min, v_max);
   v_max = actual_max;
@@ -207,10 +207,8 @@ void recitfy_min_max(T &v_min, T &v_max){
 
 QuantisationParams OutputTransformFnInt8::quantise_activation(
     std::vector<double> &output_transform_multiplier,
-    std::vector<double> &output_transform_bias, 
-    std::vector<int32_t> &accu_min,
+    std::vector<double> &output_transform_bias, std::vector<int32_t> &accu_min,
     std::vector<int32_t> &accu_max) {
-
   assert(output_transform_multiplier.size() == output_transform_bias.size());
   assert(accu_min.size() == accu_max.size());
   assert(accu_min.size() == output_transform_bias.size());
@@ -222,31 +220,34 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
     recitfy_min_max(accu_min[ch], accu_max[ch]);
 
   // These will hold the min and max accumulator values after the output clamp
-  // has been back propogated to them. 
+  // has been back propogated to them.
   std::vector<int32_t> accu_min_adjusted(ch_count, 0);
   std::vector<int32_t> accu_max_adjusted(ch_count, 0);
 
   // adjust accu_min and max to account for the saturation on the output
   for (int ch = 0; ch < ch_count; ch++) {
+    float accu_meaningful_max =
+        round_away_from_zero(((float)INT8_MAX - output_transform_bias[ch]) /
+                             output_transform_multiplier[ch]);
 
-    float accu_meaningful_max = round_away_from_zero(((float)INT8_MAX - output_transform_bias[ch]) /
-                            output_transform_multiplier[ch]);
+    float accu_meaningful_min =
+        round_away_from_zero(((float)INT8_MIN - output_transform_bias[ch]) /
+                             output_transform_multiplier[ch]);
 
-    float accu_meaningful_min = round_away_from_zero(((float)INT8_MIN - output_transform_bias[ch]) /
-                            output_transform_multiplier[ch]);
-
-    //Test in case the output_transform_multiplier is negative.
+    // Test in case the output_transform_multiplier is negative.
     recitfy_min_max(accu_meaningful_min, accu_meaningful_max);
 
-    if (accu_meaningful_max < accu_max[ch]){
+    if (accu_meaningful_max < accu_max[ch]) {
       // ------accu_max------accu_meaningful_max++++++...
 
       // The input range of the accumulator is restricted by the output clamp.
-      if (accu_meaningful_max < accu_min[ch]){
+      if (accu_meaningful_max < accu_min[ch]) {
         // ------accu_max------accu_min------accu_meaningful_max------...
-        //There is no overlap between what the accumulator can be and what could contribute to the output
-        
-        int32_t singular_output_value = std::max(std::min((float)INT8_MAX, accu_meaningful_max), (float)INT8_MIN);
+        // There is no overlap between what the accumulator can be and what
+        // could contribute to the output
+
+        int32_t singular_output_value = std::max(
+            std::min((float)INT8_MAX, accu_meaningful_max), (float)INT8_MIN);
         output_transform_multiplier[ch] = 0.0;
         output_transform_bias[ch] = singular_output_value;
 
@@ -254,41 +255,43 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
         // ------accu_max------accu_meaningful_max++++++accu_min------...
         accu_max_adjusted[ch] = accu_meaningful_max;
         accu_min_adjusted[ch] = accu_min[ch];
-        if (accu_meaningful_min > accu_min[ch]){
+        if (accu_meaningful_min > accu_min[ch]) {
           // ------accu_max------accu_meaningful_max++++++accu_meaningful_min------accu_min------...
           accu_min_adjusted[ch] = accu_meaningful_min;
-        } else{
+        } else {
           // ------accu_max------accu_meaningful_max++++++accu_min------accu_meaningful_min------...
           accu_min_adjusted[ch] = accu_min[ch];
         }
       }
     } else {
       // ------accu_meaningful_max------accu_max++++++...
-      if (accu_meaningful_min > accu_max[ch]){
-      // ------accu_meaningful_max------accu_meaningful_min------accu_max------...
-        //There is no overlap between what the accumulator can be and what could contribute to the output
-        int32_t singular_output_value = std::max(std::min((float)INT8_MAX, accu_meaningful_max), (float)INT8_MIN);
+      if (accu_meaningful_min > accu_max[ch]) {
+        // ------accu_meaningful_max------accu_meaningful_min------accu_max------...
+        // There is no overlap between what the accumulator can be and what
+        // could contribute to the output
+        int32_t singular_output_value = std::max(
+            std::min((float)INT8_MAX, accu_meaningful_max), (float)INT8_MIN);
         output_transform_multiplier[ch] = 0.0;
         output_transform_bias[ch] = singular_output_value;
       } else {
         // ------accu_meaningful_max------accu_max++++++accu_meaningful_min------...
         accu_max_adjusted[ch] = accu_max[ch];
 
-        if (accu_meaningful_min > accu_min[ch]){
+        if (accu_meaningful_min > accu_min[ch]) {
           // ------accu_meaningful_max------accu_max++++++accu_meaningful_min------accu_min------...
           accu_min_adjusted[ch] = accu_meaningful_min;
-        } else{
+        } else {
           // ------accu_meaningful_max------accu_max++++++accu_min------accu_meaningful_min------...
           accu_min_adjusted[ch] = accu_min[ch];
         }
       }
-    }                            
+    }
   }
 
   int A, M;
   std::tie(A, M) =
       solve_for_constraints(output_transform_multiplier, output_transform_bias,
-                           accu_min_adjusted, accu_max_adjusted);
+                            accu_min_adjusted, accu_max_adjusted);
 
   int bias_max_bits = 0;
   int bias_min_bits = 64;
