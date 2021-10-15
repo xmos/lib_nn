@@ -1,19 +1,13 @@
 
-#include "RefOps.hpp"
-
 #include "tensorflow/lite/kernels/internal/reference/integer_ops/pooling.h"
+
+#include "RefOps.hpp"
 
 using namespace nn;
 using namespace nn::test::ops::ref;
 
-
-
-
 std::vector<int8_t> nn::test::ops::ref::MaxPoolReference(
-    const nn::Filter2dGeometry& filter_geometry,
-    const int8_t input_img[])
-{
-
+    const nn::Filter2dGeometry& filter_geometry, const int8_t input_img[]) {
   tflite::PoolParams params;
 
   auto padding = filter_geometry.Padding();
@@ -31,24 +25,23 @@ std::vector<int8_t> nn::test::ops::ref::MaxPoolReference(
   params.quantized_activation_min = std::numeric_limits<int8_t>::min();
   params.quantized_activation_max = std::numeric_limits<int8_t>::max();
 
-  tflite::RuntimeShape input_shape = 
-      { 1, (int) filter_geometry.input.height, (int) filter_geometry.input.width, (int) filter_geometry.input.depth };
-  tflite::RuntimeShape output_shape = 
-      { 1, (int) filter_geometry.output.height, (int) filter_geometry.output.width, (int) filter_geometry.output.depth };
-
+  tflite::RuntimeShape input_shape = {1, (int)filter_geometry.input.height,
+                                      (int)filter_geometry.input.width,
+                                      (int)filter_geometry.input.depth};
+  tflite::RuntimeShape output_shape = {1, (int)filter_geometry.output.height,
+                                       (int)filter_geometry.output.width,
+                                       (int)filter_geometry.output.depth};
 
   auto result = std::vector<int8_t>(filter_geometry.output.ElementCount());
 
-  tflite::reference_integer_ops::MaxPool(params, input_shape, input_img, output_shape, &result[0]);
+  tflite::reference_integer_ops::MaxPool(params, input_shape, input_img,
+                                         output_shape, &result[0]);
 
   return result;
 }
 
 std::vector<int8_t> nn::test::ops::ref::AveragePoolReference(
-    const nn::Filter2dGeometry& filter_geometry,
-    const int8_t input_img[])
-{
-
+    const nn::Filter2dGeometry& filter_geometry, const int8_t input_img[]) {
   tflite::PoolParams params;
 
   auto padding = filter_geometry.Padding();
@@ -66,15 +59,17 @@ std::vector<int8_t> nn::test::ops::ref::AveragePoolReference(
   params.quantized_activation_min = std::numeric_limits<int8_t>::min();
   params.quantized_activation_max = std::numeric_limits<int8_t>::max();
 
-  tflite::RuntimeShape input_shape = 
-      { 1, (int) filter_geometry.input.height, (int) filter_geometry.input.width, (int) filter_geometry.input.depth };
-  tflite::RuntimeShape output_shape = 
-      { 1, (int) filter_geometry.output.height, (int) filter_geometry.output.width, (int) filter_geometry.output.depth };
-
+  tflite::RuntimeShape input_shape = {1, (int)filter_geometry.input.height,
+                                      (int)filter_geometry.input.width,
+                                      (int)filter_geometry.input.depth};
+  tflite::RuntimeShape output_shape = {1, (int)filter_geometry.output.height,
+                                       (int)filter_geometry.output.width,
+                                       (int)filter_geometry.output.depth};
 
   auto result = std::vector<int8_t>(filter_geometry.output.ElementCount());
 
-  tflite::reference_integer_ops::AveragePool(params, input_shape, input_img, output_shape, &result[0]);
+  tflite::reference_integer_ops::AveragePool(params, input_shape, input_img,
+                                             output_shape, &result[0]);
 
   return result;
 }
