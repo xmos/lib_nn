@@ -121,15 +121,14 @@ int MatMulInt8::get_weights_bytes(int input_bytes, int output_channel_count) {
 }
 
 MatMulInt8::Params::Params(int output_slice_channel_count,
-                           int32_t bytes_per_kernel_channel, int8_t *weights)
+                           int32_t bytes_per_kernel_channel)
     : output_slice_channel_count(output_slice_channel_count),
-      bytes_per_kernel_channel(bytes_per_kernel_channel),
-      weights(weights) {
+      bytes_per_kernel_channel(bytes_per_kernel_channel) {
   // maybe compute k_p_adjust and input_channel_group_count
 }
 
 void mat_mul_int8_generic_impl(MatMulInt8::Params *params, VPURingBuffer *A,
-                               int8_t *T, int32_t output_channel_group) {
+                               int8_t *T, int32_t output_channel_group, int8_t * weights) {
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
 
@@ -143,7 +142,7 @@ void mat_mul_int8_generic_impl(MatMulInt8::Params *params, VPURingBuffer *A,
 
   // Point K_p at the beginning of the first output channel
   int8_t *K_p =
-      (int8_t *)params->weights +
+      (int8_t *)weights +
       params->bytes_per_kernel_channel * first_output_channel;  // changes
 
   int step = vpu_bytes;
@@ -194,10 +193,7 @@ void mat_mul_int8_generic_impl(MatMulInt8::Params *params, VPURingBuffer *A,
 }
 
 MatMulDirectFn::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
-                               const int input_ch_per_output, int8_t *weights,
-                               int weights_bytes) {
-  this->weights_bytes = weights_bytes;
-  this->weights = weights;
+                               const int input_ch_per_output) {
   // TODO X.bits_per_element
   // int bytes_per_copy_per_channel = (input_ch_per_output * X.bits_per_element)
   // / CHAR_BIT;
@@ -221,7 +217,7 @@ MatMulDirectFn::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
 }
 
 void mat_mul_direct_impl(MatMulDirectFn::Params *params, VPURingBuffer *A,
-                         int8_t *X, int32_t output_channel_group) {
+                         int8_t *X, int32_t output_channel_group, int8_t * weights) {
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
 
@@ -230,7 +226,7 @@ void mat_mul_direct_impl(MatMulDirectFn::Params *params, VPURingBuffer *A,
 
   int8_t *X_cur_p = X;
 
-  int8_t *K_p = (int8_t *)params->weights +
+  int8_t *K_p = (int8_t *)weights +
                 params->bytes_per_kernel_channel * output_channel_group;
   for (int kh = params->k_height_loop_counter; kh >= 0; kh--) {
     for (int kw = params->k_width_loop_counter; kw >= 0; kw--) {
@@ -254,61 +250,27 @@ void mat_mul_direct_impl(MatMulDirectFn::Params *params, VPURingBuffer *A,
   VSTD(vpu, &A->vD);
 }
 
-void MatMulBinaryDirectFn::mat_mul_direct_impl(VPURingBuffer *A, int8_t *X,
-                                               int32_t output_channel_group) {
-  xs3_vpu vpu_mem;
-  xs3_vpu *vpu = &vpu_mem;
-
-  VSETC(vpu, MODE_S8);
-  VCLRDR(vpu);
-
-  int8_t *X_cur_p = X;
-
-  int8_t *K_p = (int8_t *)params->weights +
-                params->bytes_per_kernel_channel * output_channel_group;
-  for (int kh = params->k_height_loop_counter; kh >= 0; kh--) {
-    for (int kw = params->k_width_loop_counter; kw >= 0; kw--) {
-      for (int ic = params->input_channel_loop_counter; ic >= 0; ic--) {
-        VLDC(vpu, X_cur_p);
-
-        X_cur_p += XS3_VPU_VREG_WIDTH_BYTES;
-
-        for (unsigned l = 0; l < VPU_INT16_EPV; l++) {
-          VLMACCR1(vpu, K_p);
-          K_p += XS3_VPU_VREG_WIDTH_BYTES;
-        }
-      }
-      X_cur_p += params->inner_x_h_step;
-    }
-    X_cur_p += params->inner_x_v_step;
-  }
-
-  // save off the accumulator
-  VSTR(vpu, &A->vR);
-  VSTD(vpu, &A->vD);
-}
-
 C_API void mat_mul_direct_impl_asm(MatMulDirectFn::Params *params,
                                    VPURingBuffer *A, int8_t *X,
-                                   int32_t output_channel_group);
+                                   int32_t output_channel_group, int8_t * weights);
 C_API void mat_mul_int8_generic_impl_asm(MatMulInt8::Params *params,
                                          VPURingBuffer *A, int8_t *X,
-                                         int32_t output_channel_group);
+                                         int32_t output_channel_group, int8_t * weights);
 
 void MatMulDirectFn::aggregate_fn(VPURingBuffer *A, int8_t *T,
                                   int32_t output_channel_group) {
 #ifdef NN_USE_REF
-  mat_mul_direct_impl(this->params, A, T, output_channel_group);
+  mat_mul_direct_impl(this->params, A, T, output_channel_group, weights);
 #else
-  mat_mul_direct_impl_asm(this->params, A, T, output_channel_group);
+  mat_mul_direct_impl_asm(this->params, A, T, output_channel_group, weights);
 #endif  // NN_USE_REF
 }
 
 void MatMulInt8::aggregate_fn(VPURingBuffer *A, int8_t *T,
                               int32_t output_channel_group) {
 #ifdef NN_USE_REF
-  mat_mul_int8_generic_impl(this->params, A, T, output_channel_group);
+  mat_mul_int8_generic_impl(this->params, A, T, output_channel_group, weights);
 #else
-  mat_mul_int8_generic_impl_asm(this->params, A, T, output_channel_group);
+  mat_mul_int8_generic_impl_asm(this->params, A, T, output_channel_group, weights);
 #endif  // NN_USE_REF
 }

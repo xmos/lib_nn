@@ -20,15 +20,15 @@ MaxPoolPatchFn::Params::Params(const int32_t pixel_count)
 MaxPoolPatchFn::Params::Params(const nn::WindowGeometry &window)
     : pixel_count(window.shape.PixelCount()) {}
 
-MaxPoolPatchFn::Params::Params(std::istream &stream) {
-  stream.read(reinterpret_cast<char *>(&this->pixel_count),
-              sizeof(this->pixel_count));
-}
+// MaxPoolPatchFn::Params::Params(std::istream &stream) {
+//   stream.read(reinterpret_cast<char *>(&this->pixel_count),
+//               sizeof(this->pixel_count));
+// }
 
-void MaxPoolPatchFn::Params::Serialize(std::ostream &stream) const {
-  stream.write(reinterpret_cast<const char *>(&this->pixel_count),
-               sizeof(this->pixel_count));
-}
+// void MaxPoolPatchFn::Params::Serialize(std::ostream &stream) const {
+//   stream.write(reinterpret_cast<const char *>(&this->pixel_count),
+//                sizeof(this->pixel_count));
+// }
 
 MaxPoolPatchFn::MaxPoolPatchFn(const Params *params) : params(params) {}
 
@@ -86,27 +86,27 @@ MaxPoolDirectValidFn::Params::Params(const nn::ImageGeometry &input_img,
   this->mp_params.rows = window.shape.height;
 }
 
-MaxPoolDirectValidFn::Params::Params(std::istream &stream) {
-  stream.read(reinterpret_cast<char *>(&this->mp_params.col_stride),
-              sizeof(this->mp_params.col_stride));
-  stream.read(reinterpret_cast<char *>(&this->mp_params.cols),
-              sizeof(this->mp_params.cols));
-  stream.read(reinterpret_cast<char *>(&this->mp_params.row_stride),
-              sizeof(this->mp_params.row_stride));
-  stream.read(reinterpret_cast<char *>(&this->mp_params.rows),
-              sizeof(this->mp_params.rows));
-}
+// MaxPoolDirectValidFn::Params::Params(std::istream &stream) {
+//   stream.read(reinterpret_cast<char *>(&this->mp_params.col_stride),
+//               sizeof(this->mp_params.col_stride));
+//   stream.read(reinterpret_cast<char *>(&this->mp_params.cols),
+//               sizeof(this->mp_params.cols));
+//   stream.read(reinterpret_cast<char *>(&this->mp_params.row_stride),
+//               sizeof(this->mp_params.row_stride));
+//   stream.read(reinterpret_cast<char *>(&this->mp_params.rows),
+//               sizeof(this->mp_params.rows));
+// }
 
-void MaxPoolDirectValidFn::Params::Serialize(std::ostream &stream) const {
-  stream.write(reinterpret_cast<const char *>(&this->mp_params.col_stride),
-               sizeof(this->mp_params.col_stride));
-  stream.write(reinterpret_cast<const char *>(&this->mp_params.cols),
-               sizeof(this->mp_params.cols));
-  stream.write(reinterpret_cast<const char *>(&this->mp_params.row_stride),
-               sizeof(this->mp_params.row_stride));
-  stream.write(reinterpret_cast<const char *>(&this->mp_params.rows),
-               sizeof(this->mp_params.rows));
-}
+// void MaxPoolDirectValidFn::Params::Serialize(std::ostream &stream) const {
+//   stream.write(reinterpret_cast<const char *>(&this->mp_params.col_stride),
+//                sizeof(this->mp_params.col_stride));
+//   stream.write(reinterpret_cast<const char *>(&this->mp_params.cols),
+//                sizeof(this->mp_params.cols));
+//   stream.write(reinterpret_cast<const char *>(&this->mp_params.row_stride),
+//                sizeof(this->mp_params.row_stride));
+//   stream.write(reinterpret_cast<const char *>(&this->mp_params.rows),
+//                sizeof(this->mp_params.rows));
+// }
 
 MaxPoolDirectValidFn::MaxPoolDirectValidFn(const Params *params)
     : params(params) {}

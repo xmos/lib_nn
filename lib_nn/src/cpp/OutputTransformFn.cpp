@@ -356,18 +356,20 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
 }
 extern "C" int8_t *output_transform_fn_impl_asm(const OT_int8::Params *params,
                                                 int8_t *Y, VPURingBuffer *A,
-                                                int32_t output_channel_group);
+                                                int32_t output_channel_group, int16_t * multipliers, 
+                                 int16_t * biases, OutputTransformValues * otv);
 
 int8_t *output_transform_fn_impl(const OT_int8::Params *params, int8_t *Y,
                                  VPURingBuffer *A,
-                                 int32_t output_channel_group) {
+                                 int32_t output_channel_group, int16_t * multipliers, 
+                                 int16_t * biases, OutputTransformValues * otv) {
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
 
   int16_t *cur_post_activation_bias =
-      params->biases + output_channel_group * VPU_INT16_EPV;
+      biases + output_channel_group * VPU_INT16_EPV;
   int16_t *cur_post_activation_mul =
-      params->multipliers + output_channel_group * VPU_INT16_EPV;
+      multipliers + output_channel_group * VPU_INT16_EPV;
 
   VSETC(vpu, MODE_S16);
 
@@ -378,9 +380,9 @@ int8_t *output_transform_fn_impl(const OT_int8::Params *params, int8_t *Y,
   memset(&temp_mem, 0, sizeof(temp_mem));
 
   // Reduce the accumulator to 16 bits
-  VLSAT(vpu, params->otv->accu_shr);
+  VLSAT(vpu, otv->accu_shr);
   VSTR(vpu, &temp_mem);
-  VLASHR(vpu, &temp_mem, params->otv->accu_shl);
+  VLASHR(vpu, &temp_mem, otv->accu_shl);
 
   // Save the 16 bit accumulator, A, to scratch
   VSTR(vpu, &temp_mem);
@@ -391,14 +393,14 @@ int8_t *output_transform_fn_impl(const OT_int8::Params *params, int8_t *Y,
   // Multiply the channel-wise bias by the bias multiplier to make it 32 bit per
   // channel
   VLDC(vpu, cur_post_activation_bias);
-  VLMACC(vpu, params->otv->bias_multipler);
+  VLMACC(vpu, otv->bias_multipler);
 
   // Multiply A by the post_activation_mul and accumulate it to the bias
   VLDC(vpu, &temp_mem);
   VLMACC(vpu, cur_post_activation_mul);
 
   // Reduce the accumulator to 16 bits
-  VLSAT(vpu, params->otv->final_shr);
+  VLSAT(vpu, otv->final_shr);
 
   VDEPTH8_FIXED(vpu);
 
@@ -418,9 +420,11 @@ int8_t *output_transform_fn_impl(const OT_int8::Params *params, int8_t *Y,
 int8_t *OT_int8::output_transform_fn(int8_t *Y, VPURingBuffer *A,
                                      int32_t output_channel_group) {
 #ifdef NN_USE_REF
-  return output_transform_fn_impl(this->params, Y, A, output_channel_group);
+  return output_transform_fn_impl(this->params, Y, A, output_channel_group, multipliers, 
+                                 biases, otv);
 #else
-  return output_transform_fn_impl_asm(this->params, Y, A, output_channel_group);
+  return output_transform_fn_impl_asm(this->params, Y, A, output_channel_group, multipliers, 
+                                 biases, otv);
 #endif  // NN_USE_REF
 }
 OTBinary_int8::Params::Params(int32_t output_slice_channel_count,
@@ -548,16 +552,6 @@ DirectWriteOutputTransform::Params::Params(
     const nn::ImageGeometry &output_image)
     : output_img_channels(output_image.depth) {}
 
-DirectWriteOutputTransform::Params::Params(std::istream &stream) {
-  stream.read(reinterpret_cast<char *>(&this->output_img_channels),
-              sizeof(int32_t));
-}
-
-void DirectWriteOutputTransform::Params::Serialize(std::ostream &stream) const {
-  stream.write(reinterpret_cast<const char *>(&this->output_img_channels),
-               sizeof(this->output_img_channels));
-}
-
 ////////// DirectWriteOutputTransform //////////////
 DirectWriteOutputTransform::DirectWriteOutputTransform(const Params *params)
     : params(params) {}
@@ -592,24 +586,6 @@ ShiftInt8OutputTransform::Params::Params(const nn::ImageGeometry &output_image,
                                          const int16_t shift)
     : output_img_channels(output_image.depth) {
   for (int k = 0; k < VPU_INT8_ACC_PERIOD; ++k) shifts[k] = shift;
-}
-
-ShiftInt8OutputTransform::Params::Params(std::istream &stream) {
-  int16_t shift;
-#define READ(X) stream.read(reinterpret_cast<char *>(&X), sizeof(X))
-  READ(this->output_img_channels);
-  READ(shift);
-#undef READ
-
-  for (int k = 0; k < VPU_INT8_ACC_PERIOD; ++k) shifts[k] = shift;
-}
-
-void ShiftInt8OutputTransform::Params::Serialize(std::ostream &stream) const {
-  auto shift = this->shifts[0];
-#define WRITE(X) stream.write(reinterpret_cast<const char *>(&X), sizeof(X));
-  WRITE(this->output_img_channels);
-  WRITE(shift);
-#undef WRITE
 }
 
 ////////// ShiftInt8OutputTransform //////////////

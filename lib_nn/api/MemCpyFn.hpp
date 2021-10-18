@@ -101,9 +101,9 @@ class DerefInputFn : public MemCpyFn {
      */
     Params(const Filter2dGeometry &filter_geometry);
 
-    Params(std::istream &stream);
+//     Params(std::istream &stream);
 
-    void Serialize(std::ostream &stream) const;
+//     void Serialize(std::ostream &stream) const;
   };
   /**
    * @brief This describes the region over which this class will perform its
@@ -183,9 +183,9 @@ class ImToColPadded : public MemCpyFn {
     Params(const Filter2dGeometry &filter_geometry, const int8_t padding_value,
            const int input_ch_per_output);
 
-    Params(std::istream &stream);
+//     Params(std::istream &stream);
 
-    void Serialize(std::ostream &stream) const;
+//     void Serialize(std::ostream &stream) const;
   };
 
  private:
