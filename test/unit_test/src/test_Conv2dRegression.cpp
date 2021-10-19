@@ -150,9 +150,9 @@ void test_Conv2dPaddedIndirectRegression() {
                                       (int8_t *)weights.data(), shape, 8,
                                       kernel_pad_val);
 
-                              MatMulInt8::Params p(k_depth, input_bytes,
-                                                   rw.weights.data());
+                              MatMulInt8::Params p(k_depth, input_bytes);
                               MatMulInt8 aggregator(&p);
+                              aggregator.setWeights(rw.weights.data());
 
                               OutputTransformFnInt8::CanonicalMulAndBias
                                   canonical_values = OutputTransformFnInt8::
@@ -178,11 +178,10 @@ void test_Conv2dPaddedIndirectRegression() {
                               OutputTransformFn::pad(
                                   qp.multipliers, (int)VPU_INT16_EPV, pad_val);
 
-                              OT_int8::Params ot_params((int32_t)k_depth,
-                                                        &qp.otv, qp.biases,
-                                                        qp.multipliers);
+                              OT_int8::Params ot_params((int32_t)k_depth);
 
                               OT_int8 ot(&ot_params);
+                              ot.setMultipliersAndBiases(qp.multipliers.data(), qp.biases.data(), &qp.otv);
                               auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
                                                     Y.depth);
 
@@ -311,9 +310,9 @@ void test_Conv2dValidIndirectRegression() {
                                       (int8_t *)weights.data(), shape, 8,
                                       kernel_pad_val);
 
-                              MatMulInt8::Params p(k_depth, input_bytes,
-                                                   rw.weights.data());
+                              MatMulInt8::Params p(k_depth, input_bytes);
                               MatMulInt8 aggregator(&p);
+                              aggregator.setWeights(rw.weights.data());
 
                               OutputTransformFnInt8::CanonicalMulAndBias
                                   canonical_values = OutputTransformFnInt8::
@@ -339,11 +338,10 @@ void test_Conv2dValidIndirectRegression() {
                               OutputTransformFn::pad(
                                   qp.multipliers, (int)VPU_INT16_EPV, pad_val);
 
-                              OT_int8::Params ot_params((int32_t)k_depth,
-                                                        &qp.otv, qp.biases,
-                                                        qp.multipliers);
+                              OT_int8::Params ot_params((int32_t)k_depth);
 
                               OT_int8 ot(&ot_params);
+                              ot.setMultipliersAndBiases(qp.multipliers.data(), qp.biases.data(), &qp.otv);
                               auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
                                                     Y.depth);
 
@@ -470,10 +468,9 @@ void test_Conv2dValidDirectRegression() {
                                       (int8_t *)weights.data(), shape, 8,
                                       kernel_pad_val);
 
-                              MatMulDirectFn::Params p(X, K, x_channels,
-                                                       rw.weights.data(),
-                                                       (int)rw.weights.size());
+                              MatMulDirectFn::Params p(X, K, x_channels);
                               MatMulDirectFn aggregator(&p);
+                              aggregator.setWeights(rw.weights.data());
 
                               OutputTransformFnInt8::CanonicalMulAndBias
                                   canonical_values = OutputTransformFnInt8::
@@ -499,10 +496,9 @@ void test_Conv2dValidDirectRegression() {
                               OutputTransformFn::pad(
                                   qp.multipliers, (int)VPU_INT16_EPV, pad_val);
 
-                              OT_int8::Params ot_params((int32_t)k_depth,
-                                                        &qp.otv, qp.biases,
-                                                        qp.multipliers);
+                              OT_int8::Params ot_params((int32_t)k_depth);
                               OT_int8 ot(&ot_params);
+                              ot.setMultipliersAndBiases(qp.multipliers.data(), qp.biases.data(), &qp.otv);
                               auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
                                                     Y.depth);
 

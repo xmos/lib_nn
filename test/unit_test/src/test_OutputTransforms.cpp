@@ -95,10 +95,10 @@ void Test_OT_int8() {
       OutputTransformFn::pad(qp.biases, VPU_INT16_EPV, pad_val);
       OutputTransformFn::pad(qp.multipliers, (int)VPU_INT16_EPV, pad_val);
 
-      OT_int8::Params p((int32_t)output_ch_count, &qp.otv, qp.biases,
-                        qp.multipliers);
+      OT_int8::Params p((int32_t)output_ch_count);
 
       OT_int8 ot(&p);
+      ot.setMultipliersAndBiases(qp.multipliers.data(), qp.biases.data(), &qp.otv);
 
       int8_t Y[output_ch_count];
       memset(Y, 0, sizeof Y);
@@ -181,10 +181,10 @@ void Test_OT_int8_directed() {
       OutputTransformFn::pad(qp.biases, VPU_INT16_EPV, pad_val);
       OutputTransformFn::pad(qp.multipliers, (int)VPU_INT16_EPV, pad_val);
 
-      OT_int8::Params p((int32_t)output_ch_count, &qp.otv, qp.biases,
-                        qp.multipliers);
+      OT_int8::Params p((int32_t)output_ch_count);
 
       OT_int8 ot(&p);
+      ot.setMultipliersAndBiases(qp.multipliers.data(), qp.biases.data(), &qp.otv);
 
       int8_t Y[output_ch_count];
       memset(Y, 0, sizeof Y);

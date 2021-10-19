@@ -164,9 +164,9 @@ void test_Conv2dValidDirectDWRegression() {
                                     (int8_t *)weights.data(), shape,
                                     kernel_pad_val);
 
-                            MatMulDirectFn_DW::Params p(X, K, rw.weights.data(),
-                                                        (int)rw.weights.size());
+                            MatMulDirectFn_DW::Params p(X, K);
                             MatMulDirectFn_DW aggregator(&p);
+                            aggregator.setWeights(rw.weights.data());
 
                             OutputTransformFnInt8::CanonicalMulAndBias
                                 canonical_values = OutputTransformFnInt8::
@@ -192,10 +192,9 @@ void test_Conv2dValidDirectDWRegression() {
                             OutputTransformFn::pad(qp.multipliers,
                                                    (int)VPU_INT16_EPV, pad_val);
 
-                            OT_int8::Params ot_params((int32_t)x_channels,
-                                                      &qp.otv, qp.biases,
-                                                      qp.multipliers);
+                            OT_int8::Params ot_params((int32_t)x_channels);
                             OT_int8 ot(&ot_params);
+                            ot.setMultipliersAndBiases(qp.multipliers.data(), qp.biases.data(), &qp.otv);
                             auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
                                                   Y.depth);
 
@@ -340,9 +339,9 @@ void test_Conv2dPaddedIndirectDWRegression() {
                                     (int8_t *)weights.data(), weights_shape,
                                     kernel_pad_val);
 
-                            MatMulDirectFn_DW::Params p(K, rw.weights.data(),
-                                                        (int)rw.weights.size());
+                            MatMulDirectFn_DW::Params p(K);
                             MatMulDirectFn_DW aggregator(&p);
+                            aggregator.setWeights(rw.weights.data());
 
                             OutputTransformFnInt8::CanonicalMulAndBias
                                 canonical_values = OutputTransformFnInt8::
@@ -368,10 +367,9 @@ void test_Conv2dPaddedIndirectDWRegression() {
                             OutputTransformFn::pad(qp.multipliers,
                                                    (int)VPU_INT16_EPV, pad_val);
 
-                            OT_int8::Params ot_params((int32_t)x_channels,
-                                                      &qp.otv, qp.biases,
-                                                      qp.multipliers);
+                            OT_int8::Params ot_params((int32_t)x_channels);
                             OT_int8 ot(&ot_params);
+                            ot.setMultipliersAndBiases(qp.multipliers.data(), qp.biases.data(), &qp.otv);
                             auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
                                                   Y.depth);
 
