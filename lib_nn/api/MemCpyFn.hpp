@@ -100,10 +100,7 @@ class DerefInputFn : public MemCpyFn {
      * performed.
      */
     Params(const Filter2dGeometry &filter_geometry);
-
-    //     Params(std::istream &stream);
-
-    //     void Serialize(std::ostream &stream) const;
+    
   };
   /**
    * @brief This describes the region over which this class will perform its

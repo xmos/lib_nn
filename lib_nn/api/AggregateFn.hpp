@@ -319,17 +319,7 @@ class MaxPoolPatchFn : public AggregateFn,
      * Construct a MaxPoolPatchFn::Params
      */
     Params(const nn::WindowGeometry &window);
-
-    /**
-     * Construct a MaxPoolPatchFn::Params by deserializing it from the provided
-     * byte stream.
-     */
-    // Params(std::istream &stream);
-
-    /**
-     * Serialize this MaxPoolPatchFn::Params into the provided byte stream
-     */
-    // void Serialize(std::ostream &stream) const;
+    
   };
 
  protected:
