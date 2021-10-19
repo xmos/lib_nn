@@ -400,7 +400,6 @@ class MaxPoolDirectValidFn
      */
     Params(const nn::ImageGeometry &input_img,
            const nn::WindowGeometry &window);
-
   };
 
  protected:
