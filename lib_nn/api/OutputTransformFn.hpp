@@ -252,79 +252,6 @@ class OT_int8 : public OutputTransformFnInt8 {
   }
 };
 
-class OTBinary_int8 : public OutputTransformFnInt8 {
- public:
-  class Params {
-   public:
-    int32_t output_slice_channel_count;  // TODO push into base class
-    OutputTransformValuesClamping *otv;
-    int16_t *biases;         //[output_slice_channel_count];
-    int16_t *multipliers;    //[output_slice_channel_count];
-    int16_t *accu_modifier;  //[output_slice_channel_count];
-
-    /**
-     * @brief Construct a new Params object
-     *
-     * @param output_slice_channel_count The count of output channels to be
-     * computed by this parameter set.
-     * @param otv Pointer to struct defining how the VPU will implement the the
-     * output transform.
-     * @param biases Pointer to the quantised biases.
-     * @param multipliers Pointer to the quantised multipliers.
-     * @param accu_modifier Pointer to a per channel accumulator modifier. This
-     * adjusts each channel by a fixed amount to compensate for channel overlap,
-     * allowing for dense weight packing.
-     */
-    Params(int32_t output_slice_channel_count,
-           OutputTransformValuesClamping *otv, int16_t *biases,
-           int16_t *multipliers, int16_t *accu_modifier);
-  };
-
- private:
-  /**
-   * @brief This describes the channels over which this class will perform its
-   * operation(OutputTransform) and how each channel will transformed.
-   */
-  Params *params;
-
- public:
-  OTBinary_int8(Params *params) : params(params){};
-
-  /**
-   * @brief This translates from the representation of:
-   *    output[ch] = min(max((accu[ch] * multipler[ch]) + bias[ch]), INT8_MIN),
-   * INT8_MAX) to a form that can be efficiently implemented on the VPU. The
-   * accu_min and accu_max allow the quantisiation logic to achieve maximum
-   * resolution on the quantised representations of the multipler and bias.
-   *
-   * @param output_transform_multiplier Vector of the multipier for each
-   * channel.
-   * @param output_transform_bias Vector of the bias for each channel.
-   * @param accu_min Vector of the minimum possible accumulator for each
-   * channel.
-   * @param accu_max Vector of the maximum possible accumulator for each
-   * channel.
-   * @return QuantisationParams
-   */
-  static QuantisationParams quantise_activation(
-      std::vector<double> &output_transform_multiplier,
-      std::vector<double> &output_transform_bias,
-      std::vector<int32_t> &accu_min, std::vector<int32_t> &accu_max);
-
-  int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
-                              int32_t output_channel_group);
-};
-
-class OTBinary_bin : public OutputTransformFn {
-  int16_t *thresholds;
-
- public:
-  OTBinary_bin(int16_t *thresholds);
-
-  int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
-                              int32_t output_channel_group);
-};
-
 /**
  * This output transform assumes the int8_t channel data is in vR[] of the
  * accumulator.
@@ -357,22 +284,6 @@ class DirectWriteOutputTransform
      */
     Params(const ImageGeometry &output_geometry);
 
-    /**
-     * Deserialize a DirectWriteOutputTransform::Params from a stream.
-     *
-     * The data to be deserialized should come from a previous call to
-     * DirectWriteOutputTransform::Params::Serialize(). The serialized data
-     * format is considered to be opaque.
-     */
-    // Params(std::istream &stream);
-
-    /**
-     * Serialize a DirectWriteOutputTransform::Params into a stream.
-     *
-     * The serialized object can be recovered later using the appropriate stream
-     * constructor.
-     */
-    // void Serialize(std::ostream &stream) const;
   };
 
  private:
@@ -436,20 +347,6 @@ class ShiftInt8OutputTransform
      */
     Params(const ImageGeometry &output_image, const int16_t shift);
 
-    /**
-     * Deseriaized a ShiftInt8OutputTransform::Params from a byte stream.
-     *
-     * The data in the stream should come from a prior call to
-     * ShiftInt8OutputTransform::Params::Serialize().
-     */
-    // Params(std::istream &stream);
-
-    /**
-     * Serialize this ShiftInt8OutputTransform::Params into a byte stream.
-     *
-     * Note: This does not serialize the shift values.
-     */
-    // void Serialize(std::ostream &stream) const;
   };
 
  private:

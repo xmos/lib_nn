@@ -411,16 +411,6 @@ class MaxPoolDirectValidFn
     Params(const nn::ImageGeometry &input_img,
            const nn::WindowGeometry &window);
 
-    /**
-     * Construct a MaxPoolDirectValidFn::Params by deserializing it from the
-     * provided byte stream
-     */
-    // Params(std::istream &stream);
-
-    /**
-     * Seralize this MaxPoolDirectValidFn::Params into the provided byte stream
-     */
-    // void Serialize(std::ostream &stream) const;
   };
 
  protected:
