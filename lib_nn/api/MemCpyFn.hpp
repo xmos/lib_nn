@@ -182,7 +182,6 @@ class ImToColPadded : public MemCpyFn {
      */
     Params(const Filter2dGeometry &filter_geometry, const int8_t padding_value,
            const int input_ch_per_output);
-           
   };
 
  private:

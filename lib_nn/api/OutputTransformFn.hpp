@@ -283,7 +283,6 @@ class DirectWriteOutputTransform
      * output image geometry.
      */
     Params(const ImageGeometry &output_geometry);
-
   };
 
  private:
@@ -346,7 +345,6 @@ class ShiftInt8OutputTransform
      * Create a ShiftInt8OutputTransform::Params
      */
     Params(const ImageGeometry &output_image, const int16_t shift);
-
   };
 
  private:
