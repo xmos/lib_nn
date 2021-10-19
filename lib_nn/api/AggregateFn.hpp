@@ -61,8 +61,6 @@ class MatMulInt8 : public AggregateFn {
    public:
     int32_t output_slice_channel_count;
     int32_t bytes_per_kernel_channel;
-
-    int8_t *weights;
     /**
      * @brief Construct a new Params object.
      *
@@ -70,47 +68,8 @@ class MatMulInt8 : public AggregateFn {
      * computed by this parameter set.
      * @param bytes_per_kernel_channel The count of bytes per each channel of
      * the kernel (weights).
-     * @param weights A Pointer to the begining of the reordered weights.
      */
-    Params(int output_slice_channel_count, int32_t bytes_per_kernel_channel,
-           int8_t *weights);
-
-    int get_allocation_byte_count() {
-      int weight_bytes = MatMulInt8::get_weights_bytes(
-          bytes_per_kernel_channel, output_slice_channel_count);
-      return sizeof(MatMulInt8::Params) + weight_bytes;
-    }
-
-    static int get_allocation_byte_count(const char *buf) {
-      return fetch_int(buf);
-    }
-
-    template <class T>
-    std::string serialise() {
-      int allocation_byte_count = MatMulInt8::get_weights_bytes(
-          bytes_per_kernel_channel, output_slice_channel_count);
-      std::string s =
-          std::string((char *)&allocation_byte_count,
-                      (char *)&allocation_byte_count + sizeof(int)) +
-          std::string((char *)this, (char *)&(weights)) +
-          std::string((char *)weights,
-                      (char *)(weights + allocation_byte_count));
-      return s;
-    }
-
-    template <class T>
-    static T *deserialise(char *allocated_memory, const char *buf) {
-      Params *t = (Params *)allocated_memory;
-      size_t const_size_stuff = (char *)&(t->weights) - (char *)t;
-      char *p = (char *)buf + sizeof(int);
-      std::memcpy(t, p, const_size_stuff);
-      p += const_size_stuff;
-      int weight_bytes = MatMulInt8::get_weights_bytes(
-          t->bytes_per_kernel_channel, t->output_slice_channel_count);
-      t->weights = (int8_t *)(allocated_memory + sizeof(Params));
-      std::memcpy(t->weights, p, weight_bytes);
-      return t;
-    }
+    Params(int output_slice_channel_count, int32_t bytes_per_kernel_channel);
   };
 
  protected:
@@ -119,9 +78,16 @@ class MatMulInt8 : public AggregateFn {
    * operation(MatMul).
    */
   Params *params;
+  int8_t *weights;
 
  public:
+  /**
+   * Setter for the reordered weights
+   */
+  void setWeights(int8_t *reordered_weights) { weights = reordered_weights; }
+
   MatMulInt8(Params *params) : params(params){};
+
   void aggregate_fn(VPURingBuffer *A, int8_t *T, int32_t output_channel_group);
 
   /**
@@ -180,9 +146,7 @@ class MatMulDirectFn : public AggregateFn {
 
     int32_t inner_x_h_step;
     int32_t inner_x_v_step;
-    int32_t weights_bytes;
 
-    int8_t *weights;
     /**
      * @brief Construct a new Params object
      *
@@ -194,69 +158,9 @@ class MatMulDirectFn : public AggregateFn {
      * an output channel. For example, a depthwise convolution will have one
      * input channel per output channel whereas a Conv2D will most likely have
      * the input tensors channel count.
-     * @param weights A Pointer to the begining of the reordered weights.
      */
     Params(const ImageGeometry &X, const WindowGeometry &K,
-           const int input_ch_per_output, int8_t *weights, int weights_bytes);
-
-    static int get_allocation_byte_count(const char *buf) {
-      return fetch_int(buf);
-    }
-
-    template <class T>
-    std::string serialise() {
-      int32_t allocation_byte_count = weights_bytes;
-      std::string s =
-          std::string((char *)&allocation_byte_count,
-                      (char *)&allocation_byte_count + sizeof(int32_t)) +
-          std::string(
-              (char *)&this->bytes_per_kernel_channel,
-              (char *)&this->bytes_per_kernel_channel + sizeof(int32_t)) +
-          std::string((char *)&this->k_height_loop_counter,
-                      (char *)&this->k_height_loop_counter + sizeof(int32_t)) +
-          std::string((char *)&this->k_width_loop_counter,
-                      (char *)&this->k_width_loop_counter + sizeof(int32_t)) +
-          std::string(
-              (char *)&this->input_channel_loop_counter,
-              (char *)&this->input_channel_loop_counter + sizeof(int32_t)) +
-          std::string((char *)&this->inner_x_h_step,
-                      (char *)&this->inner_x_h_step + sizeof(int32_t)) +
-          std::string((char *)&this->inner_x_v_step,
-                      (char *)&this->inner_x_v_step + sizeof(int32_t)) +
-          std::string((char *)&this->weights_bytes,
-                      (char *)&this->weights_bytes + sizeof(int32_t)) +
-          std::string((char *)weights, (char *)(weights + weights_bytes));
-      return s;
-    }
-
-    template <class T>
-    static T *deserialise(char *allocated_memory, const char *buf) {
-      Params *t = (Params *)allocated_memory;
-      assert(is_aligned(allocated_memory, 4));
-
-      char *p = (char *)buf + sizeof(int32_t);
-
-      std::memcpy(&t->bytes_per_kernel_channel, p, sizeof(int32_t));
-      p += sizeof(int32_t);
-      std::memcpy(&t->k_height_loop_counter, p, sizeof(int32_t));
-      p += sizeof(int32_t);
-      std::memcpy(&t->k_width_loop_counter, p, sizeof(int32_t));
-      p += sizeof(int32_t);
-      std::memcpy(&t->input_channel_loop_counter, p, sizeof(int32_t));
-      p += sizeof(int32_t);
-      std::memcpy(&t->inner_x_h_step, p, sizeof(int32_t));
-      p += sizeof(int32_t);
-      std::memcpy(&t->inner_x_v_step, p, sizeof(int32_t));
-      p += sizeof(int32_t);
-      std::memcpy(&t->weights_bytes, p, sizeof(int32_t));
-      p += sizeof(int32_t);
-
-      t->weights = (int8_t *)(allocated_memory + sizeof(Params));
-
-      assert(is_aligned(t->weights, 4));
-      std::memcpy(t->weights, p, t->weights_bytes);
-      return t;
-    }
+           const int input_ch_per_output);
   };
 
  protected:
@@ -266,19 +170,20 @@ class MatMulDirectFn : public AggregateFn {
    */
   Params *params;
 
+  /**
+   * @brief A Pointer to the begining of the reordered weights.
+   */
+  int8_t *weights;
+
  public:
   MatMulDirectFn(Params *params) : params(params){};
 
   void aggregate_fn(VPURingBuffer *A, int8_t *T, int32_t output_channel_group);
-};
 
-class MatMulBinaryDirectFn : public MatMulDirectFn {
- public:
-  MatMulBinaryDirectFn(Params *params) : MatMulDirectFn(params) {}
-
- private:
-  void mat_mul_direct_impl(VPURingBuffer *A, int8_t *T,
-                           int32_t output_channel_group);
+  /**
+   * Setter for the reordered weights
+   */
+  void setWeights(int8_t *reordered_weights) { weights = reordered_weights; }
 };
 
 // Depthwise below here
@@ -301,9 +206,7 @@ class MatMulDirectFn_DW : public AggregateFn {
 
     int32_t inner_x_h_step;
     int32_t inner_x_v_step;
-    int32_t weights_bytes;
 
-    int8_t *weights;
     /**
      * @brief Construct a new Params object for direct application to the input
      * tensor
@@ -315,8 +218,7 @@ class MatMulDirectFn_DW : public AggregateFn {
      * @param weights A Pointer to the begining of the reordered weights.
      * @param weights_bytes Count of bytes in the weights array.
      */
-    Params(const ImageGeometry &X, const WindowGeometry &K, int8_t *weights,
-           int weights_bytes);
+    Params(const ImageGeometry &X, const WindowGeometry &K);
 
     /**
      * @brief Construct a new Params object for indirect application to the
@@ -325,63 +227,8 @@ class MatMulDirectFn_DW : public AggregateFn {
      * @param K Class describing the properties of the convolution to be
      * preformed.
      * @param weights A Pointer to the begining of the reordered weights.
-     * @param weights_bytes Count of bytes in the weights array.
      */
-    Params(const WindowGeometry &K, int8_t *weights, int weights_bytes);
-
-    static int get_allocation_byte_count(const char *buf) {
-      return fetch_int(buf);
-    }
-
-    template <class T>
-    std::string serialise() {
-      int32_t allocation_byte_count = weights_bytes;
-      std::string s =
-          std::string((char *)&allocation_byte_count,
-                      (char *)&allocation_byte_count + sizeof(int32_t)) +
-          std::string(
-              (char *)&this->bytes_per_kernel_channel_group,
-              (char *)&this->bytes_per_kernel_channel_group + sizeof(int32_t)) +
-          std::string((char *)&this->k_height_loop_counter,
-                      (char *)&this->k_height_loop_counter + sizeof(int32_t)) +
-          std::string((char *)&this->k_width_loop_counter,
-                      (char *)&this->k_width_loop_counter + sizeof(int32_t)) +
-          std::string((char *)&this->inner_x_h_step,
-                      (char *)&this->inner_x_h_step + sizeof(int32_t)) +
-          std::string((char *)&this->inner_x_v_step,
-                      (char *)&this->inner_x_v_step + sizeof(int32_t)) +
-          std::string((char *)&this->weights_bytes,
-                      (char *)&this->weights_bytes + sizeof(int32_t)) +
-          std::string((char *)weights, (char *)(weights + weights_bytes));
-      return s;
-    }
-
-    template <class T>
-    static T *deserialise(char *allocated_memory, const char *buf) {
-      Params *t = (Params *)allocated_memory;
-      assert(is_aligned(allocated_memory, 4));
-
-      char *p = (char *)buf + sizeof(int32_t);
-
-      std::memcpy(&t->bytes_per_kernel_channel_group, p, sizeof(int32_t));
-      p += sizeof(int32_t);
-      std::memcpy(&t->k_height_loop_counter, p, sizeof(int32_t));
-      p += sizeof(int32_t);
-      std::memcpy(&t->k_width_loop_counter, p, sizeof(int32_t));
-      p += sizeof(int32_t);
-      std::memcpy(&t->inner_x_h_step, p, sizeof(int32_t));
-      p += sizeof(int32_t);
-      std::memcpy(&t->inner_x_v_step, p, sizeof(int32_t));
-      p += sizeof(int32_t);
-      std::memcpy(&t->weights_bytes, p, sizeof(int32_t));
-      p += sizeof(int32_t);
-
-      t->weights = (int8_t *)(allocated_memory + sizeof(Params));
-
-      assert(is_aligned(t->weights, 4));
-      std::memcpy(t->weights, p, t->weights_bytes);
-      return t;
-    }
+    Params(const WindowGeometry &K);
   };
 
  protected:
@@ -390,12 +237,17 @@ class MatMulDirectFn_DW : public AggregateFn {
    * operation(MatMul).
    */
   Params *params;
+  int8_t *weights;
 
  public:
   MatMulDirectFn_DW(Params *params) : params(params){};
 
   void aggregate_fn(VPURingBuffer *A, int8_t *T, int32_t output_channel_group);
 
+  /**
+   * Setter for the reordered weights
+   */
+  void setWeights(int8_t *reordered_weights) { weights = reordered_weights; }
   /**
    * @brief Used to reorder the weights from their normal form ([OutputChannel,
    * Height, Width, InputChannel]) to a form conducive to the VPU efficiently
@@ -467,17 +319,7 @@ class MaxPoolPatchFn : public AggregateFn,
      * Construct a MaxPoolPatchFn::Params
      */
     Params(const nn::WindowGeometry &window);
-
-    /**
-     * Construct a MaxPoolPatchFn::Params by deserializing it from the provided
-     * byte stream.
-     */
-    Params(std::istream &stream);
-
-    /**
-     * Serialize this MaxPoolPatchFn::Params into the provided byte stream
-     */
-    void Serialize(std::ostream &stream) const;
+    
   };
 
  protected:
@@ -558,17 +400,6 @@ class MaxPoolDirectValidFn
      */
     Params(const nn::ImageGeometry &input_img,
            const nn::WindowGeometry &window);
-
-    /**
-     * Construct a MaxPoolDirectValidFn::Params by deserializing it from the
-     * provided byte stream
-     */
-    Params(std::istream &stream);
-
-    /**
-     * Seralize this MaxPoolDirectValidFn::Params into the provided byte stream
-     */
-    void Serialize(std::ostream &stream) const;
   };
 
  protected:
@@ -620,215 +451,6 @@ C_API
 void maxpool_direct_valid_ref(VPURingBuffer *A, const int8_t *X,
                               const maxpool_direct_valid_params *params);
 
-/**
- * Parameter struct required by avgpool_patch_ref() and avgpool_patch_xcore().
- */
-typedef struct {
-  /**
-   * Number of pixels in a patch.
-   */
-  int32_t pixels;
-
-  /**
-   * Scale value by which input elements are multiplied.
-   *
-   * Each scale[k] == scale[j]. It is duplicated for the VPU's sake.
-   */
-  int8_t scale[VPU_INT8_ACC_PERIOD];
-} avgpool_patch_params;
-
-/**
- * Aggregator for performing avgpool on a contiguous sequence of 16-channel
- * pixels.
- *
- * @see
- */
-class AvgPoolPatchFn
-    : public AggregateFn,
-      public ChannelParallelComponent<VPU_INT8_ACC_PERIOD_LOG2> {
- public:
-  /**
-   * Configuration parameters for AvgPoolPatchFn
-   */
-  struct Params {
-    /**
-     * Parameter struct required by the low-level implementation.
-     */
-    avgpool_patch_params ap_params;
-
-    /**
-     */
-    Params() {}
-
-    /**
-     * Construct an AvgPoolPatchFn::Params using the supplied params struct.
-     */
-    Params(const avgpool_patch_params &ap_params);
-
-    /**
-     * Construct an AvgPoolPatchFn::Params from a high-level geometric
-     * description of the pooling window.
-     */
-    Params(const nn::WindowGeometry &filter, const int8_t scale);
-
-    /**
-     * Deserialize an AvgPoolPatchFn::Params from a byte stream.
-     */
-    Params(std::istream &stream);
-
-    /**
-     * Serialize an AvgPoolPatchFn::Params into a byte stream.
-     */
-    void Serialize(std::ostream &stream) const;
-  };
-
- protected:
-  /**
-   * The configuration parameters for this operator.
-   */
-  const Params *params;
-
- public:
-  /**
-   * Construct an AvgPoolPatchFn
-   */
-  AvgPoolPatchFn(const Params *params);
-
-  /**
-   * Perform avgpool aggregation.
-   */
-  virtual void aggregate_fn(VPURingBuffer *acc, int8_t *input_patch,
-                            int32_t output_channel_group) override;
-};
-
-/**
- * Parameter struct required by avgpool_direct_valid_ref() and
- * avgpool_direct_valid_xcore().
- */
-typedef struct {
-  /**
-   * Stride between columns in the pooling window (taking dilation into
-   * account).
-   */
-  int32_t col_stride;
-
-  /**
-   * The number of columns in the pooling widow
-   */
-  int32_t cols;
-
-  /**
-   * Stride from the last pixel in one row of the pooling window, to the first
-   * pixel of the next.
-   */
-  int32_t row_stride;
-
-  /**
-   * The number of rows in the pooling window
-   */
-  int32_t rows;
-
-  /**
-   * Scale value by which input elements are multiplied.
-   *
-   * Each scale[k] == scale[j]. It is duplicated for the VPU's sake.
-   */
-  int8_t scale[VPU_INT8_ACC_PERIOD];
-} avgpool_direct_valid_params;
-
-/**
- * Aggregator for performing avgpool over a 2D rectangular grid of pixels, not
- * necessarily contiguous in memory.
- *
- * AvgPoolDirectValidFn can process up to 16 output channels in parallel.
- *
- * @see ShiftInt8OutputTransform
- */
-class AvgPoolDirectValidFn
-    : public AggregateFn,
-      public ChannelParallelComponent<VPU_INT8_ACC_PERIOD_LOG2> {
- public:
-  /**
-   * Configuration parameters for AvgPoolDirectValidFn
-   */
-  struct Params {
-    /**
-     * Parameters to be passed to the kernel function.
-     */
-    avgpool_direct_valid_params ap_params;
-
-    /**
-     *
-     */
-    Params() {}
-
-    /**
-     * Construct a AvgPoolDirectValidFn::Params
-     */
-    Params(const avgpool_direct_valid_params &ap_params);
-
-    /**
-     * Construct a AvgPoolDirectValidFn::Params
-     */
-    Params(const nn::Filter2dGeometry &filter, const int8_t scale);
-
-    /**
-     * Deserialize an AvgPoolDirectValidFn::Params from a byte stream.
-     */
-    Params(std::istream &stream);
-
-    /**
-     * Serialize an AvgPoolDirectValidFn::Params into a byte stream.
-     */
-    void Serialize(std::ostream &stream) const;
-  };
-
- protected:
-  /**
-   * The configuration parameters for this operator.
-   */
-  const Params *params;
-
- public:
-  /**
-   * Construct an AvgPoolDirectValidFn
-   */
-  AvgPoolDirectValidFn(const Params *params);
-
-  /**
-   * Perform avgpool aggregation.
-   */
-  virtual void aggregate_fn(VPURingBuffer *acc, int8_t *input_img,
-                            int32_t output_channel_group) override;
-};
-
-/**
- * xcore implementation of avgpool_patch_ref()
- */
-C_API
-void avgpool_patch_xcore(VPURingBuffer *A, const int8_t patch[],
-                         const avgpool_patch_params *params);
-
-/**
- * xcore implementation of avgpool_direct_valid_ref()
- */
-C_API
-void avgpool_direct_valid_xcore(VPURingBuffer *acc, const int8_t X[],
-                                const avgpool_direct_valid_params *params);
-
-/**
- * Portable implementation of avgpool_patch_xcore().
- */
-C_API
-void avgpool_patch_ref(VPURingBuffer *A, const int8_t patch[],
-                       const avgpool_patch_params *params);
-
-/**
- * Portable implementation of avgpool_direct_valid_xcore().
- */
-C_API
-void avgpool_direct_valid_ref(VPURingBuffer *acc, const int8_t X[],
-                              const avgpool_direct_valid_params *params);
 }  // namespace nn
 
 #endif  // LIB_NN_AGGREGATE_FN_HPP_

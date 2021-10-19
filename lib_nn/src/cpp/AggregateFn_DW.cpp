@@ -109,11 +109,7 @@ int MatMulDirectFn_DW::get_scratch_mem_bytes(std::array<int, 4> &shape) {
 }
 
 MatMulDirectFn_DW::Params::Params(const ImageGeometry &X,
-                                  const WindowGeometry &K, int8_t *weights,
-                                  int weights_bytes) {
-  this->weights_bytes = weights_bytes;
-  this->weights = weights;
-
+                                  const WindowGeometry &K) {
   k_height_loop_counter = K.shape.height - 1;
   k_width_loop_counter = K.shape.width - 1;
 
@@ -132,11 +128,7 @@ This is the constructor for when the input has been flattened to a single
 vector, i.e. for when we are using im2col (padding) then multiplying depthwise
 with the scrach
 */
-MatMulDirectFn_DW::Params::Params(const WindowGeometry &K, int8_t *weights,
-                                  int weights_bytes) {
-  this->weights_bytes = weights_bytes;
-  this->weights = weights;
-
+MatMulDirectFn_DW::Params::Params(const WindowGeometry &K) {
   k_height_loop_counter = 0;
   k_width_loop_counter = K.shape.height * K.shape.width - 1;
 
@@ -148,7 +140,8 @@ MatMulDirectFn_DW::Params::Params(const WindowGeometry &K, int8_t *weights,
 }
 
 void mat_mul_direct_dw_impl(MatMulDirectFn_DW::Params *params, VPURingBuffer *A,
-                            int8_t *X, int32_t output_channel_group) {
+                            int8_t *X, int32_t output_channel_group,
+                            int8_t *weights) {
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
 
@@ -156,7 +149,7 @@ void mat_mul_direct_dw_impl(MatMulDirectFn_DW::Params *params, VPURingBuffer *A,
   VCLRDR(vpu);
 
   int8_t *X_cur_p = X;
-  int8_t *K_p = (int8_t *)params->weights +
+  int8_t *K_p = (int8_t *)weights +
                 params->bytes_per_kernel_channel_group * output_channel_group;
 
   for (int kh = params->k_height_loop_counter; kh >= 0; kh--) {
@@ -176,13 +169,14 @@ void mat_mul_direct_dw_impl(MatMulDirectFn_DW::Params *params, VPURingBuffer *A,
 
 C_API void mat_mul_direct_dw_impl_asm(MatMulDirectFn_DW::Params *params,
                                       VPURingBuffer *A, int8_t *X,
-                                      int32_t output_channel_group);
+                                      int32_t output_channel_group,
+                                      int8_t *weights);
 
 void MatMulDirectFn_DW::aggregate_fn(VPURingBuffer *A, int8_t *T,
                                      int32_t output_channel_group) {
 #ifdef NN_USE_REF
-  mat_mul_direct_dw_impl(this->params, A, T, output_channel_group);
+  mat_mul_direct_dw_impl(this->params, A, T, output_channel_group, weights);
 #else
-  mat_mul_direct_dw_impl_asm(this->params, A, T, output_channel_group);
+  mat_mul_direct_dw_impl_asm(this->params, A, T, output_channel_group, weights);
 #endif  // NN_USE_REF
 }
