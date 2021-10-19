@@ -70,7 +70,6 @@ class MatMulInt8 : public AggregateFn {
      * the kernel (weights).
      */
     Params(int output_slice_channel_count, int32_t bytes_per_kernel_channel);
-
   };
 
  protected:
@@ -82,13 +81,10 @@ class MatMulInt8 : public AggregateFn {
   int8_t *weights;
 
  public:
-
   /**
    * Setter for the reordered weights
    */
-  void setWeights(int8_t *reordered_weights){
-    weights = reordered_weights;
-  }
+  void setWeights(int8_t *reordered_weights) { weights = reordered_weights; }
 
   MatMulInt8(Params *params) : params(params){};
 
@@ -165,7 +161,6 @@ class MatMulDirectFn : public AggregateFn {
      */
     Params(const ImageGeometry &X, const WindowGeometry &K,
            const int input_ch_per_output);
-
   };
 
  protected:
@@ -174,11 +169,11 @@ class MatMulDirectFn : public AggregateFn {
    * operation(MatMul).
    */
   Params *params;
-  
+
   /**
    * @brief A Pointer to the begining of the reordered weights.
    */
-  int8_t * weights;
+  int8_t *weights;
 
  public:
   MatMulDirectFn(Params *params) : params(params){};
@@ -188,9 +183,7 @@ class MatMulDirectFn : public AggregateFn {
   /**
    * Setter for the reordered weights
    */
-  void setWeights(int8_t *reordered_weights){
-    weights = reordered_weights;
-  }
+  void setWeights(int8_t *reordered_weights) { weights = reordered_weights; }
 };
 
 // Depthwise below here
@@ -244,7 +237,7 @@ class MatMulDirectFn_DW : public AggregateFn {
    * operation(MatMul).
    */
   Params *params;
-    int8_t *weights;
+  int8_t *weights;
 
  public:
   MatMulDirectFn_DW(Params *params) : params(params){};
@@ -254,9 +247,7 @@ class MatMulDirectFn_DW : public AggregateFn {
   /**
    * Setter for the reordered weights
    */
-  void setWeights(int8_t *reordered_weights){
-    weights = reordered_weights;
-  }
+  void setWeights(int8_t *reordered_weights) { weights = reordered_weights; }
   /**
    * @brief Used to reorder the weights from their normal form ([OutputChannel,
    * Height, Width, InputChannel]) to a form conducive to the VPU efficiently

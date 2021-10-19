@@ -1,6 +1,6 @@
+#include <algorithm>
 #include <cmath>
 #include <random>
-#include <algorithm>
 
 #include "OutputTransformFn.hpp"
 #include "Rand.hpp"
@@ -98,7 +98,8 @@ void Test_OT_int8() {
       OT_int8::Params p((int32_t)output_ch_count);
 
       OT_int8 ot(&p);
-      ot.setMultipliersAndBiases(qp.multipliers.data(), qp.biases.data(), &qp.otv);
+      ot.setMultipliersAndBiases(qp.multipliers.data(), qp.biases.data(),
+                                 &qp.otv);
 
       int8_t Y[output_ch_count];
       memset(Y, 0, sizeof Y);
@@ -184,7 +185,8 @@ void Test_OT_int8_directed() {
       OT_int8::Params p((int32_t)output_ch_count);
 
       OT_int8 ot(&p);
-      ot.setMultipliersAndBiases(qp.multipliers.data(), qp.biases.data(), &qp.otv);
+      ot.setMultipliersAndBiases(qp.multipliers.data(), qp.biases.data(),
+                                 &qp.otv);
 
       int8_t Y[output_ch_count];
       memset(Y, 0, sizeof Y);

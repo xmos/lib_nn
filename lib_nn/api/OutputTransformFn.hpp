@@ -208,9 +208,9 @@ class OT_int8 : public OutputTransformFnInt8 {
   class Params : public Serialisable {
    public:
     int32_t output_slice_channel_count;
-  //[asj] these will be the replacement for OutputTransformValues
-  // int16_t initial_shift;
-  // int16_t final_shr;
+    //[asj] these will be the replacement for OutputTransformValues
+    // int16_t initial_shift;
+    // int16_t final_shr;
 
    public:
     /**
@@ -220,7 +220,7 @@ class OT_int8 : public OutputTransformFnInt8 {
      * computed by this parameter set.
      */
     Params(int32_t output_slice_channel_count)
-        : output_slice_channel_count(output_slice_channel_count){}
+        : output_slice_channel_count(output_slice_channel_count) {}
   };
 
  private:
@@ -242,14 +242,14 @@ class OT_int8 : public OutputTransformFnInt8 {
   int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
                               int32_t output_channel_group);
 
-  void setMultipliersAndBiases(int16_t *m, int16_t *b, OutputTransformValues *o){
+  void setMultipliersAndBiases(int16_t *m, int16_t *b,
+                               OutputTransformValues *o) {
     multipliers = m;
     biases = b;
     otv = o;
     assert(is_aligned(biases, 4));
     assert(is_aligned(multipliers, 4));
   }
-
 };
 
 class OTBinary_int8 : public OutputTransformFnInt8 {

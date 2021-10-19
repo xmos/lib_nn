@@ -356,13 +356,15 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
 }
 extern "C" int8_t *output_transform_fn_impl_asm(const OT_int8::Params *params,
                                                 int8_t *Y, VPURingBuffer *A,
-                                                int32_t output_channel_group, int16_t * multipliers, 
-                                 int16_t * biases, OutputTransformValues * otv);
+                                                int32_t output_channel_group,
+                                                int16_t *multipliers,
+                                                int16_t *biases,
+                                                OutputTransformValues *otv);
 
 int8_t *output_transform_fn_impl(const OT_int8::Params *params, int8_t *Y,
-                                 VPURingBuffer *A,
-                                 int32_t output_channel_group, int16_t * multipliers, 
-                                 int16_t * biases, OutputTransformValues * otv) {
+                                 VPURingBuffer *A, int32_t output_channel_group,
+                                 int16_t *multipliers, int16_t *biases,
+                                 OutputTransformValues *otv) {
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
 
@@ -420,11 +422,11 @@ int8_t *output_transform_fn_impl(const OT_int8::Params *params, int8_t *Y,
 int8_t *OT_int8::output_transform_fn(int8_t *Y, VPURingBuffer *A,
                                      int32_t output_channel_group) {
 #ifdef NN_USE_REF
-  return output_transform_fn_impl(this->params, Y, A, output_channel_group, multipliers, 
-                                 biases, otv);
+  return output_transform_fn_impl(this->params, Y, A, output_channel_group,
+                                  multipliers, biases, otv);
 #else
-  return output_transform_fn_impl_asm(this->params, Y, A, output_channel_group, multipliers, 
-                                 biases, otv);
+  return output_transform_fn_impl_asm(this->params, Y, A, output_channel_group,
+                                      multipliers, biases, otv);
 #endif  // NN_USE_REF
 }
 OTBinary_int8::Params::Params(int32_t output_slice_channel_count,

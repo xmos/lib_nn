@@ -125,7 +125,8 @@ void Test_MatMulInt8() {
       alignas(4) int8_t reordered_weights[rw.weights.size()];
       std::memcpy(reordered_weights, rw.weights.data(), rw.weights.size());
 
-      MatMulInt8::Params p(output_channel_count, input_bytes);//reordered_weights
+      MatMulInt8::Params p(output_channel_count,
+                           input_bytes);  // reordered_weights
       MatMulInt8 mm(&p);
       mm.setWeights((int8_t *)reordered_weights);
       int ocg_count = (output_channel_count + vpu_ring_buffer_length - 1) /
@@ -192,7 +193,9 @@ void Test_Simple_MatMulDirectFn() {
                     (int8_t *)K;  // todo we will switch to usnig the boggler
 
                 MatMulDirectFn::Params p(
-                    X_params, K_params, x_channels);//weights, (int)(y_channels * k_height * k_width * x_channels)
+                    X_params, K_params,
+                    x_channels);  // weights, (int)(y_channels * k_height *
+                                  // k_width * x_channels)
                 MatMulDirectFn mmd(&p);
                 mmd.setWeights(weights);
 
@@ -287,10 +290,10 @@ void Test_MatMulDirectFn() {
                                 (int8_t *)raw_weights, shape, 8, pad_val);
 
                         MatMulDirectFn::Params p(X, K, input_ch_per_output
-                        //,
-                                                //  rw.weights.data(),
-                                                //  rw.weights.size()
-                                                 );
+                                                 //,
+                                                 //  rw.weights.data(),
+                                                 //  rw.weights.size()
+                        );
                         MatMulDirectFn mmd(&p);
                         mmd.setWeights(rw.weights.data());
                         int ocg_count =
@@ -407,11 +410,12 @@ void Test_Simple_MatMulDirectFn_DW() {
 
               int8_t *weights = rw.weights.data();
 
-              MatMulDirectFn_DW::Params p(X_params, K_params
-              // , 
-              // weights,
-              //                             sizeof(K)
-                                          );
+              MatMulDirectFn_DW::Params p(
+                  X_params, K_params
+                  // ,
+                  // weights,
+                  //                             sizeof(K)
+              );
               MatMulDirectFn_DW mmd(&p);
               mmd.setWeights(weights);
 
@@ -499,10 +503,11 @@ void Test_MatMulDirectFn_DW() {
                         MatMulDirectFn_DW::reorder_kernel_weights(
                             (int8_t *)raw_weights, shape, pad_val);
 
-                    MatMulDirectFn_DW::Params p(X, K
-                    // , rw.weights.data(),
-                    //                             rw.weights.size()
-                                                );
+                    MatMulDirectFn_DW::Params p(
+                        X, K
+                        // , rw.weights.data(),
+                        //                             rw.weights.size()
+                    );
                     MatMulDirectFn_DW mmd(&p);
                     mmd.setWeights(rw.weights.data());
 

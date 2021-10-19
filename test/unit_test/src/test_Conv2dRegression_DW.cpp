@@ -194,7 +194,9 @@ void test_Conv2dValidDirectDWRegression() {
 
                             OT_int8::Params ot_params((int32_t)x_channels);
                             OT_int8 ot(&ot_params);
-                            ot.setMultipliersAndBiases(qp.multipliers.data(), qp.biases.data(), &qp.otv);
+                            ot.setMultipliersAndBiases(qp.multipliers.data(),
+                                                       qp.biases.data(),
+                                                       &qp.otv);
                             auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
                                                   Y.depth);
 
@@ -369,7 +371,9 @@ void test_Conv2dPaddedIndirectDWRegression() {
 
                             OT_int8::Params ot_params((int32_t)x_channels);
                             OT_int8 ot(&ot_params);
-                            ot.setMultipliersAndBiases(qp.multipliers.data(), qp.biases.data(), &qp.otv);
+                            ot.setMultipliersAndBiases(qp.multipliers.data(),
+                                                       qp.biases.data(),
+                                                       &qp.otv);
                             auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
                                                   Y.depth);
 

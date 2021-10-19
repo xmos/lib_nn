@@ -181,7 +181,9 @@ void test_Conv2dPaddedIndirectRegression() {
                               OT_int8::Params ot_params((int32_t)k_depth);
 
                               OT_int8 ot(&ot_params);
-                              ot.setMultipliersAndBiases(qp.multipliers.data(), qp.biases.data(), &qp.otv);
+                              ot.setMultipliersAndBiases(qp.multipliers.data(),
+                                                         qp.biases.data(),
+                                                         &qp.otv);
                               auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
                                                     Y.depth);
 
@@ -341,7 +343,9 @@ void test_Conv2dValidIndirectRegression() {
                               OT_int8::Params ot_params((int32_t)k_depth);
 
                               OT_int8 ot(&ot_params);
-                              ot.setMultipliersAndBiases(qp.multipliers.data(), qp.biases.data(), &qp.otv);
+                              ot.setMultipliersAndBiases(qp.multipliers.data(),
+                                                         qp.biases.data(),
+                                                         &qp.otv);
                               auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
                                                     Y.depth);
 
@@ -498,7 +502,9 @@ void test_Conv2dValidDirectRegression() {
 
                               OT_int8::Params ot_params((int32_t)k_depth);
                               OT_int8 ot(&ot_params);
-                              ot.setMultipliersAndBiases(qp.multipliers.data(), qp.biases.data(), &qp.otv);
+                              ot.setMultipliersAndBiases(qp.multipliers.data(),
+                                                         qp.biases.data(),
+                                                         &qp.otv);
                               auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
                                                     Y.depth);
 
