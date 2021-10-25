@@ -168,12 +168,11 @@ void test_Conv2dValidDirectDWRegression() {
                             MatMulDirectFn_DW aggregator(&p);
                             aggregator.setWeights(rw.weights.data());
 
-                            MulsAndBias
-                                  mul_and_biases = OutputTransformFnInt8::
-                                    canonicalise_mul_and_bias_dw(
-                                        eff_mult, bias, weights, shape,
-                                        ks.input_zero_point,
-                                        ks.output_zero_point, x_channels);
+                            MulsAndBias mul_and_biases = OutputTransformFnInt8::
+                                canonicalise_mul_and_bias_dw(
+                                    eff_mult, bias, weights, shape,
+                                    ks.input_zero_point, ks.output_zero_point,
+                                    x_channels);
 
                             QuantisationParams qp =
                                 OutputTransformFnInt8::quantise_activation(
@@ -184,13 +183,17 @@ void test_Conv2dValidDirectDWRegression() {
                             // over reads
                             int16_t pad_val =
                                 rng.rand<int16_t>();  // this is arbitrary
-                            OutputTransformFn::pad_final_access(qp.multipliers_and_biases, VPU_INT16_EPV,
-                                                    pad_val);
+                            OutputTransformFn::pad_final_access(
+                                qp.multipliers_and_biases, VPU_INT16_EPV,
+                                pad_val);
 
-                            OT_int8::Params ot_params((int32_t)x_channels, qp.initial_shr, qp.final_shr);
+                            OT_int8::Params ot_params((int32_t)x_channels,
+                                                      qp.initial_shr,
+                                                      qp.final_shr);
 
                             OT_int8 ot(&ot_params);
-                            ot.setMultipliersAndBiases(qp.multipliers_and_biases.data());
+                            ot.setMultipliersAndBiases(
+                                qp.multipliers_and_biases.data());
 
                             auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
                                                   Y.depth);
@@ -340,12 +343,11 @@ void test_Conv2dPaddedIndirectDWRegression() {
                             MatMulDirectFn_DW aggregator(&p);
                             aggregator.setWeights(rw.weights.data());
 
-                            MulsAndBias
-                                  mul_and_biases = OutputTransformFnInt8::
-                                    canonicalise_mul_and_bias_dw(
-                                        eff_mult, bias, weights, weights_shape,
-                                        ks.input_zero_point,
-                                        ks.output_zero_point, x_channels);
+                            MulsAndBias mul_and_biases = OutputTransformFnInt8::
+                                canonicalise_mul_and_bias_dw(
+                                    eff_mult, bias, weights, weights_shape,
+                                    ks.input_zero_point, ks.output_zero_point,
+                                    x_channels);
 
                             QuantisationParams qp =
                                 OutputTransformFnInt8::quantise_activation(
@@ -356,13 +358,17 @@ void test_Conv2dPaddedIndirectDWRegression() {
                             // over reads
                             int16_t pad_val =
                                 rng.rand<int16_t>();  // this is arbitrary
-                            OutputTransformFn::pad_final_access(qp.multipliers_and_biases, VPU_INT16_EPV,
-                                                    pad_val);
-                            OT_int8::Params ot_params((int32_t)x_channels, qp.initial_shr, qp.final_shr);
+                            OutputTransformFn::pad_final_access(
+                                qp.multipliers_and_biases, VPU_INT16_EPV,
+                                pad_val);
+                            OT_int8::Params ot_params((int32_t)x_channels,
+                                                      qp.initial_shr,
+                                                      qp.final_shr);
 
                             OT_int8 ot(&ot_params);
-                            ot.setMultipliersAndBiases(qp.multipliers_and_biases.data());
-                            
+                            ot.setMultipliersAndBiases(
+                                qp.multipliers_and_biases.data());
+
                             auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
                                                   Y.depth);
 

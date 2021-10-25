@@ -515,19 +515,17 @@ void vpu_sim_print(xs3_vpu *vpu) {
     case MODE_S16:
       printf("16-bit:  vC     \t    vR      \t    vD\n");
       for (int i = 0; i < VPU_INT16_EPV; i++) {
-      #if 0
+#if 0
 
         printf("%d\t%c0x%0.4X(%d)\t%c0x%0.4X(%d)\t%c0x%0.4X(%d)\n", i,
                signof(vC16[i]), abs(vC16[i]), (int)vC16[i], signof(vR16[i]),
                abs(vR16[i]), (int)vR16[i], signof(vD16[i]), abs(vD16[i]),
                (int)vD16[i]);
-      #else
-        printf("%d\t0x%0.4X(%d)\t0x%0.4X(%d)\t0x%0.4X(%d)\n", i,
-                abs(vC16[i]), (int)vC16[i],
-               abs(vR16[i]), (int)vR16[i], abs(vD16[i]),
+#else
+        printf("%d\t0x%0.4X(%d)\t0x%0.4X(%d)\t0x%0.4X(%d)\n", i, abs(vC16[i]),
+               (int)vC16[i], abs(vR16[i]), (int)vR16[i], abs(vD16[i]),
                (int)vD16[i]);
-      #endif
-
+#endif
       }
       break;
 

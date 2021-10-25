@@ -319,7 +319,6 @@ class MaxPoolPatchFn : public AggregateFn,
      * Construct a MaxPoolPatchFn::Params
      */
     Params(const nn::WindowGeometry &window);
-    
   };
 
  protected:

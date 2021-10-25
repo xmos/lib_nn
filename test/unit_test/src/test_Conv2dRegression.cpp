@@ -57,7 +57,7 @@ KernelStimulus create_simple_stimulus(Filter2dGeometry &geom) {
   ks.output_zero_point = rng.rand<int8_t>() % 32;
 
   for (int ch = 0; ch < geom.output.depth; ch++) {
-    ks.eff_mult[ch] = rng.rand<float>(1.0 / (256*256), 1.0 / 256);
+    ks.eff_mult[ch] = rng.rand<float>(1.0 / (256 * 256), 1.0 / 256);
     ks.bias[ch] = rng.rand<int8_t>() % 512;
   }
   float eff_mult_scalar = 2.0;
@@ -83,7 +83,7 @@ void test_Conv2dPaddedIndirectRegression() {
                           for (int right_pad = 0; right_pad <= 1; ++right_pad) {
                             for (int bottom_pad = 0; bottom_pad <= 1;
                                  ++bottom_pad) {
-                              for(int itt=0;itt<itt_count;++itt){
+                              for (int itt = 0; itt < itt_count; ++itt) {
                                 padding_t padding = {
                                     (int16_t)top_pad, (int16_t)left_pad,
                                     (int16_t)bottom_pad, (int16_t)right_pad};
@@ -108,13 +108,14 @@ void test_Conv2dPaddedIndirectRegression() {
                                 ImageGeometry X(x_height, x_width, x_channels);
 
                                 WindowGeometry K(k_height, k_width, k_depth,
-                                                -padding.top, -padding.left,
-                                                k_v_stride, k_h_stride, 1,
-                                                k_v_dilation, k_h_dilation);
+                                                 -padding.top, -padding.left,
+                                                 k_v_stride, k_h_stride, 1,
+                                                 k_v_dilation, k_h_dilation);
 
                                 Filter2dGeometry geom(X, Y, K);
 
-                                KernelStimulus ks = create_simple_stimulus(geom);
+                                KernelStimulus ks =
+                                    create_simple_stimulus(geom);
                                 auto &weights = ks.weights;
                                 auto &bias = ks.bias;
                                 auto &eff_mult = ks.eff_mult;
@@ -142,8 +143,9 @@ void test_Conv2dPaddedIndirectRegression() {
                                 std::vector<int8_t> T(scratch_bytes, 0);
 
                                 int8_t kernel_pad_val =
-                                    rng.rand<int8_t>();  // This can be anything,
-                                                        // 0 in pratice.
+                                    rng.rand<int8_t>();  // This can be
+                                                         // anything, 0 in
+                                                         // pratice.
                                 std::array<int, 4> shape = {
                                     {k_depth, k_height, k_width, x_channels}};
 
@@ -156,38 +158,44 @@ void test_Conv2dPaddedIndirectRegression() {
                                 MatMulInt8 aggregator(&p);
                                 aggregator.setWeights(rw.weights.data());
 
-                                assert(eff_mult.size()>0);
-                                
-                                MulsAndBias
-                                    mul_and_biases = OutputTransformFnInt8::
+                                assert(eff_mult.size() > 0);
+
+                                MulsAndBias mul_and_biases =
+                                    OutputTransformFnInt8::
                                         canonicalise_mul_and_bias(
                                             eff_mult, bias, weights,
                                             ks.input_zero_point,
                                             ks.output_zero_point, k_depth);
 
                                 QuantisationParams qp =
-                                    OutputTransformFnInt8::quantise_activation(mul_and_biases);
+                                    OutputTransformFnInt8::quantise_activation(
+                                        mul_and_biases);
 
-                                assert(qp.multipliers_and_biases.size()>0);
+                                assert(qp.multipliers_and_biases.size() > 0);
 
                                 // pad qp.multipliers_and_biases to a multiple
                                 // of VPU_INT16_EPV this is to work around array
                                 // over reads
                                 int16_t pad_val =
                                     rng.rand<int16_t>();  // this is arbitrary
-                                OutputTransformFn::pad_final_access(qp.multipliers_and_biases, VPU_INT16_EPV,
-                                                      pad_val);
+                                OutputTransformFn::pad_final_access(
+                                    qp.multipliers_and_biases, VPU_INT16_EPV,
+                                    pad_val);
 
-                                OT_int8::Params ot_params((int32_t)k_depth, qp.initial_shr, qp.final_shr);
+                                OT_int8::Params ot_params((int32_t)k_depth,
+                                                          qp.initial_shr,
+                                                          qp.final_shr);
 
                                 OT_int8 ot(&ot_params);
-                                assert(qp.multipliers_and_biases.size()>0);
-                                ot.setMultipliersAndBiases(qp.multipliers_and_biases.data());
+                                assert(qp.multipliers_and_biases.size() > 0);
+                                ot.setMultipliersAndBiases(
+                                    qp.multipliers_and_biases.data());
 
-                                auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
-                                                      Y.depth);
+                                auto ir = ImageRegion(0, 0, 0, Y.height,
+                                                      Y.width, Y.depth);
 
-                                Filter2D::Params akp(Y, ir, VPU_INT8_ACC_PERIOD);
+                                Filter2D::Params akp(Y, ir,
+                                                     VPU_INT8_ACC_PERIOD);
 
                                 Conv2dPaddedInDirect conv2d(&akp, &memcpy,
                                                             &aggregator, &ot);
@@ -202,9 +210,9 @@ void test_Conv2dPaddedIndirectRegression() {
                                       int idx = yh * (Y.width * Y.depth) +
                                                 yw * Y.depth + yd;
 
-                                      TEST_ASSERT_INT32_WITHIN(1,
-                                                              (int)expected[idx],
-                                                              (int)output[idx]);
+                                      TEST_ASSERT_INT32_WITHIN(
+                                          1, (int)expected[idx],
+                                          (int)output[idx]);
                                     }
                                   }
                                 }
@@ -241,7 +249,7 @@ void test_Conv2dValidIndirectRegression() {
                           for (int right_pad = 0; right_pad <= 0; ++right_pad) {
                             for (int bottom_pad = 0; bottom_pad <= 0;
                                  ++bottom_pad) {
-                              for(int itt=0;itt<itt_count;++itt){
+                              for (int itt = 0; itt < itt_count; ++itt) {
                                 padding_t padding = {
                                     (int16_t)top_pad, (int16_t)left_pad,
                                     (int16_t)bottom_pad, (int16_t)right_pad};
@@ -266,13 +274,14 @@ void test_Conv2dValidIndirectRegression() {
                                 ImageGeometry X(x_height, x_width, x_channels);
 
                                 WindowGeometry K(k_height, k_width, k_depth,
-                                                -padding.top, -padding.left,
-                                                k_v_stride, k_h_stride, 1,
-                                                k_v_dilation, k_h_dilation);
+                                                 -padding.top, -padding.left,
+                                                 k_v_stride, k_h_stride, 1,
+                                                 k_v_dilation, k_h_dilation);
 
                                 Filter2dGeometry geom(X, Y, K);
 
-                                KernelStimulus ks = create_simple_stimulus(geom);
+                                KernelStimulus ks =
+                                    create_simple_stimulus(geom);
                                 auto &weights = ks.weights;
                                 auto &bias = ks.bias;
                                 auto &eff_mult = ks.eff_mult;
@@ -285,14 +294,15 @@ void test_Conv2dValidIndirectRegression() {
                                         ks.input_zero_point,
                                         ks.output_zero_point);
 
-                                ImToColValid::Params im_to_col_params(X, K,
-                                                                      x_channels);
+                                ImToColValid::Params im_to_col_params(
+                                    X, K, x_channels);
                                 ImToColValid memcpy(&im_to_col_params);
 
-                                int overread_bytes = memcpy.get_overread_bytes();
-                                input.resize(input.size() +
-                                                overread_bytes / sizeof(int8_t),
-                                            0);
+                                int overread_bytes =
+                                    memcpy.get_overread_bytes();
+                                input.resize(input.size() + overread_bytes /
+                                                                sizeof(int8_t),
+                                             0);
 
                                 int input_bytes = geom.window.shape.height *
                                                   geom.window.shape.width *
@@ -318,8 +328,8 @@ void test_Conv2dValidIndirectRegression() {
                                 MatMulInt8 aggregator(&p);
                                 aggregator.setWeights(rw.weights.data());
 
-                                MulsAndBias
-                                    mul_and_biases = OutputTransformFnInt8::
+                                MulsAndBias mul_and_biases =
+                                    OutputTransformFnInt8::
                                         canonicalise_mul_and_bias(
                                             eff_mult, bias, weights,
                                             ks.input_zero_point,
@@ -334,21 +344,26 @@ void test_Conv2dValidIndirectRegression() {
                                 // over reads
                                 int16_t pad_val =
                                     rng.rand<int16_t>();  // this is arbitrary
-                                OutputTransformFn::pad_final_access(qp.multipliers_and_biases, VPU_INT16_EPV,
-                                                      pad_val);
+                                OutputTransformFn::pad_final_access(
+                                    qp.multipliers_and_biases, VPU_INT16_EPV,
+                                    pad_val);
 
-                                OT_int8::Params ot_params((int32_t)k_depth, qp.initial_shr, qp.final_shr);
+                                OT_int8::Params ot_params((int32_t)k_depth,
+                                                          qp.initial_shr,
+                                                          qp.final_shr);
 
                                 OT_int8 ot(&ot_params);
-                                assert(qp.multipliers_and_biases.size()>0);
-                                ot.setMultipliersAndBiases(qp.multipliers_and_biases.data());
-                                auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
-                                                      Y.depth);
+                                assert(qp.multipliers_and_biases.size() > 0);
+                                ot.setMultipliersAndBiases(
+                                    qp.multipliers_and_biases.data());
+                                auto ir = ImageRegion(0, 0, 0, Y.height,
+                                                      Y.width, Y.depth);
 
-                                Filter2D::Params akp(Y, ir, VPU_INT8_ACC_PERIOD);
+                                Filter2D::Params akp(Y, ir,
+                                                     VPU_INT8_ACC_PERIOD);
 
                                 Conv2dValidIndirect conv2d(&akp, &memcpy,
-                                                          &aggregator, &ot);
+                                                           &aggregator, &ot);
 
                                 auto output = std::vector<int8_t>(
                                     Y.height * Y.width * Y.depth);
@@ -364,9 +379,9 @@ void test_Conv2dValidIndirectRegression() {
                                       // (int)expected[idx] << " xcore: " <<
                                       // (int)output[idx] << std::endl;
 
-                                      TEST_ASSERT_INT32_WITHIN(1,
-                                                              (int)expected[idx],
-                                                              (int)output[idx]);
+                                      TEST_ASSERT_INT32_WITHIN(
+                                          1, (int)expected[idx],
+                                          (int)output[idx]);
                                     }
                                   }
                                 }
@@ -403,7 +418,7 @@ void test_Conv2dValidDirectRegression() {
                           for (int right_pad = 0; right_pad <= 0; ++right_pad) {
                             for (int bottom_pad = 0; bottom_pad <= 0;
                                  ++bottom_pad) {
-                              for(int itt=0;itt<itt_count;++itt){
+                              for (int itt = 0; itt < itt_count; ++itt) {
                                 padding_t padding = {
                                     (int16_t)top_pad, (int16_t)left_pad,
                                     (int16_t)bottom_pad, (int16_t)right_pad};
@@ -428,13 +443,14 @@ void test_Conv2dValidDirectRegression() {
                                 ImageGeometry X(x_height, x_width, x_channels);
 
                                 WindowGeometry K(k_height, k_width, k_depth,
-                                                -padding.top, -padding.left,
-                                                k_v_stride, k_h_stride, 1,
-                                                k_v_dilation, k_h_dilation);
+                                                 -padding.top, -padding.left,
+                                                 k_v_stride, k_h_stride, 1,
+                                                 k_v_dilation, k_h_dilation);
 
                                 Filter2dGeometry geom(X, Y, K);
 
-                                KernelStimulus ks = create_simple_stimulus(geom);
+                                KernelStimulus ks =
+                                    create_simple_stimulus(geom);
 
                                 auto &weights = ks.weights;
                                 auto &bias = ks.bias;
@@ -474,8 +490,8 @@ void test_Conv2dValidDirectRegression() {
                                 MatMulDirectFn aggregator(&p);
                                 aggregator.setWeights(rw.weights.data());
 
-                                MulsAndBias
-                                    mul_and_biases = OutputTransformFnInt8::
+                                MulsAndBias mul_and_biases =
+                                    OutputTransformFnInt8::
                                         canonicalise_mul_and_bias(
                                             eff_mult, bias, weights,
                                             ks.input_zero_point,
@@ -490,22 +506,27 @@ void test_Conv2dValidDirectRegression() {
                                 // over reads
                                 int16_t pad_val =
                                     rng.rand<int16_t>();  // this is arbitrary
-                                OutputTransformFn::pad_final_access(qp.multipliers_and_biases, VPU_INT16_EPV,
-                                                      pad_val);
+                                OutputTransformFn::pad_final_access(
+                                    qp.multipliers_and_biases, VPU_INT16_EPV,
+                                    pad_val);
 
-                                OT_int8::Params ot_params((int32_t)k_depth, qp.initial_shr, qp.final_shr);
+                                OT_int8::Params ot_params((int32_t)k_depth,
+                                                          qp.initial_shr,
+                                                          qp.final_shr);
 
                                 OT_int8 ot(&ot_params);
-                                assert(qp.multipliers_and_biases.size()>0);
-                                ot.setMultipliersAndBiases(qp.multipliers_and_biases.data());
+                                assert(qp.multipliers_and_biases.size() > 0);
+                                ot.setMultipliersAndBiases(
+                                    qp.multipliers_and_biases.data());
 
-                                auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
-                                                      Y.depth);
+                                auto ir = ImageRegion(0, 0, 0, Y.height,
+                                                      Y.width, Y.depth);
 
-                                Filter2D::Params akp(Y, ir, VPU_INT8_ACC_PERIOD);
+                                Filter2D::Params akp(Y, ir,
+                                                     VPU_INT8_ACC_PERIOD);
 
                                 Conv2dValidDirect conv2d(&akp, &memcpy,
-                                                        &aggregator, &ot);
+                                                         &aggregator, &ot);
 
                                 auto output = std::vector<int8_t>(
                                     Y.height * Y.width * Y.depth);
@@ -517,9 +538,9 @@ void test_Conv2dValidDirectRegression() {
                                     for (int yd = 0; yd < Y.depth; yd++) {
                                       int idx = yh * (Y.width * Y.depth) +
                                                 yw * Y.depth + yd;
-                                      TEST_ASSERT_INT32_WITHIN(1,
-                                                              (int)expected[idx],
-                                                              (int)output[idx]);
+                                      TEST_ASSERT_INT32_WITHIN(
+                                          1, (int)expected[idx],
+                                          (int)output[idx]);
                                     }
                                   }
                                 }
