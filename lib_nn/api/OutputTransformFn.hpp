@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <cmath>
 
 #include "Serialisable.hpp"
 #include "Utils.hpp"
@@ -22,13 +23,70 @@ namespace nn {
  * number space and written to the output tensor (Y).
  */
 class OutputTransformFn {
+  
  public:
+  class ActivationParams {
+
+    public:
+    /*
+    The originals exist for further optimisation in the future
+    */
+    double original_bias;
+    double original_multiplier;
+    int32_t original_accu_min_val;
+    int32_t original_accu_max_val;
+
+    double bias;
+    double multiplier;
+    int32_t accu_min_val;
+    int32_t accu_max_val;
+    
+    ActivationParams(double bias, double multiplier, int32_t accu_min_val, int32_t accu_max_val):
+      original_bias(bias), original_multiplier(multiplier), 
+      original_accu_min_val(accu_min_val), original_accu_max_val(accu_max_val),
+      bias(bias), multiplier(multiplier), accu_min_val(accu_min_val), accu_max_val(accu_max_val) {
+        assert(accu_min_val <= accu_max_val);
+      }
+  };
+
+  /**
+   * Pads a vector to a boundary with a pad value
+   */
   template <class T>
   static void pad(std::vector<T> &vec, int pad_boundary, T pad_val) {
     vec.resize(
         vec.size() + (pad_boundary - vec.size() % pad_boundary) % pad_boundary,
         pad_val);
   }
+  /**
+   * Pads a vector such that the final access of the vector has access_count
+   * elements with a pad value. This is intended to be used with MulsAndBias
+   * to pad the final access to a VPU word boundary.
+   */
+  template <class T>
+  static void pad_final_access(std::vector<T> &vec, int access_count, T pad_val) {
+
+    //divide by two as there is always a mul for each bias
+    int l = (access_count - (vec.size()/2)%access_count)%access_count;
+    vec.resize( vec.size() + l, pad_val);
+  }
+
+
+  template <class activationT>
+  static int get_max_exponent(activationT f){
+    int e;
+    std::frexp(f, &e);
+    return e;
+  }
+
+  template <class activationT>
+  static int get_max_exponent(std::vector<activationT> &arr){
+    int m = INT_MIN;
+    for (auto f : arr)
+      m = std::max(m, get_max_exponent(f));
+    return m;
+  }
+
   /**
    * @brief The method that will translate the accumulator into the output
    * number space.
@@ -42,64 +100,44 @@ class OutputTransformFn {
   virtual int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
                                       int32_t output_channel_group) = 0;
 };
-
-/**
- * These are in a protected order(internally)
- */
-struct OutputTransformValues {
-  int16_t bias_multipler[VPU_INT16_EPV];  // The 16 bit bias will be multiplied
-                                          // by this to make it a 32 bit value
-  int16_t final_shr[VPU_INT16_EPV];
-  int16_t accu_shr[VPU_INT16_EPV];  // for the vlsat
-  int32_t accu_shl;                 // for the vlashr
-};
-
-/**
- * @brief When the output transform requires the raw accumulator value to be
- * clamped between a min and a max then this structure is used to provide that
- * functionality. The clamping is implemented by taking the accumulator (32 bit)
- * and after shifting it into a 16 bit space
- *    - adding a scalar, near, to the accumulator,
- *    - subtracting near from the accumulator,
- *    - adding a scalar, far_0, to the accumulator,
- *    - adding a scalar, far_1, to the accumulator,
- *    - subtracting near far_1 the accumulator,
- *    - subtracting near far_0 the accumulator,
- * Of these three values near represents the scalar that moves (and returns) the
- * accumulator to it's nearest saturation point, i.e. INT16_MAX, and far_0 +
- * far_1 moves (and returns) the accumulator to the farthest saturation point.
- */
-struct OutputTransformValuesClamping : OutputTransformValues {
-  int16_t clamp_near[VPU_INT16_EPV];
-  int16_t clamp_far_0[VPU_INT16_EPV];
-  int16_t clamp_far_1[VPU_INT16_EPV];
-};
+  
+typedef std::vector<OutputTransformFn::ActivationParams> MulsAndBias;
 
 struct QuantisationParams {
-  OutputTransformValues otv;
-  std::vector<int16_t> biases;
-  std::vector<int16_t> multipliers;
+  /**
+   * The amount to shift all the 32 bit accumulators right by to reduce them to 16 bit scalars.
+   * This will be non-negative. It is used to control the VLSAT.
+   * Note, some may saturate in the 16 bit conversion as the output clamp may have been back propagated.
+   */
+  int16_t initial_shr;
+
+  /**
+   * The amount to shift all the 16 bit biased and scaled accumulators right by to reduce them to 
+   * 8 bit scalars. 
+   * It is used to control the VLASHR. Also the result may be bigger than the int8 range as clamping is 
+   * expected to follow.
+   */
+  int16_t final_shr;
+
+  /**
+   * The mutipliers and biases are interleaved into a single array. They are arranged as channel 
+   * groups of 16 multipliers and 16 biases until the final group of N multipliers and N biases
+   * where N is the remaining number of channels after all the full channel groups.
+   */
+  std::vector<int16_t> multipliers_and_biases;
 };
 
 class OutputTransformFnInt8 : public OutputTransformFn {
- public:
-  struct CanonicalMulAndBias {
-    std::vector<double> f_biases;
-    std::vector<double> f_multipliers;
-    std::vector<int32_t> accu_min;
-    std::vector<int32_t> accu_max;
 
-    CanonicalMulAndBias(int output_channels)
-        : f_biases(output_channels, 0),
-          f_multipliers(output_channels, 0),
-          accu_min(output_channels, 0),
-          accu_max(output_channels, 0){};
-  };
-  static CanonicalMulAndBias canonicalise_mul_and_bias_dw(
-      const std::vector<float> &eff_mult, const std::vector<int32_t> &bias,
-      const std::vector<int8_t> &weights, const std::array<int, 4> &shape,
+ public:
+
+  static MulsAndBias canonicalise_mul_and_bias_dw(
+      const std::vector<float> &eff_mult, 
+      const std::vector<int32_t> &bias,
+      const std::vector<int8_t> &weights, 
+      const std::array<int, 4> &shape,
       int input_zero_point, int output_zero_point, int output_channels) {
-    CanonicalMulAndBias canonical_values(output_channels);
+    MulsAndBias canonical_values;
 
     assert(shape[0] == 1);
 
@@ -127,21 +165,21 @@ class OutputTransformFnInt8 : public OutputTransformFn {
         }
       }
 
-      canonical_values.f_biases[out_chan] =
+      double canonical_bias =
           (bias[out_chan] - input_zero_point * coefs_sum) * eff_mult[out_chan] +
           output_zero_point;
-      canonical_values.f_multipliers[out_chan] = eff_mult[out_chan];
 
-      canonical_values.accu_min[out_chan] = min_accu_sum;
-      canonical_values.accu_max[out_chan] = max_accu_sum;
+      OutputTransformFn::ActivationParams a(canonical_bias, eff_mult[out_chan], min_accu_sum, max_accu_sum);
+      canonical_values.push_back(a);
     }
     return canonical_values;
   }
-  static CanonicalMulAndBias canonicalise_mul_and_bias(
+  
+  static MulsAndBias canonicalise_mul_and_bias(
       const std::vector<float> &eff_mult, const std::vector<int32_t> &bias,
       const std::vector<int8_t> &weights, int input_zero_point,
       int output_zero_point, int output_channels) {
-    CanonicalMulAndBias canonical_values(output_channels);
+    MulsAndBias canonical_values;
 
     int elements_per_channel = weights.size() / output_channels;
     assert((weights.size() % output_channels) == 0);
@@ -165,13 +203,12 @@ class OutputTransformFnInt8 : public OutputTransformFn {
         }
       }
 
-      canonical_values.f_biases[out_chan] =
+      double canonical_bias =
           (bias[out_chan] - input_zero_point * coefs_sum) * eff_mult[out_chan] +
           output_zero_point;
-      canonical_values.f_multipliers[out_chan] = eff_mult[out_chan];
 
-      canonical_values.accu_min[out_chan] = min_accu_sum;
-      canonical_values.accu_max[out_chan] = max_accu_sum;
+      OutputTransformFn::ActivationParams a(canonical_bias, eff_mult[out_chan], min_accu_sum, max_accu_sum);
+      canonical_values.push_back(a);
     }
     return canonical_values;
   }
@@ -193,9 +230,8 @@ class OutputTransformFnInt8 : public OutputTransformFn {
    * @return QuantisationParams
    */
   static QuantisationParams quantise_activation(
-      std::vector<double> &output_transform_multiplier,
-      std::vector<double> &output_transform_bias,
-      std::vector<int32_t> &accu_min, std::vector<int32_t> &accu_max);
+      MulsAndBias &activation_params, bool verbose = false);
+
 };
 
 /**
@@ -208,9 +244,8 @@ class OT_int8 : public OutputTransformFnInt8 {
   class Params : public Serialisable {
    public:
     int32_t output_slice_channel_count;
-    //[asj] these will be the replacement for OutputTransformValues
-    // int16_t initial_shift;
-    // int16_t final_shr;
+    int16_t initial_shift;
+    int16_t final_shr;
 
    public:
     /**
@@ -219,8 +254,9 @@ class OT_int8 : public OutputTransformFnInt8 {
      * @param output_slice_channel_count The count of output channels to be
      * computed by this parameter set.
      */
-    Params(int32_t output_slice_channel_count)
-        : output_slice_channel_count(output_slice_channel_count) {}
+    Params(int32_t output_slice_channel_count, int16_t initial_shift, int16_t final_shr)
+        : output_slice_channel_count(output_slice_channel_count), initial_shift(initial_shift),
+         final_shr(final_shr){}
   };
 
  private:
@@ -229,12 +265,7 @@ class OT_int8 : public OutputTransformFnInt8 {
    * operation(OutputTransform) and how each channel will transformed.
    */
   Params *params;
-
-  //[asj] These will be merged into a single pointer.
-  int16_t *biases;
-  int16_t *multipliers;
-  //[asj] This will be dropped.
-  OutputTransformValues *otv;
+  int16_t *multipliers_and_biases;
 
  public:
   OT_int8(Params *params) : params(params){};
@@ -242,13 +273,10 @@ class OT_int8 : public OutputTransformFnInt8 {
   int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
                               int32_t output_channel_group);
 
-  void setMultipliersAndBiases(int16_t *m, int16_t *b,
-                               OutputTransformValues *o) {
-    multipliers = m;
-    biases = b;
-    otv = o;
-    assert(is_aligned(biases, 4));
-    assert(is_aligned(multipliers, 4));
+  void setMultipliersAndBiases(int16_t *m) {
+    multipliers_and_biases = m;
+    assert(m != nullptr);
+    assert(is_aligned(multipliers_and_biases, 4));
   }
 };
 

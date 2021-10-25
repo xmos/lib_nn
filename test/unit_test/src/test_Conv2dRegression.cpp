@@ -23,6 +23,7 @@ using namespace nn::test;
 static auto rng = Rand(69);
 
 const int max_k_channels = 32;
+const int itt_count = 32;
 
 struct KernelStimulus {
   std::vector<int8_t> weights;
@@ -56,7 +57,7 @@ KernelStimulus create_simple_stimulus(Filter2dGeometry &geom) {
   ks.output_zero_point = rng.rand<int8_t>() % 32;
 
   for (int ch = 0; ch < geom.output.depth; ch++) {
-    while (ks.eff_mult[ch] < (1.0 / 256)) ks.eff_mult[ch] = rng.rand<float>();
+    ks.eff_mult[ch] = rng.rand<float>(1.0 / (256*256), 1.0 / 256);
     ks.bias[ch] = rng.rand<int8_t>() % 512;
   }
   float eff_mult_scalar = 2.0;
@@ -82,129 +83,129 @@ void test_Conv2dPaddedIndirectRegression() {
                           for (int right_pad = 0; right_pad <= 1; ++right_pad) {
                             for (int bottom_pad = 0; bottom_pad <= 1;
                                  ++bottom_pad) {
-                              padding_t padding = {
-                                  (int16_t)top_pad, (int16_t)left_pad,
-                                  (int16_t)bottom_pad, (int16_t)right_pad};
+                              for(int itt=0;itt<itt_count;++itt){
+                                padding_t padding = {
+                                    (int16_t)top_pad, (int16_t)left_pad,
+                                    (int16_t)bottom_pad, (int16_t)right_pad};
 
-                              int output_height = CONV2D_OUTPUT_LENGTH(
-                                  x_height + padding.top + padding.bottom,
-                                  k_height, k_v_dilation, k_v_stride);
-                              int output_width = CONV2D_OUTPUT_LENGTH(
-                                  x_width + padding.left + padding.right,
-                                  k_width, k_h_dilation, k_h_stride);
+                                int output_height = CONV2D_OUTPUT_LENGTH(
+                                    x_height + padding.top + padding.bottom,
+                                    k_height, k_v_dilation, k_v_stride);
+                                int output_width = CONV2D_OUTPUT_LENGTH(
+                                    x_width + padding.left + padding.right,
+                                    k_width, k_h_dilation, k_h_stride);
 
-                              if (output_height <= 0 || output_width <= 0)
-                                continue;
+                                if (output_height <= 0 || output_width <= 0)
+                                  continue;
 
-                              int test_seed = rng.getSeed();
+                                int test_seed = rng.getSeed();
 
-                              // here output_height + width muct match the
-                              // allocated memory for y
-                              ImageGeometry Y(output_height, output_width,
-                                              k_depth);
+                                // here output_height + width muct match the
+                                // allocated memory for y
+                                ImageGeometry Y(output_height, output_width,
+                                                k_depth);
 
-                              ImageGeometry X(x_height, x_width, x_channels);
+                                ImageGeometry X(x_height, x_width, x_channels);
 
-                              WindowGeometry K(k_height, k_width, k_depth,
-                                               -padding.top, -padding.left,
-                                               k_v_stride, k_h_stride, 1,
-                                               k_v_dilation, k_h_dilation);
+                                WindowGeometry K(k_height, k_width, k_depth,
+                                                -padding.top, -padding.left,
+                                                k_v_stride, k_h_stride, 1,
+                                                k_v_dilation, k_h_dilation);
 
-                              Filter2dGeometry geom(X, Y, K);
+                                Filter2dGeometry geom(X, Y, K);
 
-                              KernelStimulus ks = create_simple_stimulus(geom);
-                              auto &weights = ks.weights;
-                              auto &bias = ks.bias;
-                              auto &eff_mult = ks.eff_mult;
-                              auto &input = ks.input;
+                                KernelStimulus ks = create_simple_stimulus(geom);
+                                auto &weights = ks.weights;
+                                auto &bias = ks.bias;
+                                auto &eff_mult = ks.eff_mult;
+                                auto &input = ks.input;
 
-                              auto expected =
-                                  nn::test::ops::ref::Conv2dDenseReference(
-                                      geom, input.data(), weights.data(),
-                                      bias.data(), eff_mult.data(),
-                                      ks.input_zero_point,
-                                      ks.output_zero_point);
+                                auto expected =
+                                    nn::test::ops::ref::Conv2dDenseReference(
+                                        geom, input.data(), weights.data(),
+                                        bias.data(), eff_mult.data(),
+                                        ks.input_zero_point,
+                                        ks.output_zero_point);
 
-                              ImToColPadded::Params im_to_col_params(
-                                  X, K, padding, x_channels,
-                                  ks.input_zero_point);
-                              ImToColPadded memcpy(&im_to_col_params);
+                                ImToColPadded::Params im_to_col_params(
+                                    X, K, padding, x_channels,
+                                    ks.input_zero_point);
+                                ImToColPadded memcpy(&im_to_col_params);
 
-                              int input_bytes = geom.window.shape.height *
-                                                geom.window.shape.width *
-                                                geom.input.depth;
-                              int scratch_bytes =
-                                  MatMulInt8::get_scratch_mem_bytes(
-                                      input_bytes) +
-                                  32;
-                              std::vector<int8_t> T(scratch_bytes, 0);
+                                int input_bytes = geom.window.shape.height *
+                                                  geom.window.shape.width *
+                                                  geom.input.depth;
+                                int scratch_bytes =
+                                    MatMulInt8::get_scratch_mem_bytes(
+                                        input_bytes) +
+                                    32;
+                                std::vector<int8_t> T(scratch_bytes, 0);
 
-                              int8_t kernel_pad_val =
-                                  rng.rand<int8_t>();  // This can be anything,
-                                                       // 0 in pratice.
-                              std::array<int, 4> shape = {
-                                  {k_depth, k_height, k_width, x_channels}};
+                                int8_t kernel_pad_val =
+                                    rng.rand<int8_t>();  // This can be anything,
+                                                        // 0 in pratice.
+                                std::array<int, 4> shape = {
+                                    {k_depth, k_height, k_width, x_channels}};
 
-                              Conv2dReorderedWeights rw =
-                                  MatMulInt8::reorder_kernel_weights(
-                                      (int8_t *)weights.data(), shape, 8,
-                                      kernel_pad_val);
+                                Conv2dReorderedWeights rw =
+                                    MatMulInt8::reorder_kernel_weights(
+                                        (int8_t *)weights.data(), shape, 8,
+                                        kernel_pad_val);
 
-                              MatMulInt8::Params p(k_depth, input_bytes);
-                              MatMulInt8 aggregator(&p);
-                              aggregator.setWeights(rw.weights.data());
+                                MatMulInt8::Params p(k_depth, input_bytes);
+                                MatMulInt8 aggregator(&p);
+                                aggregator.setWeights(rw.weights.data());
 
-                              OutputTransformFnInt8::CanonicalMulAndBias
-                                  canonical_values = OutputTransformFnInt8::
-                                      canonicalise_mul_and_bias(
-                                          eff_mult, bias, weights,
-                                          ks.input_zero_point,
-                                          ks.output_zero_point, k_depth);
+                                assert(eff_mult.size()>0);
+                                
+                                MulsAndBias
+                                    mul_and_biases = OutputTransformFnInt8::
+                                        canonicalise_mul_and_bias(
+                                            eff_mult, bias, weights,
+                                            ks.input_zero_point,
+                                            ks.output_zero_point, k_depth);
 
-                              QuantisationParams qp =
-                                  OutputTransformFnInt8::quantise_activation(
-                                      canonical_values.f_multipliers,
-                                      canonical_values.f_biases,
-                                      canonical_values.accu_min,
-                                      canonical_values.accu_max);
+                                QuantisationParams qp =
+                                    OutputTransformFnInt8::quantise_activation(mul_and_biases);
 
-                              // pad q.biases and  q.multipliers to a multiple
-                              // of VPU_INT16_EPV this is to work around array
-                              // over reads
-                              int16_t pad_val =
-                                  rng.rand<int16_t>();  // this is arbitrary
-                              OutputTransformFn::pad(qp.biases, VPU_INT16_EPV,
-                                                     pad_val);
-                              OutputTransformFn::pad(
-                                  qp.multipliers, (int)VPU_INT16_EPV, pad_val);
+                                assert(qp.multipliers_and_biases.size()>0);
 
-                              OT_int8::Params ot_params((int32_t)k_depth);
+                                // pad qp.multipliers_and_biases to a multiple
+                                // of VPU_INT16_EPV this is to work around array
+                                // over reads
+                                int16_t pad_val =
+                                    rng.rand<int16_t>();  // this is arbitrary
+                                OutputTransformFn::pad_final_access(qp.multipliers_and_biases, VPU_INT16_EPV,
+                                                      pad_val);
 
-                              OT_int8 ot(&ot_params);
-                              ot.setMultipliersAndBiases(qp.multipliers.data(),
-                                                         qp.biases.data(),
-                                                         &qp.otv);
-                              auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
-                                                    Y.depth);
+                                OT_int8::Params ot_params((int32_t)k_depth, qp.initial_shr, qp.final_shr);
 
-                              Filter2D::Params akp(Y, ir, VPU_INT8_ACC_PERIOD);
+                                OT_int8 ot(&ot_params);
+                                assert(qp.multipliers_and_biases.size()>0);
+                                ot.setMultipliersAndBiases(qp.multipliers_and_biases.data());
 
-                              Conv2dPaddedInDirect conv2d(&akp, &memcpy,
-                                                          &aggregator, &ot);
-                              alignas(4)
-                                  int8_t output[Y.height * Y.width * Y.depth];
+                                auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
+                                                      Y.depth);
 
-                              conv2d.execute(&output[0], &input[0], &T[0]);
+                                Filter2D::Params akp(Y, ir, VPU_INT8_ACC_PERIOD);
 
-                              for (int yh = 0; yh < Y.height; yh++) {
-                                for (int yw = 0; yw < Y.width; yw++) {
-                                  for (int yd = 0; yd < Y.depth; yd++) {
-                                    int idx = yh * (Y.width * Y.depth) +
-                                              yw * Y.depth + yd;
+                                Conv2dPaddedInDirect conv2d(&akp, &memcpy,
+                                                            &aggregator, &ot);
+                                alignas(4)
+                                    int8_t output[Y.height * Y.width * Y.depth];
 
-                                    TEST_ASSERT_INT32_WITHIN(1,
-                                                             (int)expected[idx],
-                                                             (int)output[idx]);
+                                conv2d.execute(&output[0], &input[0], &T[0]);
+
+                                for (int yh = 0; yh < Y.height; yh++) {
+                                  for (int yw = 0; yw < Y.width; yw++) {
+                                    for (int yd = 0; yd < Y.depth; yd++) {
+                                      int idx = yh * (Y.width * Y.depth) +
+                                                yw * Y.depth + yd;
+
+                                      TEST_ASSERT_INT32_WITHIN(1,
+                                                              (int)expected[idx],
+                                                              (int)output[idx]);
+                                    }
                                   }
                                 }
                               }
@@ -240,137 +241,133 @@ void test_Conv2dValidIndirectRegression() {
                           for (int right_pad = 0; right_pad <= 0; ++right_pad) {
                             for (int bottom_pad = 0; bottom_pad <= 0;
                                  ++bottom_pad) {
-                              padding_t padding = {
-                                  (int16_t)top_pad, (int16_t)left_pad,
-                                  (int16_t)bottom_pad, (int16_t)right_pad};
+                              for(int itt=0;itt<itt_count;++itt){
+                                padding_t padding = {
+                                    (int16_t)top_pad, (int16_t)left_pad,
+                                    (int16_t)bottom_pad, (int16_t)right_pad};
 
-                              int output_height = CONV2D_OUTPUT_LENGTH(
-                                  x_height + padding.top + padding.bottom,
-                                  k_height, k_v_dilation, k_v_stride);
-                              int output_width = CONV2D_OUTPUT_LENGTH(
-                                  x_width + padding.left + padding.right,
-                                  k_width, k_h_dilation, k_h_stride);
+                                int output_height = CONV2D_OUTPUT_LENGTH(
+                                    x_height + padding.top + padding.bottom,
+                                    k_height, k_v_dilation, k_v_stride);
+                                int output_width = CONV2D_OUTPUT_LENGTH(
+                                    x_width + padding.left + padding.right,
+                                    k_width, k_h_dilation, k_h_stride);
 
-                              if (output_height <= 0 || output_width <= 0)
-                                continue;
+                                if (output_height <= 0 || output_width <= 0)
+                                  continue;
 
-                              int test_seed = rng.getSeed();
+                                int test_seed = rng.getSeed();
 
-                              // here output_height + width muct match the
-                              // allocated memory for y
-                              ImageGeometry Y(output_height, output_width,
-                                              k_depth);
+                                // here output_height + width muct match the
+                                // allocated memory for y
+                                ImageGeometry Y(output_height, output_width,
+                                                k_depth);
 
-                              ImageGeometry X(x_height, x_width, x_channels);
+                                ImageGeometry X(x_height, x_width, x_channels);
 
-                              WindowGeometry K(k_height, k_width, k_depth,
-                                               -padding.top, -padding.left,
-                                               k_v_stride, k_h_stride, 1,
-                                               k_v_dilation, k_h_dilation);
+                                WindowGeometry K(k_height, k_width, k_depth,
+                                                -padding.top, -padding.left,
+                                                k_v_stride, k_h_stride, 1,
+                                                k_v_dilation, k_h_dilation);
 
-                              Filter2dGeometry geom(X, Y, K);
+                                Filter2dGeometry geom(X, Y, K);
 
-                              KernelStimulus ks = create_simple_stimulus(geom);
-                              auto &weights = ks.weights;
-                              auto &bias = ks.bias;
-                              auto &eff_mult = ks.eff_mult;
-                              auto &input = ks.input;
+                                KernelStimulus ks = create_simple_stimulus(geom);
+                                auto &weights = ks.weights;
+                                auto &bias = ks.bias;
+                                auto &eff_mult = ks.eff_mult;
+                                auto &input = ks.input;
 
-                              auto expected =
-                                  nn::test::ops::ref::Conv2dDenseReference(
-                                      geom, input.data(), weights.data(),
-                                      bias.data(), eff_mult.data(),
-                                      ks.input_zero_point,
-                                      ks.output_zero_point);
+                                auto expected =
+                                    nn::test::ops::ref::Conv2dDenseReference(
+                                        geom, input.data(), weights.data(),
+                                        bias.data(), eff_mult.data(),
+                                        ks.input_zero_point,
+                                        ks.output_zero_point);
 
-                              ImToColValid::Params im_to_col_params(X, K,
-                                                                    x_channels);
-                              ImToColValid memcpy(&im_to_col_params);
+                                ImToColValid::Params im_to_col_params(X, K,
+                                                                      x_channels);
+                                ImToColValid memcpy(&im_to_col_params);
 
-                              int overread_bytes = memcpy.get_overread_bytes();
-                              input.resize(input.size() +
-                                               overread_bytes / sizeof(int8_t),
-                                           0);
+                                int overread_bytes = memcpy.get_overread_bytes();
+                                input.resize(input.size() +
+                                                overread_bytes / sizeof(int8_t),
+                                            0);
 
-                              int input_bytes = geom.window.shape.height *
-                                                geom.window.shape.width *
-                                                geom.input.depth;
+                                int input_bytes = geom.window.shape.height *
+                                                  geom.window.shape.width *
+                                                  geom.input.depth;
 
-                              int scratch_bytes =
-                                  MatMulInt8::get_scratch_mem_bytes(
-                                      input_bytes) +
-                                  32;
+                                int scratch_bytes =
+                                    MatMulInt8::get_scratch_mem_bytes(
+                                        input_bytes) +
+                                    32;
 
-                              std::vector<int8_t> T(scratch_bytes, 0);
+                                std::vector<int8_t> T(scratch_bytes, 0);
 
-                              int8_t kernel_pad_val = rng.rand<int8_t>();
+                                int8_t kernel_pad_val = rng.rand<int8_t>();
 
-                              std::array<int, 4> shape = {
-                                  {k_depth, k_height, k_width, x_channels}};
-                              Conv2dReorderedWeights rw =
-                                  MatMulInt8::reorder_kernel_weights(
-                                      (int8_t *)weights.data(), shape, 8,
-                                      kernel_pad_val);
+                                std::array<int, 4> shape = {
+                                    {k_depth, k_height, k_width, x_channels}};
+                                Conv2dReorderedWeights rw =
+                                    MatMulInt8::reorder_kernel_weights(
+                                        (int8_t *)weights.data(), shape, 8,
+                                        kernel_pad_val);
 
-                              MatMulInt8::Params p(k_depth, input_bytes);
-                              MatMulInt8 aggregator(&p);
-                              aggregator.setWeights(rw.weights.data());
+                                MatMulInt8::Params p(k_depth, input_bytes);
+                                MatMulInt8 aggregator(&p);
+                                aggregator.setWeights(rw.weights.data());
 
-                              OutputTransformFnInt8::CanonicalMulAndBias
-                                  canonical_values = OutputTransformFnInt8::
-                                      canonicalise_mul_and_bias(
-                                          eff_mult, bias, weights,
-                                          ks.input_zero_point,
-                                          ks.output_zero_point, k_depth);
+                                MulsAndBias
+                                    mul_and_biases = OutputTransformFnInt8::
+                                        canonicalise_mul_and_bias(
+                                            eff_mult, bias, weights,
+                                            ks.input_zero_point,
+                                            ks.output_zero_point, k_depth);
 
-                              QuantisationParams qp =
-                                  OutputTransformFnInt8::quantise_activation(
-                                      canonical_values.f_multipliers,
-                                      canonical_values.f_biases,
-                                      canonical_values.accu_min,
-                                      canonical_values.accu_max);
+                                QuantisationParams qp =
+                                    OutputTransformFnInt8::quantise_activation(
+                                        mul_and_biases);
 
-                              // pad q.biases and  q.multipliers to a multiple
-                              // of VPU_INT16_EPV this is to work around array
-                              // over reads
-                              int16_t pad_val =
-                                  rng.rand<int16_t>();  // this is arbitrary
-                              OutputTransformFn::pad(qp.biases, VPU_INT16_EPV,
-                                                     pad_val);
-                              OutputTransformFn::pad(
-                                  qp.multipliers, (int)VPU_INT16_EPV, pad_val);
+                                // pad q.biases and  q.multipliers to a multiple
+                                // of VPU_INT16_EPV this is to work around array
+                                // over reads
+                                int16_t pad_val =
+                                    rng.rand<int16_t>();  // this is arbitrary
+                                OutputTransformFn::pad_final_access(qp.multipliers_and_biases, VPU_INT16_EPV,
+                                                      pad_val);
 
-                              OT_int8::Params ot_params((int32_t)k_depth);
+                                OT_int8::Params ot_params((int32_t)k_depth, qp.initial_shr, qp.final_shr);
 
-                              OT_int8 ot(&ot_params);
-                              ot.setMultipliersAndBiases(qp.multipliers.data(),
-                                                         qp.biases.data(),
-                                                         &qp.otv);
-                              auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
-                                                    Y.depth);
+                                OT_int8 ot(&ot_params);
+                                assert(qp.multipliers_and_biases.size()>0);
+                                ot.setMultipliersAndBiases(qp.multipliers_and_biases.data());
+                                auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
+                                                      Y.depth);
 
-                              Filter2D::Params akp(Y, ir, VPU_INT8_ACC_PERIOD);
+                                Filter2D::Params akp(Y, ir, VPU_INT8_ACC_PERIOD);
 
-                              Conv2dValidIndirect conv2d(&akp, &memcpy,
-                                                         &aggregator, &ot);
+                                Conv2dValidIndirect conv2d(&akp, &memcpy,
+                                                          &aggregator, &ot);
 
-                              auto output = std::vector<int8_t>(
-                                  Y.height * Y.width * Y.depth);
+                                auto output = std::vector<int8_t>(
+                                    Y.height * Y.width * Y.depth);
 
-                              conv2d.execute(&output[0], &input[0], &T[0]);
+                                conv2d.execute(&output[0], &input[0], &T[0]);
 
-                              for (int yh = 0; yh < Y.height; yh++) {
-                                for (int yw = 0; yw < Y.width; yw++) {
-                                  for (int yd = 0; yd < Y.depth; yd++) {
-                                    int idx = yh * (Y.width * Y.depth) +
-                                              yw * Y.depth + yd;
-                                    // std::cout << "tflite: " <<
-                                    // (int)expected[idx] << " xcore: " <<
-                                    // (int)output[idx] << std::endl;
+                                for (int yh = 0; yh < Y.height; yh++) {
+                                  for (int yw = 0; yw < Y.width; yw++) {
+                                    for (int yd = 0; yd < Y.depth; yd++) {
+                                      int idx = yh * (Y.width * Y.depth) +
+                                                yw * Y.depth + yd;
+                                      // std::cout << "tflite: " <<
+                                      // (int)expected[idx] << " xcore: " <<
+                                      // (int)output[idx] << std::endl;
 
-                                    TEST_ASSERT_INT32_WITHIN(1,
-                                                             (int)expected[idx],
-                                                             (int)output[idx]);
+                                      TEST_ASSERT_INT32_WITHIN(1,
+                                                              (int)expected[idx],
+                                                              (int)output[idx]);
+                                    }
                                   }
                                 }
                               }
@@ -406,126 +403,124 @@ void test_Conv2dValidDirectRegression() {
                           for (int right_pad = 0; right_pad <= 0; ++right_pad) {
                             for (int bottom_pad = 0; bottom_pad <= 0;
                                  ++bottom_pad) {
-                              padding_t padding = {
-                                  (int16_t)top_pad, (int16_t)left_pad,
-                                  (int16_t)bottom_pad, (int16_t)right_pad};
+                              for(int itt=0;itt<itt_count;++itt){
+                                padding_t padding = {
+                                    (int16_t)top_pad, (int16_t)left_pad,
+                                    (int16_t)bottom_pad, (int16_t)right_pad};
 
-                              int output_height = CONV2D_OUTPUT_LENGTH(
-                                  x_height + padding.top + padding.bottom,
-                                  k_height, k_v_dilation, k_v_stride);
-                              int output_width = CONV2D_OUTPUT_LENGTH(
-                                  x_width + padding.left + padding.right,
-                                  k_width, k_h_dilation, k_h_stride);
+                                int output_height = CONV2D_OUTPUT_LENGTH(
+                                    x_height + padding.top + padding.bottom,
+                                    k_height, k_v_dilation, k_v_stride);
+                                int output_width = CONV2D_OUTPUT_LENGTH(
+                                    x_width + padding.left + padding.right,
+                                    k_width, k_h_dilation, k_h_stride);
 
-                              if (output_height <= 0 || output_width <= 0)
-                                continue;
+                                if (output_height <= 0 || output_width <= 0)
+                                  continue;
 
-                              int test_seed = rng.getSeed();
+                                int test_seed = rng.getSeed();
 
-                              // here output_height + width muct match the
-                              // allocated memory for y
-                              ImageGeometry Y(output_height, output_width,
-                                              k_depth);
+                                // here output_height + width muct match the
+                                // allocated memory for y
+                                ImageGeometry Y(output_height, output_width,
+                                                k_depth);
 
-                              ImageGeometry X(x_height, x_width, x_channels);
+                                ImageGeometry X(x_height, x_width, x_channels);
 
-                              WindowGeometry K(k_height, k_width, k_depth,
-                                               -padding.top, -padding.left,
-                                               k_v_stride, k_h_stride, 1,
-                                               k_v_dilation, k_h_dilation);
+                                WindowGeometry K(k_height, k_width, k_depth,
+                                                -padding.top, -padding.left,
+                                                k_v_stride, k_h_stride, 1,
+                                                k_v_dilation, k_h_dilation);
 
-                              Filter2dGeometry geom(X, Y, K);
+                                Filter2dGeometry geom(X, Y, K);
 
-                              KernelStimulus ks = create_simple_stimulus(geom);
+                                KernelStimulus ks = create_simple_stimulus(geom);
 
-                              auto &weights = ks.weights;
-                              auto &bias = ks.bias;
-                              auto &eff_mult = ks.eff_mult;
-                              auto &input = ks.input;
+                                auto &weights = ks.weights;
+                                auto &bias = ks.bias;
+                                auto &eff_mult = ks.eff_mult;
+                                auto &input = ks.input;
 
-                              auto expected =
-                                  nn::test::ops::ref::Conv2dDenseReference(
-                                      geom, input.data(), weights.data(),
-                                      bias.data(), eff_mult.data(),
-                                      ks.input_zero_point,
-                                      ks.output_zero_point);
+                                auto expected =
+                                    nn::test::ops::ref::Conv2dDenseReference(
+                                        geom, input.data(), weights.data(),
+                                        bias.data(), eff_mult.data(),
+                                        ks.input_zero_point,
+                                        ks.output_zero_point);
 
-                              DerefInputFn::Params im_to_col_params(X, K);
-                              DerefInputFn memcpy(&im_to_col_params);
+                                DerefInputFn::Params im_to_col_params(X, K);
+                                DerefInputFn memcpy(&im_to_col_params);
 
-                              int input_bytes = geom.window.shape.height *
-                                                geom.window.shape.width *
-                                                geom.input.depth;
-                              int scratch_bytes =
-                                  MatMulInt8::get_scratch_mem_bytes(
-                                      input_bytes) +
-                                  32;  //[asj] FIXME
+                                int input_bytes = geom.window.shape.height *
+                                                  geom.window.shape.width *
+                                                  geom.input.depth;
+                                int scratch_bytes =
+                                    MatMulInt8::get_scratch_mem_bytes(
+                                        input_bytes) +
+                                    32;  //[asj] FIXME
 
-                              std::vector<int8_t> T(scratch_bytes, 0);
+                                std::vector<int8_t> T(scratch_bytes, 0);
 
-                              int8_t kernel_pad_val = rng.rand<int8_t>();
+                                int8_t kernel_pad_val = rng.rand<int8_t>();
 
-                              std::array<int, 4> shape = {
-                                  {k_depth, k_height, k_width, x_channels}};
-                              Conv2dReorderedWeights rw =
-                                  MatMulInt8::reorder_kernel_weights(
-                                      (int8_t *)weights.data(), shape, 8,
-                                      kernel_pad_val);
+                                std::array<int, 4> shape = {
+                                    {k_depth, k_height, k_width, x_channels}};
+                                Conv2dReorderedWeights rw =
+                                    MatMulInt8::reorder_kernel_weights(
+                                        (int8_t *)weights.data(), shape, 8,
+                                        kernel_pad_val);
 
-                              MatMulDirectFn::Params p(X, K, x_channels);
-                              MatMulDirectFn aggregator(&p);
-                              aggregator.setWeights(rw.weights.data());
+                                MatMulDirectFn::Params p(X, K, x_channels);
+                                MatMulDirectFn aggregator(&p);
+                                aggregator.setWeights(rw.weights.data());
 
-                              OutputTransformFnInt8::CanonicalMulAndBias
-                                  canonical_values = OutputTransformFnInt8::
-                                      canonicalise_mul_and_bias(
-                                          eff_mult, bias, weights,
-                                          ks.input_zero_point,
-                                          ks.output_zero_point, k_depth);
+                                MulsAndBias
+                                    mul_and_biases = OutputTransformFnInt8::
+                                        canonicalise_mul_and_bias(
+                                            eff_mult, bias, weights,
+                                            ks.input_zero_point,
+                                            ks.output_zero_point, k_depth);
 
-                              QuantisationParams qp =
-                                  OutputTransformFnInt8::quantise_activation(
-                                      canonical_values.f_multipliers,
-                                      canonical_values.f_biases,
-                                      canonical_values.accu_min,
-                                      canonical_values.accu_max);
+                                QuantisationParams qp =
+                                    OutputTransformFnInt8::quantise_activation(
+                                        mul_and_biases);
 
-                              // pad q.biases and  q.multipliers to a multiple
-                              // of VPU_INT16_EPV this is to work around array
-                              // over reads
-                              int16_t pad_val =
-                                  rng.rand<int16_t>();  // this is arbitrary
-                              OutputTransformFn::pad(qp.biases, VPU_INT16_EPV,
-                                                     pad_val);
-                              OutputTransformFn::pad(
-                                  qp.multipliers, (int)VPU_INT16_EPV, pad_val);
+                                // pad q.biases and  q.multipliers to a multiple
+                                // of VPU_INT16_EPV this is to work around array
+                                // over reads
+                                int16_t pad_val =
+                                    rng.rand<int16_t>();  // this is arbitrary
+                                OutputTransformFn::pad_final_access(qp.multipliers_and_biases, VPU_INT16_EPV,
+                                                      pad_val);
 
-                              OT_int8::Params ot_params((int32_t)k_depth);
-                              OT_int8 ot(&ot_params);
-                              ot.setMultipliersAndBiases(qp.multipliers.data(),
-                                                         qp.biases.data(),
-                                                         &qp.otv);
-                              auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
-                                                    Y.depth);
+                                OT_int8::Params ot_params((int32_t)k_depth, qp.initial_shr, qp.final_shr);
 
-                              Filter2D::Params akp(Y, ir, VPU_INT8_ACC_PERIOD);
+                                OT_int8 ot(&ot_params);
+                                assert(qp.multipliers_and_biases.size()>0);
+                                ot.setMultipliersAndBiases(qp.multipliers_and_biases.data());
 
-                              Conv2dValidDirect conv2d(&akp, &memcpy,
-                                                       &aggregator, &ot);
+                                auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
+                                                      Y.depth);
 
-                              auto output = std::vector<int8_t>(
-                                  Y.height * Y.width * Y.depth);
+                                Filter2D::Params akp(Y, ir, VPU_INT8_ACC_PERIOD);
 
-                              conv2d.execute(&output[0], &input[0]);
+                                Conv2dValidDirect conv2d(&akp, &memcpy,
+                                                        &aggregator, &ot);
 
-                              for (int yh = 0; yh < Y.height; yh++) {
-                                for (int yw = 0; yw < Y.width; yw++) {
-                                  for (int yd = 0; yd < Y.depth; yd++) {
-                                    int idx = yh * (Y.width * Y.depth) +
-                                              yw * Y.depth + yd;
-                                    TEST_ASSERT_INT32_WITHIN(1,
-                                                             (int)expected[idx],
-                                                             (int)output[idx]);
+                                auto output = std::vector<int8_t>(
+                                    Y.height * Y.width * Y.depth);
+
+                                conv2d.execute(&output[0], &input[0]);
+
+                                for (int yh = 0; yh < Y.height; yh++) {
+                                  for (int yw = 0; yw < Y.width; yw++) {
+                                    for (int yd = 0; yd < Y.depth; yd++) {
+                                      int idx = yh * (Y.width * Y.depth) +
+                                                yw * Y.depth + yd;
+                                      TEST_ASSERT_INT32_WITHIN(1,
+                                                              (int)expected[idx],
+                                                              (int)output[idx]);
+                                    }
                                   }
                                 }
                               }

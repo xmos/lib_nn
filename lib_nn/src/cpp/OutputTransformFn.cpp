@@ -33,54 +33,26 @@ static void VDEPTH8_FIXED(xs3_vpu *vpu) {
   }
 }
 
-static int clrsb(int x) {
-#if __has_builtin(__builtin_clrsb)
-  return __builtin_clrsb(x);
-#else
-  for (unsigned i = 0; i < 32; i++) {
-    int y = (x << i) >> i;
-    if (y != x) return (i - 1);
-  }
-  return 32;
-#endif
-}
-
 static int clrsbll(long long x) {
 #if __has_builtin(__builtin_clrsbll)
   return __builtin_clrsbll(x);
 #else
-  for (unsigned i = 0; i < 64; i++) {
-    int y = (x << i) >> i;
-    if (y != x) return (i - 1);
-  }
-  return 64;
+  return clrsb_sw(x);
 #endif
-}
-
-template <class activationT>
-int get_max_exponent(std::vector<activationT> &arr) {
-  activationT min_arr = std::numeric_limits<activationT>::max();
-  activationT max_arr = std::numeric_limits<activationT>::min();
-
-  for (activationT a : arr) {
-    min_arr = std::min(min_arr, a);
-    max_arr = std::max(max_arr, a);
-  }
-
-  int exp_of_min, exp_of_max;
-  std::frexp(min_arr, &exp_of_min);
-  std::frexp(max_arr, &exp_of_max);
-
-  return std::max(exp_of_min, exp_of_max);
 }
 
 static int64_t shl(int32_t v, int amount_to_shl) {
   if (amount_to_shl >= 0) {
-    return (uint64_t)(uint32_t)v << amount_to_shl;
+    //TODO fix the undefined behaviour
+    return v << amount_to_shl;
   } else {
     return ((int64_t)v) >> (-amount_to_shl);
   }
 }
+
+/**
+ * Return the number of bits required to hold v (round up to the next highest integer).
+ */
 static int count_bits(int64_t v) {
 #ifndef CHAR_BIT
 #define CHAR_BIT 8
@@ -92,87 +64,177 @@ static int count_bits(int64_t v) {
 static bool check_val_fits(int64_t v, int bit_count) {
   return count_bits(v) <= bit_count;
 }
+
+template <class T>
+void recitfy_min_max(T &v_min, T &v_max) {
+  T actual_max = std::max(v_min, v_max);
+  v_min = std::min(v_min, v_max);
+  v_max = actual_max;
+}
+
 // Select A, M such that
 // ((accu * 2**A) * (mul * 2**M) + bias*2**B) gives the most precision
-template <class activationT>
-std::tuple<int, int> solve_for_constraints(std::vector<activationT> &multiplier,
-                                           std::vector<activationT> &bias,
-                                           std::vector<int32_t> &accu_min,
-                                           std::vector<int32_t> &accu_max) {
-  int ch_count = accu_min.size();
+// accu_min and accu_max should be pairwise correct, i.e. min is the min, max is the max for each channel.
 
-  // These could(and should) be refined by inspecting accu_min, accu_max
-  int max_A = std::min(15 - get_max_exponent(accu_min),
-                       15 - get_max_exponent(accu_max));
-  int max_multiplier_exponent = get_max_exponent(multiplier);
+std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams, bool verbose = false) {
+    
+  int accu_bits_max = 0;
+  int max_multiplier_exponent = INT_MIN;
+
+  //If all the accumulators or multipliers are zero then there is no defined range.
+  bool accu_range_defined = false;
+  bool multiplier_range_defined = false;
+
+  for (auto activationParam : activationParams) {
+    if(activationParam.accu_max_val){
+      int accu_max_bits = OutputTransformFn::get_max_exponent(activationParam.accu_max_val);
+      accu_bits_max = std::max(accu_bits_max, accu_max_bits);
+      accu_range_defined |= true;
+    }
+    if(activationParam.accu_min_val){
+      int accu_min_bits = OutputTransformFn::get_max_exponent(activationParam.accu_min_val);
+      accu_bits_max = std::max(accu_bits_max, accu_min_bits);
+      accu_range_defined |= true;
+    }
+    if(activationParam.multiplier){
+      int multiplier_bits = OutputTransformFn::get_max_exponent(activationParam.multiplier);
+      max_multiplier_exponent = std::max(max_multiplier_exponent, multiplier_bits);
+      multiplier_range_defined |= true;
+    }
+  }
+   
+  // If either of the ranges are undefined(i.e. all zero) then the result is the same: the product
+  // contributes nothing 
+  bool product_range_defined = multiplier_range_defined && accu_range_defined;
+
+  if (!product_range_defined){
+    if(verbose) std::cout << "undefined procut range"<<std::endl;
+
+    // Then we only care about the biases -> we know they will always fit in an 8 bit number so
+    // a bias exp of 0 will do fine.
+    int A = 0; 
+    int M = 14;
+    int B = A + M - 14;
+    assert(B == 0);
+    return std::make_tuple(A, M);
+  }
+
+  int max_A = 15 - accu_bits_max;
   int max_M = 15 - max_multiplier_exponent;
 
-  int A = max_A;
+  int A = max_A; 
   int M = max_M;
 
   int mul_sig_bits = 0, accu_sig_bits = 0;
-  for (auto ch = 0; ch < ch_count; ++ch) {
-    int64_t mul_16 = std::round(ldexp(multiplier[ch], M));
+
+  for (auto activationParam : activationParams) {
+
+    int64_t mul_16 = std::round(ldexp(activationParam.multiplier, M));
     mul_sig_bits = std::max(mul_sig_bits, count_bits(mul_16));
 
-    int64_t accu_max_16 = shl(accu_max[ch], A);
-    int64_t accu_min_16 = shl(accu_min[ch], A);
+    int64_t accu_max_16 = shl(activationParam.accu_max_val, A);
+    int64_t accu_min_16 = shl(activationParam.accu_min_val, A);
+
     accu_sig_bits = std::max(accu_sig_bits, std::max(count_bits(accu_max_16),
                                                      count_bits(accu_min_16)));
   }
 
-  if (A > 0) {
-    accu_sig_bits -= A;
-    A = 0;
+  if(verbose){
+    std::cout << "accu_sig_bits: "<<accu_sig_bits<<std::endl;
+    std::cout << "mul_sig_bits: "<<mul_sig_bits<<std::endl;
+    std::cout << "A: "<<A<<std::endl;
+    std::cout << "M: "<<M<<std::endl;
   }
 
   bool trying = true;
 
+  int64_t max_group_prod, min_group_prod, max_group_sum, min_group_sum;
   while (trying) {
     trying = false;
-    for (auto ch = 0; ch < ch_count; ++ch) {
+    
+    max_group_prod = INT32_MIN;
+    min_group_prod = INT32_MAX;
+    max_group_sum = INT32_MIN;
+    min_group_sum = INT32_MAX;
+
+    for (auto activationParam : activationParams) {
       // check
       // accu*2**A fit in 16 bits
       // mul*2**B fit in 16 bits
-      // bias*(2**(A+B)) fit in 31 bits (must be representable by 16bit *
+      // bias*(2**(A+B-14)) fit in 16 bits
+      
+      // (must be representable by 16bit *
       // (1<<x)) (accu*2**A)*(mul*2**B) fit in 32 bits (accu*2**A)*(mul*2**B) +
       // bias*(2**(A+B)) fit in 32 bits
 
-      int64_t accu_max_16 = shl(accu_max[ch], A);
-      int64_t accu_min_16 = shl(accu_min[ch], A);
+      int64_t accu_max_16 = shl(activationParam.accu_max_val, A);
+      int64_t accu_min_16 = shl(activationParam.accu_min_val, A);
       if (!check_val_fits(accu_max_16, 16) ||
           !check_val_fits(accu_min_16, 16)) {
         A--;
         accu_sig_bits--;
         trying = true;
+
+        if(verbose){
+          std::cout << "Accu too big "<<std::endl;
+          std::cout << "   accu_sig_bits: "<<accu_sig_bits<<std::endl;
+          std::cout << "   A: "<<A<<std::endl;
+        }
         break;
       }
 
-      int64_t mul_16 = std::round(ldexp(multiplier[ch], M));
+      int64_t mul_16 = std::round(ldexp(activationParam.multiplier, M));
       if (!check_val_fits(mul_16, 16)) {
         M--;
         mul_sig_bits--;
         trying = true;
+
+        if(verbose){
+          std::cout << "mul too big "<<std::endl;
+          std::cout << "   mul_sig_bits: "<<mul_sig_bits<<std::endl;
+          std::cout << "   M: "<<M<<std::endl;
+        }
         break;
       }
 
-      // TODO remove the lowest 16 bits of this
-      int64_t bias_32 = std::round(ldexp(bias[ch], A + M));
+      int64_t bias_16 = std::round(ldexp(activationParam.bias, A + M - 14));
 
-      int64_t prod_max = accu_max_16 * mul_16;
-      int64_t prod_min = accu_min_16 * mul_16;
-      int64_t sum_max = prod_max + bias_32;
-      int64_t sum_min = prod_min + bias_32;
+      int64_t prod_max = shl(accu_max_16 * mul_16, -14);
+      int64_t prod_min = shl(accu_min_16 * mul_16, -14);
 
-      if (!check_val_fits(bias_32, 30) || !check_val_fits(prod_max, 32) ||
-          !check_val_fits(prod_min, 32) || !check_val_fits(sum_max, 32) ||
-          !check_val_fits(sum_min, 32)) {
-        if (A > 0 || accu_sig_bits > mul_sig_bits) {
+      max_group_prod = std::max(max_group_prod, prod_max);
+      min_group_prod = std::min(min_group_prod, prod_min);
+
+      recitfy_min_max(prod_min, prod_max);
+
+      int64_t sum_max = prod_max + bias_16;
+      int64_t sum_min = prod_min + bias_16;
+
+      max_group_sum = std::max(max_group_sum, sum_max);
+      min_group_sum = std::min(min_group_sum, sum_min);
+
+      //at least one of these must be true
+      //one of them can saturate
+      if (!check_val_fits(prod_max, 16) || !check_val_fits(prod_min, 16) ||
+          !check_val_fits(sum_max, 16) || !check_val_fits(sum_min, 16)||
+          !check_val_fits(bias_16, 16) 
+          ) {
+
+        if(verbose) std::cout << "overflow in prod or sum "<<std::endl;
+        if (A >= 0 || accu_sig_bits > mul_sig_bits) {
           A--;
           accu_sig_bits--;
+          if (verbose){
+            std::cout << "   accu_sig_bits: "<<accu_sig_bits<<std::endl;
+            std::cout << "   A: "<<A<<std::endl;
+          }
         } else {
           M--;
           mul_sig_bits--;
+          if(verbose){
+            std::cout << "   mul_sig_bits: "<<mul_sig_bits<<std::endl;
+            std::cout << "   M: "<<M<<std::endl;
+          }
         }
 
         trying = true;
@@ -183,12 +245,15 @@ std::tuple<int, int> solve_for_constraints(std::vector<activationT> &multiplier,
     // want to have the same number of significant bits of accu and mul
     // must use as all 16 bits of the bias
   }
+  if(verbose){
+    std::cout << "max_group_prod: " << max_group_prod << std::endl;
+    std::cout << "min_group_prod: " << min_group_prod << std::endl;
+    std::cout << "max_group_sum: " << max_group_sum << std::endl;
+    std::cout << "min_group_sum: " << min_group_sum << std::endl;
+    std::cout << "mul_sig_bits: " << mul_sig_bits << std::endl;
+    std::cout << "accu_sig_bits: " << accu_sig_bits << std::endl;
+  }
   return std::make_tuple(A, M);
-}
-
-template <class T, std::size_t S>
-static void fill_array(T (&arr)[S], T v) {
-  std::fill_n(arr, sizeof arr / sizeof(T), v);
 }
 
 int32_t round_away_from_zero(float x) {
@@ -198,180 +263,201 @@ int32_t round_away_from_zero(float x) {
     return std::floor(x);
 }
 
-template <class T>
-void recitfy_min_max(T &v_min, T &v_max) {
-  T actual_max = std::max(v_min, v_max);
-  v_min = std::min(v_min, v_max);
-  v_max = actual_max;
+int64_t round_up(float x) {
+    return std::ceil(x);
 }
 
-QuantisationParams OutputTransformFnInt8::quantise_activation(
-    std::vector<double> &output_transform_multiplier,
-    std::vector<double> &output_transform_bias, std::vector<int32_t> &accu_min,
-    std::vector<int32_t> &accu_max) {
-  assert(output_transform_multiplier.size() == output_transform_bias.size());
-  assert(accu_min.size() == accu_max.size());
-  assert(accu_min.size() == output_transform_bias.size());
+int64_t round_down(float x) {
+    return std::floor(x);
+}
 
-  int ch_count = accu_min.size();
-
-  // Ensure the order is correct
-  for (int ch = 0; ch < ch_count; ch++)
-    recitfy_min_max(accu_min[ch], accu_max[ch]);
-
-  // These will hold the min and max accumulator values after the output clamp
-  // has been back propogated to them.
-  std::vector<int32_t> accu_min_adjusted(ch_count, 0);
-  std::vector<int32_t> accu_max_adjusted(ch_count, 0);
+void backprop_output_clamps_to_accu_limits(MulsAndBias &activationParams, bool verbose = false){
 
   // adjust accu_min and max to account for the saturation on the output
-  for (int ch = 0; ch < ch_count; ch++) {
-    float accu_meaningful_max =
-        round_away_from_zero(((float)INT8_MAX - output_transform_bias[ch]) /
-                             output_transform_multiplier[ch]);
+  for (auto & activationParam : activationParams) {
 
-    float accu_meaningful_min =
-        round_away_from_zero(((float)INT8_MIN - output_transform_bias[ch]) /
-                             output_transform_multiplier[ch]);
+    if (activationParam.multiplier == 0.0)
+      continue;
 
-    // Test in case the output_transform_multiplier is negative.
+    double hi = ((double)INT8_MAX - activationParam.bias) / activationParam.multiplier;
+    double lo = ((double)INT8_MIN - activationParam.bias) / activationParam.multiplier;                      
+
+    int64_t accu_meaningful_max = round_up(hi);
+    int64_t accu_meaningful_min = round_down(lo);
+
     recitfy_min_max(accu_meaningful_min, accu_meaningful_max);
 
-    if (accu_meaningful_max < accu_max[ch]) {
+    if(verbose){
+      std::cout << "accu_meaningful_min: "<<accu_meaningful_min<<std::endl;
+      std::cout << "accu_meaningful_max: "<<accu_meaningful_max<<std::endl;
+    }
+
+    if (accu_meaningful_max < (int64_t)activationParam.accu_max_val) {
       // ------accu_max------accu_meaningful_max++++++...
 
       // The input range of the accumulator is restricted by the output clamp.
-      if (accu_meaningful_max < accu_min[ch]) {
+      if (accu_meaningful_max < (int64_t)activationParam.accu_min_val) {
         // ------accu_max------accu_min------accu_meaningful_max------...
         // There is no overlap between what the accumulator can be and what
         // could contribute to the output
 
         int32_t singular_output_value = std::max(
-            std::min((float)INT8_MAX, accu_meaningful_max), (float)INT8_MIN);
-        output_transform_multiplier[ch] = 0.0;
-        output_transform_bias[ch] = singular_output_value;
+            std::min((int32_t)INT8_MAX, (int32_t)activationParam.original_bias), (int32_t)INT8_MIN);
+
+        activationParam.multiplier = 0.0;
+        activationParam.bias = singular_output_value;
+
+        activationParam.accu_max_val = 0;
+        activationParam.accu_min_val = 0;
 
       } else {
         // ------accu_max------accu_meaningful_max++++++accu_min------...
-        accu_max_adjusted[ch] = accu_meaningful_max;
-        accu_min_adjusted[ch] = accu_min[ch];
-        if (accu_meaningful_min > accu_min[ch]) {
+        activationParam.accu_max_val = accu_meaningful_max;
+        if (accu_meaningful_min > (int64_t)activationParam.accu_min_val) {
           // ------accu_max------accu_meaningful_max++++++accu_meaningful_min------accu_min------...
-          accu_min_adjusted[ch] = accu_meaningful_min;
+          activationParam.accu_min_val = accu_meaningful_min;
         } else {
           // ------accu_max------accu_meaningful_max++++++accu_min------accu_meaningful_min------...
-          accu_min_adjusted[ch] = accu_min[ch];
+          // activationParam.accu_min_val = activationParam.accu_min_val;
         }
       }
     } else {
       // ------accu_meaningful_max------accu_max++++++...
-      if (accu_meaningful_min > accu_max[ch]) {
+      if (accu_meaningful_min > (int64_t)activationParam.accu_max_val) {
         // ------accu_meaningful_max------accu_meaningful_min------accu_max------...
         // There is no overlap between what the accumulator can be and what
         // could contribute to the output
         int32_t singular_output_value = std::max(
-            std::min((float)INT8_MAX, accu_meaningful_max), (float)INT8_MIN);
-        output_transform_multiplier[ch] = 0.0;
-        output_transform_bias[ch] = singular_output_value;
+            std::min((int32_t)INT8_MAX, (int32_t)activationParam.original_bias), (int32_t)INT8_MIN);
+
+        activationParam.multiplier = 0.0;
+        activationParam.bias = singular_output_value;
+        activationParam.accu_max_val = 0;
+        activationParam.accu_min_val = 0;
+
       } else {
         // ------accu_meaningful_max------accu_max++++++accu_meaningful_min------...
-        accu_max_adjusted[ch] = accu_max[ch];
+        // activationParam.accu_max_val = activationParam.accu_max_val;
 
-        if (accu_meaningful_min > accu_min[ch]) {
+        if (accu_meaningful_min > (int64_t)activationParam.accu_min_val) {
           // ------accu_meaningful_max------accu_max++++++accu_meaningful_min------accu_min------...
-          accu_min_adjusted[ch] = accu_meaningful_min;
+          activationParam.accu_min_val = accu_meaningful_min;
         } else {
           // ------accu_meaningful_max------accu_max++++++accu_min------accu_meaningful_min------...
-          accu_min_adjusted[ch] = accu_min[ch];
+          // activationParam.accu_min_val = activationParam.accu_min_val;
         }
       }
     }
   }
 
-  int A, M;
-  std::tie(A, M) =
-      solve_for_constraints(output_transform_multiplier, output_transform_bias,
-                            accu_min_adjusted, accu_max_adjusted);
+  if(verbose){
+    std::cout << "ActivationParams"<<std::endl;
+    for (auto a : activationParams) {
+      std::cout << "bias        : " << a.original_bias << " -> " << a.bias <<std::endl;
+      std::cout << "multiplier  : " << a.original_multiplier << " -> " << a.multiplier <<std::endl;
+      std::cout << "accu_min_val: " << a.original_accu_min_val << " -> " << a.accu_min_val <<std::endl;
+      std::cout << "accu_max_val: " << a.original_accu_max_val << " -> " << a.accu_max_val <<std::endl;
+    }
+  }
+}
 
-  int bias_max_bits = 0;
-  int bias_min_bits = 64;
-  int mul_max_bits = 0;
-  int mul_min_bits = 64;
-  for (int ch = 0; ch < ch_count; ++ch) {
-    int64_t bias_q = std::round(ldexp(output_transform_bias[ch], A + M));
-    bias_max_bits = std::max(bias_max_bits, count_bits(bias_q));
-    bias_min_bits = std::min(bias_min_bits, count_bits(bias_q));
+template <class T>
+int16_t float_to_int16(T f, int e){
+  int32_t v = (int32_t)round(ldexp(f, e));
 
-    int64_t mul_q = std::round(ldexp(output_transform_multiplier[ch], M));
-    mul_max_bits = std::max(mul_max_bits, count_bits(mul_q));
-    mul_min_bits = std::min(mul_min_bits, count_bits(mul_q));
+  assert(v <= INT16_MAX);
+  assert(v >= INT16_MIN);
+  v = std::min((int32_t)INT16_MAX, v);
+  v = std::max((int32_t)INT16_MIN, v);
+  return (int16_t) v;
+}
+
+QuantisationParams OutputTransformFnInt8::quantise_activation(
+      MulsAndBias &activationParams, bool verbose){
+
+  if(activationParams.size() == 0){
+      QuantisationParams q;
+      q.initial_shr = 0;
+      q.final_shr = 0;
+      return q;
   }
 
-  assert(bias_max_bits <=
-         30);  // 30 bits is the most we can achieve with this method
+  // Ensure the order is correct
+  for (auto &activationParam : activationParams)
+    recitfy_min_max(activationParam.accu_min_val, activationParam.accu_max_val);
 
-  int B = A + M;
+  backprop_output_clamps_to_accu_limits(activationParams, verbose);
 
-  int e = std::max(0, bias_max_bits - 16);
-  int16_t bias_multipler = (int16_t)(1 << e);
-  int adjusted_B = B - e;
+  int A, M;
+
+  std::tie(A, M) = solve_for_constraints(activationParams, verbose);
+
+  int B = A + M - 14;
 
   QuantisationParams q;
 
-  std::fill_n(q.otv.bias_multipler,
-              sizeof q.otv.bias_multipler / sizeof bias_multipler,
-              bias_multipler);
+  q.initial_shr = -A;
+  q.final_shr = B - 8;
 
-  // The -8 is here to leave the result in a 16 bit form so that the
-  // quantisation to 8 bit can deal with the asymertic rounding.
-  int16_t final_shr = B - 8;
-  assert(final_shr >= 0);
+  //The final step is to output the multipliers and biases in an arrangement that will be 
+  //efficient to load.
+  int output_channel_groups = activationParams.size() / VPU_INT16_EPV;
 
-  fill_array(q.otv.final_shr, final_shr);
-
-  for (auto f : output_transform_multiplier) {
-    int32_t pa_mul = (int32_t)round(ldexp(f, M));
-    assert(clrsb(pa_mul) >= 16);  // make sure there is no overflow
-    q.multipliers.push_back((int16_t)pa_mul);
+  if(verbose){
+    std::cout << "final_shr: " <<q.final_shr <<std::endl;
   }
 
-  for (auto f : output_transform_bias) {
-    int32_t pa_bias = (int32_t)round(ldexp(f, adjusted_B));
-    pa_bias = std::min((int32_t)INT16_MAX, pa_bias);
-    q.biases.push_back((int16_t)pa_bias);
+  for (int ocg = 0; ocg < output_channel_groups; ++ocg){
+    for (int ch=ocg * VPU_INT16_EPV;ch<(ocg+1) * VPU_INT16_EPV;++ch){
+      int16_t v = float_to_int16(activationParams[ch].multiplier, M);
+      q.multipliers_and_biases.push_back(v);
+      if(verbose)
+        std::cout <<"multiplier: " << v << "(" <<std::ldexp(v, -M) << ") original:"<< activationParams[ch].original_multiplier<<std::endl;
+    }
+
+    for (int ch=ocg * VPU_INT16_EPV;ch<(ocg+1) * VPU_INT16_EPV;++ch){
+      int16_t v = float_to_int16(activationParams[ch].bias, B);
+      q.multipliers_and_biases.push_back(v);
+      if(verbose)
+        std::cout <<"bias: " << v << "(" <<std::ldexp(v, -B) << ") original:"<< activationParams[ch].original_bias<< " " << activationParams[ch].bias<<std::endl;
+    }
   }
 
-  int16_t accu_shr = -A;
-  if (accu_shr > 0) {
-    // use a vlsat
-    fill_array(q.otv.accu_shr, accu_shr);
-    q.otv.accu_shl = 0;
-  } else {
-    // use a vashr
-    fill_array(q.otv.accu_shr, (int16_t)0);
-    q.otv.accu_shl = accu_shr;
+  for (int ch=output_channel_groups * VPU_INT16_EPV;ch<activationParams.size();++ch){
+      int16_t v = float_to_int16(activationParams[ch].multiplier, M);
+      q.multipliers_and_biases.push_back(v);
+      if(verbose)
+        std::cout <<"multiplier: " << v << "(" <<std::ldexp(v, -M) << ") original:"<< activationParams[ch].original_multiplier<<std::endl;
   }
+  for (int ch=output_channel_groups * VPU_INT16_EPV;ch<activationParams.size();++ch){
+      int16_t v = float_to_int16(activationParams[ch].bias, B);
+      q.multipliers_and_biases.push_back(v);
+      if(verbose)
+        std::cout <<"bias: " << v << "(" <<std::ldexp(v, -B) << ") original:"<< activationParams[ch].original_bias<< " " << activationParams[ch].bias<<std::endl;
+    }
 
   return q;
 }
 extern "C" int8_t *output_transform_fn_impl_asm(const OT_int8::Params *params,
                                                 int8_t *Y, VPURingBuffer *A,
                                                 int32_t output_channel_group,
-                                                int16_t *multipliers,
-                                                int16_t *biases,
-                                                OutputTransformValues *otv);
+                                                int16_t *multipliers_and_biases);
 
 int8_t *output_transform_fn_impl(const OT_int8::Params *params, int8_t *Y,
                                  VPURingBuffer *A, int32_t output_channel_group,
-                                 int16_t *multipliers, int16_t *biases,
-                                 OutputTransformValues *otv) {
+                                 int16_t *multipliers_and_biases) {
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
 
-  int16_t *cur_post_activation_bias =
-      biases + output_channel_group * VPU_INT16_EPV;
+  // we need to know how many we are processing
+  int output_count = std::min(
+      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
+      (int32_t)VPU_INT16_EPV);
   int16_t *cur_post_activation_mul =
-      multipliers + output_channel_group * VPU_INT16_EPV;
+      multipliers_and_biases + output_channel_group * VPU_INT16_EPV*2;
+
+  int16_t * cur_post_activation_bias =
+      cur_post_activation_mul + output_count;
 
   VSETC(vpu, MODE_S16);
 
@@ -379,40 +465,34 @@ int8_t *output_transform_fn_impl(const OT_int8::Params *params, int8_t *Y,
   VLDD(vpu, &A->vD);
 
   vpu_vector_t temp_mem;
-  memset(&temp_mem, 0, sizeof(temp_mem));
 
-  // Reduce the accumulator to 16 bits
-  VLSAT(vpu, otv->accu_shr);
+  if (params->initial_shift > 0){
+    for (int i=0;i<VPU_INT16_EPV;++i)
+      temp_mem.s16[i] = params->initial_shift;
+
+    VLSAT(vpu, &temp_mem);
+  } else {
+
+    for (int i=0;i<VPU_INT16_EPV;++i)
+      temp_mem.s16[i] = 0;
+    VLSAT(vpu, &temp_mem);
+
+    VSTR(vpu, &temp_mem);
+    VLASHR(vpu, &temp_mem, params->initial_shift);
+  }
+
+
+  VLMUL(vpu, cur_post_activation_mul);
+  
+  VLADD(vpu, cur_post_activation_bias);
+
+
   VSTR(vpu, &temp_mem);
-  VLASHR(vpu, &temp_mem, otv->accu_shl);
-
-  // Save the 16 bit accumulator, A, to scratch
-  VSTR(vpu, &temp_mem);
-
-  // Clear the ring buffer
-  VCLRDR(vpu);
-
-  // Multiply the channel-wise bias by the bias multiplier to make it 32 bit per
-  // channel
-  VLDC(vpu, cur_post_activation_bias);
-  VLMACC(vpu, otv->bias_multipler);
-
-  // Multiply A by the post_activation_mul and accumulate it to the bias
-  VLDC(vpu, &temp_mem);
-  VLMACC(vpu, cur_post_activation_mul);
-
-  // Reduce the accumulator to 16 bits
-  VLSAT(vpu, otv->final_shr);
+  VLASHR(vpu, &temp_mem, params->final_shr);
 
   VDEPTH8_FIXED(vpu);
 
-  // we need to know how many we are processing
-  int output_count = std::min(
-      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
-      (int32_t)VPU_INT16_EPV);
-
   int mask = (1 << output_count) - 1;
-
   VSTRPV(vpu, Y, mask);
   Y += output_count;
 
@@ -423,10 +503,10 @@ int8_t *OT_int8::output_transform_fn(int8_t *Y, VPURingBuffer *A,
                                      int32_t output_channel_group) {
 #ifdef NN_USE_REF
   return output_transform_fn_impl(this->params, Y, A, output_channel_group,
-                                  multipliers, biases, otv);
+                                  multipliers_and_biases);
 #else
   return output_transform_fn_impl_asm(this->params, Y, A, output_channel_group,
-                                      multipliers, biases, otv);
+                                      multipliers_and_biases);
 #endif  // NN_USE_REF
 }
 
