@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <vector>
 
 #include "Serialisable.hpp"
@@ -84,7 +85,7 @@ class OutputTransformFn {
 
   template <class activationT>
   static int get_max_exponent(std::vector<activationT> &arr) {
-    int m = INT_MIN;
+    int m = INT32_MIN;
     for (auto f : arr) m = std::max(m, get_max_exponent(f));
     return m;
   }
