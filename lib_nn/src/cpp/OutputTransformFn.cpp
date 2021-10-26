@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <cmath>
 #include <cstdint>
 #include <limits>
 #include <tuple>
@@ -13,7 +12,7 @@
 
 using namespace nn;
 
-const int vlmul_shr = 14;
+const int VLMUL_SHR = 14;
 
 static int64_t saturate_non_sym(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
@@ -129,8 +128,8 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams,
     // Then we only care about the biases -> we know they will always fit in an
     // 8 bit number so a bias exp of 0 will do fine.
     int A = 0;
-    int M = vlmul_shr;
-    int B = A + M - vlmul_shr;
+    int M = VLMUL_SHR;
+    int B = A + M - VLMUL_SHR;
     assert(B == 0);
     return std::make_tuple(A, M);
   }
@@ -176,7 +175,7 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams,
       // check
       // accu*2**A fit in 16 bits
       // mul*2**B fit in 16 bits
-      // bias*(2**(A+B-vlmul_shr)) fit in 16 bits
+      // bias*(2**(A+B-VLMUL_SHR)) fit in 16 bits
       // (must be representable by 16bit *
       // (1<<x)) (accu*2**A)*(mul*2**B) fit in 32 bits (accu*2**A)*(mul*2**B) +
       // bias*(2**(A+B)) fit in 32 bits
@@ -212,10 +211,10 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams,
       }
 
       int64_t bias_16 =
-          std::round(ldexp(activationParam.bias, A + M - vlmul_shr));
+          std::round(ldexp(activationParam.bias, A + M - VLMUL_SHR));
 
-      int64_t prod_max = shl(accu_max_16 * mul_16, -vlmul_shr);
-      int64_t prod_min = shl(accu_min_16 * mul_16, -vlmul_shr);
+      int64_t prod_max = shl(accu_max_16 * mul_16, -VLMUL_SHR);
+      int64_t prod_min = shl(accu_min_16 * mul_16, -VLMUL_SHR);
 
       max_group_prod = std::max(max_group_prod, prod_max);
       min_group_prod = std::min(min_group_prod, prod_min);
@@ -406,7 +405,7 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
 
   std::tie(A, M) = solve_for_constraints(activationParams, verbose);
 
-  int B = A + M - vlmul_shr;
+  int B = A + M - VLMUL_SHR;
 
   QuantisationParams q;
 
