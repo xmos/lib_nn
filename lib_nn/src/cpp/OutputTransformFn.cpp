@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <tuple>
 
 #include "../src/asm/asm_constants.h"
