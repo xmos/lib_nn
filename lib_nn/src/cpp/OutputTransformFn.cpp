@@ -12,6 +12,8 @@
 
 using namespace nn;
 
+const int vlmul_shr = 14;
+
 static int64_t saturate_non_sym(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
   const int64_t min_val = -max_val - 1;
@@ -79,7 +81,7 @@ void recitfy_min_max(T &v_min, T &v_max) {
 std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams, bool verbose = false) {
     
   int accu_bits_max = 0;
-  int max_multiplier_exponent = INT_MIN;
+  int max_multiplier_exponent = INT32_MIN;
 
   //If all the accumulators or multipliers are zero then there is no defined range.
   bool accu_range_defined = false;
@@ -113,8 +115,8 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams, bool v
     // Then we only care about the biases -> we know they will always fit in an 8 bit number so
     // a bias exp of 0 will do fine.
     int A = 0; 
-    int M = 14;
-    int B = A + M - 14;
+    int M = vlmul_shr;
+    int B = A + M - vlmul_shr;
     assert(B == 0);
     return std::make_tuple(A, M);
   }
@@ -161,7 +163,7 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams, bool v
       // check
       // accu*2**A fit in 16 bits
       // mul*2**B fit in 16 bits
-      // bias*(2**(A+B-14)) fit in 16 bits
+      // bias*(2**(A+B-vlmul_shr)) fit in 16 bits
       
       // (must be representable by 16bit *
       // (1<<x)) (accu*2**A)*(mul*2**B) fit in 32 bits (accu*2**A)*(mul*2**B) +
@@ -197,10 +199,10 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams, bool v
         break;
       }
 
-      int64_t bias_16 = std::round(ldexp(activationParam.bias, A + M - 14));
+      int64_t bias_16 = std::round(ldexp(activationParam.bias, A + M - vlmul_shr));
 
-      int64_t prod_max = shl(accu_max_16 * mul_16, -14);
-      int64_t prod_min = shl(accu_min_16 * mul_16, -14);
+      int64_t prod_max = shl(accu_max_16 * mul_16, -vlmul_shr);
+      int64_t prod_min = shl(accu_min_16 * mul_16, -vlmul_shr);
 
       max_group_prod = std::max(max_group_prod, prod_max);
       min_group_prod = std::min(min_group_prod, prod_min);
@@ -392,7 +394,7 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
 
   std::tie(A, M) = solve_for_constraints(activationParams, verbose);
 
-  int B = A + M - 14;
+  int B = A + M - vlmul_shr;
 
   QuantisationParams q;
 
