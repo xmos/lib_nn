@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cmath>
 #include <random>
+#include <set>
 
 #include "OutputTransformFn.hpp"
 #include "Rand.hpp"
@@ -51,17 +52,32 @@ T get_random_uniform_from_range(T lo, T hi) {
   return rng.rand<T>(lo, hi);
 }
 
-void test_big_range(int coef_count, int N) {
-  int64_t bias_low = -(8LL << N);
-  int64_t bias_high = (8LL << N) - 1;
 
-  double p_low = -(1LL << std::max(N - 16, 0));
+/*
+coef_count - controls the number of coefs that make up the kernel.
+N - controls the scale of the product, i.e. the product will be in the range
+    [-1<<N, 1<<N - 1] but additionally the dynamic range is controlled by 
+    the product_range.
+product_range - controls the dynamic range of the product.
+bias_range - controls how much bigger or smaller the product should be 
+    compared to the product.
+*/
+void test_big_range(int coef_count, int N, int product_range, int bias_range, 
+  std::set<int> &seen_initial_shr, std::set<int> &seen_final_shr) {
+  int64_t bias_low = -(1LL << (N+bias_range));
+  int64_t bias_high = (1LL << (N+bias_range)) - 1;
+
+  double p_low = -(1LL << std::max(N - product_range, 0));
   double p_high = (1LL << N) - 1;
 
   const int vpu_ring_buffer_length = VPU_INT16_EPV;
 
+  double error_sum = 0.0;
+  double abs_error_sum = 0.0;
+  int error_count = 0;
+
   for (int output_ch_count = 4; output_ch_count <= 64; output_ch_count += 4) {
-    for (int itt = 0; itt < 32; itt++) {
+    for (int itt = 0; itt < 8; itt++) {
       MulsAndBias mul_and_biases;
       for (int ch = 0; ch < output_ch_count; ++ch) {
         int accu_min, accu_max;
@@ -90,6 +106,9 @@ void test_big_range(int coef_count, int N) {
 
       QuantisationParams qp =
           OutputTransformFnInt8::quantise_activation(mul_and_biases);
+
+      seen_final_shr.insert(qp.final_shr);
+      seen_initial_shr.insert(qp.initial_shr);
 
       // pad q.multipliers_and_biases to a multiple of VPU_INT16_EPV
       // this is to work around array over reads - padding wont effect the
@@ -158,32 +177,21 @@ void test_big_range(int coef_count, int N) {
 
             int actual = (int)Y[actual_output_channel];
 
-            // if(std::abs((int)expected  - actual) > 1){
-
-            //   std::cout << "Error, ch:" << actual_output_channel<<std::endl;
-
-            //   for(int ch=0;ch < mul_and_biases.size();ch++){
-            //     std::cout << ch << " accu_min: " <<
-            //     mul_and_biases[ch].original_accu_min_val << " accu_max:"
-            //     << mul_and_biases[ch].original_accu_max_val << " bias:"
-            //     << mul_and_biases[ch].original_bias << " mul:"
-            //     << mul_and_biases[ch].original_multiplier << std::endl;
-            //   }
-            //   std::cout << "output_chan " << output_chan <<std::endl;
-            //   std::cout << "actual_output_channel " << actual_output_channel
-            //   <<std::endl; std::cout << "accu_values[output_chan] " <<
-            //   accu_values[output_chan] <<std::endl; std::cout << "expected "
-            //   << expected <<std::endl; std::cout << "actual " << actual
-            //   <<std::endl;
-
-            // }
             TEST_ASSERT_INT32_WITHIN(1, (int)expected, actual);
+
+            error_count += 1;
+            error_sum += (expected - actual);
+            abs_error_sum += std::abs(expected - actual);
           }
         }
         y = next_y;
       }
     }
   }
+  float bias = error_sum / error_count ;
+
+  TEST_ASSERT_TRUE_MESSAGE(std::abs(bias) < 1e-2, "Bias out of range");
+  TEST_ASSERT_TRUE_MESSAGE(error_count/abs_error_sum > 100, "abs average error too high");
 }
 
 /*
@@ -302,10 +310,31 @@ void Test_OT_int8_small_range_massive_bias_range() {
 }
 
 void Test_OT_int8_big_range() {
-  for (int n = 6; n < 12; n++) {
-    for (int coef_count_log2 = 3; coef_count_log2 < 12; coef_count_log2++) {
-      test_big_range(1 << coef_count_log2, n);
+  std::set<int> seen_initial_shift;
+  std::set<int> seen_final_shr;
+  for (int product_range = -3; product_range < 3;product_range++){
+    for (int n = 3; n < 9; n++) {
+      for (int bias_range = -n; bias_range < 3; bias_range++){
+        for (int coef_count_log2 = 2; coef_count_log2 < 12; coef_count_log2+=1) {
+          test_big_range(1 << coef_count_log2, n, product_range, bias_range,
+            seen_initial_shift, seen_final_shr);
+        }
+      }
     }
+  }
+#define INITIAL_SHR_RANGE_MAX 12
+#define INITIAL_SHR_RANGE_MIN 0
+
+#define FINAL_SHR_RANGE_MAX 6
+#define FINAL_SHR_RANGE_MIN -8
+
+  for (int i=INITIAL_SHR_RANGE_MIN;i<=INITIAL_SHR_RANGE_MAX;i++){
+    const bool is_in = seen_initial_shift.find(i) != seen_initial_shift.end();
+    TEST_ASSERT_TRUE(is_in);
+  }
+  for (int i=FINAL_SHR_RANGE_MIN;i<=FINAL_SHR_RANGE_MAX;i++){
+    const bool is_in = seen_final_shr.find(i) != seen_final_shr.end();
+    TEST_ASSERT_TRUE(is_in);
   }
 }
 

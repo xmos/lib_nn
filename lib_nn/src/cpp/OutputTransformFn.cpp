@@ -49,9 +49,11 @@ static int clrsbll(long long x) {
 }
 
 static int64_t shl(int32_t v, int amount_to_shl) {
+
   if (amount_to_shl >= 0) {
-    // TODO fix the undefined behaviour
-    return v << amount_to_shl;
+    // work around  the undefined behaviour
+    uint64_t mask = (~0LLU)>>amount_to_shl;
+    return ((uint64_t)v&mask) << amount_to_shl;
   } else {
     return ((int64_t)v) >> (-amount_to_shl);
   }
