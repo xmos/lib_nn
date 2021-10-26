@@ -168,35 +168,33 @@ void test_Conv2dValidDirectDWRegression() {
                             MatMulDirectFn_DW aggregator(&p);
                             aggregator.setWeights(rw.weights.data());
 
-                            OutputTransformFnInt8::CanonicalMulAndBias
-                                canonical_values = OutputTransformFnInt8::
-                                    canonicalise_mul_and_bias_dw(
-                                        eff_mult, bias, weights, shape,
-                                        ks.input_zero_point,
-                                        ks.output_zero_point, x_channels);
+                            MulsAndBias mul_and_biases = OutputTransformFnInt8::
+                                canonicalise_mul_and_bias_dw(
+                                    eff_mult, bias, weights, shape,
+                                    ks.input_zero_point, ks.output_zero_point,
+                                    x_channels);
 
                             QuantisationParams qp =
                                 OutputTransformFnInt8::quantise_activation(
-                                    canonical_values.f_multipliers,
-                                    canonical_values.f_biases,
-                                    canonical_values.accu_min,
-                                    canonical_values.accu_max);
+                                    mul_and_biases);
 
                             // pad q.biases and  q.multipliers to a multiple
                             // of VPU_INT16_EPV this is to work around array
                             // over reads
                             int16_t pad_val =
-                                rng.rand<int8_t>();  // this is arbitrary
-                            OutputTransformFn::pad(qp.biases, VPU_INT16_EPV,
-                                                   pad_val);
-                            OutputTransformFn::pad(qp.multipliers,
-                                                   (int)VPU_INT16_EPV, pad_val);
+                                rng.rand<int16_t>();  // this is arbitrary
+                            OutputTransformFn::pad_final_access(
+                                qp.multipliers_and_biases, VPU_INT16_EPV,
+                                pad_val);
 
-                            OT_int8::Params ot_params((int32_t)x_channels);
+                            OT_int8::Params ot_params((int32_t)x_channels,
+                                                      qp.initial_shr,
+                                                      qp.final_shr);
+
                             OT_int8 ot(&ot_params);
-                            ot.setMultipliersAndBiases(qp.multipliers.data(),
-                                                       qp.biases.data(),
-                                                       &qp.otv);
+                            ot.setMultipliersAndBiases(
+                                qp.multipliers_and_biases.data());
+
                             auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
                                                   Y.depth);
 
@@ -345,35 +343,32 @@ void test_Conv2dPaddedIndirectDWRegression() {
                             MatMulDirectFn_DW aggregator(&p);
                             aggregator.setWeights(rw.weights.data());
 
-                            OutputTransformFnInt8::CanonicalMulAndBias
-                                canonical_values = OutputTransformFnInt8::
-                                    canonicalise_mul_and_bias_dw(
-                                        eff_mult, bias, weights, weights_shape,
-                                        ks.input_zero_point,
-                                        ks.output_zero_point, x_channels);
+                            MulsAndBias mul_and_biases = OutputTransformFnInt8::
+                                canonicalise_mul_and_bias_dw(
+                                    eff_mult, bias, weights, weights_shape,
+                                    ks.input_zero_point, ks.output_zero_point,
+                                    x_channels);
 
                             QuantisationParams qp =
                                 OutputTransformFnInt8::quantise_activation(
-                                    canonical_values.f_multipliers,
-                                    canonical_values.f_biases,
-                                    canonical_values.accu_min,
-                                    canonical_values.accu_max);
+                                    mul_and_biases);
 
                             // pad q.biases and  q.multipliers to a multiple
                             // of VPU_INT16_EPV this is to work around array
                             // over reads
                             int16_t pad_val =
-                                rng.rand<int8_t>();  // this is arbitrary
-                            OutputTransformFn::pad(qp.biases, VPU_INT16_EPV,
-                                                   pad_val);
-                            OutputTransformFn::pad(qp.multipliers,
-                                                   (int)VPU_INT16_EPV, pad_val);
+                                rng.rand<int16_t>();  // this is arbitrary
+                            OutputTransformFn::pad_final_access(
+                                qp.multipliers_and_biases, VPU_INT16_EPV,
+                                pad_val);
+                            OT_int8::Params ot_params((int32_t)x_channels,
+                                                      qp.initial_shr,
+                                                      qp.final_shr);
 
-                            OT_int8::Params ot_params((int32_t)x_channels);
                             OT_int8 ot(&ot_params);
-                            ot.setMultipliersAndBiases(qp.multipliers.data(),
-                                                       qp.biases.data(),
-                                                       &qp.otv);
+                            ot.setMultipliersAndBiases(
+                                qp.multipliers_and_biases.data());
+
                             auto ir = ImageRegion(0, 0, 0, Y.height, Y.width,
                                                   Y.depth);
 

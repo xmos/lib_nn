@@ -100,7 +100,6 @@ class DerefInputFn : public MemCpyFn {
      * performed.
      */
     Params(const Filter2dGeometry &filter_geometry);
-    
   };
   /**
    * @brief This describes the region over which this class will perform its
