@@ -120,9 +120,9 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams,
   if (!product_range_defined) {
     if (verbose) std::cout << "undefined procut range" << std::endl;
 
-    // Then we only care about the biases -> we know they will always fit in an 8 bit number so
-    // a bias exp of 0 will do fine.
-    int A = 0; 
+    // Then we only care about the biases -> we know they will always fit in an
+    // 8 bit number so a bias exp of 0 will do fine.
+    int A = 0;
     int M = vlmul_shr;
     int B = A + M - vlmul_shr;
     assert(B == 0);
@@ -205,7 +205,8 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams,
         break;
       }
 
-      int64_t bias_16 = std::round(ldexp(activationParam.bias, A + M - vlmul_shr));
+      int64_t bias_16 =
+          std::round(ldexp(activationParam.bias, A + M - vlmul_shr));
 
       int64_t prod_max = shl(accu_max_16 * mul_16, -vlmul_shr);
       int64_t prod_min = shl(accu_min_16 * mul_16, -vlmul_shr);
