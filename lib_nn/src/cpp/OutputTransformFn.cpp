@@ -40,20 +40,19 @@ static int clrsbll(long long x) {
 #if __has_builtin(__builtin_clrsbll)
   return __builtin_clrsbll(x);
 #else
-   for (unsigned i = 0; i < 64; i++) {
-     int y = (x << i) >> i;
-     if (y != x) return (i - 1);
-   }
-   return 64;
+  for (unsigned i = 0; i < 64; i++) {
+    int y = (x << i) >> i;
+    if (y != x) return (i - 1);
+  }
+  return 64;
 #endif
 }
 
 static int64_t shl(int32_t v, int amount_to_shl) {
-
   if (amount_to_shl >= 0) {
     // work around  the undefined behaviour
-    uint64_t mask = (~0LLU)>>amount_to_shl;
-    return ((uint64_t)v&mask) << amount_to_shl;
+    uint64_t mask = (~0LLU) >> amount_to_shl;
+    return ((uint64_t)v & mask) << amount_to_shl;
   } else {
     return ((int64_t)v) >> (-amount_to_shl);
   }

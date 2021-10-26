@@ -52,20 +52,20 @@ T get_random_uniform_from_range(T lo, T hi) {
   return rng.rand<T>(lo, hi);
 }
 
-
 /*
 coef_count - controls the number of coefs that make up the kernel.
 N - controls the scale of the product, i.e. the product will be in the range
-    [-1<<N, 1<<N - 1] but additionally the dynamic range is controlled by 
+    [-1<<N, 1<<N - 1] but additionally the dynamic range is controlled by
     the product_range.
 product_range - controls the dynamic range of the product.
-bias_range - controls how much bigger or smaller the product should be 
+bias_range - controls how much bigger or smaller the product should be
     compared to the product.
 */
-void test_big_range(int coef_count, int N, int product_range, int bias_range, 
-  std::set<int> &seen_initial_shr, std::set<int> &seen_final_shr) {
-  int64_t bias_low = -(1LL << (N+bias_range));
-  int64_t bias_high = (1LL << (N+bias_range)) - 1;
+void test_big_range(int coef_count, int N, int product_range, int bias_range,
+                    std::set<int> &seen_initial_shr,
+                    std::set<int> &seen_final_shr) {
+  int64_t bias_low = -(1LL << (N + bias_range));
+  int64_t bias_high = (1LL << (N + bias_range)) - 1;
 
   double p_low = -(1LL << std::max(N - product_range, 0));
   double p_high = (1LL << N) - 1;
@@ -188,10 +188,11 @@ void test_big_range(int coef_count, int N, int product_range, int bias_range,
       }
     }
   }
-  float bias = error_sum / error_count ;
+  float bias = error_sum / error_count;
 
   TEST_ASSERT_TRUE_MESSAGE(std::abs(bias) < 1e-2, "Bias out of range");
-  TEST_ASSERT_TRUE_MESSAGE(error_count/abs_error_sum > 100, "abs average error too high");
+  TEST_ASSERT_TRUE_MESSAGE(error_count / abs_error_sum > 100,
+                           "abs average error too high");
 }
 
 /*
@@ -312,12 +313,13 @@ void Test_OT_int8_small_range_massive_bias_range() {
 void Test_OT_int8_big_range() {
   std::set<int> seen_initial_shift;
   std::set<int> seen_final_shr;
-  for (int product_range = -3; product_range < 3;product_range++){
+  for (int product_range = -3; product_range < 3; product_range++) {
     for (int n = 3; n < 9; n++) {
-      for (int bias_range = -n; bias_range < 3; bias_range++){
-        for (int coef_count_log2 = 2; coef_count_log2 < 12; coef_count_log2+=1) {
+      for (int bias_range = -n; bias_range < 3; bias_range++) {
+        for (int coef_count_log2 = 2; coef_count_log2 < 12;
+             coef_count_log2 += 1) {
           test_big_range(1 << coef_count_log2, n, product_range, bias_range,
-            seen_initial_shift, seen_final_shr);
+                         seen_initial_shift, seen_final_shr);
         }
       }
     }
@@ -328,11 +330,11 @@ void Test_OT_int8_big_range() {
 #define FINAL_SHR_RANGE_MAX 6
 #define FINAL_SHR_RANGE_MIN -8
 
-  for (int i=INITIAL_SHR_RANGE_MIN;i<=INITIAL_SHR_RANGE_MAX;i++){
+  for (int i = INITIAL_SHR_RANGE_MIN; i <= INITIAL_SHR_RANGE_MAX; i++) {
     const bool is_in = seen_initial_shift.find(i) != seen_initial_shift.end();
     TEST_ASSERT_TRUE(is_in);
   }
-  for (int i=FINAL_SHR_RANGE_MIN;i<=FINAL_SHR_RANGE_MAX;i++){
+  for (int i = FINAL_SHR_RANGE_MIN; i <= FINAL_SHR_RANGE_MAX; i++) {
     const bool is_in = seen_final_shr.find(i) != seen_final_shr.end();
     TEST_ASSERT_TRUE(is_in);
   }
