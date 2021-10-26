@@ -40,7 +40,11 @@ static int clrsbll(long long x) {
 #if __has_builtin(__builtin_clrsbll)
   return __builtin_clrsbll(x);
 #else
-  return clrsb_sw(x);
+   for (unsigned i = 0; i < 64; i++) {
+     int y = (x << i) >> i;
+     if (y != x) return (i - 1);
+   }
+   return 64;
 #endif
 }
 
