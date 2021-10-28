@@ -2,31 +2,6 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if defined(__XS3A__)
 
-	.section        .cp.rodata.cst4,"aMc",@progbits,4
-	.cc_top VECT_INT16_MAX.data
-	.align 4
-VECT_INT16_MAX:
-	.word    0x7f007f00
-	.word    0x7f007f00
-	.word    0x7f007f00
-	.word    0x7f007f00
-	.word    0x7f007f00
-	.word    0x7f007f00
-	.word    0x7f007f00
-	.word    0x7f007f00
-	.cc_bottom VECT_INT16_MAX.data
-
-	.section        .cp.rodata.cst4,"aMc",@progbits,4
-	.cc_top VECT_INT8_MIN.data
-	.align 4
-VECT_INT8_MIN:
-	.word    0x80808080
-	.word    0x80808080
-	.word    0x80808080
-	.word    0x80808080
-	.cc_bottom VECT_INT8_MIN.data
-
-    
 #define FUNCTION_NAME output_transform_fn_v2_impl_asm
 
     .text
@@ -50,6 +25,22 @@ VECT_SHIFT_TABLE:
 	.word    0x0E000E, 0x0E000E, 0x0E000E, 0x0E000E, 0x0E000E, 0x0E000E, 0x0E000E, 0x0E000E
 	.word    0x0F000F, 0x0F000F, 0x0F000F, 0x0F000F, 0x0F000F, 0x0F000F, 0x0F000F, 0x0F000F
 	.word    0x100010, 0x100010, 0x100010, 0x100010, 0x100010, 0x100010, 0x100010, 0x100010
+
+VECT_INT16_MAX:
+	.word    0x7f007f00
+	.word    0x7f007f00
+	.word    0x7f007f00
+	.word    0x7f007f00
+	.word    0x7f007f00
+	.word    0x7f007f00
+	.word    0x7f007f00
+	.word    0x7f007f00
+
+VECT_INT8_MIN:
+	.word    0x80808080
+	.word    0x80808080
+	.word    0x80808080
+	.word    0x80808080
 
 	.issue_mode  dual
 
@@ -115,35 +106,38 @@ FUNCTION_NAME:
     ldap r11, VECT_SHIFT_TABLE
     {bt r5, negshift_vlsat             ; add r5, r11, r2 }
 
-    {vlsat r5[0]                       ; ldaw r11, sp[S_TEMP_VECTOR] }      // TODO: off by 1.
-    {bu vlsat_done                     ; ldc r2, 32 }
+    {vlsat r5[0]                       ; nop }
+    ldw r2, sp[S_OUTPUT_COUNT]
+    {bu vlsat_done                     ; shl r11, r2, 1 }
     
 negshift_vlsat: 
     {vlsat r11[0]                      ; ldaw r11, sp[S_TEMP_VECTOR] }
-    { vstr r11[0]                      ; ldc r2, 32 }
+    { vstr r11[0]                      ; nop }
     vlashr r11[0], r4
+    ldw r2, sp[S_OUTPUT_COUNT]
+    shl r11, r2, 1
     
 vlsat_done: 
 
     OPTIONAL_DDR_SPILL(r3) // destroys r5
-    { vlmul r3[0]                       ; add r3, r3, r2 }
+    { vlmul r3[0]                       ; add r3, r3, r11 }
+
     OPTIONAL_DDR_SPILL(r3) // destroys r5
-    { vladd r3[0]                       ; nop            }
+    { vladd r3[0]                       ; ldaw r11, sp[S_TEMP_VECTOR] }
     { vstr r11[0]                       ; ldc r4, PARAMS_final_shr }
     
     { ld16s r4, r0[r4]                  ; nop }
 
     vlashr r11[0], r4
 
-    {vstr r11[0]                        ; nop }             //store off the unmodified vector
+    {vstr r11[0]                        ; ldap r11, VECT_INT16_MAX }             //store off the unmodified vector
 
-    ldaw r11, cp[VECT_INT16_MAX]
     {vladd r11[0]                       ; mkmsk r3, 2}
     {vdepth1                            ; ldaw r11, sp[S_MASK]}
 
     vstrpv r11[0], r3
 
-    ldaw r11, cp[VECT_INT8_MIN]
+    ldap r11, VECT_INT8_MIN
     {vldr r11[0]                        ; ldaw r11, sp[S_TEMP_VECTOR] } 
 
     { ldw r4, sp[S_OUTPUT_COUNT]       ; nop }
