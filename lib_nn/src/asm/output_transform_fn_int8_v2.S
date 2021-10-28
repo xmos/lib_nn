@@ -2,7 +2,7 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if defined(__XS3A__)
 
-	.section        .cp.const32,"aMc",@progbits,32
+	.section        .cp.rodata.cst4,"aMc",@progbits,4
 	.cc_top VECT_INT16_MAX.data
 	.align 4
 VECT_INT16_MAX:
@@ -16,7 +16,7 @@ VECT_INT16_MAX:
 	.word    0x7f007f00
 	.cc_bottom VECT_INT16_MAX.data
 
-	.section        .cp.const32,"aMc",@progbits,32
+	.section        .cp.rodata.cst4,"aMc",@progbits,4
 	.cc_top VECT_INT8_MIN.data
 	.align 4
 VECT_INT8_MIN:
