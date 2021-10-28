@@ -39,8 +39,9 @@ void Test_SimpleMatMulInt8() {
         alignas(4) int8_t K[kernel_bytes];
         alignas(4) int8_t T[scratch_bytes];
 
-        MatMulInt8::Params p(output_channel_count, input_bytes, (int8_t *)K);
+        MatMulInt8::Params p(output_channel_count, input_bytes);
         MatMulInt8 mm(&p);
+        mm.setWeights((int8_t *)K);
 
         std::fill_n(K, kernel_bytes, kernel_fill);
         std::fill_n(T, scratch_bytes, scratch_fill);
@@ -124,9 +125,10 @@ void Test_MatMulInt8() {
       alignas(4) int8_t reordered_weights[rw.weights.size()];
       std::memcpy(reordered_weights, rw.weights.data(), rw.weights.size());
 
-      MatMulInt8::Params p(output_channel_count, input_bytes,
-                           reordered_weights);
+      MatMulInt8::Params p(output_channel_count,
+                           input_bytes);  // reordered_weights
       MatMulInt8 mm(&p);
+      mm.setWeights((int8_t *)reordered_weights);
       int ocg_count = (output_channel_count + vpu_ring_buffer_length - 1) /
                       vpu_ring_buffer_length;
 
@@ -191,9 +193,11 @@ void Test_Simple_MatMulDirectFn() {
                     (int8_t *)K;  // todo we will switch to usnig the boggler
 
                 MatMulDirectFn::Params p(
-                    X_params, K_params, x_channels, weights,
-                    (int)(y_channels * k_height * k_width * x_channels));
+                    X_params, K_params,
+                    x_channels);  // weights, (int)(y_channels * k_height *
+                                  // k_width * x_channels)
                 MatMulDirectFn mmd(&p);
+                mmd.setWeights(weights);
 
                 std::fill_n((int8_t *)K, sizeof K, kernel_fill);
                 std::fill_n((int8_t *)T, x_height * x_width * x_channels,
@@ -285,11 +289,13 @@ void Test_MatMulDirectFn() {
                             MatMulInt8::reorder_kernel_weights(
                                 (int8_t *)raw_weights, shape, 8, pad_val);
 
-                        MatMulDirectFn::Params p(X, K, input_ch_per_output,
-                                                 rw.weights.data(),
-                                                 rw.weights.size());
+                        MatMulDirectFn::Params p(X, K, input_ch_per_output
+                                                 //,
+                                                 //  rw.weights.data(),
+                                                 //  rw.weights.size()
+                        );
                         MatMulDirectFn mmd(&p);
-
+                        mmd.setWeights(rw.weights.data());
                         int ocg_count =
                             (output_channels + vpu_ring_buffer_length - 1) /
                             vpu_ring_buffer_length;
@@ -404,9 +410,14 @@ void Test_Simple_MatMulDirectFn_DW() {
 
               int8_t *weights = rw.weights.data();
 
-              MatMulDirectFn_DW::Params p(X_params, K_params, weights,
-                                          sizeof(K));
+              MatMulDirectFn_DW::Params p(
+                  X_params, K_params
+                  // ,
+                  // weights,
+                  //                             sizeof(K)
+              );
               MatMulDirectFn_DW mmd(&p);
+              mmd.setWeights(weights);
 
               int ocg_count = (x_channels + vpu_ring_buffer_length - 1) /
                               vpu_ring_buffer_length;
@@ -492,9 +503,13 @@ void Test_MatMulDirectFn_DW() {
                         MatMulDirectFn_DW::reorder_kernel_weights(
                             (int8_t *)raw_weights, shape, pad_val);
 
-                    MatMulDirectFn_DW::Params p(X, K, rw.weights.data(),
-                                                rw.weights.size());
+                    MatMulDirectFn_DW::Params p(
+                        X, K
+                        // , rw.weights.data(),
+                        //                             rw.weights.size()
+                    );
                     MatMulDirectFn_DW mmd(&p);
+                    mmd.setWeights(rw.weights.data());
 
                     int ocg_count = (x_channels + vpu_ring_buffer_length - 1) /
                                     vpu_ring_buffer_length;

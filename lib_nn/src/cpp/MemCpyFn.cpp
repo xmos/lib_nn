@@ -22,27 +22,6 @@ DerefInputFn::Params::Params(const ImageGeometry &input,
 DerefInputFn::Params::Params(const Filter2dGeometry &filter)
     : Params(filter.input, filter.window) {}
 
-DerefInputFn::Params::Params(std::istream &stream) {
-#define READ_MEMBER(MEMBER) \
-  stream.read(reinterpret_cast<char *>(&this->MEMBER), sizeof(this->MEMBER))
-
-  READ_MEMBER(bytes_per_h_line);
-  READ_MEMBER(bytes_per_pixel);
-
-#undef READ_MEMBER
-}
-
-void DerefInputFn::Params::Serialize(std::ostream &stream) const {
-#define WRITE_MEMBER(MEMBER)                                  \
-  stream.write(reinterpret_cast<const char *>(&this->MEMBER), \
-               sizeof(this->MEMBER))
-
-  WRITE_MEMBER(bytes_per_h_line);
-  WRITE_MEMBER(bytes_per_pixel);
-
-#undef WRITE_MEMBER
-}
-
 int DerefInputFn::get_scratch_bytes() { return 0; }
 int DerefInputFn::get_overread_bytes() { return 0; }
 
@@ -146,51 +125,6 @@ ImToColPadded::Params::Params(const Filter2dGeometry &filter,
   bytes_per_copy_per_channel = channels_per_output_group *
                                filter.window.shape.depth *
                                filter.window.shape.channel_depth;
-}
-
-ImToColPadded::Params::Params(std::istream &stream) {
-#define READ_MEMBER(MEMBER) \
-  stream.read(reinterpret_cast<char *>(&this->MEMBER), sizeof(this->MEMBER))
-
-  READ_MEMBER(kernel_height);
-  READ_MEMBER(kernel_width);
-  READ_MEMBER(vertical_stride);
-  READ_MEMBER(horizontal_stride);
-  READ_MEMBER(vertical_dilation);
-  READ_MEMBER(horizontal_dilation);
-  READ_MEMBER(padding_left);
-  READ_MEMBER(padding_top);
-  READ_MEMBER(input_v_length);
-  READ_MEMBER(input_h_length);
-  READ_MEMBER(padding_val);
-  READ_MEMBER(bytes_per_h_line);
-  READ_MEMBER(bytes_per_pixel);
-  READ_MEMBER(bytes_per_copy_per_channel);
-
-#undef READ_MEMBER
-}
-
-void ImToColPadded::Params::Serialize(std::ostream &stream) const {
-#define WRITE_MEMBER(MEMBER)                                  \
-  stream.write(reinterpret_cast<const char *>(&this->MEMBER), \
-               sizeof(this->MEMBER))
-
-  WRITE_MEMBER(kernel_height);
-  WRITE_MEMBER(kernel_width);
-  WRITE_MEMBER(vertical_stride);
-  WRITE_MEMBER(horizontal_stride);
-  WRITE_MEMBER(vertical_dilation);
-  WRITE_MEMBER(horizontal_dilation);
-  WRITE_MEMBER(padding_left);
-  WRITE_MEMBER(padding_top);
-  WRITE_MEMBER(input_v_length);
-  WRITE_MEMBER(input_h_length);
-  WRITE_MEMBER(padding_val);
-  WRITE_MEMBER(bytes_per_h_line);
-  WRITE_MEMBER(bytes_per_pixel);
-  WRITE_MEMBER(bytes_per_copy_per_channel);
-
-#undef WRITE_MEMBER
 }
 
 int8_t *ImToColPadded::memcopy_fn_impl(int8_t *T, int8_t *X,
