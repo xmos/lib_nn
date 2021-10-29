@@ -461,14 +461,14 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
   return q;
 }
 
-extern "C" int8_t *output_transform_fn_v2_impl_asm(
+extern "C" int8_t *output_transform_fn_impl_asm(
     const OT_int8::Params *params, int8_t *Y, VPURingBuffer *A,
     int16_t *multipliers_and_biases, int output_count);
 
 #ifndef NN_USE_REF
 int8_t *output_transform_fn_impl_asm_stub(const OT_int8::Params *params, int8_t *Y,
-                                     VPURingBuffer *A, int32_t output_channel_group,
-                                     int16_t *multipliers_and_biases) {
+                                          VPURingBuffer *A, int32_t output_channel_group,
+                                          int16_t *multipliers_and_biases) {
     int output_count = std::min(
         params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
         (int32_t)VPU_INT16_EPV);
