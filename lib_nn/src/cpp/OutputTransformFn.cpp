@@ -466,14 +466,14 @@ extern "C" int8_t *output_transform_fn_v2_impl_asm(
     int16_t *multipliers_and_biases, int output_count);
 
 #ifndef NN_USE_REF
-int8_t *output_transform_fn_impl_asm(const OT_int8::Params *params, int8_t *Y,
+int8_t *output_transform_fn_impl_asm_stub(const OT_int8::Params *params, int8_t *Y,
                                      VPURingBuffer *A, int32_t output_channel_group,
                                      int16_t *multipliers_and_biases) {
     int output_count = std::min(
         params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
         (int32_t)VPU_INT16_EPV);
     multipliers_and_biases += output_channel_group * VPU_INT16_EPV * 2;
-    return output_transform_fn_v2_impl_asm(params, Y, A, multipliers_and_biases, output_count);
+    return output_transform_fn_impl_asm(params, Y, A, multipliers_and_biases, output_count);
 }
 #endif
 
@@ -534,8 +534,8 @@ int8_t *OT_int8::output_transform_fn(int8_t *Y, VPURingBuffer *A,
   return output_transform_fn_impl(this->params, Y, A, output_channel_group,
                                   multipliers_and_biases);
 #else
-  return output_transform_fn_impl_asm(this->params, Y, A, output_channel_group,
-                                      multipliers_and_biases);
+  return output_transform_fn_impl_asm_stub(this->params, Y, A, output_channel_group,
+                                           multipliers_and_biases);
 #endif  // NN_USE_REF
 }
 
