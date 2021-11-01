@@ -29,7 +29,7 @@ class Filter2D : public AbstractKernel {
    */
   static constexpr bool UsesPerGroupMemCopy = false;
 
- protected:
+ public:
   /**
    * The patch handler used by this class. This determines how (and whether) a
    * region of the input image is copied into (and padded out, if necessary) a
@@ -85,7 +85,7 @@ class Filter2D_DW : public AbstractKernel {
  public:
   static constexpr bool UsesPerGroupMemCopy = true;
 
- private:
+ public:
   /**
    * The patch handler used by this class. This determines how (and whether) a
    * region of the input image is copied into (and padded out, if necessary) a
