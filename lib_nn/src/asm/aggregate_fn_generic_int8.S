@@ -68,7 +68,7 @@ FUNCTION_NAME:
     {ldw K_p_adjust, params_p[PARAMS_bytes_per_kernel_channel]; shl output_channel_group, output_channel_group, 4}
     
     mul t, K_p_adjust, output_channel_group
-    {ldw K_p, params_p[PARAMS_weights]; sub step, step, output_channel_group}
+    {ldw K_p, sp[NSTACKWORDS+1]; sub step, step, output_channel_group}
     {add K_p, K_p, t; sub t, step, thirty_two}
 
     {shr ic_group_count, K_p_adjust, 5; zext K_p_adjust, 5}
