@@ -71,7 +71,7 @@ FUNCTION_NAME:
     {ldw kw, params_p[PARAMS_bytes_per_kernel_channel]; shl t, t, 4}
     {vsetc t; nop}
     mul output_channel_group, kw, output_channel_group
-    {ldw K_p, params_p[PARAMS_weights]; nop} 
+    {ldw K_p, sp[NSTACKWORDS + 1]; nop}
     {ldw inner_x_v_step, params_p[PARAMS_inner_x_v_step]; add K_p, output_channel_group, K_p}
     {ldc thirty_two, 32; ldw inner_x_h_step, params_p[PARAMS_inner_x_h_step]}
     {ldw kh, params_p[PARAMS_k_height_loop_counter];nop}

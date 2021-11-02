@@ -190,7 +190,7 @@ void test_big_range(int coef_count, int N, int product_range, int bias_range,
   }
   float bias = error_sum / error_count;
 
-  TEST_ASSERT_TRUE_MESSAGE(std::abs(bias) < 1e-2, "Bias out of range");
+  TEST_ASSERT_TRUE_MESSAGE(std::abs(bias) < 2e-2, "Bias out of range");
   TEST_ASSERT_TRUE_MESSAGE(error_count / abs_error_sum > 100,
                            "abs average error too high");
 }

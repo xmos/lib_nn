@@ -2,59 +2,63 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if defined(__XS3A__)
 
-.section        .cp.const32,"aMc",@progbits,32
-.cc_top VECT_INT16_MAX.data
-.align 4
+#define FUNCTION_NAME output_transform_fn_impl_asm
+
+    .text
+	.cc_top FUNCTION_NAME.function,FUNCTION_NAME
+	.align 4
+VECT_SHIFT_TABLE:
+	.word    0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000
+	.word    0x010001, 0x010001, 0x010001, 0x010001, 0x010001, 0x010001, 0x010001, 0x010001
+	.word    0x020002, 0x020002, 0x020002, 0x020002, 0x020002, 0x020002, 0x020002, 0x020002
+	.word    0x030003, 0x030003, 0x030003, 0x030003, 0x030003, 0x030003, 0x030003, 0x030003
+	.word    0x040004, 0x040004, 0x040004, 0x040004, 0x040004, 0x040004, 0x040004, 0x040004
+	.word    0x050005, 0x050005, 0x050005, 0x050005, 0x050005, 0x050005, 0x050005, 0x050005
+	.word    0x060006, 0x060006, 0x060006, 0x060006, 0x060006, 0x060006, 0x060006, 0x060006
+	.word    0x070007, 0x070007, 0x070007, 0x070007, 0x070007, 0x070007, 0x070007, 0x070007
+	.word    0x080008, 0x080008, 0x080008, 0x080008, 0x080008, 0x080008, 0x080008, 0x080008
+	.word    0x090009, 0x090009, 0x090009, 0x090009, 0x090009, 0x090009, 0x090009, 0x090009
+	.word    0x0A000A, 0x0A000A, 0x0A000A, 0x0A000A, 0x0A000A, 0x0A000A, 0x0A000A, 0x0A000A
+	.word    0x0B000B, 0x0B000B, 0x0B000B, 0x0B000B, 0x0B000B, 0x0B000B, 0x0B000B, 0x0B000B
+	.word    0x0C000C, 0x0C000C, 0x0C000C, 0x0C000C, 0x0C000C, 0x0C000C, 0x0C000C, 0x0C000C
+	.word    0x0D000D, 0x0D000D, 0x0D000D, 0x0D000D, 0x0D000D, 0x0D000D, 0x0D000D, 0x0D000D
+	.word    0x0E000E, 0x0E000E, 0x0E000E, 0x0E000E, 0x0E000E, 0x0E000E, 0x0E000E, 0x0E000E
+	.word    0x0F000F, 0x0F000F, 0x0F000F, 0x0F000F, 0x0F000F, 0x0F000F, 0x0F000F, 0x0F000F
+	.word    0x100010, 0x100010, 0x100010, 0x100010, 0x100010, 0x100010, 0x100010, 0x100010
+
 VECT_INT16_MAX:
-.word    0x7f007f00
-.word    0x7f007f00
-.word    0x7f007f00
-.word    0x7f007f00
-.word    0x7f007f00
-.word    0x7f007f00
-.word    0x7f007f00
-.word    0x7f007f00
-.cc_bottom VECT_INT16_MAX.data
+	.word    0x7f007f00
+	.word    0x7f007f00
+	.word    0x7f007f00
+	.word    0x7f007f00
+	.word    0x7f007f00
+	.word    0x7f007f00
+	.word    0x7f007f00
+	.word    0x7f007f00
 
-.section        .cp.const32,"aMc",@progbits,32
-.cc_top VECT_INT8_MIN.data
-.align 4
 VECT_INT8_MIN:
-.word    0x80808080
-.word    0x80808080
-.word    0x80808080
-.word    0x80808080
-.word    0x80808080
-.word    0x80808080
-.word    0x80808080
-.word    0x80808080
-.cc_bottom VECT_INT8_MIN.data
-.text
+	.word    0x80808080
+	.word    0x80808080
+	.word    0x80808080
+	.word    0x80808080
 
-.issue_mode  dual
+	.issue_mode  dual
 
 #define PARAMS_output_slice_channel_count 0
-#define PARAMS_mul_and_bias_size 1
-#define PARAMS_otv_p 2
-#define PARAMS_biases 3
-#define PARAMS_multipliers 4
-
-//OutputTransformValues
-#define OTV_bias_multipler 0
-#define OTV_final_shr 8
-#define OTV_accu_shr 16
-#define OTV_accu_shl 24
+#define PARAMS_initial_shift              2       // int16
+#define PARAMS_final_shr                  3       // int16
 
 //Registers
 
-#define params_p             r0
-#define Y_p                  r1
-#define A_p                  r2
-#define otv_p                A_p     
-#define output_channel_group r3
-#define output_count output_channel_group
-#define s                    r4
+//#define params_p             r0
+//#define Y_p                  r1
+//#define A_p                  r2
+//#define otv_p                A_p     
+//#define output_channel_group r3
+//#define output_count output_channel_group
+//#define s                    r4
 
+    
 
 #ifdef USE_DDR_FIX
 #define OPTIONAL_DDR_SPILL(x) { ldw ddr_spill, x[8]; nop} ; \
@@ -67,95 +71,83 @@ VECT_INT8_MIN:
 
 #define t                    r11 
 
-#define S_R4    0
-#define S_R5    1
-#define S_MASK  2
-#define S_TEMP_VECTOR 3
+    //int8_t *OT_int8::output_transform_fn( OT_int8::Params *params,         r0
+    //                                      int8_t *Y,                       r1
+    //                                      VPURingBuffer *A                 r2
+    //                                      int16_t *multipliers_and_biases  r3
+    //                                      int32_t output_count             sp[OC])
 
-#define FUNCTION_NAME output_transform_fn_impl_asm
-
-//int8_t *OT_int8::output_transform_fn(int8_t *Y, VPURingBuffer *A, int32_t output_channel_group)
-
-#define NSTACKWORDS  (S_TEMP_VECTOR + 1 + 8)
+    //  r2 holds 32.
     
-.text
-.issue_mode  dual
-.globl FUNCTION_NAME
-.align 4
-.type FUNCTION_NAME,@function
-.cc_top FUNCTION_NAME.function,FUNCTION_NAME
+#define S_R4            0
+#define S_R5            1
+#define S_MASK          2
+#define S_TEMP_VECTOR   3
+#define NSTACKWORDS     (S_TEMP_VECTOR + 1 + 8)         // Must be even
+#define S_OUTPUT_COUNT  (NSTACKWORDS + 1)
+
+	.issue_mode  dual
+	.globl FUNCTION_NAME
+	.align 4
+	.type FUNCTION_NAME,@function
 
 FUNCTION_NAME:
     {dualentsp NSTACKWORDS; nop}
 
     std r4, r5, sp[0]
 
-    {ldc A_p, 32; mov t, A_p}
-    {vldr t[0]; add t, A_p, t}
-    {vldd t[0]; shl t, A_p, 3}
-    {vsetc t;  shl output_channel_group, output_channel_group, 5}
+    {ldc r2, 32                        ; add r11, r2, 0}
+    {vldr r11[0]                       ; add r11, r2, r11}
+    {vldd r11[0]                       ; shl r11, r2, 3}
+    {vsetc r11                         ; ldc r4, PARAMS_initial_shift }
 
-    {ldw otv_p, params_p[PARAMS_otv_p]; ldc t, OTV_accu_shr}
-    ldaw t, otv_p[t]
+    {ld16s r4, r0[r4]                  ; ldc r5, 0 }
+    {lss r5, r4, r5                    ; shl r2, r4, 5 }
+    ldap r11, VECT_SHIFT_TABLE
+    {bt r5, negshift_vlsat             ; add r5, r11, r2 }
 
-    OPTIONAL_DDR_SPILL(t)
-    {vlsat t[0]; ldaw s, sp[S_TEMP_VECTOR]}
-    {vstr s[0]; ldc t, OTV_accu_shl}
-    {ldw t, otv_p[t]; nop}
+    {vlsat r5[0]                       ; nop }
+    ldw r2, sp[S_OUTPUT_COUNT]
+    {bu vlsat_done                     ; shl r11, r2, 1 }
+    
+negshift_vlsat: 
+    {vlsat r11[0]                      ; ldaw r11, sp[S_TEMP_VECTOR] }
+    { vstr r11[0]                      ; nop }
+    vlashr r11[0], r4
+    ldw r2, sp[S_OUTPUT_COUNT]
+    shl r11, r2, 1
+    
+vlsat_done: 
 
-    OPTIONAL_DDR_SPILL(s)
-    vlashr s[0], t
-    {vstr s[0]; nop}
+    OPTIONAL_DDR_SPILL(r3) // destroys r5
+    { vlmul r3[0]                       ; add r3, r3, r11 }
 
-    {ldw t, params_p[PARAMS_biases]; nop}
-    {vclrdr; add t, t, output_channel_group}
-    {vldc t[0]; nop}
-    ldaw t, otv_p[OTV_bias_multipler]
+    OPTIONAL_DDR_SPILL(r3) // destroys r5
+    { vladd r3[0]                       ; ldaw r11, sp[S_TEMP_VECTOR] }
+    { vstr r11[0]                       ; ldc r4, PARAMS_final_shr }
+    
+    { ld16s r4, r0[r4]                  ; nop }
 
-    OPTIONAL_DDR_SPILL(t)
-    {vlmacc t[0]; nop}
+    vlashr r11[0], r4
 
-    {ldw t, params_p[PARAMS_multipliers]; nop}
-    {vldc s[0]; add t, t, output_channel_group}
+    {vstr r11[0]                        ; ldap r11, VECT_INT16_MAX }             //store off the unmodified vector
 
-    OPTIONAL_DDR_SPILL(t)
-    {vlmacc t[0]; nop}
+    {vladd r11[0]                       ; mkmsk r3, 2}
+    {vdepth1                            ; ldaw r11, sp[S_MASK]}
 
-    ldaw t, otv_p[OTV_final_shr]
+    vstrpv r11[0], r3
 
-    OPTIONAL_DDR_SPILL(t)
-    {vlsat t[0];shr output_channel_group, output_channel_group, 1 }
+    ldap r11, VECT_INT8_MIN
+    {vldr r11[0]                        ; ldaw r11, sp[S_TEMP_VECTOR] } 
 
-    {ldw t, params_p[PARAMS_output_slice_channel_count]; ldaw s, sp[S_TEMP_VECTOR]}
-    {sub t, t, output_channel_group; ldc output_channel_group, 16}
-    {lss output_channel_group, t, output_channel_group; nop}
-    {bt output_channel_group, asm_min_skip; mov output_count, t}
-        {ldc output_count, 16; nop}
-   
-    asm_min_skip:
+    { ldw r4, sp[S_OUTPUT_COUNT]       ; nop }
+    { mkmsk r3, r4                      ; ldw r2, sp[S_MASK] }
+    vstrpv r1[0], r3                                          //store the int8_mins to output Y
 
-    {vstr s[0]; nop}             //store off the unmodified vector
+    {vldr r11[0]                        ; add r0, r1, r4 }
+    {vdepth8                            ; andnot r3, r2}
+    vstrpv r1[0], r3
 
-    ldaw t, cp[VECT_INT16_MAX]
-
-    OPTIONAL_DDR_SPILL(t)
-    {vladd t[0]; mkmsk t, 2}
-    {vdepth1; ldaw s, sp[S_MASK]}
-
-    vstrpv s[0], t 
-
-    ldaw t, cp[VECT_INT8_MIN]
-
-    {vldr t[0]; mkmsk t, output_count} 
-    vstrpv Y_p[0], t    //store the int16_mins to output Y
-
-    ldaw t, sp[S_TEMP_VECTOR]
-    {vldr t[0]; mkmsk t, output_count}
-    {ldw s, s[0]; nop}
-    {vdepth8; andnot t, s}
-    vstrpv Y_p[0], t
-
-    add r0, Y_p, output_count
     ldd r4, r5, sp[0]
     retsp NSTACKWORDS
 
