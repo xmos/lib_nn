@@ -122,7 +122,7 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams,
   bool product_range_defined = multiplier_range_defined && accu_range_defined;
 
   if (!product_range_defined) {
-    if (verbose) std::cout << "undefined procut range" << std::endl;
+//    if (verbose) std::cout << "undefined procut range" << std::endl;
 
     // Then we only care about the biases -> we know they will always fit in an
     // 8 bit number so a bias exp of 0 will do fine.
@@ -153,10 +153,10 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams,
   }
 
   if (verbose) {
-    std::cout << "accu_sig_bits: " << accu_sig_bits << std::endl;
-    std::cout << "mul_sig_bits: " << mul_sig_bits << std::endl;
-    std::cout << "A: " << A << std::endl;
-    std::cout << "M: " << M << std::endl;
+//    std::cout << "accu_sig_bits: " << accu_sig_bits << std::endl;
+//    std::cout << "mul_sig_bits: " << mul_sig_bits << std::endl;
+//    std::cout << "A: " << A << std::endl;
+//    std::cout << "M: " << M << std::endl;
   }
 
   bool trying = true;
@@ -188,9 +188,9 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams,
         trying = true;
 
         if (verbose) {
-          std::cout << "Accu too big " << std::endl;
-          std::cout << "   accu_sig_bits: " << accu_sig_bits << std::endl;
-          std::cout << "   A: " << A << std::endl;
+//          std::cout << "Accu too big " << std::endl;
+//          std::cout << "   accu_sig_bits: " << accu_sig_bits << std::endl;
+//          std::cout << "   A: " << A << std::endl;
         }
         break;
       }
@@ -202,9 +202,9 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams,
         trying = true;
 
         if (verbose) {
-          std::cout << "mul too big " << std::endl;
-          std::cout << "   mul_sig_bits: " << mul_sig_bits << std::endl;
-          std::cout << "   M: " << M << std::endl;
+//          std::cout << "mul too big " << std::endl;
+//          std::cout << "   mul_sig_bits: " << mul_sig_bits << std::endl;
+//          std::cout << "   M: " << M << std::endl;
         }
         break;
       }
@@ -231,20 +231,20 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams,
       if (!check_val_fits(prod_max, 16) || !check_val_fits(prod_min, 16) ||
           !check_val_fits(sum_max, 16) || !check_val_fits(sum_min, 16) ||
           !check_val_fits(bias_16, 16)) {
-        if (verbose) std::cout << "overflow in prod or sum " << std::endl;
+//        if (verbose) std::cout << "overflow in prod or sum " << std::endl;
         if (A >= 0 || accu_sig_bits > mul_sig_bits) {
           A--;
           accu_sig_bits--;
           if (verbose) {
-            std::cout << "   accu_sig_bits: " << accu_sig_bits << std::endl;
-            std::cout << "   A: " << A << std::endl;
+//            std::cout << "   accu_sig_bits: " << accu_sig_bits << std::endl;
+//            std::cout << "   A: " << A << std::endl;
           }
         } else {
           M--;
           mul_sig_bits--;
           if (verbose) {
-            std::cout << "   mul_sig_bits: " << mul_sig_bits << std::endl;
-            std::cout << "   M: " << M << std::endl;
+//            std::cout << "   mul_sig_bits: " << mul_sig_bits << std::endl;
+//            std::cout << "   M: " << M << std::endl;
           }
         }
 
@@ -257,12 +257,12 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams,
     // must use as all 16 bits of the bias
   }
   if (verbose) {
-    std::cout << "max_group_prod: " << max_group_prod << std::endl;
-    std::cout << "min_group_prod: " << min_group_prod << std::endl;
-    std::cout << "max_group_sum: " << max_group_sum << std::endl;
-    std::cout << "min_group_sum: " << min_group_sum << std::endl;
-    std::cout << "mul_sig_bits: " << mul_sig_bits << std::endl;
-    std::cout << "accu_sig_bits: " << accu_sig_bits << std::endl;
+//    std::cout << "max_group_prod: " << max_group_prod << std::endl;
+//    std::cout << "min_group_prod: " << min_group_prod << std::endl;
+//    std::cout << "max_group_sum: " << max_group_sum << std::endl;
+//    std::cout << "min_group_sum: " << min_group_sum << std::endl;
+//    std::cout << "mul_sig_bits: " << mul_sig_bits << std::endl;
+//    std::cout << "accu_sig_bits: " << accu_sig_bits << std::endl;
   }
   return std::make_tuple(A, M);
 }
@@ -295,8 +295,8 @@ void backprop_output_clamps_to_accu_limits(MulsAndBias &activationParams,
     recitfy_min_max(accu_meaningful_min, accu_meaningful_max);
 
     if (verbose) {
-      std::cout << "accu_meaningful_min: " << accu_meaningful_min << std::endl;
-      std::cout << "accu_meaningful_max: " << accu_meaningful_max << std::endl;
+//      std::cout << "accu_meaningful_min: " << accu_meaningful_min << std::endl;
+//      std::cout << "accu_meaningful_max: " << accu_meaningful_max << std::endl;
     }
 
     if (accu_meaningful_max < (int64_t)activationParam.accu_max_val) {
@@ -360,16 +360,16 @@ void backprop_output_clamps_to_accu_limits(MulsAndBias &activationParams,
   }
 
   if (verbose) {
-    std::cout << "ActivationParams" << std::endl;
+//    std::cout << "ActivationParams" << std::endl;
     for (auto a : activationParams) {
-      std::cout << "bias        : " << a.original_bias << " -> " << a.bias
-                << std::endl;
-      std::cout << "multiplier  : " << a.original_multiplier << " -> "
-                << a.multiplier << std::endl;
-      std::cout << "accu_min_val: " << a.original_accu_min_val << " -> "
-                << a.accu_min_val << std::endl;
-      std::cout << "accu_max_val: " << a.original_accu_max_val << " -> "
-                << a.accu_max_val << std::endl;
+//      std::cout << "bias        : " << a.original_bias << " -> " << a.bias
+//                << std::endl;
+//      std::cout << "multiplier  : " << a.original_multiplier << " -> "
+//                << a.multiplier << std::endl;
+//      std::cout << "accu_min_val: " << a.original_accu_min_val << " -> "
+//                << a.accu_min_val << std::endl;
+//      std::cout << "accu_max_val: " << a.original_accu_max_val << " -> "
+//                << a.accu_max_val << std::endl;
     }
   }
 }
@@ -416,26 +416,22 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
   int output_channel_groups = activationParams.size() / VPU_INT16_EPV;
 
   if (verbose) {
-    std::cout << "final_shr: " << q.final_shr << std::endl;
+//    std::cout << "final_shr: " << q.final_shr << std::endl;
   }
 
   for (int ocg = 0; ocg < output_channel_groups; ++ocg) {
     for (int ch = ocg * VPU_INT16_EPV; ch < (ocg + 1) * VPU_INT16_EPV; ++ch) {
       int16_t v = float_to_int16(activationParams[ch].multiplier, M);
       q.multipliers_and_biases.push_back(v);
-      if (verbose)
-        std::cout << "multiplier: " << v << "(" << std::ldexp(v, -M)
-                  << ") original:" << activationParams[ch].original_multiplier
-                  << std::endl;
+//      if (verbose)
+//        std::cout << "multiplier: " << v << "(" << std::ldexp(v, -M)
+//                  << ") original:" << activationParams[ch].original_multiplier
+//                  << std::endl;
     }
-
+    
     for (int ch = ocg * VPU_INT16_EPV; ch < (ocg + 1) * VPU_INT16_EPV; ++ch) {
       int16_t v = float_to_int16(activationParams[ch].bias, B);
       q.multipliers_and_biases.push_back(v);
-      if (verbose)
-        std::cout << "bias: " << v << "(" << std::ldexp(v, -B)
-                  << ") original:" << activationParams[ch].original_bias << " "
-                  << activationParams[ch].bias << std::endl;
     }
   }
 
@@ -443,19 +439,19 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
        ch < activationParams.size(); ++ch) {
     int16_t v = float_to_int16(activationParams[ch].multiplier, M);
     q.multipliers_and_biases.push_back(v);
-    if (verbose)
-      std::cout << "multiplier: " << v << "(" << std::ldexp(v, -M)
-                << ") original:" << activationParams[ch].original_multiplier
-                << std::endl;
+//    if (verbose)
+//      std::cout << "multiplier: " << v << "(" << std::ldexp(v, -M)
+//                << ") original:" << activationParams[ch].original_multiplier
+//                << std::endl;
   }
   for (int ch = output_channel_groups * VPU_INT16_EPV;
        ch < activationParams.size(); ++ch) {
     int16_t v = float_to_int16(activationParams[ch].bias, B);
     q.multipliers_and_biases.push_back(v);
-    if (verbose)
-      std::cout << "bias: " << v << "(" << std::ldexp(v, -B)
-                << ") original:" << activationParams[ch].original_bias << " "
-                << activationParams[ch].bias << std::endl;
+//    if (verbose)
+//      std::cout << "bias: " << v << "(" << std::ldexp(v, -B)
+//                << ") original:" << activationParams[ch].original_bias << " "
+//                << activationParams[ch].bias << std::endl;
   }
 
   return q;

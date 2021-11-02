@@ -8,6 +8,8 @@
 
 #include "nn_api.h"
 
+#ifndef XS1_VSR_TYPE
+
 /* TODO use from xs3a_kernel.h in a future tools release */
 #define XS1_VSR_HEADROOM_SHIFT 0x0
 #define XS1_VSR_HEADROOM_SIZE 0x5
@@ -41,6 +43,8 @@
 #define XS1_VSR_LENGTH_SET(x, v)  \
   (((x) & ~XS1_VSR_LENGTH_MASK) | \
    (((v) << XS1_VSR_LENGTH_SHIFT) & XS1_VSR_LENGTH_MASK))
+
+#endif
 
 #define XS1_VSETC_SHIFT_NOSHIFT 0x0
 #define XS1_VSETC_SHIFT_SHIFTLEFT 0x1
