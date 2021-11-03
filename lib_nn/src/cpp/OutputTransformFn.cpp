@@ -227,7 +227,7 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams,
       if (!check_val_fits(prod_max, 16) || !check_val_fits(prod_min, 16) ||
           !check_val_fits(sum_max, 16) || !check_val_fits(sum_min, 16) ||
           !check_val_fits(bias_16, 16)) {
-          if (verbose) printf("overflow in prod or sum \n");
+        if (verbose) printf("overflow in prod or sum \n");
         if (A >= 0 || accu_sig_bits > mul_sig_bits) {
           A--;
           accu_sig_bits--;
