@@ -422,6 +422,10 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
     for (int ch = ocg * VPU_INT16_EPV; ch < (ocg + 1) * VPU_INT16_EPV; ++ch) {
       int16_t v = float_to_int16(activationParams[ch].bias, B);
       q.multipliers_and_biases.push_back(v);
+      if (verbose)
+        printf("bias: %d(%f) original: %f %f\n", v, std::ldexp(v, -B),
+               activationParams[ch].original_bias,
+               activationParams[ch].bias);
     }
   }
 
