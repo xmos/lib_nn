@@ -122,7 +122,7 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams,
   bool product_range_defined = multiplier_range_defined && accu_range_defined;
 
   if (!product_range_defined) {
-    if (verbose) printf("undefined procut range\n");
+    if (verbose) printf("undefined product range\n");
 
     // Then we only care about the biases -> we know they will always fit in an
     // 8 bit number so a bias exp of 0 will do fine.
