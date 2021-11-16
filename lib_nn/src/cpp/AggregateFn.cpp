@@ -32,6 +32,8 @@ Conv2dReorderedWeights MatMulInt8::reorder_kernel_weights(
   int kernel_size =
       get_weights_bytes(bytes_per_output_channel, output_channel_count);
 
+  assert (bytes_per_output_channel * output_channel_count <= kernel_size + vpu_ring_buffer_length * vpu_bytes_per_word);
+
   // For each output channel keep a record of the final vpu load
   // so the overlap betweek the desired channel and the next can
   // be accounted for.
@@ -94,30 +96,39 @@ int MatMulInt8 ::get_scratch_mem_bytes(int input_bytes) {
 input_bytes is the number of bytes a single output channel of the kernel
 requires output_channel_count obvs
 */
-int MatMulInt8::get_weights_bytes(int input_bytes, int output_channel_count) {
-  const int vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
+int MatMulInt8::get_weights_bytes(int bytes_per_output_channel, int output_channel_count) {
+  const int vpu_bytes_per_word = XS3_VPU_VREG_WIDTH_BYTES;
   const int vpu_ring_buffer_length = VPU_INT16_EPV;
 
-  int complete_channel_groups = output_channel_count / vpu_ring_buffer_length;
+  int kernel_bytes = 0;
+  int min_bytes = 0;
 
-  int kernel_bytes =
-      complete_channel_groups * input_bytes * vpu_ring_buffer_length;
+  int output_channel_groups =
+      (output_channel_count + vpu_ring_buffer_length - 1) /
+      vpu_ring_buffer_length;
 
-  int kernel_tail =
-      (input_bytes % vpu_bytes) * (output_channel_count - 1) + vpu_bytes;
+  for (int ocg = 0; ocg < output_channel_groups; ++ocg) {
 
-  // for all but the last full kernel vpu word load we need vpu_bytes *
-  // output_channel_count
-  int full_kernel_vpu_work_loads = input_bytes / vpu_bytes;
-  if (full_kernel_vpu_work_loads > 0)
-    kernel_bytes +=
-        output_channel_count * vpu_bytes * (full_kernel_vpu_work_loads - 1);
+    int output_channels_per_ocg =
+        std::min(output_channel_count - ocg * vpu_ring_buffer_length,
+                 vpu_ring_buffer_length);
 
-  // the final load can go over
-  kernel_bytes += std::max(vpu_bytes * vpu_ring_buffer_length,
-                           vpu_bytes * output_channel_count + kernel_tail);
+    int input_channel_groups =
+        (bytes_per_output_channel + vpu_bytes_per_word - 1) /
+        vpu_bytes_per_word;
 
-  return kernel_bytes;
+    for (int icg = 0; icg < input_channel_groups; ++icg) {
+
+      min_bytes = kernel_bytes + vpu_ring_buffer_length * vpu_bytes_per_word;
+
+      int bytes_in_this_vpu_copy =
+          std::min(bytes_per_output_channel - icg * vpu_bytes_per_word,
+                    vpu_bytes_per_word);
+
+      kernel_bytes += bytes_in_this_vpu_copy*output_channels_per_ocg;
+    }
+  }
+  return min_bytes;
 }
 
 MatMulInt8::Params::Params(int output_slice_channel_count,
