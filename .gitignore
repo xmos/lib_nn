@@ -9,6 +9,7 @@
 **/.lock*
 **/build*/
 **/.build/
+**/*build*/
 _build
 **/dist/
 **/bin/
