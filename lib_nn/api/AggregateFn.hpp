@@ -113,14 +113,19 @@ class MatMulInt8 : public AggregateFn {
   /**
    * @brief Get the required size of the weights array. This is a non-trivial
    * computation as it accounts for how the VPU will access the weights array.
+   * It includes padding at after the weights, this padding exists to ensure 
+   * that all memory accesses of the VPU are of valid memory. 
+   * [asj] we could stop emiting this as OOB accesses shouldnt cause a problem
+   * and only cost memory. 
    *
-   * @param input_bytes The count of bytes in a single channel.
+   * @param input_bytes_per_channel The count of bytes in a single channel, i.e. the product of
+   * kernel height, kernel width, input channel count and bytes per element.
    * @param output_channel_count The number of output channels that these
    * weights will compute.
    * @return The size in bytes that will hold the weights and guarentee no OOB
    * accesses.
    */
-  static int get_weights_bytes(int input_bytes, int output_channel_count);
+  static int get_weights_bytes(int input_bytes_per_channel, int output_channel_count);
 
   /**
    * @brief Get the required size of the scratch array. This is a non-trivial
