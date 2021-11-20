@@ -15,7 +15,7 @@ static int8_t *deref2d(int8_t *p, int p_w, int h, int w) {
   return p + h * p_w + w;
 }
 
-Conv2dReorderedWeights MatMulInt8::reorder_kernel_weights(
+Conv2dReorderedWeights MatMulBase::reorder_kernel_weights(
     int8_t *raw_weights, std::array<int, 4> &shape, int bits_per_element,
     int8_t pad_value) {
   const int vpu_ring_buffer_length = VPU_INT16_EPV;
@@ -27,7 +27,7 @@ Conv2dReorderedWeights MatMulInt8::reorder_kernel_weights(
 
   // The number of bytes in the kernel for each output channel
   int bytes_per_output_channel =
-      (shape[1] * shape[2] * shape[3] * bits_per_element) / 8;
+      (shape[1] * shape[2] * shape[3] * bits_per_element) / CHAR_BIT;
 
   int kernel_size =
       get_weights_bytes(bytes_per_output_channel, output_channel_count);
@@ -85,7 +85,7 @@ Conv2dReorderedWeights MatMulInt8::reorder_kernel_weights(
   return reordered_weights;
 }
 
-int MatMulInt8 ::get_scratch_mem_bytes(int input_bytes) {
+int MatMulBase ::get_scratch_mem_bytes(int input_bytes) {
   const int vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
   return ((input_bytes + vpu_bytes - 1) / vpu_bytes) * vpu_bytes;
 }
@@ -94,7 +94,7 @@ int MatMulInt8 ::get_scratch_mem_bytes(int input_bytes) {
 input_bytes is the number of bytes a single output channel of the kernel
 requires output_channel_count obvs
 */
-int MatMulInt8::get_weights_bytes(int input_bytes, int output_channel_count) {
+int MatMulBase::get_weights_bytes(int input_bytes, int output_channel_count) {
   const int vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
   const int vpu_ring_buffer_length = VPU_INT16_EPV;
 
@@ -120,14 +120,14 @@ int MatMulInt8::get_weights_bytes(int input_bytes, int output_channel_count) {
   return kernel_bytes;
 }
 
-MatMulInt8::Params::Params(int output_slice_channel_count,
+MatMulBase::Params::Params(int output_slice_channel_count,
                            int32_t bytes_per_kernel_channel)
     : output_slice_channel_count(output_slice_channel_count),
       bytes_per_kernel_channel(bytes_per_kernel_channel) {
   // maybe compute k_p_adjust and input_channel_group_count
 }
 
-void mat_mul_generic_impl(MatMulInt8::Params *params, VPURingBuffer *A,
+void mat_mul_generic_impl(MatMulBase::Params *params, VPURingBuffer *A,
       int8_t *T, int32_t output_channel_group,
       int8_t *weights, void (*macc_inst)(xs3_vpu *vpu, const void *addr)) {
   xs3_vpu vpu_mem;
@@ -192,13 +192,13 @@ void mat_mul_generic_impl(MatMulInt8::Params *params, VPURingBuffer *A,
   VSTD(vpu, &A->vD);
 }
 
-void mat_mul_int8_generic_impl(MatMulInt8::Params *params, VPURingBuffer *A,
+void mat_mul_int8_generic_impl(MatMulBase::Params *params, VPURingBuffer *A,
                                int8_t *T, int32_t output_channel_group,
                                int8_t *weights) {
   mat_mul_generic_impl(params, A, T, output_channel_group, weights, VLMACCR);
 }
 
-void mat_mul_binary_generic_impl(MatMulInt8::Params *params, VPURingBuffer *A,
+void mat_mul_binary_generic_impl(MatMulBase::Params *params, VPURingBuffer *A,
                                int8_t *T, int32_t output_channel_group,
                                int8_t *weights) {
   mat_mul_generic_impl(params, A, T, output_channel_group, weights, VLMACCR1);
@@ -206,10 +206,8 @@ void mat_mul_binary_generic_impl(MatMulInt8::Params *params, VPURingBuffer *A,
 
 MatMulDirectFn::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
                                const int input_ch_per_output) {
-  // TODO X.bits_per_element
-  // int bytes_per_copy_per_channel = (input_ch_per_output * X.bits_per_element)
-  // / CHAR_BIT;
-  int bytes_per_copy_per_channel = (input_ch_per_output * CHAR_BIT) / CHAR_BIT;
+
+  int bytes_per_copy_per_channel = (input_ch_per_output * X.element_bits) / CHAR_BIT;
 
   k_height_loop_counter = K.shape.height - 1;
   k_width_loop_counter = K.shape.width - 1;
@@ -218,10 +216,11 @@ MatMulDirectFn::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
       (bytes_per_copy_per_channel / XS3_VPU_VREG_WIDTH_BYTES) - 1;
 
   bytes_per_kernel_channel =
-      K.shape.height * K.shape.width * X.depth * VPU_INT16_EPV;
+      K.shape.height * K.shape.width * bytes_per_copy_per_channel * VPU_INT16_EPV;
 
   int bytes_per_pixel = X.PixelBytes();
 
+  assert(bytes_per_pixel == bytes_per_copy_per_channel);
   inner_x_h_step =
       bytes_per_pixel * K.dilation.col - bytes_per_copy_per_channel;
   inner_x_v_step = bytes_per_pixel * (int)X.width * (int)K.dilation.row -
@@ -303,12 +302,30 @@ void MatMulDirectFn::aggregate_fn(VPURingBuffer *A, int8_t *T,
 #endif  // NN_USE_REF
 }
 
+void MatMulBinaryDirectFn::aggregate_fn(VPURingBuffer *A, int8_t *T,
+                                  int32_t output_channel_group) {
+#ifdef NN_USE_REF
+  mat_mul_binary_direct_impl(this->params, A, T, output_channel_group, weights);
+#else
+  mat_mul_binary_direct_impl_asm(this->params, A, T, output_channel_group, weights);
+#endif  // NN_USE_REF
+}
+
 void MatMulInt8::aggregate_fn(VPURingBuffer *A, int8_t *T,
                               int32_t output_channel_group) {
 #ifdef NN_USE_REF
   mat_mul_int8_generic_impl(this->params, A, T, output_channel_group, weights);
 #else
   mat_mul_int8_generic_impl_asm(this->params, A, T, output_channel_group,
+                                weights);
+#endif  // NN_USE_REF
+}
+void MatMulBinary::aggregate_fn(VPURingBuffer *A, int8_t *T,
+                              int32_t output_channel_group) {
+#ifdef NN_USE_REF
+  mat_mul_binary_generic_impl(this->params, A, T, output_channel_group, weights);
+#else
+  mat_mul_binary_generic_impl_asm(this->params, A, T, output_channel_group,
                                 weights);
 #endif  // NN_USE_REF
 }

@@ -55,7 +55,7 @@ struct Conv2dReorderedWeights {
       : weights(), final_vpu_load_addresses(channels, 0) {}
 };
 
-class MatMulInt8 : public AggregateFn {
+class MatMulBase : public AggregateFn {
  public:
   class Params : public Serialisable {
    public:
@@ -81,14 +81,13 @@ class MatMulInt8 : public AggregateFn {
   int8_t *weights;
 
  public:
+ 
+  MatMulBase(Params *params):params(params){};
+
   /**
    * Setter for the reordered weights
    */
   void setWeights(int8_t *reordered_weights) { weights = reordered_weights; }
-
-  MatMulInt8(Params *params) : params(params){};
-
-  void aggregate_fn(VPURingBuffer *A, int8_t *T, int32_t output_channel_group);
 
   /**
    * @brief Used to reorder the weights from their normal form ([OutputChannel,
@@ -136,6 +135,18 @@ class MatMulInt8 : public AggregateFn {
    * guarentee no OOB accesses.
    */
   static int get_scratch_mem_bytes(int input_bytes);
+};
+
+class MatMulInt8 : public MatMulBase {
+  public:
+  MatMulInt8(MatMulBase::Params *params) : MatMulBase(params) {};
+  void aggregate_fn(VPURingBuffer *A, int8_t *T, int32_t output_channel_group);
+};
+
+class MatMulBinary : public MatMulBase {
+  public:
+  MatMulBinary(MatMulBase::Params *params) : MatMulBase(params) {};
+  void aggregate_fn(VPURingBuffer *A, int8_t *T, int32_t output_channel_group);
 };
 
 class MatMulDirectFn : public AggregateFn {
@@ -190,6 +201,12 @@ class MatMulDirectFn : public AggregateFn {
    */
   void setWeights(int8_t *reordered_weights) { weights = reordered_weights; }
 };
+
+class MatMulBinaryDirectFn : public MatMulDirectFn {
+  public:
+
+  MatMulBinaryDirectFn(Params *params) : MatMulDirectFn(params){};
+  void aggregate_fn(VPURingBuffer *A, int8_t *T, int32_t output_channel_group);};
 
 // Depthwise below here
 // ////////////////////////////////////////////////////////////////////////////
