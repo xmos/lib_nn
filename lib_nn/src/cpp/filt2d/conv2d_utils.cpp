@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <vector>
+#include <limits>
 
 #include "xs3_vpu.h"
 
