@@ -230,7 +230,7 @@ class WindowGeometry {
                            int const dil_cols = 1,
                            int const channel_depth = 1) noexcept
       : shape(height, width, depth,
-              channel_depth),  // asj: channel_depth could be bits_per_element
+              channel_depth*CHAR_BIT),
         start{start_row, start_col},
         stride{stride_rows, stride_cols, stride_chans},
         dilation{dil_rows, dil_cols} {}

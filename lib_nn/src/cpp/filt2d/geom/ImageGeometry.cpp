@@ -22,7 +22,7 @@ mem_stride_t ImageGeometry::GetStride(const ImageVect &vect) const {
 mem_stride_t ImageGeometry::GetStride(const int rows, const int cols,
                                       const int chans) const {
   return rows * this->RowBytes() + cols * this->PixelBytes() +
-         chans * channel_depth;
+         chans * element_bits/CHAR_BIT;
 }
 
 mem_stride_t ImageGeometry::GetStride(const ImageVect &from,
@@ -34,7 +34,7 @@ mem_stride_t ImageGeometry::GetStride(const ImageVect &from,
 bool ImageGeometry::operator==(ImageGeometry other) const {
   return this->height == other.height && this->width == other.width &&
          this->depth == other.depth &&
-         this->channel_depth == other.channel_depth;
+         this->element_bits == other.element_bits;
 }
 
 bool ImageGeometry::IsWithinImage(const ImageVect &coords) const {

@@ -122,9 +122,9 @@ ImToColPadded::Params::Params(const Filter2dGeometry &filter,
   ///       many input channels are needed to compute an output. It is UNRELATED
   ///       to the number of channels we compute in parallel. So we need to
   ///       multiply by the degree of parallelism of the operator.
-  bytes_per_copy_per_channel = channels_per_output_group *
+  bytes_per_copy_per_channel = (channels_per_output_group *
                                filter.window.shape.depth *
-                               filter.window.shape.channel_depth;
+                               filter.window.shape.element_bits)/CHAR_BIT;
 }
 
 int8_t *ImToColPadded::memcopy_fn_impl(int8_t *T, int8_t *X,

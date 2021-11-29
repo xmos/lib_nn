@@ -35,26 +35,26 @@ bool MaxPool2d_Generic::SupportsGeometry(const Filter2dGeometry& filter) {
   ///       making sure image shapes are positive.
 
   if (input.height <= 0 || input.width <= 0 || input.depth <= 0 ||
-      input.channel_depth <= 0)
+      input.element_bits <= 0)
     return false;
   if (output.height <= 0 || output.width <= 0 || output.depth <= 0 ||
-      output.channel_depth <= 0)
+      output.element_bits <= 0)
     return false;
   if (window.shape.height <= 0 || window.shape.width <= 0 ||
-      window.shape.depth <= 0 || window.shape.channel_depth <= 0)
+      window.shape.depth <= 0 || window.shape.element_bits <= 0)
     return false;
 
   // Input and output images must have the same number of channels.
   if (input.depth != output.depth) return false;
 
   // And the elements must be the same size
-  if (input.channel_depth != output.channel_depth) return false;
+  if (input.element_bits != output.element_bits) return false;
 
   // Window depth and channel stride must each be exactly 1
   if (window.shape.depth != 1 || window.stride.channel != 1) return false;
 
   // Window channel depth must equal input chanel depth.
-  if (window.shape.channel_depth != input.channel_depth) return false;
+  if (window.shape.element_bits != input.element_bits) return false;
 
   // Channel count must be a multiple of 4 to guarantee correct alignment
   if (input.depth % 4 != 0) return false;

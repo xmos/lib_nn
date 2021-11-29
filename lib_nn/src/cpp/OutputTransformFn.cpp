@@ -359,8 +359,8 @@ void backprop_output_clamps_to_accu_limits(MulsAndBias &activationParams,
     for (auto a : activationParams) {
       printf("bias        : %f -> %f\n", a.original_bias, a.bias);
       printf("multiplier  : %f -> %f\n", a.original_multiplier, a.multiplier);
-      printf("accu_min_val: %ld -> %ld\n", a.original_accu_min_val, a.accu_min_val);
-      printf("accu_max_val: %ld -> %ld\n", a.original_accu_max_val, a.accu_max_val);
+      printf("accu_min_val: %d -> %d\n", a.original_accu_min_val, a.accu_min_val);
+      printf("accu_max_val: %d -> %d\n", a.original_accu_max_val, a.accu_max_val);
     }
   }
 }
