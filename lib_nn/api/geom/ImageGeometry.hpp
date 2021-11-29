@@ -3,11 +3,18 @@
 #include <cassert>
 #include <functional>
 #include <iostream>
+#include <cstdint>
 
 #include "nn_types.h"
 #include "util.hpp"
 
 namespace nn {
+
+// TODO: [astew] CHAR_BIT not defined if I build with Cygwin or gcc+Ubuntu+WSL.
+// Not in <limits> either.
+#ifndef CHAR_BIT
+#define CHAR_BIT (sizeof(char) * 8)
+#endif
 
 /**
  * Represents the geometry of a 2D multi-channel image.
