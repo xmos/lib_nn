@@ -1,0 +1,113 @@
+
+
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <iostream>
+#include <memory>
+#include <vector>
+
+#include "Rand.hpp"
+#include "RefOps.hpp"
+#include "geom/Filter2dGeometry.hpp"
+#include "geom/util.hpp"
+#include "gtest/gtest.h"
+#include "nn_types.h"
+#include "ref_tests.hpp"
+
+using namespace nn;
+using namespace nn::test;
+
+const int bnn_elements_per_word = 32;
+
+class BNNConv2dDenseBinaryReferenceTestA
+    : public ::testing::TestWithParam<Filter2dGeometry> {};
+
+TEST_P(BNNConv2dDenseBinaryReferenceTestA, NoPadding) {
+  auto geom = GetParam();
+
+  int packed_weight_word_count = geom.window.shape.ElementCount()/bnn_elements_per_word 
+    * geom.output.depth;
+
+  auto packed_filter =
+      std::vector<int32_t>(packed_weight_word_count, 0);
+
+  int packed_input_word_count = geom.input.ElementCount()/bnn_elements_per_word ;
+  auto packed_input =
+      std::vector<int32_t>(packed_input_word_count, 0);
+
+  int packed_output_word_count = geom.output.ElementCount()/bnn_elements_per_word ;
+  auto expected_packed_output =
+      std::vector<int32_t>(packed_output_word_count, 0);
+
+  auto thresholds = std::vector<int32_t>(geom.output.depth, 0);
+
+  auto output = nn::test::ops::ref::Conv2dBNNBinaryOutReference(
+    geom, packed_input.data(), packed_filter.data(), thresholds.data());
+  ASSERT_EQ(output, expected_packed_output);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    Basic, BNNConv2dDenseBinaryReferenceTestA,
+    ::testing::Values(
+        Filter2dGeometry(ImageGeometry(1, 1, 32), ImageGeometry(1, 1, 32),
+                         WindowGeometry(1, 1, 32)),
+        Filter2dGeometry(ImageGeometry(2, 2, 32), ImageGeometry(2, 2, 32),
+                         WindowGeometry(1, 1, 32)),
+        Filter2dGeometry(ImageGeometry(2, 2, 32), ImageGeometry(1, 1, 32),
+                         WindowGeometry(2, 2, 32))));
+
+static auto iterA = nn::test::ParamedRandIter<Filter2dGeometry, SimpleFilter>(
+    100, SimpleFilter(false, false));
+INSTANTIATE_TEST_SUITE_P(Random, BNNConv2dDenseBinaryReferenceTestA,
+                         ::testing::ValuesIn(iterA.begin(), iterA.end()));
+
+class BNNConv2dDenseIntReferenceTestA
+    : public ::testing::TestWithParam<Filter2dGeometry> {};
+
+TEST_P(BNNConv2dDenseIntReferenceTestA, NoPadding) {
+  auto geom = GetParam();
+
+  int packed_weight_word_count = geom.window.shape.ElementCount()/bnn_elements_per_word 
+    * geom.output.depth;
+
+  auto packed_filter =
+      std::vector<int32_t>(packed_weight_word_count, 0);
+
+  int packed_input_word_count = geom.input.ElementCount()/bnn_elements_per_word ;
+  auto packed_input =
+      std::vector<int32_t>(packed_input_word_count, 0);
+
+  int packed_output_word_count = geom.output.ElementCount() ;
+  auto expected_packed_output =
+      std::vector<int8_t>(packed_output_word_count, 0);
+
+  auto post_activation_multiplier = std::vector<float>(geom.output.depth, 1);
+  auto post_activation_bias = std::vector<float>(geom.output.depth, 0);
+  
+  const int clamp_min = INT32_MIN;
+  const int clamp_max = INT32_MAX;
+
+  auto output = nn::test::ops::ref::Conv2dBNNIntOutReference(
+    geom, packed_input.data(), packed_filter.data(), 
+    post_activation_multiplier.data(),
+    post_activation_bias.data(),
+    clamp_min, clamp_max
+    );
+  ASSERT_EQ(output, expected_packed_output);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    Basic, BNNConv2dDenseIntReferenceTestA,
+    ::testing::Values(
+        Filter2dGeometry(ImageGeometry(1, 1, 32), ImageGeometry(1, 1, 32),
+                         WindowGeometry(1, 1, 32)),
+        Filter2dGeometry(ImageGeometry(2, 2, 32), ImageGeometry(2, 2, 32),
+                         WindowGeometry(1, 1, 32)),
+        Filter2dGeometry(ImageGeometry(2, 2, 32), ImageGeometry(1, 1, 32),
+                         WindowGeometry(2, 2, 32))));
+
+static auto iterD = nn::test::ParamedRandIter<Filter2dGeometry, SimpleFilter>(
+    100, SimpleFilter(false, false));
+INSTANTIATE_TEST_SUITE_P(Random, BNNConv2dDenseIntReferenceTestA,
+                         ::testing::ValuesIn(iterD.begin(), iterD.end()));

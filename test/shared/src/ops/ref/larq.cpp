@@ -101,7 +101,7 @@ std::vector<DstScalar> LarqConv2dBinaryReference(
                  filter_geometry.input.depth/ channels_per_word},
   };
 
-  auto output_data = std::vector<DstScalar>(filter_geometry.output.ElementCount());
+  auto output_data = std::vector<DstScalar>(filter_geometry.output.ElementCount()/channels_per_output_word);
 
   ce::core::bconv2d::BConv2DReference<std::uint32_t, DstScalar>(
       &params, 
