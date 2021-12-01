@@ -49,31 +49,31 @@ class ImageGeometry {
         element_bits(element_bits) {}
 
   /**
-   * The total number of pixels in the image
+   * The total number of pixels in the image, i.e. height x width
    */
   int inline const PixelCount() const { return this->height * this->width; }
 
   /**
-   * The number of image elements per pixel
+   * The number of image elements per pixel, i.e. channels
    */
   int inline const PixelElements() const { return this->depth; }
 
   /**
-   * The number of image elements per row of the image
+   * The number of image elements per row of the image, i.e. width x channels
    */
   int inline const RowElements() const {
     return this->width * this->PixelElements();
   }
 
   /**
-   * The number of image elements per column of the image
+   * The number of image elements per column of the image, i.e. height x channels
    */
   int inline const ColElements() const {
     return this->height * this->PixelElements();
   }
 
   /**
-   * The total number of image elements
+   * The total number of image elements, i.e. width x height x channels
    */
   int inline const ElementCount() const {
     return this->height * this->RowElements();

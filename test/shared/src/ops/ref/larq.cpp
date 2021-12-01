@@ -1,33 +1,18 @@
-
-// #include "RefOps.hpp"
-// #include "conv2d_utils.hpp"
-// #include "tensorflow/lite/kernels/internal/reference/integer_ops/conv.h"
-// #include "tensorflow/lite/kernels/internal/reference/integer_ops/depthwise_conv.h"
-
-#include "larq_compute_engine/core/bconv2d/output_transform.h"
 #include "larq_compute_engine/core/bitpacking/bitpack.h"
-#include "larq_compute_engine/core/types.h"
-#include "nn_operator.h"
 
 using namespace tflite;
 
 #include "larq_compute_engine/core/bconv2d/reference.h"
 
-#include "Conv2d.hpp"
-#include "Rand.hpp"
 #include "RefOps.hpp"
 #include "geom/Filter2dGeometry.hpp"
-#include "geom/util.hpp"
-#include "nn_types.h"
 
 using namespace nn;
 using namespace nn::test::ops::ref;
 
-namespace compute_engine {
+using namespace compute_engine::core;
 
 namespace ce = compute_engine;
-
-namespace core {
 
 extern "C" void larq_ref_bsign(int8_t* input, int32_t* output,
                                size_t inputLength, int32_t zero_point) {
@@ -52,11 +37,10 @@ void GetOutputTransform(OutputTransform<DstScalar>& output_transform,
 }
 
 // Fill in the OutputTransform values for bitpacked outputs
-void GetOutputTransform(OutputTransform<core::TBitpacked>& output_transform,
+void GetOutputTransform(OutputTransform<ce::core::TBitpacked>& output_transform,
                         const int32_t* thresholds) {
   output_transform.thresholds = thresholds;
 }
-}  // namespace core
 
 
 template <typename DstScalar>
@@ -65,13 +49,13 @@ std::vector<DstScalar> LarqConv2dBinaryReference(
     const int32_t* packed_input_data,
     const int32_t* packed_filter_data,
     const int channels_per_output_word,
-    const ce::core::OutputTransform<DstScalar>& output_transform
+    const OutputTransform<DstScalar>& output_transform
     ) {
 
   const int batches = 1;
   const int channels_per_word = 32;
 
-  compute_engine::core::bconv2d::BConv2DParams params;
+  ce::core::bconv2d::BConv2DParams params;
 
   params.filter_width = filter_geometry.window.shape.width;
   params.filter_height = filter_geometry.window.shape.height;
@@ -119,7 +103,7 @@ std::vector<DstScalar> LarqConv2dBinaryReference(
 
   auto output_data = std::vector<DstScalar>(filter_geometry.output.ElementCount());
 
-  compute_engine::core::bconv2d::BConv2DReference<std::uint32_t, DstScalar>(
+  ce::core::bconv2d::BConv2DReference<std::uint32_t, DstScalar>(
       &params, 
       shape.input, 
       packed_input_data, 
@@ -133,18 +117,17 @@ std::vector<DstScalar> LarqConv2dBinaryReference(
   return output_data;
 }
 
-std::vector<int8_t> Conv2dBNNIntOutReference(
+std::vector<int8_t> nn::test::ops::ref::Conv2dBNNIntOutReference(
     const Filter2dGeometry& filter_geometry, 
     const int32_t* packed_input_data,
     const int32_t* packed_filter_data,
-    int8_t* packed_output_data,
     const float* post_activation_multiplier, 
     const float* post_activation_bias,
     const int clamp_min, const int clamp_max
     ) 
 {
-  ce::core::OutputTransform<std::int8_t> output_transform;
-  ce::core::GetOutputTransform(output_transform, clamp_min, clamp_max,
+  OutputTransform<std::int8_t> output_transform;
+  GetOutputTransform(output_transform, clamp_min, clamp_max,
                                post_activation_multiplier,
                                post_activation_bias);
 
@@ -154,21 +137,18 @@ std::vector<int8_t> Conv2dBNNIntOutReference(
     packed_filter_data, channels_per_output_word, output_transform);
 }
 
-std::vector<int32_t> Conv2dBNNBinaryOutReference(
+std::vector<int32_t> nn::test::ops::ref::Conv2dBNNBinaryOutReference(
     const Filter2dGeometry& filter_geometry, 
     const int32_t* packed_input_data,
     const int32_t* packed_filter_data,
-    int32_t* packed_output_data,
     const int32_t* thresholds
     ) 
 {
-  ce::core::OutputTransform<std::int32_t> output_transform;
-  ce::core::GetOutputTransform(output_transform, thresholds);
+  OutputTransform<std::int32_t> output_transform;
+  GetOutputTransform(output_transform, thresholds);
 
   const unsigned channels_per_output_word = 32;
 
   return LarqConv2dBinaryReference<std::int32_t>(filter_geometry, packed_input_data, 
     packed_filter_data, channels_per_output_word, output_transform);
-}
-
 }
