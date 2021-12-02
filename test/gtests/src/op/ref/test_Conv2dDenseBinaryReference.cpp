@@ -55,7 +55,18 @@ INSTANTIATE_TEST_SUITE_P(
         Filter2dGeometry(ImageGeometry(2, 2, 32), ImageGeometry(2, 2, 32),
                          WindowGeometry(1, 1, 32)),
         Filter2dGeometry(ImageGeometry(2, 2, 32), ImageGeometry(1, 1, 32),
-                         WindowGeometry(2, 2, 32))));
+                         WindowGeometry(2, 2, 32)),
+        Filter2dGeometry(ImageGeometry(2, 2, 256), ImageGeometry(1, 1, 32),
+                         WindowGeometry(2, 2, 256)),
+        Filter2dGeometry(ImageGeometry(2, 2, 32), ImageGeometry(1, 1, 256),
+                         WindowGeometry(2, 2, 32)),
+        Filter2dGeometry(ImageGeometry(2, 2, 64), ImageGeometry(1, 1, 64),
+                         WindowGeometry(2, 2, 64)),
+        Filter2dGeometry(ImageGeometry(8, 8, 32), ImageGeometry(3, 3, 32),
+                         WindowGeometry(6, 6, 32)),
+        Filter2dGeometry(ImageGeometry(8, 8, 32), ImageGeometry(8, 8, 32),
+                         WindowGeometry(1, 1, 32))
+                         ));
 
 static auto iterA = nn::test::ParamedRandIter<Filter2dGeometry, SimpleFilter>(
     100, SimpleFilter(false, false));
@@ -68,11 +79,11 @@ class BNNConv2dDenseIntReferenceTestA
 TEST_P(BNNConv2dDenseIntReferenceTestA, NoPadding) {
   auto geom = GetParam();
 
-  int packed_weight_word_count = geom.window.shape.ElementCount()/bnn_elements_per_word 
-    * geom.output.depth;
+  int receptive_volume = geom.window.shape.ElementCount();
+  int packed_weight_word_count = (receptive_volume * geom.output.depth)/bnn_elements_per_word;
 
   auto packed_filter =
-      std::vector<int32_t>(packed_weight_word_count, 0);
+      std::vector<int32_t>(packed_weight_word_count, ~0);
 
   int packed_input_word_count = geom.input.ElementCount()/bnn_elements_per_word ;
   auto packed_input =
@@ -82,8 +93,9 @@ TEST_P(BNNConv2dDenseIntReferenceTestA, NoPadding) {
   auto expected_packed_output =
       std::vector<int8_t>(packed_output_word_count, 0);
 
-  auto post_activation_multiplier = std::vector<float>(geom.output.depth, 1);
-  auto post_activation_bias = std::vector<float>(geom.output.depth, 0);
+  int val = 24; //not special - just a target for the scaled accumulator
+  auto post_activation_multiplier = std::vector<float>(geom.output.depth, (float)val/receptive_volume);
+  auto post_activation_bias = std::vector<float>(geom.output.depth, 0.);
   
   const int clamp_min = INT32_MIN;
   const int clamp_max = INT32_MAX;
@@ -94,7 +106,11 @@ TEST_P(BNNConv2dDenseIntReferenceTestA, NoPadding) {
     post_activation_bias.data(),
     clamp_min, clamp_max
     );
-  ASSERT_EQ(output, expected_packed_output);
+
+  //[asj] The 2 is due to the random shift left in the output transform
+  auto expected = std::vector<int8_t>(output.size(), val*2);
+
+  ASSERT_EQ(output, expected);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -105,7 +121,18 @@ INSTANTIATE_TEST_SUITE_P(
         Filter2dGeometry(ImageGeometry(2, 2, 32), ImageGeometry(2, 2, 32),
                          WindowGeometry(1, 1, 32)),
         Filter2dGeometry(ImageGeometry(2, 2, 32), ImageGeometry(1, 1, 32),
-                         WindowGeometry(2, 2, 32))));
+                         WindowGeometry(2, 2, 32)),
+        Filter2dGeometry(ImageGeometry(2, 2, 256), ImageGeometry(1, 1, 32),
+                         WindowGeometry(2, 2, 256)),
+        Filter2dGeometry(ImageGeometry(2, 2, 32), ImageGeometry(1, 1, 256),
+                         WindowGeometry(2, 2, 32)),
+        Filter2dGeometry(ImageGeometry(2, 2, 64), ImageGeometry(1, 1, 64),
+                         WindowGeometry(2, 2, 64)),
+        Filter2dGeometry(ImageGeometry(8, 8, 32), ImageGeometry(3, 3, 32),
+                         WindowGeometry(6, 6, 32)),
+        Filter2dGeometry(ImageGeometry(8, 8, 32), ImageGeometry(8, 8, 32),
+                         WindowGeometry(1, 1, 32))
+                         ));
 
 static auto iterD = nn::test::ParamedRandIter<Filter2dGeometry, SimpleFilter>(
     100, SimpleFilter(false, false));
