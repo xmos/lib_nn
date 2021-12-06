@@ -8,8 +8,9 @@
 
 #include "Serialisable.hpp"
 #include "Utils.hpp"
-#include "geom/ImageGeometry.hpp"
+#include "geom/WindowGeometry.hpp"
 #include "vpu.hpp"
+#include "AggregateFn.hpp"
 
 namespace nn {
 
@@ -284,6 +285,162 @@ class OT_int8 : public OutputTransformFnInt8 {
 };
 
 /**
+ * @brief Output Transform class to converting 32 bit accumulators to an 8 bit
+ * output space.
+ *
+ */
+class OT_int8_clamped : public OutputTransformFnInt8 {
+ public:
+  class Params : public Serialisable {
+   public:
+    int32_t output_slice_channel_count;
+    int16_t initial_shift;
+    int16_t final_shr;
+    int16_t clamp_near;
+    int16_t clamp_far_0;
+    int16_t clamp_far_1;
+
+   public:
+    /**
+     * @brief Construct a new Params object
+     *
+     * @param output_slice_channel_count The count of output channels to be
+     * computed by this parameter set.
+     */
+    Params(int32_t output_slice_channel_count, int16_t initial_shift,
+           int16_t final_shr)
+        : output_slice_channel_count(output_slice_channel_count),
+          initial_shift(initial_shift),
+          final_shr(final_shr) {}
+  };
+
+ private:
+  /**
+   * @brief This describes the channels over which this class will perform its
+   * operation(OutputTransform) and how each channel will transformed.
+   */
+  Params *params;
+  int16_t *multipliers_and_biases;
+
+ public:
+  OT_int8_clamped(Params *params) : params(params){};
+
+  int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
+                              int32_t output_channel_group);
+
+  void setMultipliersAndBiases(int16_t *m) {
+    multipliers_and_biases = m;
+    assert(m != nullptr);
+    assert(is_aligned(multipliers_and_biases, 4));
+  }
+};
+
+
+/**
+ * @brief Output Transform class to converting 32 bit accumulators to a 1 bit
+ * output space.
+ *
+ */
+
+typedef int16_t threshold_t;
+class OT_binary : public OutputTransformFn {
+
+ public:
+  class Params : public Serialisable {
+   public:
+    int32_t output_slice_channel_count;
+
+   public:
+    /**
+     * @brief Construct a new Params object
+     *
+     * @param output_slice_channel_count The count of output channels to be
+     * computed by this parameter set.
+     */
+    Params(int32_t output_slice_channel_count)
+        : output_slice_channel_count(output_slice_channel_count) {}
+  };
+
+ private:
+  /**
+   * @brief This describes the channels over which this class will perform its
+   * operation(OutputTransform) and how each channel will transformed.
+   */
+  Params *params;
+  threshold_t *thresholds;
+
+ public:
+  OT_binary(Params *params) : params(params){};
+
+  int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
+                              int32_t output_channel_group);
+
+  static std::vector<threshold_t> 
+    adjust_thresholds(std::vector<int32_t>& thresholds, WindowGeometry &K, Conv2dReorderedWeights& reordered_weights){
+      // std::cerr << "thresholds.size(): " <<thresholds.size()<< std::endl; 
+      std::vector<threshold_t> adjusted_thresholds(thresholds.size());
+
+      // Larq assumes xor-popcount is used for the aggregation but the xcore uses
+      // sum(xor * 2 - 1)/2. Over a receptive volume this means 
+      // sum(xor * 2 - 1)/2 = xor-popcount - receptive_field/2
+      // or
+      // xor-popcount = sum(xor * 2 - 1)/2 + receptive_field/2
+
+      int receptive_field = K.shape.ElementCount();
+      int receptive_bytes = receptive_field/8;
+      
+      std::cerr << "receptive_bytes: " <<receptive_bytes<< " " << K.shape <<std::endl;
+
+      //the number of useful bytes loaded on the final load of the kernel
+      int final_load_bytes = (receptive_bytes%32);
+      if (final_load_bytes == 0)
+        final_load_bytes = 32;
+
+      //the number of useless bytes loaded on the final load of the kernel
+      int final_overload_bytes = 32 - final_load_bytes;
+      std::cerr << "final_load_bytes: " <<final_load_bytes <<std::endl; 
+      std::cerr << "final_overload_bytes: " <<final_overload_bytes <<std::endl; 
+
+      for (int ch=0;ch<thresholds.size();++ch){
+        adjusted_thresholds[ch] = thresholds[ch] - receptive_field/2;
+
+        int final_vpu_load_address = reordered_weights.final_vpu_load_addresses[ch];
+        printf("ch %d final_vpu_load_addresses: %d\n", ch, final_vpu_load_address);
+
+        // for(int i=0;i< final_load_bytes ;i++){
+        //   printf("f:%d ", reordered_weights.weights[final_vpu_load_address+i]);
+        // }
+
+        int8_t padding_byte = 0;
+        int acc = 0;
+        for (int i = final_load_bytes; i < 32; i++) {
+          int8_t b = reordered_weights.weights[final_vpu_load_address+i];
+
+          int8_t v = (padding_byte ^ b);
+          acc += (2 * __builtin_popcount(~v) - 32) / 2;
+        }
+        printf("acc: %d\n", acc);
+
+      }
+      return adjusted_thresholds;
+    }
+
+  void setThresholds(threshold_t *th) {
+    thresholds = th;
+    assert(th != nullptr);
+    assert(is_aligned(thresholds, 4));
+  }
+};
+
+
+
+
+
+
+
+
+
+/**
  * This output transform assumes the int8_t channel data is in vR[] of the
  * accumulator.
  */
@@ -336,6 +493,19 @@ class DirectWriteOutputTransform
   virtual int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *acc,
                                       int32_t output_channel_group) override;
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /**
  * This output transform applies a per-channel, rounding, saturating right-shift

@@ -527,6 +527,74 @@ int8_t *OT_int8::output_transform_fn(int8_t *Y, VPURingBuffer *A,
 #endif  // NN_USE_REF
 }
 
+
+int8_t *output_transform_fn_int_clamped_impl(const OT_int8_clamped::Params *params, int8_t *Y,
+                                 VPURingBuffer *A, int32_t output_channel_group,
+                                 int16_t *multipliers_and_biases) {
+
+ }
+
+
+int8_t *OT_int8_clamped::output_transform_fn(int8_t *Y, VPURingBuffer *A,
+                                     int32_t output_channel_group) {
+#ifdef NN_USE_REF
+  return output_transform_fn_int_clamped_impl(this->params, Y, A, output_channel_group,
+                                  multipliers_and_biases);
+#else
+  // return output_transform_fn_impl_asm_stub(this->params, Y, A, output_channel_group,
+  //                                          multipliers_and_biases);
+#endif  // NN_USE_REF
+}
+
+int8_t *output_transform_fn_binary_impl(const OT_binary::Params *params, int8_t *Y,
+                                 VPURingBuffer *A, int32_t output_channel_group,
+                                 threshold_t *thresholds) {
+  xs3_vpu vpu_mem;
+  xs3_vpu *vpu = &vpu_mem;
+
+  // This can only process 16 channels at a time
+  int output_count = VPU_INT16_EPV;
+
+  threshold_t * cur_thresholds =
+      thresholds + output_channel_group * VPU_INT16_EPV ;
+
+  std::cerr << "output_channel_group: " << output_channel_group << std::endl; 
+
+  VSETC(vpu, MODE_S16);
+
+  VLDR(vpu, &A->vR);
+  VLDD(vpu, &A->vD);
+
+  // vpu_vector_t temp_mem;
+  // for (int i = 0; i < VPU_INT16_EPV; ++i)
+  //   temp_mem.s16[i] = 0;
+
+  // VLSAT(vpu, &temp_mem);
+  VLADD(vpu, cur_thresholds);
+  VDEPTH1(vpu);
+
+  int mask = 0x3; // this stores 2 bytes (16 channels)
+  VSTRPV(vpu, Y, mask);
+  Y += output_count;
+  return Y;
+}
+
+int8_t *OT_binary::output_transform_fn(int8_t *Y, VPURingBuffer *A,
+                                     int32_t output_channel_group) {
+#ifdef NN_USE_REF
+  return output_transform_fn_binary_impl(this->params, Y, A, output_channel_group,
+                                  thresholds);
+#else
+  // return output_transform_fn_binary_impl_asm(this->params, Y, A, output_channel_group,
+  //                                          thresholds);
+#endif  // NN_USE_REF
+}
+
+
+
+
+
+
 /******************************
  * DirectWriteOutputTransform
  *****************************/
@@ -557,6 +625,13 @@ int8_t *DirectWriteOutputTransform::output_transform_fn(
 
   return &Y[count];
 }
+
+
+
+
+
+
+
 
 /******************************
  * ShiftInt8OutputTransform
