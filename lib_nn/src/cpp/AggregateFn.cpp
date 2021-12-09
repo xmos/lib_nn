@@ -136,7 +136,7 @@ MatMulBase::Params::Params(int output_slice_channel_count,
     : output_slice_channel_count(output_slice_channel_count),
       bytes_per_kernel_channel(bytes_per_kernel_channel) {
   // maybe compute k_p_adjust and input_channel_group_count
-  printf("output_slice_channel_count:%d bytes_per_kernel_channel:%d\n", output_slice_channel_count, bytes_per_kernel_channel);
+  // printf("output_slice_channel_count:%d bytes_per_kernel_channel:%d\n", output_slice_channel_count, bytes_per_kernel_channel);
 }
 
 /*
@@ -151,20 +151,18 @@ void mat_mul_generic_impl(MatMulBase::Params *params, VPURingBuffer *A,
   VSETC(vpu, MODE_S8);
   VCLRDR(vpu);
 
-  std::cerr << "mat_mul_generic_impl: output_channel_group: " << output_channel_group << std::endl;  
+  // std::cerr << "mat_mul_generic_impl: output_channel_group: " << output_channel_group << std::endl;  
 
   const int32_t vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
   const int32_t vpu_epv = VPU_INT16_EPV;
 
   const int32_t first_output_channel = output_channel_group * vpu_epv;
 
-  std::cerr << "mat_mul_generic_impl: first_output_channel: " << first_output_channel << std::endl;  
+  // std::cerr << "mat_mul_generic_impl: first_output_channel: " << first_output_channel << std::endl;  
 
   // Point K_p at the beginning of the first output channel
   int8_t *K_p = (int8_t *)weights + params->bytes_per_kernel_channel *
                                         first_output_channel;  // changes
-
-    printf("weights:%p\n", weights);
   int step = vpu_bytes;
   int t = params->output_slice_channel_count - first_output_channel;
   t -= (vpu_epv - 1);
@@ -177,7 +175,7 @@ void mat_mul_generic_impl(MatMulBase::Params *params, VPURingBuffer *A,
       (params->bytes_per_kernel_channel) / vpu_bytes;
 
 
-  std::cerr << "mat_mul_generic_impl: input_channel_group_count: " << input_channel_group_count << std::endl;  
+  // std::cerr << "mat_mul_generic_impl: input_channel_group_count: " << input_channel_group_count << std::endl;  
 
   // The tail loop must execute in order to rotate the ring buffer to leave the
   // results in 0->N-1 of the ring buffer
@@ -188,7 +186,7 @@ void mat_mul_generic_impl(MatMulBase::Params *params, VPURingBuffer *A,
 
   int8_t *D_p = T;
 
-  std::cerr << "input_channel_group_count: " << input_channel_group_count << std::endl;
+  // std::cerr << "input_channel_group_count: " << input_channel_group_count << std::endl;
   for (int p = 0; p < input_channel_group_count; ++p) {
     VLDC(vpu, D_p);
 
@@ -196,23 +194,22 @@ void mat_mul_generic_impl(MatMulBase::Params *params, VPURingBuffer *A,
 
     for (int l = 0; l < VPU_INT16_EPV - 1; l++) {
       macc_inst(vpu, K_p);
-      printf("%p\n", K_p);
+      // printf("%p\n", K_p);
       K_p += XS3_VPU_VREG_WIDTH_BYTES;
     }
     macc_inst(vpu, K_p);
-    printf("%p\n", K_p);
+    // printf("%p\n", K_p);
     K_p += step;
   }
 
   VLDC(vpu, D_p);
 
   int tail_loops = vpu_epv - 1 + step / vpu_bytes;
-  std::cerr << "tail loops: " << tail_loops << " k_p_adjust:" << k_p_adjust<<std::endl;
+  // std::cerr << "tail loops: " << tail_loops << " k_p_adjust:" << k_p_adjust<<std::endl;
   // Note: This forces kernels to be padded to word aligned boundaries TODO put
   // an assert on this
   for (int l = 0; l < tail_loops; l++) {
     macc_inst(vpu, K_p);
-    printf("%p\n", K_p);
     K_p += k_p_adjust;
   }
 

@@ -376,7 +376,7 @@ class OT_binary : public OutputTransformFn {
                               int32_t output_channel_group);
 
   static std::vector<threshold_t> 
-    adjust_thresholds(std::vector<int32_t>& thresholds, WindowGeometry &K, Conv2dReorderedWeights& reordered_weights){
+    adjust_thresholds(std::vector<int32_t>& thresholds, int input_channels, WindowGeometry &K, Conv2dReorderedWeights& reordered_weights){
       // std::cerr << "thresholds.size(): " <<thresholds.size()<< std::endl; 
       std::vector<threshold_t> adjusted_thresholds(thresholds.size());
 
@@ -386,10 +386,13 @@ class OT_binary : public OutputTransformFn {
       // or
       // xor-popcount = sum(xor * 2 - 1)/2 + receptive_field/2
 
-      int receptive_field = K.shape.ElementCount();
+      // std::cerr << K << std::endl;
+      int receptive_field = input_channels * K.shape.width * K.shape.height;
+
+      // printf("receptive_field: %d\n", receptive_field);
       int receptive_bytes = receptive_field/8;
       
-      std::cerr << "receptive_bytes: " <<receptive_bytes<< " " << K.shape <<std::endl;
+      // std::cerr << "receptive_bytes: " <<receptive_bytes<< " " << K.shape <<std::endl;
 
       //the number of useful bytes loaded on the final load of the kernel
       int final_load_bytes = (receptive_bytes%32);
@@ -397,30 +400,28 @@ class OT_binary : public OutputTransformFn {
         final_load_bytes = 32;
 
       //the number of useless bytes loaded on the final load of the kernel
-      int final_overload_bytes = 32 - final_load_bytes;
-      std::cerr << "final_load_bytes: " <<final_load_bytes <<std::endl; 
-      std::cerr << "final_overload_bytes: " <<final_overload_bytes <<std::endl; 
+      // int final_overload_bytes = 32 - final_load_bytes;
+      // std::cerr << "final_load_bytes: " <<final_load_bytes <<std::endl; 
+      // std::cerr << "final_overload_bytes: " <<final_overload_bytes <<std::endl; 
 
+      assert(final_load_bytes > 0);
       for (int ch=0;ch<thresholds.size();++ch){
-        adjusted_thresholds[ch] = thresholds[ch] - receptive_field/2;
 
         int final_vpu_load_address = reordered_weights.final_vpu_load_addresses[ch];
-        printf("ch %d final_vpu_load_addresses: %d\n", ch, final_vpu_load_address);
-
-        // for(int i=0;i< final_load_bytes ;i++){
-        //   printf("f:%d ", reordered_weights.weights[final_vpu_load_address+i]);
-        // }
-
         int8_t padding_byte = 0;
         int acc = 0;
         for (int i = final_load_bytes; i < 32; i++) {
           int8_t b = reordered_weights.weights[final_vpu_load_address+i];
-
+          
           int8_t v = (padding_byte ^ b);
-          acc += (2 * __builtin_popcount(~v) - 32) / 2;
+          int t= ((2 * __builtin_popcount((~v)&0xff) - CHAR_BIT) / 2);
+          // printf("%2x %2x -> %d\n", b, v, t);
+          acc += t;
         }
-        printf("acc: %d\n", acc);
+        // printf("ch %d final_vpu_load_addresses: %d  acc: %d\n", ch, final_vpu_load_address, acc);
 
+        adjusted_thresholds[ch] = thresholds[ch] - receptive_field/2 - acc;
+        // printf("%d %d -> %d\n",ch, thresholds[ch], adjusted_thresholds[ch]);
       }
       return adjusted_thresholds;
     }

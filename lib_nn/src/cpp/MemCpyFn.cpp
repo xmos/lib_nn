@@ -184,8 +184,10 @@ ImToColValid::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
   // TODO
   // int bytes_per_copy_per_channel = (input_ch_per_output * X.bits_per_element)
   // / CHAR_BIT;
-  int bytes_per_copy_per_channel = (input_ch_per_output * CHAR_BIT) / CHAR_BIT;
+  // printf("X.element_bits: %d\n", X.element_bits);
+  int bytes_per_copy_per_channel = (input_ch_per_output * X.element_bits) / CHAR_BIT;
 
+  // printf("bytes_per_copy_per_channel: %d\n", bytes_per_copy_per_channel);
   bytes_per_pixel = X.PixelBytes();
   bytes_per_h_line = X.RowBytes();
 
@@ -195,6 +197,7 @@ ImToColValid::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
   input_channel_groups =
       (bytes_per_copy_per_channel + XS3_VPU_VREG_WIDTH_BYTES - 1) /
       XS3_VPU_VREG_WIDTH_BYTES;
+  // printf("input_channel_groups: %d\n", input_channel_groups);
   input_channel_groups -= 1;
 
   int bytes_actually_copied =
@@ -238,11 +241,14 @@ int8_t *ImToColValid::memcopy_fn_impl(int8_t *T, int8_t *X,
 
   int8_t *T_in = T;
 
+  // printf("params->input_channel_groups %d\n", params->input_channel_groups);
+
   for (int32_t i_height = params->input_height; i_height >= 0; i_height--) {
     for (int32_t i_width = params->input_width; i_width >= 0; i_width--) {
       // This loop copies a whole pixel
       for (int32_t i_ch_group = params->input_channel_groups; i_ch_group >= 0;
            i_ch_group--) {
+            //  printf("%d\n", i_ch_group);
         VLDD(vpu, X_cur_p);
         X_cur_p += XS3_VPU_VREG_WIDTH_BYTES;
 

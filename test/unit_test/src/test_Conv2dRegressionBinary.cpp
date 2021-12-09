@@ -23,7 +23,7 @@ using namespace nn::test;
 static auto rng = Rand(69);
 
 const int max_k_channels = 512;
-const int itt_count = 32;
+const int itt_count = 1;
 
 struct BinaryKernelStimulus {
   std::vector<int32_t> weights;
@@ -36,12 +36,14 @@ struct BinaryKernelStimulus {
 
   BinaryKernelStimulus(Filter2dGeometry &geom)
       : weights(geom.window.shape.height * geom.window.shape.width *
-                    geom.output.depth * geom.input.depth,
+                    geom.output.depth * geom.input.depth/(CHAR_BIT*sizeof(int32_t)),
                 0),
         bias(geom.output.depth),
         eff_mult(geom.output.depth), 
         thresholds(geom.output.depth),
-        input(geom.input.height * geom.input.width * geom.input.depth, 0),
+
+        //We add 8 to the input to allow over reading, if it effects the result then it's a bug.
+        input(geom.input.height * geom.input.width * geom.input.depth/(CHAR_BIT*sizeof(int32_t)) + 8, 0),
         clamp_high(0),
         clamp_low(0){};
 };
@@ -60,7 +62,7 @@ BinaryKernelStimulus create_simple_binary_stimulus(Filter2dGeometry &geom) {
   ks.clamp_high = INT32_MAX; //TODO
   ks.clamp_low = INT32_MIN;
 
-  int receptive_volume = geom.window.shape.ElementCount();
+  int receptive_volume = geom.input.depth * geom.window.shape.height  * geom.window.shape.width;
 
   //accu = [0, receptive_volume], map that to [-128, 127]*scalar, where scalar [0.5, 2]
   for (int ch = 0; ch < geom.output.depth; ch++) {
@@ -127,9 +129,9 @@ void test_Conv2dPaddedIndirectBinaryRegression() {
                                 // here output_height + width muct match the
                                 // allocated memory for y
                                 ImageGeometry Y(output_height, output_width,
-                                                k_depth);
+                                                k_depth, 1);
 
-                                ImageGeometry X(x_height, x_width, x_channels);
+                                ImageGeometry X(x_height, x_width, x_channels, 1);
 
                                 WindowGeometry K(k_height, k_width, k_depth,
                                                  -padding.top, -padding.left,
@@ -162,12 +164,14 @@ void test_Conv2dPaddedIndirectBinaryRegression() {
                                                   geom.input.depth / elements_per_byte;
                                 int scratch_bytes =
                                     MatMulInt8::get_scratch_mem_bytes(
-                                        input_bytes);
-                              
-                                printf("scratch_bytes: %d\n", scratch_bytes);
+                                        input_bytes)+32;
 
-                                std::cerr <<"input_bytes "<<input_bytes<<"\n";
-                                std::cerr <<"allocated "<<scratch_bytes<<"\n";
+                                
+                              
+                                // printf("scratch_bytes: %d\n", scratch_bytes);
+
+                                // std::cerr <<"input_bytes "<<input_bytes<<"\n";
+                                // std::cerr <<"allocated "<<scratch_bytes<<"\n";
                                 std::vector<int8_t> T(scratch_bytes, 0);
 
                                 int8_t kernel_pad_val =
@@ -191,11 +195,11 @@ void test_Conv2dPaddedIndirectBinaryRegression() {
                                 auto adjusted_thresholds =
                                     OT_binary::
                                         adjust_thresholds(
-                                            thresholds, K, rw);
+                                            thresholds, x_channels, K, rw);
 
                                 assert(adjusted_thresholds.size() > 0);
 
-                                std::cerr << "adjusted_thresholds: " << adjusted_thresholds.size() << std::endl;
+                                // std::cerr << "adjusted_thresholds: " << adjusted_thresholds.size() << std::endl;
 
                                 // pad qp.adjusted_thresholds to a multiple
                                 // of VPU_INT16_EPV this is to work around array
@@ -206,14 +210,12 @@ void test_Conv2dPaddedIndirectBinaryRegression() {
                                     adjusted_thresholds, 16,
                                     pad_val);
 
-                                std::cerr << "adjusted_thresholds: " << adjusted_thresholds.size() << std::endl;
-                                printf("%p\n", adjusted_thresholds.data());
+                                // std::cerr << "adjusted_thresholds: " << adjusted_thresholds.size() << std::endl;
                                 OT_binary::Params ot_params((int32_t)k_depth);
 
                                 OT_binary ot(&ot_params);
                                 ot.setThresholds(
                                     adjusted_thresholds.data());
-
                                 auto ir = ImageRegion(0, 0, 0, Y.height,
                                                       Y.width, Y.depth);
 
@@ -223,18 +225,21 @@ void test_Conv2dPaddedIndirectBinaryRegression() {
                                 BNNConv2dValidIndirectBinary conv2d(&akp, &memcpy,
                                                             &aggregator, &ot);
                                 alignas(4)
-                                    int8_t output[Y.height * Y.width * Y.depth];
+                                    int32_t output[Y.height * Y.width * Y.depth/32];
+                                std::memset(output, 0x55, sizeof(output));
 
-                                conv2d.execute(&output[0], (int8_t*)&input[0], &T[0]);
+                                conv2d.execute((int8_t*)&output[0], (int8_t*)&input[0], &T[0]);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
-                                    for (int yd = 0; yd < Y.depth; yd++) {
-                                      int idx = yh * (Y.width * Y.depth) +
-                                                yw * Y.depth + yd;
+                                    for (int yd = 0; yd < Y.depth/32; yd++) {
+                                      int idx = yh * (Y.width * Y.depth/32) +
+                                                yw * Y.depth/32 + yd;
 
-                                      TEST_ASSERT_INT32_WITHIN(
-                                          1, (int)expected[idx],
+                                      // printf("%d %08x %08x\n", idx, expected[idx], output[idx]);
+
+                                      TEST_ASSERT_EQUAL_HEX32(
+                                          (int)expected[idx],
                                           (int)output[idx]);
                                     }
                                   }

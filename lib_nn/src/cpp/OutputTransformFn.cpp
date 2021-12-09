@@ -552,30 +552,47 @@ int8_t *output_transform_fn_binary_impl(const OT_binary::Params *params, int8_t 
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
 
-  // This can only process 16 channels at a time
-  int output_count = VPU_INT16_EPV;
 
   threshold_t * cur_thresholds =
       thresholds + output_channel_group * VPU_INT16_EPV ;
 
-  std::cerr << "output_channel_group: " << output_channel_group << std::endl; 
+  // std::cerr << "output_channel_group: " << output_channel_group << std::endl; 
 
   VSETC(vpu, MODE_S16);
 
+  //dont need D as we will assume that the sum is 16 bit - else we will use the reference.
   VLDR(vpu, &A->vR);
   VLDD(vpu, &A->vD);
 
-  // vpu_vector_t temp_mem;
-  // for (int i = 0; i < VPU_INT16_EPV; ++i)
-  //   temp_mem.s16[i] = 0;
+  vpu_vector_t temp_mem;
+  for (int i = 0; i < VPU_INT16_EPV; ++i)
+    temp_mem.s16[i] = 0;
 
-  // VLSAT(vpu, &temp_mem);
+  // printf("original \n");
+  // vpu_sim_print(vpu);
+  VLSAT(vpu, &temp_mem);
+
+  // printf("VLSAT \n");
+  // vpu_sim_print(vpu);
   VLADD(vpu, cur_thresholds);
+  // printf("VLADD\n");
+  // vpu_sim_print(vpu);
   VDEPTH1(vpu);
+  // printf("VDEPTH1\n");
+  // vpu_sim_print(vpu);
 
+
+  // This can only process 16 channels at a time
+  int output_count = VPU_INT16_EPV;
+
+  
   int mask = 0x3; // this stores 2 bytes (16 channels)
-  VSTRPV(vpu, Y, mask);
-  Y += output_count;
+  VSTRPV(vpu, temp_mem.s16, mask);
+  //TODO clean up!!!
+  memcpy(Y, temp_mem.s16, output_count/8);
+
+  Y += 2;
+
   return Y;
 }
 
