@@ -73,7 +73,7 @@ BinaryKernelStimulus create_simple_binary_stimulus(Filter2dGeometry &geom) {
   return ks;
 }
 
-void test_Conv2dPaddedIndirectBinaryRegression() {
+void test_Conv2dValidIndirectBinaryRegression() {
   for (int x_height = 1; x_height <= 2; ++x_height) {
     for (int x_width = 1; x_width <= 2; ++x_width) {
       for (int x_channels = 32; x_channels <= 32*3; x_channels += 32) {
@@ -108,19 +108,19 @@ void test_Conv2dPaddedIndirectBinaryRegression() {
                                   continue;
 
 
-                                std::cerr << "x_height :" << x_height
-                                  << " x_width :" << x_width
-                                  << " x_channels :" << x_channels
-                                  << " k_height :" << k_height
-                                  << " k_width :" << k_width
-                                  << " k_depth :" << k_depth
-                                  << " k_h_dilation :" << k_h_dilation
-                                  << " k_v_dilation :" << k_v_dilation
-                                  << " k_h_stride :" << k_h_stride
-                                  << " k_v_stride :" << k_v_stride
-                                  << " output_height :" << output_height
-                                  << " output_width :" << output_width
-                                  << " itt :" << itt <<std::endl;
+                                // std::cerr << "x_height :" << x_height
+                                //   << " x_width :" << x_width
+                                //   << " x_channels :" << x_channels
+                                //   << " k_height :" << k_height
+                                //   << " k_width :" << k_width
+                                //   << " k_depth :" << k_depth
+                                //   << " k_h_dilation :" << k_h_dilation
+                                //   << " k_v_dilation :" << k_v_dilation
+                                //   << " k_h_stride :" << k_h_stride
+                                //   << " k_v_stride :" << k_v_stride
+                                //   << " output_height :" << output_height
+                                //   << " output_width :" << output_width
+                                //   << " itt :" << itt <<std::endl;
 
 
 
@@ -155,8 +155,8 @@ void test_Conv2dPaddedIndirectBinaryRegression() {
                                 //this is the value that would be inserted if we were padding
                                 int im_to_col_pad_val = 0;
                                 ImToColValid::Params im_to_col_params(
-                                    X, K, x_channels
-                                    );
+                                    X, K, x_channels);
+
                                 ImToColValid memcpy(&im_to_col_params);
                                 const int elements_per_byte = 8;
                                 int input_bytes = geom.window.shape.height *
@@ -166,12 +166,6 @@ void test_Conv2dPaddedIndirectBinaryRegression() {
                                     MatMulInt8::get_scratch_mem_bytes(
                                         input_bytes)+32;
 
-                                
-                              
-                                // printf("scratch_bytes: %d\n", scratch_bytes);
-
-                                // std::cerr <<"input_bytes "<<input_bytes<<"\n";
-                                // std::cerr <<"allocated "<<scratch_bytes<<"\n";
                                 std::vector<int8_t> T(scratch_bytes, 0);
 
                                 int8_t kernel_pad_val =
@@ -199,8 +193,6 @@ void test_Conv2dPaddedIndirectBinaryRegression() {
 
                                 assert(adjusted_thresholds.size() > 0);
 
-                                // std::cerr << "adjusted_thresholds: " << adjusted_thresholds.size() << std::endl;
-
                                 // pad qp.adjusted_thresholds to a multiple
                                 // of VPU_INT16_EPV this is to work around array
                                 // over reads
@@ -210,7 +202,6 @@ void test_Conv2dPaddedIndirectBinaryRegression() {
                                     adjusted_thresholds, 16,
                                     pad_val);
 
-                                // std::cerr << "adjusted_thresholds: " << adjusted_thresholds.size() << std::endl;
                                 OT_binary::Params ot_params((int32_t)k_depth);
 
                                 OT_binary ot(&ot_params);
@@ -261,13 +252,13 @@ void test_Conv2dPaddedIndirectBinaryRegression() {
   }
 }
 
-void test_Conv2dValidIndirectBinaryRegression() {
+void test_Conv2dValidDirectBinaryRegression() {
   for (int x_height = 1; x_height <= 5; ++x_height) {
     for (int x_width = 1; x_width <= 5; ++x_width) {
-      for (int x_channels = 4; x_channels <= 16; x_channels += 4) {
+      for (int x_channels = 256; x_channels <= 256*2; x_channels += 256) {
         for (int k_height = 1; k_height <= x_height; ++k_height) {
           for (int k_width = 1; k_width <= x_width; ++k_width) {
-            for (int k_depth = 4; k_depth <= max_k_channels; k_depth += 4) {
+            for (int k_depth = 256; k_depth <= 256*3; k_depth += 256) {
               for (int k_h_dilation = 1; k_h_dilation <= 2; ++k_h_dilation) {
                 for (int k_v_dilation = 1; k_v_dilation <= 2; ++k_v_dilation) {
                   for (int k_h_stride = 1; k_h_stride <= 2; ++k_h_stride) {
@@ -294,12 +285,26 @@ void test_Conv2dValidIndirectBinaryRegression() {
 
                                 int test_seed = rng.getSeed();
 
+                                // std::cerr << "x_height :" << x_height
+                                //   << " x_width :" << x_width
+                                //   << " x_channels :" << x_channels
+                                //   << " k_height :" << k_height
+                                //   << " k_width :" << k_width
+                                //   << " k_depth :" << k_depth
+                                //   << " k_h_dilation :" << k_h_dilation
+                                //   << " k_v_dilation :" << k_v_dilation
+                                //   << " k_h_stride :" << k_h_stride
+                                //   << " k_v_stride :" << k_v_stride
+                                //   << " output_height :" << output_height
+                                //   << " output_width :" << output_width
+                                //   << " itt :" << itt <<std::endl;
+
                                 // here output_height + width muct match the
                                 // allocated memory for y
                                 ImageGeometry Y(output_height, output_width,
-                                                k_depth);
+                                                k_depth, 1);
 
-                                ImageGeometry X(x_height, x_width, x_channels);
+                                ImageGeometry X(x_height, x_width, x_channels, 1);
 
                                 WindowGeometry K(k_height, k_width, k_depth,
                                                  -padding.top, -padding.left,
@@ -311,8 +316,8 @@ void test_Conv2dValidIndirectBinaryRegression() {
                                 BinaryKernelStimulus ks =
                                     create_simple_binary_stimulus(geom);
                                 auto &weights = ks.weights;
-                                auto &thresholds = ks.thresholds;
                                 auto &input = ks.input;
+                                auto &thresholds = ks.thresholds;
 
                                 auto expected = 
                                     nn::test::ops::ref::Conv2dBNNBinaryOutReference(
@@ -320,19 +325,19 @@ void test_Conv2dValidIndirectBinaryRegression() {
                                       weights.data(), 
                                       thresholds.data());
 
-                                // ImToColValid::Params im_to_col_params(
-                                //     X, K, x_channels);
-                                // ImToColValid memcpy(&im_to_col_params);
+                                DerefInputFn::Params im_to_col_params(X, K);
+                                DerefInputFn memcpy(&im_to_col_params);
 
-                                // int overread_bytes =
-                                //     memcpy.get_overread_bytes();
-                                // input.resize(input.size() + overread_bytes /
-                                //                                 sizeof(int8_t),
-                                //              0);
+                                int overread_bytes =
+                                    memcpy.get_overread_bytes();
+                                input.resize(input.size() + overread_bytes /
+                                                                sizeof(int8_t),
+                                             0);
 
-                                // int input_bytes = geom.window.shape.height *
-                                //                   geom.window.shape.width *
-                                //                   geom.input.depth;
+                                const int elements_per_byte = 8;
+                                int input_bytes = geom.window.shape.height *
+                                                  geom.window.shape.width *
+                                                  geom.input.depth / elements_per_byte;
 
                                 // int scratch_bytes =
                                 //     MatMulInt8::get_scratch_mem_bytes(
@@ -341,76 +346,72 @@ void test_Conv2dValidIndirectBinaryRegression() {
 
                                 // std::vector<int8_t> T(scratch_bytes, 0);
 
-                                // int8_t kernel_pad_val = rng.rand<int8_t>();
+                                int8_t kernel_pad_val = rng.rand<int8_t>();
 
-                                // std::array<int, 4> shape = {
-                                //     {k_depth, k_height, k_width, x_channels}};
-                                // Conv2dReorderedWeights rw =
-                                //     MatMulInt8::reorder_kernel_weights(
-                                //         (int8_t *)weights.data(), shape, 8,
-                                //         kernel_pad_val);
+                                std::array<int, 4> shape = {
+                                    {k_depth, k_height, k_width, x_channels}};
+                                Conv2dReorderedWeights rw =
+                                    MatMulInt8::reorder_kernel_weights(
+                                        (int8_t *)weights.data(), shape, 1,
+                                        kernel_pad_val);
 
-                                // MatMulInt8::Params p(k_depth, input_bytes);
-                                // MatMulInt8 aggregator(&p);
-                                // aggregator.setWeights(rw.weights.data());
+                                MatMulBinaryDirectFn::Params p(X, K, x_channels);
+                                MatMulBinaryDirectFn aggregator(&p);
+                                aggregator.setWeights(rw.weights.data());
 
-                                // MulsAndBias mul_and_biases =
-                                //     OutputTransformFnInt8::
-                                //         canonicalise_mul_and_bias(
-                                //             eff_mult, bias, weights,
-                                //             ks.input_zero_point,
-                                //             ks.output_zero_point, k_depth);
+                                //adjust the thresholds from xorpopcount space to xcore space
+                                auto adjusted_thresholds =
+                                    OT_binary::
+                                        adjust_thresholds(
+                                            thresholds, x_channels, K, rw);
+                                
+                                assert(adjusted_thresholds.size() > 0);
 
-                                // QuantisationParams qp =
-                                //     OutputTransformFnInt8::quantise_activation(
-                                //         mul_and_biases);
+                                // pad q.biases and  q.multipliers to a multiple
+                                // of VPU_INT16_EPV this is to work around array
+                                // over reads
+                                int16_t pad_val =
+                                    rng.rand<int16_t>();  // this is arbitrary
+                                
+                                OutputTransformFn::pad_final_access(
+                                    adjusted_thresholds, 16,
+                                    pad_val);
 
-                                // // pad q.biases and  q.multipliers to a multiple
-                                // // of VPU_INT16_EPV this is to work around array
-                                // // over reads
-                                // int16_t pad_val =
-                                //     rng.rand<int16_t>();  // this is arbitrary
-                                // OutputTransformFn::pad_final_access(
-                                //     qp.multipliers_and_biases, VPU_INT16_EPV,
-                                //     pad_val);
+                                OT_binary::Params ot_params((int32_t)k_depth);
 
-                                // OT_int8::Params ot_params((int32_t)k_depth,
-                                //                           qp.initial_shr,
-                                //                           qp.final_shr);
+                                OT_binary ot(&ot_params);
 
-                                // OT_int8 ot(&ot_params);
-                                // assert(qp.multipliers_and_biases.size() > 0);
-                                // ot.setMultipliersAndBiases(
-                                //     qp.multipliers_and_biases.data());
-                                // auto ir = ImageRegion(0, 0, 0, Y.height,
-                                //                       Y.width, Y.depth);
+                                ot.setThresholds(
+                                    adjusted_thresholds.data());
+                                auto ir = ImageRegion(0, 0, 0, Y.height,
+                                                      Y.width, Y.depth);
 
-                                // Filter2D::Params akp(Y, ir,
-                                //                      VPU_INT8_ACC_PERIOD);
+                                Filter2D::Params akp(Y, ir,
+                                                     VPU_INT8_ACC_PERIOD);
 
-                                // Conv2dValidIndirect conv2d(&akp, &memcpy,
-                                //                            &aggregator, &ot);
+                                BNNConv2dValidDirectBinary conv2d(&akp, &memcpy,
+                                                           &aggregator, &ot);
 
-                                // auto output = std::vector<int8_t>(
-                                //     Y.height * Y.width * Y.depth);
+                                alignas(4)
+                                    int32_t output[Y.height * Y.width * Y.depth/32];
+                                std::memset(output, 0x55, sizeof(output));
 
-                                // conv2d.execute(&output[0], &input[0], &T[0]);
+                                conv2d.execute((int8_t*)&output[0], (int8_t*)&input[0]);
 
-                                // for (int yh = 0; yh < Y.height; yh++) {
-                                //   for (int yw = 0; yw < Y.width; yw++) {
-                                //     for (int yd = 0; yd < Y.depth; yd++) {
-                                //       int idx = yh * (Y.width * Y.depth) +
-                                //                 yw * Y.depth + yd;
-                                //       // std::cout << "tflite: " <<
-                                //       // (int)expected[idx] << " xcore: " <<
-                                //       // (int)output[idx] << std::endl;
+                                 for (int yh = 0; yh < Y.height; yh++) {
+                                  for (int yw = 0; yw < Y.width; yw++) {
+                                    for (int yd = 0; yd < Y.depth/32; yd++) {
+                                      int idx = yh * (Y.width * Y.depth/32) +
+                                                yw * Y.depth/32 + yd;
 
-                                //       TEST_ASSERT_INT32_WITHIN(
-                                //           1, (int)expected[idx],
-                                //           (int)output[idx]);
-                                //     }
-                                //   }
-                                // }
+                                      // printf("%d %08x %08x\n", idx, expected[idx], output[idx]);
+
+                                      TEST_ASSERT_EQUAL_HEX32(
+                                          (int)expected[idx],
+                                          (int)output[idx]);
+                                    }
+                                  }
+                                }
                               }
                             }
                           }
@@ -428,7 +429,7 @@ void test_Conv2dValidIndirectBinaryRegression() {
   }
 }
 
-void test_Conv2dValidDirectBinaryRegression() {
+void test_Conv2dValidDirectInt8Regression() {
   for (int x_height = 1; x_height <= 3; ++x_height) {
     for (int x_width = 1; x_width <= 3; ++x_width) {
       for (int x_channels = 32; x_channels <= 64; x_channels += 32) {
@@ -588,7 +589,8 @@ void test_Conv2dValidDirectBinaryRegression() {
 extern "C" void test_conv2d_binary_regression();
 void test_conv2d_binary_regression() {
   UNITY_SET_FILE();
-  RUN_TEST(test_Conv2dPaddedIndirectBinaryRegression);
-  RUN_TEST(test_Conv2dValidDirectBinaryRegression);
   RUN_TEST(test_Conv2dValidIndirectBinaryRegression);
+  RUN_TEST(test_Conv2dValidDirectBinaryRegression);
+  // RUN_TEST(test_Conv2dValidIndirectInt8Regression);
+  // RUN_TEST(test_Conv2dValidDirectInt8Regression);
 }
