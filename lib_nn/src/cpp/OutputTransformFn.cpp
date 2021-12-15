@@ -560,12 +560,12 @@ int8_t *OT_int8_clamped::output_transform_fn(int8_t *Y, VPURingBuffer *A,
   return output_transform_fn_int_clamped_impl(this->params, Y, A, output_channel_group,
                                   multipliers_and_biases);
 #else
-  // return output_transform_fn_impl_asm_stub(this->params, Y, A, output_channel_group,
+  // return output_transform_fn_int_clamped_impl_asm(this->params, Y, A, output_channel_group,
   //                                          multipliers_and_biases);
 #endif  // NN_USE_REF
 }
 
-int8_t *output_transform_fn_binary_impl(const OT_binary::Params *params, int8_t *Y,
+int8_t *output_transform_fn_binary_impl(int8_t *Y,
                                  VPURingBuffer *A, int32_t output_channel_group,
                                  threshold_t *thresholds) {
   xs3_vpu vpu_mem;
@@ -594,14 +594,20 @@ int8_t *output_transform_fn_binary_impl(const OT_binary::Params *params, int8_t 
   return Y;
 }
 
+
+
+extern "C" int8_t *output_transform_fn_binary_impl_asm(
+    int8_t *Y, VPURingBuffer *A,
+    int32_t output_channel_group,
+    int16_t *thresholds);
+
 int8_t *OT_binary::output_transform_fn(int8_t *Y, VPURingBuffer *A,
                                      int32_t output_channel_group) {
 #ifdef NN_USE_REF
-  return output_transform_fn_binary_impl(this->params, Y, A, output_channel_group,
+  return output_transform_fn_binary_impl(Y, A, output_channel_group,
                                   thresholds);
 #else
-  // return output_transform_fn_binary_impl_asm(this->params, Y, A, output_channel_group,
-  //                                          thresholds);
+  return output_transform_fn_binary_impl_asm(Y, A, output_channel_group, thresholds);
 #endif  // NN_USE_REF
 }
 

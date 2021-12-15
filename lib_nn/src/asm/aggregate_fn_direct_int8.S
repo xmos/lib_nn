@@ -53,7 +53,7 @@ extern "C" void mat_mul_impl_asm(void *params, VPURingBuffer *A, int8_t *X, int3
 .text
 .issue_mode  dual
 .globl FUNCTION_NAME
-.align 2
+.align 4
 .type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 

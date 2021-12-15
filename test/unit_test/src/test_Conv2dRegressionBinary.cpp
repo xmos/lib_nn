@@ -201,9 +201,7 @@ void test_Conv2dValidIndirectBinaryRegression() {
                                     adjusted_thresholds, 16,
                                     pad_val);
 
-                                OT_binary::Params ot_params((int32_t)k_depth);
-
-                                OT_binary ot(&ot_params);
+                                OT_binary ot;
                                 ot.setThresholds(
                                     adjusted_thresholds.data());
                                 auto ir = ImageRegion(0, 0, 0, Y.height,
@@ -225,8 +223,6 @@ void test_Conv2dValidIndirectBinaryRegression() {
                                     for (int yd = 0; yd < Y.depth/32; yd++) {
                                       int idx = yh * (Y.width * Y.depth/32) +
                                                 yw * Y.depth/32 + yd;
-
-                                      // printf("%d %08x %08x\n", idx, expected[idx], output[idx]);
 
                                       TEST_ASSERT_EQUAL_HEX32(
                                           (int)expected[idx],
@@ -252,8 +248,8 @@ void test_Conv2dValidIndirectBinaryRegression() {
 }
 
 void test_Conv2dValidDirectBinaryRegression() {
-  for (int x_height = 1; x_height <= 5; ++x_height) {
-    for (int x_width = 1; x_width <= 5; ++x_width) {
+  for (int x_height = 1; x_height <= 4; ++x_height) {
+    for (int x_width = 1; x_width <= 4; ++x_width) {
       for (int x_channels = 256; x_channels <= 256*2; x_channels += 256) {
         for (int k_height = 1; k_height <= x_height; ++k_height) {
           for (int k_width = 1; k_width <= x_width; ++k_width) {
@@ -338,13 +334,6 @@ void test_Conv2dValidDirectBinaryRegression() {
                                                   geom.window.shape.width *
                                                   geom.input.depth / elements_per_byte;
 
-                                // int scratch_bytes =
-                                //     MatMulInt8::get_scratch_mem_bytes(
-                                //         input_bytes) +
-                                //     32;
-
-                                // std::vector<int8_t> T(scratch_bytes, 0);
-
                                 int8_t kernel_pad_val = rng.rand<int8_t>();
 
                                 std::array<int, 4> shape = {
@@ -376,9 +365,7 @@ void test_Conv2dValidDirectBinaryRegression() {
                                     adjusted_thresholds, 16,
                                     pad_val);
 
-                                OT_binary::Params ot_params((int32_t)k_depth);
-
-                                OT_binary ot(&ot_params);
+                                OT_binary ot;
 
                                 ot.setThresholds(
                                     adjusted_thresholds.data());
@@ -580,7 +567,7 @@ void test_Conv2dValidIndirectInt8Regression() {
 
                                 OT_int8_clamped ot(&ot_params);
                                 assert(serialised_offsets_multipliers_and_biases.size() > 0);
-                                ot.setMultipliersAndBiases(
+                                ot.setOffsetsMultipliersAndBiases(
                                     serialised_offsets_multipliers_and_biases.data());
 
                                 auto ir = ImageRegion(0, 0, 0, Y.height,
@@ -627,12 +614,12 @@ void test_Conv2dValidIndirectInt8Regression() {
 }
 
 void test_Conv2dValidDirectInt8Regression() {
-  for (int x_height = 1; x_height <= 5; ++x_height) {
-    for (int x_width = 1; x_width <= 5; ++x_width) {
+  for (int x_height = 1; x_height <= 4; ++x_height) {
+    for (int x_width = 1; x_width <= 4; ++x_width) {
       for (int x_channels = 256; x_channels <= 256*2; x_channels += 256) {
         for (int k_height = 1; k_height <= x_height; ++k_height) {
           for (int k_width = 1; k_width <= x_width; ++k_width) {
-            for (int k_depth = 256; k_depth <= 256*3; k_depth += 256) {
+            for (int k_depth = 256; k_depth <= 256*2; k_depth += 256) {
               for (int k_h_dilation = 1; k_h_dilation <= 2; ++k_h_dilation) {
                 for (int k_v_dilation = 1; k_v_dilation <= 2; ++k_v_dilation) {
                   for (int k_h_stride = 1; k_h_stride <= 2; ++k_h_stride) {
@@ -770,7 +757,7 @@ void test_Conv2dValidDirectInt8Regression() {
                                 OT_int8_clamped ot(&ot_params);
 
                                 assert(serialised_offsets_multipliers_and_biases.size() > 0);
-                                ot.setMultipliersAndBiases(
+                                ot.setOffsetsMultipliersAndBiases(
                                     serialised_offsets_multipliers_and_biases.data());
 
                                 auto ir = ImageRegion(0, 0, 0, Y.height,

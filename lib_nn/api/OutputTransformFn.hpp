@@ -149,10 +149,6 @@ class OutputTransformFn {
     return serialised_memory;
   }
 
-  
-
-
-
   template <class activationT>
   static int get_max_exponent(activationT f) {
     int e;
@@ -405,7 +401,7 @@ class OT_int8_clamped : public OutputTransformFnInt8 {
   int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
                               int32_t output_channel_group);
 
-  void setMultipliersAndBiases(int16_t *m) {
+  void setOffsetsMultipliersAndBiases(int16_t *m) {
     multipliers_and_biases = m;
     assert(m != nullptr);
     assert(is_aligned(multipliers_and_biases, 4));
@@ -423,17 +419,35 @@ class OT_int8_clamped : public OutputTransformFnInt8 {
     int32_t xcore_clamp_low = clamp_low - receptive_volume/2;
     int32_t xcore_clamp_high = clamp_high - receptive_volume/2;
     
-    // Larq assumes xor-popcount is used for the aggregation but the xcore uses
-    // sum(xor * 2 - 1)/2. Over a receptive volume this means 
-    // sum(xor * 2 - 1)/2 = xor-popcount - receptive_field/2
-    // or
-    // xor-popcount = sum(xor * 2 - 1)/2 + receptive_field/2
 
+
+/*
+    Larq assumes xor-popcount is used for the aggregation but the xcore uses
+    sum(xor * 2 - 1)/2. Over a receptive volume this means 
+    sum(xor * 2 - 1)/2 = xor-popcount - receptive_field/2
+    or
+    xor-popcount = sum(xor * 2 - 1)/2 + receptive_field/2
+
+    We are implementing:
+
+            std::int32_t x = accum << 1;
+            x = std::max<std::int32_t>(std::min<std::int32_t>(x, clamp_max), clamp_min);
+            // The linear transformation is done in float
+            float y =
+                static_cast<float>(x) * multiplier[out_channel] + bias[out_channel];
+            // And then we round back to int32 and clamp to the int8 range
+            return saturate(round(y));
+
+    Which is why we have a spurious x3 below.
+*/
     for (int out_chan = 0; out_chan < output_channel_count; out_chan++) {
 
-      double xcore_multiplier =
+      float xcore_multiplier =
           -post_activation_multiplier[out_chan] * 2;
-      double xcore_bias =
+
+      //Here we add on M*R/2 to account for the way xcore computes the macc as opposed to
+      //xor-popcount.
+      float xcore_bias =
           post_activation_bias[out_chan] + post_activation_multiplier[out_chan] * receptive_volume;
  
       //This is considering the perspective of the accumulator after a VPOS has been performed on it
@@ -449,11 +463,13 @@ class OT_int8_clamped : public OutputTransformFnInt8 {
       int output_channel_count, 
       Conv2dReorderedWeights &reordered_weights) {
 
-    int receptive_bytes = receptive_volume/8;
+    int receptive_bytes = receptive_volume/CHAR_BIT;
+
+    const int vpu_vector_byte_count = VPU_INT8_EPV;
     
-    int final_load_bytes = (receptive_bytes%32);
+    int final_load_bytes = (receptive_bytes%vpu_vector_byte_count);
     if (final_load_bytes == 0)
-      final_load_bytes = 32;
+      final_load_bytes = vpu_vector_byte_count;
 
     std::vector<int16_t> accumulator_overlaps;
     for (int out_chan = 0; out_chan < output_channel_count; out_chan++) {
@@ -461,7 +477,7 @@ class OT_int8_clamped : public OutputTransformFnInt8 {
       int final_vpu_load_address = reordered_weights.final_vpu_load_addresses[out_chan];
       int8_t padding_byte = 0;
       int acc = 0;
-      for (int i = final_load_bytes; i < 32; i++) {
+      for (int i = final_load_bytes; i < vpu_vector_byte_count; i++) {
         int8_t b = reordered_weights.weights[final_vpu_load_address+i];
         
         int8_t v = (padding_byte ^ b);
@@ -485,64 +501,34 @@ class OT_int8_clamped : public OutputTransformFnInt8 {
 typedef int16_t threshold_t;
 class OT_binary : public OutputTransformFn {
 
- public:
-  class Params : public Serialisable {
-   public:
-    int32_t output_slice_channel_count;
-
-   public:
-    /**
-     * @brief Construct a new Params object
-     *
-     * @param output_slice_channel_count The count of output channels to be
-     * computed by this parameter set.
-     */
-    Params(int32_t output_slice_channel_count)
-        : output_slice_channel_count(output_slice_channel_count) {}
-  };
-
  private:
-  /**
-   * @brief This describes the channels over which this class will perform its
-   * operation(OutputTransform) and how each channel will transformed.
-   */
-  Params *params;
   threshold_t *thresholds;
 
  public:
-  OT_binary(Params *params) : params(params){};
+  OT_binary(){};
 
   int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
                               int32_t output_channel_group);
 
   static std::vector<threshold_t> 
     adjust_thresholds(std::vector<int32_t>& thresholds, int input_channels, WindowGeometry &K, Conv2dReorderedWeights& reordered_weights){
-      // std::cerr << "thresholds.size(): " <<thresholds.size()<< std::endl; 
+      
       std::vector<threshold_t> adjusted_thresholds(thresholds.size());
+
+      const int vpu_vector_byte_count = VPU_INT8_EPV;
 
       // Larq assumes xor-popcount is used for the aggregation but the xcore uses
       // sum(xor * 2 - 1)/2. Over a receptive volume this means 
       // sum(xor * 2 - 1)/2 = xor-popcount - receptive_field/2
       // or
       // xor-popcount = sum(xor * 2 - 1)/2 + receptive_field/2
-
-      // std::cerr << K << std::endl;
       int receptive_field = input_channels * K.shape.width * K.shape.height;
-
-      // printf("receptive_field: %d\n", receptive_field);
-      int receptive_bytes = receptive_field/8;
-      
-      // std::cerr << "receptive_bytes: " <<receptive_bytes<< " " << K.shape <<std::endl;
+      int receptive_bytes = receptive_field/CHAR_BIT;
 
       //the number of useful bytes loaded on the final load of the kernel
-      int final_load_bytes = (receptive_bytes%32);
+      int final_load_bytes = (receptive_bytes%vpu_vector_byte_count);
       if (final_load_bytes == 0)
-        final_load_bytes = 32;
-
-      //the number of useless bytes loaded on the final load of the kernel
-      // int final_overload_bytes = 32 - final_load_bytes;
-      // std::cerr << "final_load_bytes: " <<final_load_bytes <<std::endl; 
-      // std::cerr << "final_overload_bytes: " <<final_overload_bytes <<std::endl; 
+        final_load_bytes = vpu_vector_byte_count;
 
       assert(final_load_bytes > 0);
       for (int ch=0;ch<thresholds.size();++ch){
@@ -550,18 +536,15 @@ class OT_binary : public OutputTransformFn {
         int final_vpu_load_address = reordered_weights.final_vpu_load_addresses[ch];
         int8_t padding_byte = 0;
         int acc = 0;
-        for (int i = final_load_bytes; i < 32; i++) {
+        for (int i = final_load_bytes; i < vpu_vector_byte_count; i++) {
           int8_t b = reordered_weights.weights[final_vpu_load_address+i];
           
           int8_t v = (padding_byte ^ b);
           int t= ((2 * __builtin_popcount((~v)&0xff) - CHAR_BIT) / 2);
-          // printf("%2x %2x -> %d\n", b, v, t);
           acc += t;
         }
-        // printf("ch %d final_vpu_load_addresses: %d  acc: %d\n", ch, final_vpu_load_address, acc);
 
         adjusted_thresholds[ch] = thresholds[ch] - receptive_field/2 - acc;
-        // printf("%d %d -> %d\n",ch, thresholds[ch], adjusted_thresholds[ch]);
       }
       return adjusted_thresholds;
     }
@@ -572,13 +555,6 @@ class OT_binary : public OutputTransformFn {
     assert(is_aligned(thresholds, 4));
   }
 };
-
-
-
-
-
-
-
 
 
 /**
@@ -634,18 +610,6 @@ class DirectWriteOutputTransform
   virtual int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *acc,
                                       int32_t output_channel_group) override;
 };
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /**

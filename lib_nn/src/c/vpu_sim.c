@@ -535,7 +535,7 @@ void vpu_accu_print(xs3_vpu *vpu){
 
     for (int i = 0; i < VPU_INT32_ACC_PERIOD; i++) {
       int64_t acc = GetAccumulator(vpu, i);
-      printf("%d %d\n", i, acc);
+      printf("%d %lld\n", i, acc);
     }
   } else {
     assert(0);  // How'd this happen?
