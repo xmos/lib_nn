@@ -77,6 +77,82 @@ class OutputTransformFn {
     vec.resize(vec.size() + l, pad_val);
   }
 
+  template <class T>
+  static std::vector<T> serialise_memory(std::vector<T> &first_array, 
+    std::vector<T> &second_array, int elements_per_group = VPU_INT16_EPV) {
+      
+    std::vector<T> serialised_memory;
+
+    assert(first_array.size() == second_array.size());
+
+    int output_channel_groups = first_array.size()/elements_per_group;
+    
+    for (int ocg = 0; ocg < output_channel_groups; ++ocg) {
+      for (int ch = ocg * elements_per_group; ch < (ocg + 1) * elements_per_group; ++ch) {
+        serialised_memory.push_back(first_array[ch]);
+      }
+      
+      for (int ch = ocg * elements_per_group; ch < (ocg + 1) * elements_per_group; ++ch) {
+        serialised_memory.push_back(second_array[ch]);
+      }
+    }
+
+    for (int ch = output_channel_groups * elements_per_group;
+        ch < first_array.size(); ++ch) {
+        serialised_memory.push_back(first_array[ch]);
+    }
+    for (int ch = output_channel_groups * elements_per_group;
+        ch < first_array.size(); ++ch) {
+        serialised_memory.push_back(second_array[ch]);
+    }
+    return serialised_memory;
+  }
+
+  template <class T>
+  static std::vector<T> serialise_memory(std::vector<T> &first_array, 
+    std::vector<T> &second_array, std::vector<T> &third_array, int elements_per_group = VPU_INT16_EPV) {
+      
+    std::vector<T> serialised_memory;
+
+    assert(first_array.size() == second_array.size());
+    assert(first_array.size() == third_array.size());
+
+    int output_channel_groups = first_array.size()/elements_per_group;
+    
+    // printf("output_channel_groups %d first_array.size():%d\n", output_channel_groups, first_array.size());
+    for (int ocg = 0; ocg < output_channel_groups; ++ocg) {
+      for (int ch = ocg * elements_per_group; ch < (ocg + 1) * elements_per_group; ++ch) {
+        serialised_memory.push_back(first_array[ch]);
+      }
+      
+      for (int ch = ocg * elements_per_group; ch < (ocg + 1) * elements_per_group; ++ch) {
+        serialised_memory.push_back(second_array[ch]);
+      }
+      
+      for (int ch = ocg * elements_per_group; ch < (ocg + 1) * elements_per_group; ++ch) {
+        serialised_memory.push_back(third_array[ch]);
+      }
+    }
+
+    for (int ch = output_channel_groups * elements_per_group;
+        ch < first_array.size(); ++ch) {
+        serialised_memory.push_back(first_array[ch]);
+    }
+    for (int ch = output_channel_groups * elements_per_group;
+        ch < second_array.size(); ++ch) {
+        serialised_memory.push_back(second_array[ch]);
+    }
+    for (int ch = output_channel_groups * elements_per_group;
+        ch < third_array.size(); ++ch) {
+        serialised_memory.push_back(third_array[ch]);
+    }
+    return serialised_memory;
+  }
+
+  
+
+
+
   template <class activationT>
   static int get_max_exponent(activationT f) {
     int e;
@@ -129,7 +205,8 @@ struct QuantisationParams {
    * group of N multipliers and N biases where N is the remaining number of
    * channels after all the full channel groups.
    */
-  std::vector<int16_t> multipliers_and_biases;
+  std::vector<int16_t> multipliers;
+  std::vector<int16_t> biases;
 };
 
 class OutputTransformFnInt8 : public OutputTransformFn {
@@ -180,13 +257,13 @@ class OutputTransformFnInt8 : public OutputTransformFn {
   static MulsAndBias canonicalise_mul_and_bias(
       const std::vector<float> &eff_mult, const std::vector<int32_t> &bias,
       const std::vector<int8_t> &weights, int input_zero_point,
-      int output_zero_point, int output_channels) {
+      int output_zero_point, int output_channel_count) {
     MulsAndBias canonical_values;
 
-    int elements_per_channel = weights.size() / output_channels;
-    assert((weights.size() % output_channels) == 0);
+    int elements_per_channel = weights.size() / output_channel_count;
+    assert((weights.size() % output_channel_count) == 0);
 
-    for (int out_chan = 0; out_chan < output_channels; out_chan++) {
+    for (int out_chan = 0; out_chan < output_channel_count; out_chan++) {
       int32_t max_accu_sum = 0;
       int32_t min_accu_sum = 0;
 
@@ -332,6 +409,69 @@ class OT_int8_clamped : public OutputTransformFnInt8 {
     multipliers_and_biases = m;
     assert(m != nullptr);
     assert(is_aligned(multipliers_and_biases, 4));
+  }
+
+ static MulsAndBias canonicalise_mul_and_bias(
+      const std::vector<float> &post_activation_multiplier, 
+      const std::vector<float> &post_activation_bias,
+      int receptive_volume,
+      int32_t clamp_low,
+      int32_t clamp_high, 
+      int output_channel_count) {
+    MulsAndBias canonical_values;
+
+    int32_t xcore_clamp_low = clamp_low - receptive_volume/2;
+    int32_t xcore_clamp_high = clamp_high - receptive_volume/2;
+    
+    // Larq assumes xor-popcount is used for the aggregation but the xcore uses
+    // sum(xor * 2 - 1)/2. Over a receptive volume this means 
+    // sum(xor * 2 - 1)/2 = xor-popcount - receptive_field/2
+    // or
+    // xor-popcount = sum(xor * 2 - 1)/2 + receptive_field/2
+
+    for (int out_chan = 0; out_chan < output_channel_count; out_chan++) {
+
+      double xcore_multiplier =
+          -post_activation_multiplier[out_chan] * 2;
+      double xcore_bias =
+          post_activation_bias[out_chan] + post_activation_multiplier[out_chan] * receptive_volume;
+ 
+      //This is considering the perspective of the accumulator after a VPOS has been performed on it
+      OutputTransformFn::ActivationParams a(xcore_bias, xcore_multiplier,
+                                            xcore_clamp_low, xcore_clamp_high);
+
+      canonical_values.push_back(a);
+    }
+    return canonical_values;
+  }
+ static std::vector<int16_t> get_accumulator_overlaps(
+      int receptive_volume, 
+      int output_channel_count, 
+      Conv2dReorderedWeights &reordered_weights) {
+
+    int receptive_bytes = receptive_volume/8;
+    
+    int final_load_bytes = (receptive_bytes%32);
+    if (final_load_bytes == 0)
+      final_load_bytes = 32;
+
+    std::vector<int16_t> accumulator_overlaps;
+    for (int out_chan = 0; out_chan < output_channel_count; out_chan++) {
+
+      int final_vpu_load_address = reordered_weights.final_vpu_load_addresses[out_chan];
+      int8_t padding_byte = 0;
+      int acc = 0;
+      for (int i = final_load_bytes; i < 32; i++) {
+        int8_t b = reordered_weights.weights[final_vpu_load_address+i];
+        
+        int8_t v = (padding_byte ^ b);
+        int t= ((2 * __builtin_popcount((~v)&0xff) - CHAR_BIT) / 2);
+        acc += t;
+      }
+      accumulator_overlaps.push_back(-acc);
+    }
+    return accumulator_overlaps;
+
   }
 };
 

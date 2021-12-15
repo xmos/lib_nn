@@ -171,7 +171,11 @@ void test_Conv2dPaddedIndirectRegression() {
                                     OutputTransformFnInt8::quantise_activation(
                                         mul_and_biases);
 
-                                assert(qp.multipliers_and_biases.size() > 0);
+                                assert(qp.multipliers.size() > 0);
+                                assert(qp.biases.size() > 0);
+
+                                auto serialised_offsets_multipliers_and_biases = 
+                                  OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
 
                                 // pad qp.multipliers_and_biases to a multiple
                                 // of VPU_INT16_EPV this is to work around array
@@ -179,7 +183,7 @@ void test_Conv2dPaddedIndirectRegression() {
                                 int16_t pad_val =
                                     rng.rand<int16_t>();  // this is arbitrary
                                 OutputTransformFn::pad_final_access(
-                                    qp.multipliers_and_biases, VPU_INT16_EPV,
+                                    serialised_offsets_multipliers_and_biases, VPU_INT16_EPV,
                                     pad_val);
 
                                 OT_int8::Params ot_params((int32_t)k_depth,
@@ -187,9 +191,10 @@ void test_Conv2dPaddedIndirectRegression() {
                                                           qp.final_shr);
 
                                 OT_int8 ot(&ot_params);
-                                assert(qp.multipliers_and_biases.size() > 0);
+                                assert(qp.multipliers.size() > 0);
+                                assert(qp.biases.size() > 0);
                                 ot.setMultipliersAndBiases(
-                                    qp.multipliers_and_biases.data());
+                                    serialised_offsets_multipliers_and_biases.data());
 
                                 auto ir = ImageRegion(0, 0, 0, Y.height,
                                                       Y.width, Y.depth);
@@ -339,13 +344,15 @@ void test_Conv2dValidIndirectRegression() {
                                     OutputTransformFnInt8::quantise_activation(
                                         mul_and_biases);
 
+                                auto serialised_offsets_multipliers_and_biases = 
+                                  OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
                                 // pad q.biases and  q.multipliers to a multiple
                                 // of VPU_INT16_EPV this is to work around array
                                 // over reads
                                 int16_t pad_val =
                                     rng.rand<int16_t>();  // this is arbitrary
                                 OutputTransformFn::pad_final_access(
-                                    qp.multipliers_and_biases, VPU_INT16_EPV,
+                                    serialised_offsets_multipliers_and_biases, VPU_INT16_EPV,
                                     pad_val);
 
                                 OT_int8::Params ot_params((int32_t)k_depth,
@@ -353,9 +360,9 @@ void test_Conv2dValidIndirectRegression() {
                                                           qp.final_shr);
 
                                 OT_int8 ot(&ot_params);
-                                assert(qp.multipliers_and_biases.size() > 0);
+                                assert(serialised_offsets_multipliers_and_biases.size() > 0);
                                 ot.setMultipliersAndBiases(
-                                    qp.multipliers_and_biases.data());
+                                    serialised_offsets_multipliers_and_biases.data());
                                 auto ir = ImageRegion(0, 0, 0, Y.height,
                                                       Y.width, Y.depth);
 
@@ -501,13 +508,15 @@ void test_Conv2dValidDirectRegression() {
                                     OutputTransformFnInt8::quantise_activation(
                                         mul_and_biases);
 
+                                auto serialised_offsets_multipliers_and_biases = 
+                                  OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
                                 // pad q.biases and  q.multipliers to a multiple
                                 // of VPU_INT16_EPV this is to work around array
                                 // over reads
                                 int16_t pad_val =
                                     rng.rand<int16_t>();  // this is arbitrary
                                 OutputTransformFn::pad_final_access(
-                                    qp.multipliers_and_biases, VPU_INT16_EPV,
+                                    serialised_offsets_multipliers_and_biases, VPU_INT16_EPV,
                                     pad_val);
 
                                 OT_int8::Params ot_params((int32_t)k_depth,
@@ -515,9 +524,9 @@ void test_Conv2dValidDirectRegression() {
                                                           qp.final_shr);
 
                                 OT_int8 ot(&ot_params);
-                                assert(qp.multipliers_and_biases.size() > 0);
+                                assert(serialised_offsets_multipliers_and_biases.size() > 0);
                                 ot.setMultipliersAndBiases(
-                                    qp.multipliers_and_biases.data());
+                                    serialised_offsets_multipliers_and_biases.data());
 
                                 auto ir = ImageRegion(0, 0, 0, Y.height,
                                                       Y.width, Y.depth);

@@ -290,8 +290,10 @@ void backprop_output_clamps_to_accu_limits(MulsAndBias &activationParams,
     recitfy_min_max(accu_meaningful_min, accu_meaningful_max);
 
     if (verbose) {
-      printf("accu_meaningful_min: %lld\naccu_meaningful_max: %lld",
+      printf("accu_meaningful_min: %lld accu_meaningful_max: %lld\n",
              accu_meaningful_min, accu_meaningful_max);
+      printf("activationParam.accu_min_val: %d activationParam.accu_max_val: %d\n",
+             activationParam.accu_min_val, activationParam.accu_max_val);
     }
 
     if (accu_meaningful_max < (int64_t)activationParam.accu_max_val) {
@@ -402,48 +404,25 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
   q.initial_shr = -A;
   q.final_shr = B - 8;
 
-  // The final step is to output the multipliers and biases in an arrangement
-  // that will be efficient to load.
-  int output_channel_groups = activationParams.size() / VPU_INT16_EPV;
-
   if (verbose) {
     printf("final_shr: %d\n", q.final_shr);
   }
 
-  for (int ocg = 0; ocg < output_channel_groups; ++ocg) {
-    for (int ch = ocg * VPU_INT16_EPV; ch < (ocg + 1) * VPU_INT16_EPV; ++ch) {
-      int16_t v = float_to_int16(activationParams[ch].multiplier, M);
-      q.multipliers_and_biases.push_back(v);
+  //Quantise the multiplier and bias
+  for(int ch=0; ch<activationParams.size(); ++ch){
+      int16_t m = float_to_int16(activationParams[ch].multiplier, M);
+      q.multipliers.push_back(m);
+      int16_t b = float_to_int16(activationParams[ch].bias, B);
+      q.biases.push_back(b);
+
       if (verbose)
-        printf("multiplier: %d(%f) original: %f\n", v, std::ldexp(v, -M),
+        printf("multiplier: %d(%f) original: %f\n", m, std::ldexp(m, -M),
                activationParams[ch].original_multiplier);
-    }
-    
-    for (int ch = ocg * VPU_INT16_EPV; ch < (ocg + 1) * VPU_INT16_EPV; ++ch) {
-      int16_t v = float_to_int16(activationParams[ch].bias, B);
-      q.multipliers_and_biases.push_back(v);
       if (verbose)
-        printf("bias: %d(%f) original: %f %f\n", v, std::ldexp(v, -B),
+        printf("bias: %d(%f) original: %f %f\n", b, std::ldexp(b, -B),
                activationParams[ch].original_bias,
                activationParams[ch].bias);
-    }
-  }
 
-  for (int ch = output_channel_groups * VPU_INT16_EPV;
-       ch < activationParams.size(); ++ch) {
-    int16_t v = float_to_int16(activationParams[ch].multiplier, M);
-    q.multipliers_and_biases.push_back(v);
-    if (verbose)
-      printf("multiplier: %d(%f) original: %f\n", v, std::ldexp(v, -M),
-             activationParams[ch].original_multiplier);
-  }
-  for (int ch = output_channel_groups * VPU_INT16_EPV;
-       ch < activationParams.size(); ++ch) {
-    int16_t v = float_to_int16(activationParams[ch].bias, B);
-    q.multipliers_and_biases.push_back(v);
-    if (verbose)
-      printf("bias: %d(%f) original: %f %f\n", v, std::ldexp(v, -B),
-             activationParams[ch].original_bias, activationParams[ch].bias);
   }
 
   return q;
@@ -530,8 +509,48 @@ int8_t *OT_int8::output_transform_fn(int8_t *Y, VPURingBuffer *A,
 
 int8_t *output_transform_fn_int_clamped_impl(const OT_int8_clamped::Params *params, int8_t *Y,
                                  VPURingBuffer *A, int32_t output_channel_group,
-                                 int16_t *multipliers_and_biases) {
+                                 int16_t *offsets_multipliers_and_biases) {
+  xs3_vpu vpu_mem;
+  xs3_vpu *vpu = &vpu_mem;
 
+  // we need to know how many we are processing
+  int output_count = std::min(
+      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
+      (int32_t)VPU_INT16_EPV);
+
+  //Thge 3 is due to the serialisation of 3 arrays in chunks of VPU_INT16_EPV elements
+  int16_t *cur_post_activation_offset =
+      offsets_multipliers_and_biases + output_channel_group * VPU_INT16_EPV * 3;
+
+  int16_t *cur_post_activation_mul =
+      cur_post_activation_offset + output_count;
+
+  int16_t *cur_post_activation_bias = cur_post_activation_mul + output_count;
+
+  VSETC(vpu, MODE_S16);
+  VLDR(vpu, &A->vR);;
+  VLADD(vpu, cur_post_activation_offset);
+
+  //Remove the kernel overlap
+  VPOS(vpu);
+
+  vpu_vector_t temp_mem;
+  VSTR(vpu, &temp_mem);
+  VLASHR(vpu, &temp_mem, params->initial_shift);
+
+  VLMUL(vpu, cur_post_activation_mul);
+  VLADD(vpu, cur_post_activation_bias);
+
+  VSTR(vpu, &temp_mem);
+  VLASHR(vpu, &temp_mem, params->final_shr);
+
+  VDEPTH8_FIXED(vpu);
+
+  int mask = (1 << output_count) - 1;
+  VSTRPV(vpu, Y, mask);
+  Y += output_count;
+
+  return Y;
  }
 
 
@@ -552,46 +571,25 @@ int8_t *output_transform_fn_binary_impl(const OT_binary::Params *params, int8_t 
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
 
-
   threshold_t * cur_thresholds =
       thresholds + output_channel_group * VPU_INT16_EPV ;
 
-  // std::cerr << "output_channel_group: " << output_channel_group << std::endl; 
-
+  //do we need this?
   VSETC(vpu, MODE_S16);
 
   //dont need D as we will assume that the sum is 16 bit - else we will use the reference.
   VLDR(vpu, &A->vR);
-  VLDD(vpu, &A->vD);
-
-  vpu_vector_t temp_mem;
-  for (int i = 0; i < VPU_INT16_EPV; ++i)
-    temp_mem.s16[i] = 0;
-
-  // printf("original \n");
-  // vpu_sim_print(vpu);
-  VLSAT(vpu, &temp_mem);
-
-  // printf("VLSAT \n");
-  // vpu_sim_print(vpu);
   VLADD(vpu, cur_thresholds);
-  // printf("VLADD\n");
-  // vpu_sim_print(vpu);
   VDEPTH1(vpu);
-  // printf("VDEPTH1\n");
-  // vpu_sim_print(vpu);
-
 
   // This can only process 16 channels at a time
-  int output_count = VPU_INT16_EPV;
+  int output_bytes = VPU_INT16_EPV/CHAR_BIT;
 
-  
-  int mask = 0x3; // this stores 2 bytes (16 channels)
-  VSTRPV(vpu, temp_mem.s16, mask);
-  //TODO clean up!!!
-  memcpy(Y, temp_mem.s16, output_count/8);
+  int16_t temp_mem;
+  VSTRPV(vpu, &temp_mem, (1<<output_bytes) - 1);
+  memcpy(Y, &temp_mem, output_bytes);
 
-  Y += 2;
+  Y += output_bytes;
 
   return Y;
 }

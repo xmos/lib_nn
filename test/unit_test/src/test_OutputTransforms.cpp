@@ -115,13 +115,16 @@ void test_big_range(int coef_count, int N, int product_range, int bias_range,
       // result.
       int16_t pad_val = rng.rand<int16_t>();
 
-      OutputTransformFn::pad_final_access(qp.multipliers_and_biases,
+      auto serialised_multipliers_and_biases = 
+        OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
+
+      OutputTransformFn::pad_final_access(serialised_multipliers_and_biases,
                                           VPU_INT16_EPV, pad_val);
 
       OT_int8::Params p((int32_t)output_ch_count, qp.initial_shr, qp.final_shr);
 
       OT_int8 ot(&p);
-      ot.setMultipliersAndBiases(qp.multipliers_and_biases.data());
+      ot.setMultipliersAndBiases(serialised_multipliers_and_biases.data());
 
       int8_t Y[output_ch_count];
       memset(Y, 0, sizeof Y);
@@ -214,17 +217,20 @@ void test_small_range(const int accu_min, const int accu_max,
     QuantisationParams qp =
         OutputTransformFnInt8::quantise_activation(mul_and_biases);
 
+    auto serialised_multipliers_and_biases = 
+      OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
+
     // pad q.biases and  q.multipliers to a multiple of VPU_INT16_EPV
     // this is to work around array over reads
     int16_t pad_val = rng.rand<int16_t>();  // this is arbitrary
 
-    OutputTransformFn::pad_final_access(qp.multipliers_and_biases,
+    OutputTransformFn::pad_final_access(serialised_multipliers_and_biases,
                                         VPU_INT16_EPV, pad_val);
 
     OT_int8::Params p((int32_t)output_ch_count, qp.initial_shr, qp.final_shr);
 
     OT_int8 ot(&p);
-    ot.setMultipliersAndBiases(qp.multipliers_and_biases.data());
+    ot.setMultipliersAndBiases(serialised_multipliers_and_biases.data());
 
     int8_t Y[output_ch_count];
     memset(Y, 0, sizeof Y);

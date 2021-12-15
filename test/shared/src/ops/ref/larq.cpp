@@ -123,7 +123,7 @@ std::vector<int8_t> nn::test::ops::ref::Conv2dBNNIntOutReference(
     const int32_t* packed_filter_data,
     const float* post_activation_multiplier, 
     const float* post_activation_bias,
-    const int clamp_min, const int clamp_max
+    const int32_t clamp_min, const int32_t clamp_max
     ) 
 {
   OutputTransform<std::int8_t> output_transform;

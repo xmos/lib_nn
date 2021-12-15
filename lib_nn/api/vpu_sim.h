@@ -50,6 +50,7 @@ C_API void VSTRPV(const xs3_vpu* vpu, void* addr, unsigned mask);
 C_API void VLMACC(xs3_vpu* vpu, const void* addr);
 C_API void VLMACCR(xs3_vpu* vpu, const void* addr);
 C_API void VLMACCR1(xs3_vpu* vpu, const void* addr);
+C_API void VPOS(xs3_vpu *vpu);
 C_API void VLSAT(xs3_vpu* vpu, const void* addr);
 C_API void VLASHR(xs3_vpu* vpu, const void* addr, const int32_t shr);
 C_API void VLADD(xs3_vpu* vpu, const void* addr);
@@ -60,6 +61,7 @@ C_API void VDEPTH8(xs3_vpu* vpu);
 C_API void VDEPTH16(xs3_vpu* vpu);
 
 /** Print vector register contents based on current vector_mode **/
+C_API void vpu_accu_print(xs3_vpu *vpu);
 C_API void vpu_sim_print(xs3_vpu* vpu);
 C_API void vpu_sim_mem_print(void* address, vector_mode mode);
 
