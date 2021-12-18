@@ -81,8 +81,7 @@ class MatMulBase : public AggregateFn {
   int8_t *weights;
 
  public:
- 
-  MatMulBase(Params *params):params(params){};
+  MatMulBase(Params *params) : params(params){};
 
   /**
    * Setter for the reordered weights
@@ -112,19 +111,21 @@ class MatMulBase : public AggregateFn {
   /**
    * @brief Get the required size of the weights array. This is a non-trivial
    * computation as it accounts for how the VPU will access the weights array.
-   * It includes padding at after the weights, this padding exists to ensure 
-   * that all memory accesses of the VPU are of valid memory. 
+   * It includes padding at after the weights, this padding exists to ensure
+   * that all memory accesses of the VPU are of valid memory.
    * [asj] we could stop emiting this as OOB accesses shouldnt cause a problem
-   * and only cost memory. 
+   * and only cost memory.
    *
-   * @param input_bytes_per_channel The count of bytes in a single channel, i.e. the product of
-   * kernel height, kernel width, input channel count and bytes per element.
+   * @param input_bytes_per_channel The count of bytes in a single channel, i.e.
+   * the product of kernel height, kernel width, input channel count and bytes
+   * per element.
    * @param output_channel_count The number of output channels that these
    * weights will compute.
    * @return The size in bytes that will hold the weights and guarentee no OOB
    * accesses.
    */
-  static int get_weights_bytes(int input_bytes_per_channel, int output_channel_count);
+  static int get_weights_bytes(int input_bytes_per_channel,
+                               int output_channel_count);
 
   /**
    * @brief Get the required size of the scratch array. This is a non-trivial
@@ -138,14 +139,14 @@ class MatMulBase : public AggregateFn {
 };
 
 class MatMulInt8 : public MatMulBase {
-  public:
-  MatMulInt8(MatMulBase::Params *params) : MatMulBase(params) {};
+ public:
+  MatMulInt8(MatMulBase::Params *params) : MatMulBase(params){};
   void aggregate_fn(VPURingBuffer *A, int8_t *T, int32_t output_channel_group);
 };
 
 class MatMulBinary : public MatMulBase {
-  public:
-  MatMulBinary(MatMulBase::Params *params) : MatMulBase(params) {};
+ public:
+  MatMulBinary(MatMulBase::Params *params) : MatMulBase(params){};
   void aggregate_fn(VPURingBuffer *A, int8_t *T, int32_t output_channel_group);
 };
 
@@ -203,10 +204,10 @@ class MatMulDirectFn : public AggregateFn {
 };
 
 class MatMulBinaryDirectFn : public MatMulDirectFn {
-  public:
-
+ public:
   MatMulBinaryDirectFn(Params *params) : MatMulDirectFn(params){};
-  void aggregate_fn(VPURingBuffer *A, int8_t *T, int32_t output_channel_group);};
+  void aggregate_fn(VPURingBuffer *A, int8_t *T, int32_t output_channel_group);
+};
 
 // Depthwise below here
 // ////////////////////////////////////////////////////////////////////////////

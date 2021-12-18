@@ -127,7 +127,7 @@ class AbstractKernel {
     int bytes_per_row =
         kparams->output_h_mem_stride +
         (kparams->w_end - kparams->w_begin) * kparams->output_w_mem_stride;
-    
+
     Y += kparams->h_begin * bytes_per_row +
          kparams->w_begin * kparams->output_w_mem_stride;
 

@@ -11,20 +11,14 @@ namespace ops {
 namespace ref {
 
 std::vector<int32_t> Conv2dBNNBinaryOutReference(
-    const Filter2dGeometry& filter_geometry, 
-    const int32_t* packed_input_data,
-    const int32_t* packed_filter_data,
-    const int32_t* thresholds
-    );
+    const Filter2dGeometry& filter_geometry, const int32_t* packed_input_data,
+    const int32_t* packed_filter_data, const int32_t* thresholds);
 
 std::vector<int8_t> Conv2dBNNIntOutReference(
-    const Filter2dGeometry& filter_geometry, 
-    const int32_t* packed_input_data,
-    const int32_t* packed_filter_data,
-    const float* post_activation_multiplier, 
-    const float* post_activation_bias,
-    const int32_t clamp_min, const int32_t clamp_max
-    );
+    const Filter2dGeometry& filter_geometry, const int32_t* packed_input_data,
+    const int32_t* packed_filter_data, const float* post_activation_multiplier,
+    const float* post_activation_bias, const int32_t clamp_min,
+    const int32_t clamp_max);
 
 std::vector<int8_t> Conv2dDenseReference(
     const nn::Filter2dGeometry& filter_geometry, const int8_t input_img[],
