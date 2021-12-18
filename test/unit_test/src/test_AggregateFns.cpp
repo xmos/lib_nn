@@ -72,10 +72,9 @@ void Test_SimpleMatMulInt8() {
   }
 }
 
-
-void accumulate_binary_bytes(int * accu, int8_t a, int8_t b){
+void accumulate_binary_bytes(int *accu, int8_t a, int8_t b) {
   int t = (a ^ b);
-  *accu += ((2 * __builtin_popcount((~t)&0xff) - CHAR_BIT) / 2);
+  *accu += ((2 * __builtin_popcount((~t) & 0xff) - CHAR_BIT) / 2);
 }
 /*
   Simple test to verify memory accesses
@@ -85,8 +84,10 @@ void Test_SimpleMatMulBinary() {
 
   for (auto input_bytes = 4; input_bytes < 48; input_bytes += 4) {
     std::list<std::tuple<int8_t, int8_t> > args = {
-        std::tuple<int8_t, int8_t>{-1, -1},  std::tuple<int8_t, int8_t>{-1, 0},
-        std::tuple<int8_t, int8_t>{0, 0},  std::tuple<int8_t, int8_t>{0, -1},
+        std::tuple<int8_t, int8_t>{-1, -1},
+        std::tuple<int8_t, int8_t>{-1, 0},
+        std::tuple<int8_t, int8_t>{0, 0},
+        std::tuple<int8_t, int8_t>{0, -1},
     };
 
     for (auto arg : args) {
@@ -94,7 +95,7 @@ void Test_SimpleMatMulBinary() {
       std::tie(kernel_fill, scratch_fill) = arg;
 
       for (int output_channel_count = 8; output_channel_count < 48;
-           output_channel_count+=8) {
+           output_channel_count += 8) {
         int scratch_bytes = MatMulInt8::get_scratch_mem_bytes(input_bytes);
         int kernel_bytes =
             MatMulInt8::get_weights_bytes(input_bytes, output_channel_count);
@@ -127,7 +128,6 @@ void Test_SimpleMatMulBinary() {
           expected *= scratch_bytes;
 
           for (int output_chan = 0; output_chan < c; ++output_chan) {
-
             int32_t v;
             ((int16_t *)&v)[0] = A.vR[output_chan];
             ((int16_t *)&v)[1] = A.vD[output_chan];
@@ -237,8 +237,8 @@ void Test_MatMulBinary() {
   const int vpu_ring_buffer_length = 16;
 
   for (int input_bytes = 4; input_bytes < 128; input_bytes += 4) {
-      for (int output_channel_count = 8; output_channel_count < 48;
-           output_channel_count+=8) {
+    for (int output_channel_count = 8; output_channel_count < 48;
+         output_channel_count += 8) {
       int k_height = 1;
       int k_width = 1;  // to make things easy
 
@@ -260,17 +260,16 @@ void Test_MatMulBinary() {
 
       alignas(4) int8_t T[scratch_bytes];
 
-      for (int j = 0; j < sizeof T; ++j)
-        T[j] = rng.rand<int8_t>();
+      for (int j = 0; j < sizeof T; ++j) T[j] = rng.rand<int8_t>();
 
       int expected[output_channel_count];
       for (int i = 0; i < output_channel_count; i++) {
-        expected[i]  = 0;
+        expected[i] = 0;
         for (int j = 0; j < sizeof T; ++j) {
-          accumulate_binary_bytes(&(expected[i]), ((int8_t*)raw_weights)[j], T[j]);
+          accumulate_binary_bytes(&(expected[i]), ((int8_t *)raw_weights)[j],
+                                  T[j]);
         }
       }
-
 
       int accu_modifier[output_channel_count];  //=0
 
@@ -408,8 +407,10 @@ void Test_Simple_MatMulBinaryDirectFn() {
   const int vpu_ring_buffer_length = 16;
 
   std::list<std::tuple<int8_t, int8_t> > args = {
-        std::tuple<int8_t, int8_t>{-1, -1},  std::tuple<int8_t, int8_t>{-1, 0},
-        std::tuple<int8_t, int8_t>{0, 0},  std::tuple<int8_t, int8_t>{0, -1},
+      std::tuple<int8_t, int8_t>{-1, -1},
+      std::tuple<int8_t, int8_t>{-1, 0},
+      std::tuple<int8_t, int8_t>{0, 0},
+      std::tuple<int8_t, int8_t>{0, -1},
   };
 
   for (auto arg : args) {
@@ -421,30 +422,29 @@ void Test_Simple_MatMulBinaryDirectFn() {
         for (int x_channels = 256; x_channels <= 256 * 3; x_channels += 256) {
           for (int k_height = 1; k_height <= x_height; ++k_height) {
             for (int k_width = 1; k_width <= x_width; ++k_width) {
-              for (int y_channels = 256; y_channels < 256 * 3; y_channels += 256) {
-                
+              for (int y_channels = 256; y_channels < 256 * 3;
+                   y_channels += 256) {
                 ImageGeometry X_params(x_height, x_width, x_channels, 1);
                 WindowGeometry K_params(k_height, k_width, 1, 1, 1, 1);
 
-                alignas(4) int8_t K[y_channels][k_height][k_width][x_channels/8];
-                alignas(4) int8_t T[x_height][x_width][x_channels/8];
+                alignas(4)
+                    int8_t K[y_channels][k_height][k_width][x_channels / 8];
+                alignas(4) int8_t T[x_height][x_width][x_channels / 8];
 
                 int8_t *weights =
                     (int8_t *)K;  // todo we will switch to usnig the boggler
 
-                MatMulBinaryDirectFn::Params p(
-                    X_params, K_params,
-                    x_channels); 
+                MatMulBinaryDirectFn::Params p(X_params, K_params, x_channels);
                 MatMulBinaryDirectFn mmd(&p);
                 mmd.setWeights(weights);
 
                 std::fill_n((int8_t *)K, sizeof K, kernel_fill);
-                std::fill_n((int8_t *)T, x_height * x_width * x_channels/8,
+                std::fill_n((int8_t *)T, x_height * x_width * x_channels / 8,
                             scratch_fill);
 
                 int expected = 0;
                 accumulate_binary_bytes(&(expected), kernel_fill, scratch_fill);
-                expected *= (k_height*k_width*x_channels/CHAR_BIT);
+                expected *= (k_height * k_width * x_channels / CHAR_BIT);
 
                 int ocg_count = (y_channels + vpu_ring_buffer_length - 1) /
                                 vpu_ring_buffer_length;
@@ -622,12 +622,13 @@ void Test_MatMulBinaryDirectFn() {
                         std::array<int, 4> shape = {
                             {output_channels, k_height, k_width, x_channels}};
                         alignas(4) int8_t raw_weights[output_channels][k_height]
-                                                     [k_width][x_channels/8];
+                                                     [k_width][x_channels / 8];
 
                         for (int j = 0; j < sizeof raw_weights; ++j)
                           ((int8_t *)raw_weights)[j] = rng.rand<int8_t>();
 
-                        alignas(4) int8_t X_mem[x_height][x_width][x_channels/8];
+                        alignas(4)
+                            int8_t X_mem[x_height][x_width][x_channels / 8];
 
                         for (int j = 0; j < sizeof X_mem; ++j)
                           ((int8_t *)X_mem)[j] = rng.rand<int8_t>();
@@ -665,13 +666,18 @@ void Test_MatMulBinaryDirectFn() {
 
                             for (int h = 0; h < k_height; ++h) {
                               for (int w = 0; w < k_width; ++w) {
-                                int input_bytes_per_output = input_ch_per_output/CHAR_BIT;
-                                for (int c = 0; c < input_bytes_per_output; ++c) {
-                                  int8_t x_byte = (int8_t)X_mem[k_v_dilation * h]
-                                                    [k_h_dilation * w][c];
-                                  int8_t k_byte = (int8_t)raw_weights[actual_output_channel][h]
-                                                     [w][c];
-                                  accumulate_binary_bytes(&expected_sum, x_byte, k_byte);
+                                int input_bytes_per_output =
+                                    input_ch_per_output / CHAR_BIT;
+                                for (int c = 0; c < input_bytes_per_output;
+                                     ++c) {
+                                  int8_t x_byte =
+                                      (int8_t)X_mem[k_v_dilation * h]
+                                                   [k_h_dilation * w][c];
+                                  int8_t k_byte =
+                                      (int8_t)raw_weights[actual_output_channel]
+                                                         [h][w][c];
+                                  accumulate_binary_bytes(&expected_sum, x_byte,
+                                                          k_byte);
                                 }
                               }
                             }

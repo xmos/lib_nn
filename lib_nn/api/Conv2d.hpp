@@ -52,22 +52,22 @@ class Conv2dDepthwisePaddedIndirect : public Filter2D_DW {
       : Filter2D_DW(akp, memcpy, aggregator, ot) {}
 };
 
-
 class BNNConv2dValidDirectBinary : public Filter2D {
  public:
   // Valid only
   // Multiple of 256 input and 16 output channels
   BNNConv2dValidDirectBinary(AbstractKernel::Params *akp, DerefInputFn *memcpy,
-                    MatMulBinaryDirectFn *aggregator, OT_binary *ot)
+                             MatMulBinaryDirectFn *aggregator, OT_binary *ot)
       : Filter2D(akp, memcpy, aggregator, ot) {}
 };
 
-class BNNConv2dValidDirectInt8: public Filter2D {
+class BNNConv2dValidDirectInt8 : public Filter2D {
  public:
   // Valid only
   // Multiple of 256 input and 16 output channels
   BNNConv2dValidDirectInt8(AbstractKernel::Params *akp, DerefInputFn *memcpy,
-                    MatMulBinaryDirectFn *aggregator, OT_int8_clamped *ot)
+                           MatMulBinaryDirectFn *aggregator,
+                           OT_int8_clamped *ot)
       : Filter2D(akp, memcpy, aggregator, ot) {}
 };
 
@@ -75,8 +75,9 @@ class BNNConv2dValidIndirectBinary : public Filter2D {
  public:
   // Valid only
   // Multiple of 32 input and 16 output channels
-  BNNConv2dValidIndirectBinary(AbstractKernel::Params *akp, ImToColValid *memcpy,
-                      MatMulBinary *aggregator, OT_binary *ot)
+  BNNConv2dValidIndirectBinary(AbstractKernel::Params *akp,
+                               ImToColValid *memcpy, MatMulBinary *aggregator,
+                               OT_binary *ot)
       : Filter2D(akp, memcpy, aggregator, ot) {}
 };
 
@@ -85,7 +86,7 @@ class BNNConv2dValidIndirectInt8 : public Filter2D {
   // Valid only
   // Multiple of 32 input and 16 output channels
   BNNConv2dValidIndirectInt8(AbstractKernel::Params *akp, ImToColValid *memcpy,
-                      MatMulBinary *aggregator, OT_int8_clamped *ot)
+                             MatMulBinary *aggregator, OT_int8_clamped *ot)
       : Filter2D(akp, memcpy, aggregator, ot) {}
 };
 

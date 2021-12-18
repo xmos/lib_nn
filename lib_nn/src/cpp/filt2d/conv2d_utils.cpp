@@ -5,8 +5,8 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
-#include <vector>
 #include <limits>
+#include <vector>
 
 #include "xs3_vpu.h"
 

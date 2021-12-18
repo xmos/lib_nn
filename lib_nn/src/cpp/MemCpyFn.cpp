@@ -122,9 +122,10 @@ ImToColPadded::Params::Params(const Filter2dGeometry &filter,
   ///       many input channels are needed to compute an output. It is UNRELATED
   ///       to the number of channels we compute in parallel. So we need to
   ///       multiply by the degree of parallelism of the operator.
-  bytes_per_copy_per_channel = (channels_per_output_group *
-                               filter.window.shape.depth *
-                               filter.window.shape.element_bits)/CHAR_BIT;
+  bytes_per_copy_per_channel =
+      (channels_per_output_group * filter.window.shape.depth *
+       filter.window.shape.element_bits) /
+      CHAR_BIT;
 }
 
 int8_t *ImToColPadded::memcopy_fn_impl(int8_t *T, int8_t *X,
@@ -185,7 +186,8 @@ ImToColValid::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
   // int bytes_per_copy_per_channel = (input_ch_per_output * X.bits_per_element)
   // / CHAR_BIT;
   // printf("X.element_bits: %d\n", X.element_bits);
-  int bytes_per_copy_per_channel = (input_ch_per_output * X.element_bits) / CHAR_BIT;
+  int bytes_per_copy_per_channel =
+      (input_ch_per_output * X.element_bits) / CHAR_BIT;
 
   // printf("bytes_per_copy_per_channel: %d\n", bytes_per_copy_per_channel);
   bytes_per_pixel = X.PixelBytes();
@@ -248,7 +250,7 @@ int8_t *ImToColValid::memcopy_fn_impl(int8_t *T, int8_t *X,
       // This loop copies a whole pixel
       for (int32_t i_ch_group = params->input_channel_groups; i_ch_group >= 0;
            i_ch_group--) {
-            //  printf("%d\n", i_ch_group);
+        //  printf("%d\n", i_ch_group);
         VLDD(vpu, X_cur_p);
         X_cur_p += XS3_VPU_VREG_WIDTH_BYTES;
 

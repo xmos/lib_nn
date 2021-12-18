@@ -27,13 +27,13 @@ void Filter2D::calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h,
       scratch_mem, X, h,
       w);  // copy all input channels, channel start is implicitly 0.
 
-  for (int32_t output_chan_group = 0; output_chan_group < kparams->output_channel_group_count;
+  for (int32_t output_chan_group = 0;
+       output_chan_group < kparams->output_channel_group_count;
        ++output_chan_group) {
     VPURingBuffer A;
     aggregate_handler->aggregate_fn(&A, input_img, output_chan_group);
 
     Y = ot_handler->output_transform_fn(Y, &A, output_chan_group);
-    
   }
 }
 

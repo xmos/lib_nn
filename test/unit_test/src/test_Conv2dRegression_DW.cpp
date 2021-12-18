@@ -178,8 +178,9 @@ void test_Conv2dValidDirectDWRegression() {
                                 OutputTransformFnInt8::quantise_activation(
                                     mul_and_biases);
 
-                            auto serialised_multipliers_and_biases = 
-                              OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
+                            auto serialised_multipliers_and_biases =
+                                OutputTransformFn::serialise_memory(
+                                    qp.multipliers, qp.biases);
 
                             // pad q.biases and  q.multipliers to a multiple
                             // of VPU_INT16_EPV this is to work around array
@@ -187,8 +188,8 @@ void test_Conv2dValidDirectDWRegression() {
                             int16_t pad_val =
                                 rng.rand<int16_t>();  // this is arbitrary
                             OutputTransformFn::pad_final_access(
-                                serialised_multipliers_and_biases, VPU_INT16_EPV,
-                                pad_val);
+                                serialised_multipliers_and_biases,
+                                VPU_INT16_EPV, pad_val);
 
                             OT_int8::Params ot_params((int32_t)x_channels,
                                                       qp.initial_shr,
@@ -356,8 +357,9 @@ void test_Conv2dPaddedIndirectDWRegression() {
                                 OutputTransformFnInt8::quantise_activation(
                                     mul_and_biases);
 
-                            auto serialised_multipliers_and_biases = 
-                              OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
+                            auto serialised_multipliers_and_biases =
+                                OutputTransformFn::serialise_memory(
+                                    qp.multipliers, qp.biases);
 
                             // pad q.biases and  q.multipliers to a multiple
                             // of VPU_INT16_EPV this is to work around array
@@ -365,8 +367,8 @@ void test_Conv2dPaddedIndirectDWRegression() {
                             int16_t pad_val =
                                 rng.rand<int16_t>();  // this is arbitrary
                             OutputTransformFn::pad_final_access(
-                                serialised_multipliers_and_biases, VPU_INT16_EPV,
-                                pad_val);
+                                serialised_multipliers_and_biases,
+                                VPU_INT16_EPV, pad_val);
                             OT_int8::Params ot_params((int32_t)x_channels,
                                                       qp.initial_shr,
                                                       qp.final_shr);
