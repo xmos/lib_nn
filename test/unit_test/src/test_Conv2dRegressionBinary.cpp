@@ -24,9 +24,10 @@ static auto rng = Rand(69);
 
 const int itt_count = 4;
 
-//int32_t is the smallest word size that the BNNs can input or output.
-//There is no point trying to support smaller until the reference code does too.
-const int chans_per_int32 = sizeof(int32_t)*CHAR_BIT;
+// int32_t is the smallest word size that the BNNs can input or output.
+// There is no point trying to support smaller until the reference code does
+// too.
+const int chans_per_int32 = sizeof(int32_t) * CHAR_BIT;
 
 struct BinaryKernelStimulus {
   std::vector<int32_t> weights;
@@ -39,14 +40,18 @@ struct BinaryKernelStimulus {
 
   BinaryKernelStimulus(Filter2dGeometry &geom)
       : weights(geom.window.shape.height * geom.window.shape.width *
-                    geom.output.depth * geom.input.depth/chans_per_int32,
+                    geom.output.depth * geom.input.depth / chans_per_int32,
                 0),
         bias(geom.output.depth),
         eff_mult(geom.output.depth),
         thresholds(geom.output.depth),
 
-        //We add 8 to the input to allow over reading, if it effects the result then it's a bug.
-        input(geom.input.height * geom.input.width * geom.input.depth/chans_per_int32 + 8, 0),
+        // We add 8 to the input to allow over reading, if it effects the result
+        // then it's a bug.
+        input(geom.input.height * geom.input.width * geom.input.depth /
+                      chans_per_int32 +
+                  8,
+              0),
         clamp_high(0),
         clamp_low(0){};
 };
@@ -82,10 +87,12 @@ BinaryKernelStimulus create_simple_binary_stimulus(Filter2dGeometry &geom) {
 void test_Conv2dValidIndirectBinaryRegression() {
   for (int x_height = 1; x_height <= 2; ++x_height) {
     for (int x_width = 1; x_width <= 2; ++x_width) {
-      for (int x_channels = chans_per_int32; x_channels <= chans_per_int32*3; x_channels += chans_per_int32) {
+      for (int x_channels = chans_per_int32; x_channels <= chans_per_int32 * 3;
+           x_channels += chans_per_int32) {
         for (int k_height = 1; k_height <= x_height; ++k_height) {
           for (int k_width = 1; k_width <= x_width; ++k_width) {
-            for (int k_depth = chans_per_int32; k_depth <= chans_per_int32*10; k_depth += chans_per_int32) {
+            for (int k_depth = chans_per_int32; k_depth <= chans_per_int32 * 10;
+                 k_depth += chans_per_int32) {
               for (int k_h_dilation = 1; k_h_dilation <= 2; ++k_h_dilation) {
                 for (int k_v_dilation = 1; k_v_dilation <= 2; ++k_v_dilation) {
                   for (int k_h_stride = 1; k_h_stride <= 2; ++k_h_stride) {
@@ -215,10 +222,11 @@ void test_Conv2dValidIndirectBinaryRegression() {
                                 Filter2D::Params akp(Y, ir,
                                                      VPU_INT8_ACC_PERIOD);
 
-                                BNNConv2dValidIndirectBinary conv2d(&akp, &memcpy,
-                                                            &aggregator, &ot);
+                                BNNConv2dValidIndirectBinary conv2d(
+                                    &akp, &memcpy, &aggregator, &ot);
                                 alignas(4)
-                                    int32_t output[Y.height * Y.width * Y.depth/chans_per_int32];
+                                    int32_t output[Y.height * Y.width *
+                                                   Y.depth / chans_per_int32];
                                 std::memset(output, 0x55, sizeof(output));
 
                                 conv2d.execute((int8_t *)&output[0],
@@ -226,9 +234,12 @@ void test_Conv2dValidIndirectBinaryRegression() {
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
-                                    for (int yd = 0; yd < Y.depth/chans_per_int32; yd++) {
-                                      int idx = yh * (Y.width * Y.depth/chans_per_int32) +
-                                                yw * Y.depth/chans_per_int32 + yd;
+                                    for (int yd = 0;
+                                         yd < Y.depth / chans_per_int32; yd++) {
+                                      int idx = yh * (Y.width * Y.depth /
+                                                      chans_per_int32) +
+                                                yw * Y.depth / chans_per_int32 +
+                                                yd;
 
                                       TEST_ASSERT_EQUAL_HEX32(
                                           (int)expected[idx], (int)output[idx]);
@@ -385,12 +396,16 @@ void test_Conv2dValidDirectBinaryRegression() {
                                     &akp, &memcpy, &aggregator, &ot);
 
                                 alignas(4)
-                                    int32_t output[Y.height * Y.width * Y.depth/chans_per_int32];
+                                    int32_t output[Y.height * Y.width *
+                                                   Y.depth / chans_per_int32];
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
-                                    for (int yd = 0; yd < Y.depth/chans_per_int32; yd++) {
-                                      int idx = yh * (Y.width * Y.depth/chans_per_int32) +
-                                                yw * Y.depth/chans_per_int32 + yd;
+                                    for (int yd = 0;
+                                         yd < Y.depth / chans_per_int32; yd++) {
+                                      int idx = yh * (Y.width * Y.depth /
+                                                      chans_per_int32) +
+                                                yw * Y.depth / chans_per_int32 +
+                                                yd;
 
                                       // printf("%d %08x %08x\n", idx,
                                       // expected[idx], output[idx]);
@@ -420,10 +435,12 @@ void test_Conv2dValidDirectBinaryRegression() {
 void test_Conv2dValidIndirectInt8Regression() {
   for (int x_height = 1; x_height <= 2; ++x_height) {
     for (int x_width = 1; x_width <= 2; ++x_width) {
-      for (int x_channels = chans_per_int32; x_channels <= chans_per_int32*3; x_channels += chans_per_int32) {
+      for (int x_channels = chans_per_int32; x_channels <= chans_per_int32 * 3;
+           x_channels += chans_per_int32) {
         for (int k_height = 1; k_height <= x_height; ++k_height) {
           for (int k_width = 1; k_width <= x_width; ++k_width) {
-            for (int k_depth = chans_per_int32; k_depth <= chans_per_int32*10; k_depth += chans_per_int32) {
+            for (int k_depth = chans_per_int32; k_depth <= chans_per_int32 * 10;
+                 k_depth += chans_per_int32) {
               for (int k_h_dilation = 1; k_h_dilation <= 2; ++k_h_dilation) {
                 for (int k_v_dilation = 1; k_v_dilation <= 2; ++k_v_dilation) {
                   for (int k_h_stride = 1; k_h_stride <= 2; ++k_h_stride) {
@@ -562,8 +579,8 @@ void test_Conv2dValidIndirectInt8Regression() {
                                     rng.rand<threshold_t>();  // this is
                                                               // arbitrary
                                 OutputTransformFn::pad_final_access(
-                                    serialised_offsets_multipliers_and_biases, VPU_INT16_EPV,
-                                    pad_val);
+                                    serialised_offsets_multipliers_and_biases,
+                                    VPU_INT16_EPV, pad_val);
 
                                 OT_int8_clamped::Params ot_params(
                                     (int32_t)k_depth, qp.initial_shr,
@@ -756,8 +773,8 @@ void test_Conv2dValidDirectInt8Regression() {
                                     rng.rand<int16_t>();  // this is arbitrary
 
                                 OutputTransformFn::pad_final_access(
-                                    serialised_offsets_multipliers_and_biases, VPU_INT16_EPV,
-                                    pad_val);
+                                    serialised_offsets_multipliers_and_biases,
+                                    VPU_INT16_EPV, pad_val);
 
                                 OT_int8_clamped::Params ot_params(
                                     (int32_t)k_depth, qp.initial_shr,
