@@ -522,12 +522,8 @@ void test_Conv2dValidIndirectInt8Regression() {
                                         (int8_t *)weights.data(), shape, 1,
                                         kernel_pad_val);
 
-
-
                                 MatMulBinary::Params p(k_depth, input_bytes);
                                 MatMulBinary aggregator(&p);
-
-                                // rw.invertWeights();
 
                                 aggregator.setWeights(rw.weights.data());
                                 //adjust the thresholds from xorpopcount space to xcore space
@@ -580,27 +576,22 @@ void test_Conv2dValidIndirectInt8Regression() {
                                                             &aggregator, &ot);
                                 alignas(4)
                                     int8_t output[Y.height * Y.width * Y.depth];
-                                std::memset(output, 12, sizeof(output));
+                                std::memset(output, 0x55, sizeof(output));
 
                                 conv2d.execute(output, (int8_t*)&input[0], &T[0]);
-
-                                printf("here\n");
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
                                     for (int yd = 0; yd < Y.depth; yd++) {
                                       int idx = yh * (Y.width * Y.depth) +
                                                 yw * Y.depth + yd;
-
-                                      printf("%d %d\n", (int8_t)expected[idx],
-                                          (int8_t)output[idx]);
-
                                       TEST_ASSERT_INT8_WITHIN(1,
                                           (int8_t)expected[idx],
                                           (int8_t)output[idx]);
                                     }
                                   }
                                 }
+                                printf("yay\n");
                               }
                             }
                           }

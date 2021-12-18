@@ -79,45 +79,33 @@ VECT_INT8_MIN:
 	.type FUNCTION_NAME,@function
 
 FUNCTION_NAME:
-    {dualentsp NSTACKWORDS; nop}
+    dualentsp NSTACKWORDS
 
     std r4, r5, sp[0]
     std r6, r7, sp[1]
 
-    {ldw initial_shift, params_p[1];nop}
-    {ldw output_slice_channel_count, params_p[0];nop}
-    {sext initial_shift, 16; shr final_shr, initial_shift, 16}
-    {sext final_shr, 16; nop}
-
-    {shl output_channel_group, output_channel_group, 4; nop}
-    {sub output_count, output_slice_channel_count, output_channel_group;nop}
+    {ldw initial_shift, params_p[1]; shl output_channel_group, output_channel_group, 4}
+    {ldw output_slice_channel_count, params_p[0]; shr final_shr, initial_shift, 16}
+    {sub output_count, output_slice_channel_count, output_channel_group; ldc t, 16}
+    {lss t, output_count, t; sext final_shr, 16}
+    {bt t, output_transform_fn_int_clamped_impl_asm_skip; sext initial_shift, 16}
+        {ldc output_count, 16; ldc t, 1}
+    output_transform_fn_int_clamped_impl_asm_skip:
     
-    {ldc t, 16; nop}
-    {lss t, output_count, t; nop}
-    {bt t, here; nop}
-        {ldc output_count, 16; nop}
-    here:
-    
-    ldc t, 0x100
-    {vsetc t ;nop }
-
-    {ldw omb_p, sp[S_OBM]}
+    {ldw omb_p, sp[S_OBM]; shl t, t, 8}
+    {vsetc t ; mov t, A_p }
 
     lda16 temp_p, output_channel_group[output_channel_group] //x3
-
     lda16 omb_p, omb_p[temp_p] //offset omb_p by output_channel_group * 16 * 3
 
-    {mov t, A_p; nop}
     {vldr t[0]; nop}
-    {vladd omb_p[0]; nop}
-    {vpos;nop}
-    ldaw temp_p, sp[S_TEMP_VECTOR]
-    {vstr temp_p[0]; nop} 
+    {vladd omb_p[0]; shl output_count, output_count, 1}
+    {vpos; ldaw temp_p, sp[S_TEMP_VECTOR]}
+    
+    {vstr temp_p[0]; add omb_p, omb_p, output_count} 
     vlashr temp_p[0], initial_shift
-    {lda16 omb_p, omb_p[output_count]}
-    {vlmul omb_p[0]; nop}
-    {lda16 omb_p, omb_p[output_count]}
-    {vladd omb_p[0]; nop}
+    {vlmul omb_p[0]; add omb_p, omb_p, output_count}
+    {vladd omb_p[0]; shr output_count, output_count, 1}
     {vstr temp_p[0]; nop}
     vlashr temp_p[0], final_shr
 
@@ -139,6 +127,7 @@ FUNCTION_NAME:
     vstrpv Y_p[0], r3
 
     ldd r4, r5, sp[0]
+    ldd r6, r7, sp[1]
     retsp NSTACKWORDS
 
     .cc_bottom FUNCTION_NAME.function
