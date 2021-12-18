@@ -369,9 +369,6 @@ class OT_int8_clamped : public OutputTransformFnInt8 {
     int32_t output_slice_channel_count;
     int16_t initial_shift;
     int16_t final_shr;
-    int16_t clamp_near;
-    int16_t clamp_far_0;
-    int16_t clamp_far_1;
 
    public:
     /**
@@ -393,7 +390,7 @@ class OT_int8_clamped : public OutputTransformFnInt8 {
    * operation(OutputTransform) and how each channel will transformed.
    */
   Params *params;
-  int16_t *multipliers_and_biases;
+  int16_t *offsets_multipliers_and_biases;
 
  public:
   OT_int8_clamped(Params *params) : params(params){};
@@ -402,9 +399,9 @@ class OT_int8_clamped : public OutputTransformFnInt8 {
                               int32_t output_channel_group);
 
   void setOffsetsMultipliersAndBiases(int16_t *m) {
-    multipliers_and_biases = m;
+    offsets_multipliers_and_biases = m;
     assert(m != nullptr);
-    assert(is_aligned(multipliers_and_biases, 4));
+    assert(is_aligned(offsets_multipliers_and_biases, 4));
   }
 
  static MulsAndBias canonicalise_mul_and_bias(

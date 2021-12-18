@@ -584,11 +584,16 @@ void test_Conv2dValidIndirectInt8Regression() {
 
                                 conv2d.execute(output, (int8_t*)&input[0], &T[0]);
 
+                                printf("here\n");
+
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
                                     for (int yd = 0; yd < Y.depth; yd++) {
                                       int idx = yh * (Y.width * Y.depth) +
                                                 yw * Y.depth + yd;
+
+                                      printf("%d %d\n", (int8_t)expected[idx],
+                                          (int8_t)output[idx]);
 
                                       TEST_ASSERT_INT8_WITHIN(1,
                                           (int8_t)expected[idx],
@@ -806,8 +811,8 @@ void test_Conv2dValidDirectInt8Regression() {
 extern "C" void test_conv2d_binary_regression();
 void test_conv2d_binary_regression() {
   UNITY_SET_FILE();
-  RUN_TEST(test_Conv2dValidIndirectBinaryRegression);
-  RUN_TEST(test_Conv2dValidDirectBinaryRegression);
+  // RUN_TEST(test_Conv2dValidIndirectBinaryRegression);
+  // RUN_TEST(test_Conv2dValidDirectBinaryRegression);
   RUN_TEST(test_Conv2dValidIndirectInt8Regression);
   RUN_TEST(test_Conv2dValidDirectInt8Regression);
 }

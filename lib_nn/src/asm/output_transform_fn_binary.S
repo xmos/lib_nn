@@ -32,7 +32,7 @@
 #define OPTIONAL_DDR_SPILL(x) /* */
 #endif
 
-#define NSTACKWORDS 1
+#define NSTACKWORDS 0
 	.issue_mode  dual
 	.globl FUNCTION_NAME
 	.align 4
@@ -42,7 +42,7 @@ FUNCTION_NAME:
     {dualentsp NSTACKWORDS}
 
 #define MODE_S16 0x100
-    {ldc t, MODE_S16}
+    ldc t, MODE_S16
     {vsetc t; shl t, output_channel_group, 5 }
     {add thresholds_p, thresholds_p, t; mov t, A_p}
     {vldr t[0]; nop}  // Don't bother loading D
