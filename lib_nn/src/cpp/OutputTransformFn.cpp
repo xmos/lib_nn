@@ -607,7 +607,7 @@ int8_t *output_transform_fn_binary_impl(int8_t *Y, VPURingBuffer *A,
   // This can only process 16 channels at a time
   int output_bytes = VPU_INT16_EPV / CHAR_BIT;
 
-  int16_t temp_mem;
+  alignas(4) int32_t temp_mem;
   VSTRPV(vpu, &temp_mem, (1 << output_bytes) - 1);
   memcpy(Y, &temp_mem, output_bytes);
 
