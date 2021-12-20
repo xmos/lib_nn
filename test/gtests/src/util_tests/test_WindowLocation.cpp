@@ -415,7 +415,7 @@ TEST(WindowLocation_Test, Fold) {
           for (int yx = 0; yx < filter.output.depth; yx++) {
             auto loc = WindowLocation(filter, ImageVect(yr, yc, yx));
 
-            int32_t expected = 1234;
+            int32_t expected = 123;
 
             for (int kr = 0; kr < filter.window.shape.height; kr++) {
               for (int kc = 0; kc < filter.window.shape.width; kc++) {
