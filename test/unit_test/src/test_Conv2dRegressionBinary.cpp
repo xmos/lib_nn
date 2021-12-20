@@ -619,7 +619,6 @@ void test_Conv2dValidIndirectInt8Regression() {
                                     }
                                   }
                                 }
-                                printf("yay\n");
                               }
                             }
                           }
@@ -835,8 +834,8 @@ void test_Conv2dValidDirectInt8Regression() {
 extern "C" void test_conv2d_binary_regression();
 void test_conv2d_binary_regression() {
   UNITY_SET_FILE();
-  // RUN_TEST(test_Conv2dValidIndirectBinaryRegression);
-  // RUN_TEST(test_Conv2dValidDirectBinaryRegression);
+  RUN_TEST(test_Conv2dValidIndirectBinaryRegression);
+  RUN_TEST(test_Conv2dValidDirectBinaryRegression);
   RUN_TEST(test_Conv2dValidIndirectInt8Regression);
   RUN_TEST(test_Conv2dValidDirectInt8Regression);
 }
