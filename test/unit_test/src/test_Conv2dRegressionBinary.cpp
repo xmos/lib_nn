@@ -398,6 +398,10 @@ void test_Conv2dValidDirectBinaryRegression() {
                                 alignas(4)
                                     int32_t output[Y.height * Y.width *
                                                    Y.depth / chans_per_int32];
+                                std::memset(output, 0x55, sizeof(output));
+
+                                conv2d.execute((int8_t *)&output[0],
+                                               (int8_t *)&input[0]);
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
                                     for (int yd = 0;
