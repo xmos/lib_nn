@@ -69,7 +69,8 @@ C_API void vpu_sim_mem_print(void* address, vector_mode mode);
 C_API int64_t vpu_saturate(const int64_t input, const unsigned bits);
 
 // Assert if the memory access is non-word aligned
-void assert_word_aligned(const void* address);
+// void assert_word_aligned(const void* address);
+#define assert_word_aligned(address) assert(((uintptr_t)address & 0x3) == 0);
 
 #ifdef __cplusplus
 
