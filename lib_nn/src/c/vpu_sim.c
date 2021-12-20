@@ -6,9 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void assert_word_aligned(const void *address) {
-  assert(((uintptr_t)address & 0x3) == 0);
-}
 
 /**
  * vpu_saturate to the relevent bounds.
