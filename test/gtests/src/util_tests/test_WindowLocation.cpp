@@ -187,7 +187,6 @@ TEST(WindowLocation_Test, Padding) {
 //
 //
 TEST(WindowLocation_Test, SignedPadding) {
-  auto rand = nn::test::Rand(981513);
 
   for (auto filter_set : filter_sets) {
     filter_set.Reset();
@@ -417,6 +416,8 @@ TEST(WindowLocation_Test, Fold) {
 
             int32_t expected = 123;
 
+            int32_t original_expected = expected;
+
             for (int kr = 0; kr < filter.window.shape.height; kr++) {
               for (int kc = 0; kc < filter.window.shape.width; kc++) {
                 for (int kx = 0; kx < filter.window.shape.depth; kx++) {
@@ -437,7 +438,7 @@ TEST(WindowLocation_Test, Fold) {
               return acc * elm;
             };
 
-            auto res = loc.Fold<int32_t, int8_t>(&input_img[0], lfunc, 1234, 0);
+            auto res = loc.Fold<int32_t, int8_t>(&input_img[0], lfunc, original_expected, 0);
 
             ASSERT_EQ(expected, res);
           }
