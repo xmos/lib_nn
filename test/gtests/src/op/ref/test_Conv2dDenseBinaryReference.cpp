@@ -67,7 +67,8 @@ INSTANTIATE_TEST_SUITE_P(
         Filter2dGeometry(ImageGeometry(8, 8, 32), ImageGeometry(8, 8, 32),
                          WindowGeometry(1, 1, 32))));
 
-// static auto iterA = nn::test::ParamedRandIter<Filter2dGeometry, SimpleFilter>(
+// static auto iterA = nn::test::ParamedRandIter<Filter2dGeometry,
+// SimpleFilter>(
 //     100, SimpleFilter(false, false));
 // INSTANTIATE_TEST_SUITE_P(Random, BNNConv2dDenseBinaryReferenceTestA,
 //                          ::testing::ValuesIn(iterA.begin(), iterA.end()));
@@ -131,7 +132,8 @@ INSTANTIATE_TEST_SUITE_P(
         Filter2dGeometry(ImageGeometry(8, 8, 32), ImageGeometry(8, 8, 32),
                          WindowGeometry(1, 1, 32))));
 
-// static auto iterD = nn::test::ParamedRandIter<Filter2dGeometry, SimpleFilter>(
+// static auto iterD = nn::test::ParamedRandIter<Filter2dGeometry,
+// SimpleFilter>(
 //     100, SimpleFilter(false, false));
 // INSTANTIATE_TEST_SUITE_P(Random, BNNConv2dDenseIntReferenceTestA,
 //                          ::testing::ValuesIn(iterD.begin(), iterD.end()));
