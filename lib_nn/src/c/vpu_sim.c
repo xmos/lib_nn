@@ -6,9 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void assert_word_aligned(const void *address) {
-  assert(((uintptr_t)address & 0x3) == 0);
-}
 
 /**
  * vpu_saturate to the relevent bounds.
@@ -194,6 +191,30 @@ void VLMACCR(xs3_vpu *vpu, const void *addr) {
     acc = vpu_saturate(acc, 40);
     rotate_accumulators(vpu);
     SetAccumulator(vpu, 0, acc);
+  } else {
+    assert(0);  // How'd this happen?
+  }
+}
+
+void VPOS(xs3_vpu *vpu) {
+  if (vpu->mode == MODE_S8) {
+    for (int i = 0; i < VPU_INT8_ACC_PERIOD; i++) {
+      int8_t acc = (int8_t)GetAccumulator(vpu, i);
+      if (acc < 0) acc = 0;
+      vpu->vR.s8[i] = acc;
+    }
+  } else if (vpu->mode == MODE_S16) {
+    for (int i = 0; i < VPU_INT16_ACC_PERIOD; i++) {
+      int16_t acc = (int16_t)GetAccumulator(vpu, i);
+      if (acc < 0) acc = 0;
+      vpu->vR.s16[i] = acc;
+    }
+  } else if (vpu->mode == MODE_S32) {
+    for (int i = 0; i < VPU_INT32_ACC_PERIOD; i++) {
+      int32_t acc = (int32_t)GetAccumulator(vpu, i);
+      if (acc < 0) acc = 0;
+      vpu->vR.s32[i] = acc;
+    }
   } else {
     assert(0);  // How'd this happen?
   }
@@ -489,6 +510,29 @@ void vpu_sim_mem_print(void *address, vector_mode mode) {
 
   printf("\n");
 }
+
+void vpu_accu_print(xs3_vpu *vpu) {
+  printf("Accumulators - Mode:%d\n", vpu->mode);
+  if (vpu->mode == MODE_S8) {
+    for (int i = 0; i < VPU_INT8_ACC_PERIOD; i++) {
+      int32_t acc = GetAccumulator(vpu, i);
+      printf("%d %d\n", i, acc);
+    }
+  } else if (vpu->mode == MODE_S16) {
+    for (int i = 0; i < VPU_INT16_ACC_PERIOD; i++) {
+      int32_t acc = GetAccumulator(vpu, i);
+      printf("%d %d\n", i, acc);
+    }
+  } else if (vpu->mode == MODE_S32) {
+    for (int i = 0; i < VPU_INT32_ACC_PERIOD; i++) {
+      int64_t acc = GetAccumulator(vpu, i);
+      printf("%d %lld\n", i, acc);
+    }
+  } else {
+    assert(0);  // How'd this happen?
+  }
+}
+
 void vpu_sim_print(xs3_vpu *vpu) {
   int8_t *vC8 = vpu->vC.s8;
   int8_t *vR8 = vpu->vR.s8;

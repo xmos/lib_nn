@@ -50,7 +50,6 @@ extern "C" void mat_mul_impl_asm(MatMulInt8::Params *params, VPURingBuffer *A, i
 #define VPU_INT16_EPV 16
 #define XS3_VPU_VREG_WIDTH_BYTES 32
 
-
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
 
@@ -129,6 +128,7 @@ FUNCTION_NAME:
     {sub step, step, 1; nop} //subtract one for now 
 
     {vldc X_p[0]; nop}
+.align 4
     tail_loop_asm:
         OPTIONAL_DDR_SPILL(K_p)
         {vlmaccr1 K_p[0]; add K_p, K_p, K_p_adjust}

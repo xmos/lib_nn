@@ -50,6 +50,7 @@ extern "C" void mat_mul_impl_asm(MatMulInt8::Params *params, VPURingBuffer *A, i
 #define VPU_INT16_EPV 16
 #define XS3_VPU_VREG_WIDTH_BYTES 32
 
+.align 4
 
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
@@ -58,8 +59,6 @@ FUNCTION_NAME:
     std r6, r7, sp[1]
     std r8, r9, sp[2]
 
-
-    
     {vclrdr; ldc t, 32}
     {nop; shl t, t, 4}
     {vsetc t; nop}
@@ -70,7 +69,6 @@ FUNCTION_NAME:
     mul t, K_p_adjust, output_channel_group
     {ldw K_p, sp[NSTACKWORDS+1]; sub step, step, output_channel_group}
     {add K_p, K_p, t; sub t, step, thirty_two}
-
     {shr ic_group_count, K_p_adjust, 5; zext K_p_adjust, 5}
     {bt K_p_adjust, K_p_adjust_lbl_asm; ldc thirty_two, 1}
         {ldc K_p_adjust, 32; sub ic_group_count, ic_group_count, 1}

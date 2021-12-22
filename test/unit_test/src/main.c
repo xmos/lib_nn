@@ -14,6 +14,9 @@
 int main(void) {
   UNITY_BEGIN();
 
+
+  CALL(test_conv2d_binary_regression);
+
   CALL(test_conv2d_regression);
   CALL(test_output_transforms);
   CALL(test_aggregate_fns);
@@ -54,8 +57,5 @@ int main(void) {
 
   CALL(test_bsign_8);
   CALL(test_pad);
-  CALL(test_bnn_conv2d_bin);
-  CALL(test_bnn_conv2d_int8);
-  CALL(test_bnn_conv2d_quant);
   return UNITY_END();
 }

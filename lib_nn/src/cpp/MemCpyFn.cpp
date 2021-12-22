@@ -122,9 +122,10 @@ ImToColPadded::Params::Params(const Filter2dGeometry &filter,
   ///       many input channels are needed to compute an output. It is UNRELATED
   ///       to the number of channels we compute in parallel. So we need to
   ///       multiply by the degree of parallelism of the operator.
-  bytes_per_copy_per_channel = (channels_per_output_group *
-                               filter.window.shape.depth *
-                               filter.window.shape.element_bits)/CHAR_BIT;
+  bytes_per_copy_per_channel =
+      (channels_per_output_group * filter.window.shape.depth *
+       filter.window.shape.element_bits) /
+      CHAR_BIT;
 }
 
 int8_t *ImToColPadded::memcopy_fn_impl(int8_t *T, int8_t *X,
@@ -181,10 +182,9 @@ This constructor is used for testing
 */
 ImToColValid::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
                              const int input_ch_per_output) {
-  // TODO
-  // int bytes_per_copy_per_channel = (input_ch_per_output * X.bits_per_element)
-  // / CHAR_BIT;
-  int bytes_per_copy_per_channel = (input_ch_per_output * CHAR_BIT) / CHAR_BIT;
+                               
+  int bytes_per_copy_per_channel =
+      (input_ch_per_output * X.element_bits) / CHAR_BIT;
 
   bytes_per_pixel = X.PixelBytes();
   bytes_per_h_line = X.RowBytes();
@@ -195,6 +195,7 @@ ImToColValid::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
   input_channel_groups =
       (bytes_per_copy_per_channel + XS3_VPU_VREG_WIDTH_BYTES - 1) /
       XS3_VPU_VREG_WIDTH_BYTES;
+
   input_channel_groups -= 1;
 
   int bytes_actually_copied =
