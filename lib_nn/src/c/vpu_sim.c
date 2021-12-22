@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
 /**
  * vpu_saturate to the relevent bounds.
  */

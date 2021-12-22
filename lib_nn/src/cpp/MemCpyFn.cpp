@@ -182,7 +182,6 @@ This constructor is used for testing
 */
 ImToColValid::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
                              const int input_ch_per_output) {
-                               
   int bytes_per_copy_per_channel =
       (input_ch_per_output * X.element_bits) / CHAR_BIT;
 

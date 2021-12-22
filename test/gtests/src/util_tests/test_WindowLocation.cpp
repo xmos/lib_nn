@@ -187,7 +187,6 @@ TEST(WindowLocation_Test, Padding) {
 //
 //
 TEST(WindowLocation_Test, SignedPadding) {
-
   for (auto filter_set : filter_sets) {
     filter_set.Reset();
     for (auto filter : filter_set) {
@@ -438,7 +437,8 @@ TEST(WindowLocation_Test, Fold) {
               return acc * elm;
             };
 
-            auto res = loc.Fold<int32_t, int8_t>(&input_img[0], lfunc, original_expected, 0);
+            auto res = loc.Fold<int32_t, int8_t>(&input_img[0], lfunc,
+                                                 original_expected, 0);
 
             ASSERT_EQ(expected, res);
           }

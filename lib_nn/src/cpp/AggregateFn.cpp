@@ -195,7 +195,7 @@ void mat_mul_generic_impl(MatMulBase::Params *params, VPURingBuffer *A,
   VLDC(vpu, D_p);
 
   int tail_loops = vpu_epv - 1 + step / vpu_bytes;
-  
+
   // aligned boundaries TODO put an assert on this
   for (int l = 0; l < tail_loops; l++) {
     macc_inst(vpu, K_p);
