@@ -567,19 +567,6 @@ int8_t *OT_int8_clamped::output_transform_fn(int8_t *Y, VPURingBuffer *A,
   return output_transform_fn_int_clamped_impl(
       this->params, Y, A, output_channel_group, offsets_multipliers_and_biases);
 #else
-  // we need to know how many we are processing
-  int output_count = std::min(
-      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
-      (int32_t)VPU_INT16_EPV);
-
-  // Thge 3 is due to the serialisation of 3 arrays in chunks of VPU_INT16_EPV
-  // elements
-  int16_t *cur_post_activation_offset =
-      offsets_multipliers_and_biases + output_channel_group * VPU_INT16_EPV * 3;
-
-  int16_t *cur_post_activation_mul = cur_post_activation_offset + output_count;
-
-  int16_t *cur_post_activation_bias = cur_post_activation_mul + output_count;
 
   return output_transform_fn_int_clamped_impl_asm(
       this->params, Y, A, output_channel_group, offsets_multipliers_and_biases);
