@@ -4,7 +4,12 @@
 #define POOLING_H_
 
 #include "nn_image.h"
+#include "nn_conv2d_structs.h"
+
+#include "nn_types.h"
 #include "nn_window_params.h"
+
+typedef nn_window_op_job_params_t nn_conv2d_job_params_t;
 
 /**
  * Flags used with maxpool2d_ext() for advanced scenarios.

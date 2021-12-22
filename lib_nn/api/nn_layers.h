@@ -4,6 +4,7 @@
 #define LAYERS_H_
 #include "nn_image.h"
 #include "nn_types.h"
+#include "nn_bin_types.h"
 
 /**
  * Describes the parameters needed for an @oper{add_elementwise} operator. @see
