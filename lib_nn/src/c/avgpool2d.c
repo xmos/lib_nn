@@ -88,24 +88,6 @@ void avgpool2d_global_ext_ref(nn_image_t* Y, const nn_image_t* X,
 
 #ifdef NN_USE_REF
 
-void avgpool2d_gen(int8_t* Y, const int8_t* X,
-                   const channel_count_t image_chans,
-                   const nn_window_params_t* pooling_window,
-                   const nn_window_op_job_params_t* job_params,
-                   const nn_avgpool2d_flags_e flags,
-                   const nn_avgpool2d_job_t* job) {
-  avgpool2d_gen_ref(Y, X, image_chans, pooling_window, job_params, flags, job);
-}
-
-void avgpool2d_2x2(int8_t* Y, const int8_t* X,
-                   const channel_count_t image_chans,
-                   const nn_window_params_t* pooling_window,
-                   const nn_window_op_job_params_t* job_params,
-                   const nn_avgpool2d_flags_e flags,
-                   const nn_avgpool2d_job_t* job) {
-  avgpool2d_2x2_ref(Y, X, image_chans, pooling_window, job_params, flags, job);
-}
-
 void avgpool2d_global_ext(nn_image_t* Y, const nn_image_t* X,
                           const int32_t bias, const int8_t scale,
                           const uint16_t shift,
