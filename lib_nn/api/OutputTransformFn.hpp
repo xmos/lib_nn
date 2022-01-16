@@ -505,7 +505,7 @@ class OT_binary : public OutputTransformFn {
                               int32_t output_channel_group);
 
   static std::vector<threshold_t> adjust_thresholds(
-      std::vector<int32_t> &thresholds, int input_channels, WindowGeometry &K,
+      const std::vector<int32_t> &thresholds, int input_channels, const WindowGeometry &K,
       Conv2dReorderedWeights &reordered_weights) {
     std::vector<threshold_t> adjusted_thresholds(thresholds.size());
 
