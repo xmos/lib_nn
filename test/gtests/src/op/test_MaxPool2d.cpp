@@ -43,12 +43,12 @@ static std::vector<int8_t> RunOperator_Generic(
   nn::MaxPoolPatchFn agg_handler(&params.agg_params);
   nn::DirectWriteOutputTransform ot_handler(&params.ot_params);
 
-  auto scratch_mem = std::vector<int8_t>(memcopy_handler.get_scratch_bytes());
+  auto scratch_mem = std::vector<int8_t>(memcopy_handler.get_scratch_bytes()); // TODO: delete?
 
-  nn::MaxPool2d_Generic mp_op(&params.ak_params, &memcopy_handler, &agg_handler,
+  nn::MaxPool2d_Generic mp_op(&memcopy_handler, &agg_handler,
                               &ot_handler);
 
-  mp_op.execute(&output_img[0], const_cast<int8_t*>(&input_img[0]));
+  nn::execute(&output_img[0], const_cast<int8_t*>(&input_img[0]), &mp_op, &params.ak_params);
 
   return output_img;
 }
@@ -70,10 +70,10 @@ static std::vector<int8_t> RunOperator_Valid(
   nn::MaxPoolDirectValidFn agg_handler(&params.agg_params);
   nn::DirectWriteOutputTransform ot_handler(&params.ot_params);
 
-  nn::MaxPool2d_Valid mp_op(&params.ak_params, &memcopy_handler, &agg_handler,
+  nn::MaxPool2d_Valid mp_op(&memcopy_handler, &agg_handler,
                             &ot_handler);
 
-  mp_op.execute(&output_img[0], const_cast<int8_t*>(&input_img[0]));
+  nn::execute(&output_img[0], const_cast<int8_t*>(&input_img[0]), &mp_op, &params.ak_params);
 
   return output_img;
 }

@@ -54,14 +54,13 @@ TEST_F(Test_AbstractKernel, BasicTest) {
 
                     AbstractKernel::Params akp(ip, ir, cog_size);
 
-                    MockAbstractKernel f(&akp,
-                                         r_channels_end - r_channels_start);
+                    MockAbstractKernel f(r_channels_end - r_channels_start);
 
                     int8_t Y[y_height][y_width][y_channels];
 
                     std::memset(Y, 0, sizeof(Y));
 
-                    f.execute((int8_t *)Y, nullptr);
+                    nn::execute((int8_t *)Y, nullptr, &f, &akp);
 
 #define ITER_MSG "Y: " << ip << " | Output Region: " << ir
 
