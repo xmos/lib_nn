@@ -131,13 +131,13 @@ TYPED_TEST(Filter2D_Test, BasicTest) {
                     auto akp =
                         typename AbstractKernel::Params(ip, ir, cog_size);
 
-                    TypeParam f(&akp, &mem_fn, &agg_fn, &ot_fn);
+                    TypeParam f(&mem_fn, &agg_fn, &ot_fn);
 
                     int8_t Y[y_height][y_width][y_channels];
 
                     std::memset(Y, 0, sizeof(Y));
 
-                    f.execute((int8_t *)Y, nullptr);
+                    nn::execute((int8_t *)Y, nullptr, &f, &akp);
 
 #define ITER_MSG "Y: " << ip << " | Output Region: " << ir
 

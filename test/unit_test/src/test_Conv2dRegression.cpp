@@ -204,12 +204,13 @@ void test_Conv2dPaddedIndirectRegression() {
                                 Filter2D::Params akp(Y, ir,
                                                      VPU_INT8_ACC_PERIOD);
 
-                                Conv2dPaddedInDirect conv2d(&akp, &memcpy,
+                                Conv2dPaddedInDirect conv2d(&memcpy,
                                                             &aggregator, &ot);
                                 alignas(4)
                                     int8_t output[Y.height * Y.width * Y.depth];
 
-                                conv2d.execute(&output[0], &input[0], &T[0]);
+                                nn::execute(&output[0], &input[0],
+                                            &conv2d, &akp, &T[0]);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
@@ -374,13 +375,14 @@ void test_Conv2dValidIndirectRegression() {
                                 Filter2D::Params akp(Y, ir,
                                                      VPU_INT8_ACC_PERIOD);
 
-                                Conv2dValidIndirect conv2d(&akp, &memcpy,
+                                Conv2dValidIndirect conv2d(&memcpy,
                                                            &aggregator, &ot);
 
                                 auto output = std::vector<int8_t>(
                                     Y.height * Y.width * Y.depth);
 
-                                conv2d.execute(&output[0], &input[0], &T[0]);
+                                nn::execute(&output[0], &input[0],
+                                            &conv2d, &akp, &T[0]);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
@@ -542,13 +544,14 @@ void test_Conv2dValidDirectRegression() {
                                 Filter2D::Params akp(Y, ir,
                                                      VPU_INT8_ACC_PERIOD);
 
-                                Conv2dValidDirect conv2d(&akp, &memcpy,
+                                Conv2dValidDirect conv2d(&memcpy,
                                                          &aggregator, &ot);
 
                                 auto output = std::vector<int8_t>(
                                     Y.height * Y.width * Y.depth);
 
-                                conv2d.execute(&output[0], &input[0]);
+                                nn::execute(&output[0], &input[0],
+                                            &conv2d, &akp);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {

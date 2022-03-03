@@ -91,17 +91,15 @@ bool MaxPool2d_Valid::SupportsGeometry(const Filter2dGeometry& filter) {
   return true;
 }
 
-MaxPool2d_Generic::MaxPool2d_Generic(AbstractKernel::Params* ak_params,
-                                     ImToColPadded* memcopy_handler,
+MaxPool2d_Generic::MaxPool2d_Generic(ImToColPadded* memcopy_handler,
                                      MaxPoolPatchFn* aggregate_handler,
                                      DirectWriteOutputTransform* ot_handler)
 
-    : Filter2D_DW(ak_params, memcopy_handler, aggregate_handler, ot_handler,
+    : Filter2D_DW(memcopy_handler, aggregate_handler, ot_handler,
                   ChannelsPerOutputGroup) {}
 
-MaxPool2d_Valid::MaxPool2d_Valid(AbstractKernel::Params* ak_params,
-                                 DerefInputFn* memcopy_handler,
+MaxPool2d_Valid::MaxPool2d_Valid(DerefInputFn* memcopy_handler,
                                  MaxPoolDirectValidFn* aggregate_handler,
                                  DirectWriteOutputTransform* ot_handler)
-    : Filter2D_DW(ak_params, memcopy_handler, aggregate_handler, ot_handler,
+    : Filter2D_DW(memcopy_handler, aggregate_handler, ot_handler,
                   ChannelsPerOutputGroup) {}

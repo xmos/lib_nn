@@ -51,7 +51,7 @@ class MaxPool2d_Generic : public Filter2D_DW, public MaxPool2d {
   MaxPool2d_Generic(MaxPool2d_Generic&) = delete;
   MaxPool2d_Generic(MaxPool2d_Generic&&) = delete;
 
-  MaxPool2d_Generic(AbstractKernel::Params* params, ImToColPadded* memcopy,
+  MaxPool2d_Generic(ImToColPadded* memcopy,
                     MaxPoolPatchFn* agg, DirectWriteOutputTransform* ot);
 };
 
@@ -79,7 +79,7 @@ class MaxPool2d_Valid : public Filter2D_DW, public MaxPool2d {
   MaxPool2d_Valid(MaxPool2d_Valid&) = delete;
   MaxPool2d_Valid(MaxPool2d_Valid&&) = delete;
 
-  MaxPool2d_Valid(AbstractKernel::Params* params, DerefInputFn* memcopy_handler,
+  MaxPool2d_Valid(DerefInputFn* memcopy_handler,
                   MaxPoolDirectValidFn* aggregate_handler,
                   DirectWriteOutputTransform* ot_handler);
 };

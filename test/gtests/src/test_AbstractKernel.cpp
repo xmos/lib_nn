@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "AbstractKernel.hpp"
+#include "Filter2D.hpp"
 #include "Rand.hpp"
 #include "gtest/gtest.h"
 #include "xs3_vpu.h"
@@ -12,14 +13,14 @@ class MockAbstractKernel : public AbstractKernel {
  public:
   int32_t output_slice_channel_count;
 
-  MockAbstractKernel(AbstractKernel::Params *kparams,
-                     int32_t output_slice_channel_count)
-      : AbstractKernel(kparams),
+  MockAbstractKernel(int32_t output_slice_channel_count)
+      : AbstractKernel(),
         output_slice_channel_count(output_slice_channel_count) {}
 
   void calc_output_pixel_slice(int8_t *output_image, int8_t *input_image,
                                int32_t output_row, int32_t output_col,
-                               int8_t *scratch) {
+                               int8_t *scratch,
+                               AbstractKernel::Params *kparams) {
     std::memset(output_image, 1, sizeof(int8_t) * output_slice_channel_count);
   }
 };
@@ -54,14 +55,13 @@ TEST_F(Test_AbstractKernel, BasicTest) {
 
                     AbstractKernel::Params akp(ip, ir, cog_size);
 
-                    MockAbstractKernel f(&akp,
-                                         r_channels_end - r_channels_start);
+                    MockAbstractKernel f(r_channels_end - r_channels_start);
 
                     int8_t Y[y_height][y_width][y_channels];
 
                     std::memset(Y, 0, sizeof(Y));
 
-                    f.execute((int8_t *)Y, nullptr);
+                    nn::execute((int8_t *)Y, nullptr, &f, &akp);
 
 #define ITER_MSG "Y: " << ip << " | Output Region: " << ir
 

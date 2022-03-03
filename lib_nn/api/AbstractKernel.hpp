@@ -85,62 +85,24 @@ class AbstractKernel {
           output_w_mem_stride(output_image.GetStride(0, 1, 0)) {}
   };
 
- protected:
+ public:
   /**
    * Parameters describing the region of the output image to be processed by
    * this filter, as well as how to iterate over the region.
    */
-  Params *kparams;
 
   virtual void calc_output_pixel_slice(int8_t *output_image,
                                        int8_t *input_image, int32_t output_row,
-                                       int32_t output_col, int8_t *scratch) = 0;
+                                       int32_t output_col, int8_t *scratch,
+                                       AbstractKernel::Params *kparams) = 0;
 
- public:
   /**
    * Constructor.
    *
    * @param [in] kparams  Parameters describing the output region to be
    * processed.
    */
-  AbstractKernel(Params *kparams) : kparams(kparams) {}
-
-  /**
-   * Execute this kernel using the output image pointed to by `Y` and input
-   * image pointed to by `X`.
-   *
-   * @TODO: astew: It isn't clear whether `Y` and `X` are supposed to point at
-   * the base address of the output and input images, or if they're supposed to
-   * point at the (first channel of the) first pixel of the images needed by
-   * this filter. [update]: From looking at the output transformer
-   * implementation, it looks like Y is _not_ supposed to be the image base
-   * address, but instead a pointer to the first output pixel to be processed by
-   * this filter. At the same time, looking at the MemCpyFn's, it looks like `X`
-   * _is_ supposed to be the image base address. Doesn't this seem unnecessarily
-   * confusing? Why is there an output channel offset built into kparams, but
-   * not an output row or column offset?
-   *
-   * @param [in] Y  Pointer to the output image.
-   * @param [in] X  Pointer to the input image.
-   */
-  void execute(int8_t *Y, int8_t *X, int8_t *scratch = nullptr) {
-    int bytes_per_row =
-        kparams->output_h_mem_stride +
-        (kparams->w_end - kparams->w_begin) * kparams->output_w_mem_stride;
-
-    Y += kparams->h_begin * bytes_per_row +
-         kparams->w_begin * kparams->output_w_mem_stride;
-
-    Y += kparams->output_channel_slice_offset;
-
-    for (int32_t h = kparams->h_begin; h < kparams->h_end; h++) {
-      for (int32_t w = kparams->w_begin; w < kparams->w_end; w++) {
-        this->calc_output_pixel_slice(Y, X, h, w, scratch);
-        Y += kparams->output_w_mem_stride;
-      }
-      Y += kparams->output_h_mem_stride;
-    }
-  }
+  AbstractKernel() {}
 };
 
 }  // namespace nn
