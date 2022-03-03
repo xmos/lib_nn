@@ -223,14 +223,15 @@ void test_Conv2dValidIndirectBinaryRegression() {
                                                      VPU_INT8_ACC_PERIOD);
 
                                 BNNConv2dValidIndirectBinary conv2d(
-                                    &akp, &memcpy, &aggregator, &ot);
+                                    &memcpy, &aggregator, &ot);
                                 alignas(4)
                                     int32_t output[Y.height * Y.width *
                                                    Y.depth / chans_per_int32];
                                 std::memset(output, 0x55, sizeof(output));
 
-                                conv2d.execute((int8_t *)&output[0],
-                                               (int8_t *)&input[0], &T[0]);
+                                nn::execute((int8_t *)&output[0],
+                                            (int8_t *)&input[0],
+                                            &conv2d, &akp, &T[0]);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
@@ -393,15 +394,16 @@ void test_Conv2dValidDirectBinaryRegression() {
                                                      VPU_INT8_ACC_PERIOD);
 
                                 BNNConv2dValidDirectBinary conv2d(
-                                    &akp, &memcpy, &aggregator, &ot);
+                                    &memcpy, &aggregator, &ot);
 
                                 alignas(4)
                                     int32_t output[Y.height * Y.width *
                                                    Y.depth / chans_per_int32];
                                 std::memset(output, 0x55, sizeof(output));
-
-                                conv2d.execute((int8_t *)&output[0],
-                                               (int8_t *)&input[0]);
+                                
+                                nn::execute((int8_t *)&output[0],
+                                            (int8_t *)&input[0],
+                                            &conv2d, &akp);
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
                                     for (int yd = 0;
@@ -604,13 +606,14 @@ void test_Conv2dValidIndirectInt8Regression() {
                                                      VPU_INT8_ACC_PERIOD);
 
                                 BNNConv2dValidIndirectInt8 conv2d(
-                                    &akp, &memcpy, &aggregator, &ot);
+                                    &memcpy, &aggregator, &ot);
                                 alignas(4)
                                     int8_t output[Y.height * Y.width * Y.depth];
                                 std::memset(output, 0x55, sizeof(output));
 
-                                conv2d.execute(output, (int8_t *)&input[0],
-                                               &T[0]);
+                                nn::execute(output, (int8_t *)&input[0],
+                                            &conv2d, &akp,
+                                            &T[0]);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
@@ -798,14 +801,15 @@ void test_Conv2dValidDirectInt8Regression() {
                                                      VPU_INT8_ACC_PERIOD);
 
                                 BNNConv2dValidDirectInt8 conv2d(
-                                    &akp, &memcpy, &aggregator, &ot);
+                                    &memcpy, &aggregator, &ot);
 
                                 alignas(4)
                                     int8_t output[Y.height * Y.width * Y.depth];
                                 std::memset(output, 0x55, sizeof(output));
 
-                                conv2d.execute((int8_t *)output,
-                                               (int8_t *)input.data());
+                                nn::execute((int8_t *)output,
+                                            (int8_t *)input.data(),
+                                            &conv2d, &akp);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
