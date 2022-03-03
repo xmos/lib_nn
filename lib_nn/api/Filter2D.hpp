@@ -65,7 +65,8 @@ class Filter2D : public AbstractKernel {
    * `kparams`
    */
   virtual void calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h,
-                                       int32_t w, int8_t *scratch_mem) override;
+                                       int32_t w, int8_t *scratch_mem,
+                                       AbstractKernel::Params *kparams) override;
 
  public:
   Filter2D(ImageGeometry &Y, ImageRegion &r, MemCpyFn *memcpy_handler,
@@ -74,7 +75,7 @@ class Filter2D : public AbstractKernel {
   /**
    * Construct a filter using the provided component handlers.
    */
-  Filter2D(AbstractKernel::Params *kparams, MemCpyFn *memcpy_handler,
+  Filter2D(MemCpyFn *memcpy_handler,
            AggregateFn *aggregate_handler, OutputTransformFn *ot_handler);
 };
 
@@ -116,7 +117,6 @@ class Filter2D_DW : public AbstractKernel {
    */
   //   int8_t *scratch_mem;
 
- protected:
   /**
    * Process a single output pixel (subject to the region constraints given by
    * `kparams`
@@ -124,17 +124,22 @@ class Filter2D_DW : public AbstractKernel {
   virtual void calc_output_pixel_slice(int8_t *output_image,
                                        int8_t *input_image, int32_t output_row,
                                        int32_t output_col,
-                                       int8_t *scratch_mem) override;
+                                       int8_t *scratch_mem,
+                                       AbstractKernel::Params *kparams) override;
 
  public:
   /**
    * Construct a filter using the provided component handlers. This flavour is
    * specifically for depthwise variants.
    */
-  Filter2D_DW(AbstractKernel::Params *kparams, MemCpyFn *memcpy_handler,
+  Filter2D_DW(MemCpyFn *memcpy_handler,
               AggregateFn *aggregate_handler, OutputTransformFn *ot_handler,
               int output_channels_per_group = VPU_INT8_ACC_PERIOD);
 };
+
+void execute(int8_t *Y, int8_t *X,
+             AbstractKernel *ak, AbstractKernel::Params *kparams,
+             int8_t *scratch = nullptr);
 
 }  // namespace nn
 

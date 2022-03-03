@@ -7,10 +7,10 @@ using namespace nn;
 constexpr bool Filter2D::UsesPerGroupMemCopy;
 constexpr bool Filter2D_DW::UsesPerGroupMemCopy;
 
-Filter2D::Filter2D(AbstractKernel::Params *kparams, MemCpyFn *memcpy_handler,
+Filter2D::Filter2D(MemCpyFn *memcpy_handler,
                    AggregateFn *aggregate_handler,
                    OutputTransformFn *ot_handler)
-    : AbstractKernel(kparams),
+    : AbstractKernel(),
       memcpy_handler(memcpy_handler),
       aggregate_handler(aggregate_handler),
       ot_handler(ot_handler) {}
@@ -22,11 +22,11 @@ Filter2D::Filter2D(AbstractKernel::Params *kparams, MemCpyFn *memcpy_handler,
   regions.
 */
 void Filter2D::calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h,
-                                       int32_t w, int8_t *scratch_mem) {
+                                       int32_t w, int8_t *scratch_mem,
+                                       AbstractKernel::Params *kparams) {
   int8_t *input_img = memcpy_handler->memcopy_fn(
       scratch_mem, X, h,
       w);  // copy all input channels, channel start is implicitly 0.
-
   for (int32_t output_chan_group = 0;
        output_chan_group < kparams->output_channel_group_count;
        ++output_chan_group) {
@@ -37,12 +37,11 @@ void Filter2D::calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h,
   }
 }
 
-Filter2D_DW::Filter2D_DW(AbstractKernel::Params *kparams,
-                         MemCpyFn *memcpy_handler,
+Filter2D_DW::Filter2D_DW(MemCpyFn *memcpy_handler,
                          AggregateFn *aggregate_handler,
                          OutputTransformFn *ot_handler,
                          int output_channels_per_group)
-    : AbstractKernel(kparams),
+    : AbstractKernel(),
       memcpy_handler(memcpy_handler),
       aggregate_handler(aggregate_handler),
       ot_handler(ot_handler),
@@ -50,13 +49,14 @@ Filter2D_DW::Filter2D_DW(AbstractKernel::Params *kparams,
 
 // This is an example of a depthwise conv or max pool
 void Filter2D_DW::calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h,
-                                          int32_t w, int8_t *scratch_mem) {
-  const auto output_groups = this->kparams->output_channel_group_count;
+                                          int32_t w, int8_t *scratch_mem,
+                                          AbstractKernel::Params *kparams) {
+  const auto output_groups = kparams->output_channel_group_count;
 
   for (int32_t chan_group = 0; chan_group < output_groups; chan_group++) {
     VPURingBuffer A;
 
-    int c = this->kparams->output_channel_slice_offset +
+    int c = kparams->output_channel_slice_offset +
             chan_group * this->output_channels_per_group;
 
     // This will know how many channels it is copying
@@ -70,5 +70,43 @@ void Filter2D_DW::calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h,
     // number of bytes to write to result
     // offset into transform specific arrays
     Y = this->ot_handler->output_transform_fn(Y, &A, chan_group);
+  }
+}
+
+/**
+ * Execute this kernel using the output image pointed to by `Y` and input
+ * image pointed to by `X`.
+ *
+ * @TODO: astew: It isn't clear whether `Y` and `X` are supposed to point at
+ * the base address of the output and input images, or if they're supposed to
+ * point at the (first channel of the) first pixel of the images needed by
+ * this filter. [update]: From looking at the output transformer
+ * implementation, it looks like Y is _not_ supposed to be the image base
+ * address, but instead a pointer to the first output pixel to be processed by
+ * this filter. At the same time, looking at the MemCpyFn's, it looks like `X`
+ * _is_ supposed to be the image base address. Doesn't this seem unnecessarily
+ * confusing? Why is there an output channel offset built into kparams, but
+ * not an output row or column offset?
+ *
+ * @param [in] Y  Pointer to the output image.
+ * @param [in] X  Pointer to the input image.
+ */
+void nn::execute(int8_t *Y, int8_t *X,
+                AbstractKernel *ak, AbstractKernel::Params *kparams,
+                int8_t *scratch) {
+  int bytes_per_row =
+      kparams->output_h_mem_stride +
+      (kparams->w_end - kparams->w_begin) * kparams->output_w_mem_stride;
+
+  Y += kparams->h_begin * bytes_per_row +
+       kparams->w_begin * kparams->output_w_mem_stride;
+
+  Y += kparams->output_channel_slice_offset;
+  for (int32_t h = kparams->h_begin; h < kparams->h_end; h++) {
+    for (int32_t w = kparams->w_begin; w < kparams->w_end; w++) {
+        ak->calc_output_pixel_slice(Y, X, h, w, scratch, kparams);
+      Y += kparams->output_w_mem_stride;
+    }
+    Y += kparams->output_h_mem_stride;
   }
 }

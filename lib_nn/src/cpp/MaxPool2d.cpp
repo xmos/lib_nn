@@ -96,12 +96,12 @@ MaxPool2d_Generic::MaxPool2d_Generic(AbstractKernel::Params* ak_params,
                                      MaxPoolPatchFn* aggregate_handler,
                                      DirectWriteOutputTransform* ot_handler)
 
-    : Filter2D_DW(ak_params, memcopy_handler, aggregate_handler, ot_handler,
+    : Filter2D_DW(memcopy_handler, aggregate_handler, ot_handler,
                   ChannelsPerOutputGroup) {}
 
 MaxPool2d_Valid::MaxPool2d_Valid(AbstractKernel::Params* ak_params,
                                  DerefInputFn* memcopy_handler,
                                  MaxPoolDirectValidFn* aggregate_handler,
                                  DirectWriteOutputTransform* ot_handler)
-    : Filter2D_DW(ak_params, memcopy_handler, aggregate_handler, ot_handler,
+    : Filter2D_DW(memcopy_handler, aggregate_handler, ot_handler,
                   ChannelsPerOutputGroup) {}
