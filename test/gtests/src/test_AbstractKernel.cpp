@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "AbstractKernel.hpp"
+#include "Filter2D.hpp"
 #include "Rand.hpp"
 #include "gtest/gtest.h"
 #include "xs3_vpu.h"
