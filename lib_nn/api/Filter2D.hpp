@@ -137,6 +137,28 @@ class Filter2D_DW : public AbstractKernel {
               int output_channels_per_group = VPU_INT8_ACC_PERIOD);
 };
 
+/**
+ * Execute this kernel using the output image pointed to by `Y` and input
+ * image pointed to by `X`, using the given filter object and kernel parameters.
+ *
+ * @TODO: astew: It isn't clear whether `Y` and `X` are supposed to point at
+ * the base address of the output and input images, or if they're supposed to
+ * point at the (first channel of the) first pixel of the images needed by
+ * this filter. [update]: From looking at the output transformer
+ * implementation, it looks like Y is _not_ supposed to be the image base
+ * address, but instead a pointer to the first output pixel to be processed by
+ * this filter. At the same time, looking at the MemCpyFn's, it looks like `X`
+ * _is_ supposed to be the image base address. Doesn't this seem unnecessarily
+ * confusing? Why is there an output channel offset built into kparams, but
+ * not an output row or column offset?
+ *
+ * @param [in] Y       Pointer to the output image.
+ * @param [in] X       Pointer to the input image.
+ * @param [in] ak      Pointer to Filter2D object on which to operate
+ * @param [in] kparams Pointer to Kernel Parameter object which identifies
+ *                     what area to operate on
+ * @param [in] scratch Pointer to scratch memory
+ */
 void execute(int8_t *Y, int8_t *X,
              AbstractKernel *ak, AbstractKernel::Params *kparams,
              int8_t *scratch = nullptr);
