@@ -6,9 +6,12 @@
 #include <limits>
 #include <tuple>
 
+extern "C"
+{
 #include "../src/asm/asm_constants.h"
 #include "vpu_sim.h"
 #include "xs3_vpu.h"
+}
 
 using namespace nn;
 
