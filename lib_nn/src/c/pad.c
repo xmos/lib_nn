@@ -44,6 +44,10 @@ void pad_ref(char* y, char* x, const padding_sizes_t* p,
   unsigned left_pad = p->left;
   unsigned right_pad = p->right;
   unsigned bottom_pad = p->bottom;
+  unsigned y_height = xp->width + left_pad + right_pad;
+  unsigned y_width = bytes_per_pixel;
+  unsigned x_height = xp->width;
+  unsigned x_width = bytes_per_pixel;
 
   vpu_memset_32(y, pad_value,
                 (xp->width + left_pad + right_pad) *
@@ -51,8 +55,8 @@ void pad_ref(char* y, char* x, const padding_sizes_t* p,
 
   for (unsigned h = 0; h < xp->height; h++) {
     for (unsigned w = 0; w < xp->width; w++) {
-      char *yt =  y + (h + top_pad)* bytes_per_pixel + w + left_pad;
-      char *xt =  x + h * bytes_per_pixel + w;
+      char *yt =  y + (h + top_pad) * y_height * y_width + (w + left_pad)* y_width;
+      char *xt =  x + h * x_height * x_width + w * x_width;
       memcpy(yt, xt, bytes_per_pixel);
     }
   }
