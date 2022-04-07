@@ -411,9 +411,9 @@ void pad_prepare(nn_pad_plan_t* plan, const padding_sizes_t* p,
  * @param x   [in]     The input vector @tensor{x}
  * @param plan [in]    The prameters describing how to pad.
  */
-void pad_run(void* y, void* x, const nn_pad_plan_t* p, uint32_t pad_value);
+void pad_run(char* y, char* x, const nn_pad_plan_t* p, uint32_t pad_value);
 
-void pad_ref(void* y, void* x, const padding_sizes_t* p,
+void pad_ref(char* y, char* x, const padding_sizes_t* p,
              const nn_image_params_t* xp, const unsigned bytes_per_pixel,
              uint32_t pad_value);
 

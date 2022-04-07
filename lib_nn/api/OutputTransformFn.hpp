@@ -12,6 +12,11 @@
 #include "geom/WindowGeometry.hpp"
 #include "vpu.hpp"
 
+#ifdef _MSC_VER
+#  include <intrin.h>
+#  define __builtin_popcount __popcnt
+#endif
+
 namespace nn {
 
 /**
