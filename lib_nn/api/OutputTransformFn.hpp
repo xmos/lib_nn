@@ -300,6 +300,82 @@ class OutputTransformFnInt8 : public OutputTransformFn {
     return canonical_values;
   }
 
+  static int32_t sat(int64_t a, int bits){
+    int64_t max_val = (1LL << bits)-1;
+    int64_t min_val = -(1LL << bits);
+
+    if(a > max_val)
+      return (int32_t)max_val;
+
+    if(a < min_val)
+      return (int32_t)min_val;
+
+    return a;
+  }
+
+  static int32_t shr(int32_t val, int shr_amount, int bits = 16 ){
+    if (shr_amount > 0){
+      return sat(((int64_t)val + (1LL << (shr_amount - 1))) >> shr_amount, bits);
+    } else {
+      return sat((int64_t)val << (-shr_amount), bits);
+    }
+  }
+
+  static int32_t add(int32_t a, int32_t b, int bits = 16 ){
+      return sat((int64_t)a + (int64_t)b, bits);
+  }
+
+  static int32_t mul(int32_t a, int32_t b, int bits = 16 ){
+      int64_t prod = (int64_t)a * (int64_t)b;
+      prod = prod + (1LL << (14-1));
+      return sat(prod>>14, bits);
+  }
+
+  /**
+   * Given a mul_and_bias quantify the error between that and the QuantisationParams.
+   */
+  static int compare_quantisation_to_original(MulsAndBias &mul_and_bias, QuantisationParams &qp, bool verbose = false){
+
+    int max_abs_error = 0;
+
+    double sum_avg_error = 0.0;
+    double sum_avg_abs_error = 0.0;
+
+    for (int idx=0; idx < mul_and_bias.size(); ++idx){
+      int64_t error_sum = 0;
+      int64_t abs_error_sum = 0;
+      for(int accu=mul_and_bias[idx].accu_min_val; accu <= mul_and_bias[idx].accu_max_val; ++accu){
+
+        int32_t t = shr(accu, qp.initial_shr); //vlsat
+        t = mul(t, qp.multipliers[idx]); //vlmul
+        t = add(t, qp.biases[idx]); //vladd
+        t = shr(t, qp.final_shr); //vlashr
+        t = shr(t, 8);  //vdepth8
+        t = sat(t, 8);
+        
+        double v = (double)accu * mul_and_bias[idx].multiplier +  mul_and_bias[idx].bias;
+        int expected = (int)std::round(v);
+        expected = std::min(expected, INT8_MAX);
+        expected = std::max(expected, INT8_MIN);
+
+        int error = expected - t;
+        error_sum += error;
+        abs_error_sum += std::abs(error);
+
+        max_abs_error = std::max(max_abs_error, std::abs(error));
+
+      }
+      
+      double avg_error = (double)error_sum / (mul_and_bias[idx].accu_max_val - mul_and_bias[idx].accu_min_val + 1);
+      double avg_abs_error = (double)error_sum / (mul_and_bias[idx].accu_max_val - mul_and_bias[idx].accu_min_val + 1);
+      sum_avg_error += avg_error;;
+      sum_avg_abs_error += avg_abs_error;
+    }
+    if (verbose)
+      std::cout << "initial_shr: " << qp.initial_shr << " final_shr: " << qp.final_shr << " max_abs_error: " << max_abs_error << " avg_avg_error: " << (sum_avg_error/mul_and_bias.size()) << " avg_avg_abs_error: " <<  (sum_avg_abs_error/mul_and_bias.size()) << std::endl;
+    
+    return max_abs_error;
+  }
   /**
    * @brief This translates from the representation of:
    *    output[ch] = min(max((accu[ch] * multipler[ch]) + bias[ch]), INT8_MIN),

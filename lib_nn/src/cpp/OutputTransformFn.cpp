@@ -56,7 +56,8 @@ static int64_t shl(int32_t v, int amount_to_shl) {
     uint64_t mask = (~0LLU) >> amount_to_shl;
     return ((uint64_t)v & mask) << amount_to_shl;
   } else {
-    return ((int64_t)v) >> (-amount_to_shl);
+    int amount_to_shr = -amount_to_shl;
+    return ((int64_t)v + (1LL<<(amount_to_shr-1))) >> amount_to_shr;
   }
 }
 
