@@ -332,50 +332,63 @@ class OutputTransformFnInt8 : public OutputTransformFn {
   }
 
   /**
-   * Given a mul_and_bias quantify the error between that and the QuantisationParams.
+   * Calculate the maximum average error between the reference and quantised implementations of the output 
+   * transform over each channel. The average is defined over the range of non-saturating accumulators, 
+   * i.e. accumulators that do not reach a saturating output in the int8 space. 
+   * The result is the maximum average for all of the channels. 
    */
-  static int compare_quantisation_to_original(MulsAndBias &mul_and_bias, QuantisationParams &qp, bool verbose = false){
-
-    int max_abs_error = 0;
-
-    double sum_avg_error = 0.0;
-    double sum_avg_abs_error = 0.0;
-
-    for (int idx=0; idx < mul_and_bias.size(); ++idx){
-      int64_t error_sum = 0;
-      int64_t abs_error_sum = 0;
-      for(int accu=mul_and_bias[idx].accu_min_val; accu <= mul_and_bias[idx].accu_max_val; ++accu){
-
-        int32_t t = shr(accu, qp.initial_shr); //vlsat
-        t = mul(t, qp.multipliers[idx]); //vlmul
-        t = add(t, qp.biases[idx]); //vladd
-        t = shr(t, qp.final_shr); //vlashr
-        t = shr(t, 8);  //vdepth8
-        t = sat(t, 8);
-        
-        double v = (double)accu * mul_and_bias[idx].multiplier +  mul_and_bias[idx].bias;
-        int expected = (int)std::round(v);
-        expected = std::min(expected, INT8_MAX);
-        expected = std::max(expected, INT8_MIN);
-
-        int error = expected - t;
-        error_sum += error;
-        abs_error_sum += std::abs(error);
-
-        max_abs_error = std::max(max_abs_error, std::abs(error));
-
-      }
-      
-      double avg_error = (double)error_sum / (mul_and_bias[idx].accu_max_val - mul_and_bias[idx].accu_min_val + 1);
-      double avg_abs_error = (double)error_sum / (mul_and_bias[idx].accu_max_val - mul_and_bias[idx].accu_min_val + 1);
-      sum_avg_error += avg_error;;
-      sum_avg_abs_error += avg_abs_error;
-    }
-    if (verbose)
-      std::cout << "initial_shr: " << qp.initial_shr << " final_shr: " << qp.final_shr << " max_abs_error: " << max_abs_error << " avg_avg_error: " << (sum_avg_error/mul_and_bias.size()) << " avg_avg_abs_error: " <<  (sum_avg_abs_error/mul_and_bias.size()) << std::endl;
+  static double get_quant_error(MulsAndBias &mul_and_bias, QuantisationParams &qp, bool use_high_precision = false){
     
-    return max_abs_error;
+    if (use_high_precision){
+
+      double max_avg_abs_error = 0.0;
+
+      for (int idx=0; idx < mul_and_bias.size(); ++idx){
+        
+        int64_t abs_error_sum = 0;
+
+        for(int accu = mul_and_bias[idx].accu_min_val; accu <= mul_and_bias[idx].accu_max_val; ++accu){
+
+          int32_t t = shr(accu, qp.initial_shr); //vlsat
+          t = mul(t, qp.multipliers[idx]);       //vlmul
+          t = add(t, qp.biases[idx]);            //vladd
+          t = shr(t, qp.final_shr);              //vlashr
+          t = sat(shr(t, 8), 8);                 //vdepth8
+          
+          double v = (double)accu * mul_and_bias[idx].multiplier + mul_and_bias[idx].bias;
+
+          int expected = (int)std::round(v);
+
+          expected = std::min(expected, INT8_MAX);
+          expected = std::max(expected, INT8_MIN);
+
+          abs_error_sum += std::abs(expected - t);
+        }
+
+        int64_t interesting_accumulators =  mul_and_bias[idx].accu_max_val - mul_and_bias[idx].accu_min_val + 1;
+        
+        if (interesting_accumulators > 0){
+          double avg_abs_error = (double)abs_error_sum / (double)interesting_accumulators;
+          max_avg_abs_error = std::max(max_avg_abs_error, avg_abs_error);
+        }
+      }
+      return max_avg_abs_error;
+    } else {
+      //final_shr | number of decimal places | error
+      //-8          0                          0.5   = 1*2*0
+      //-7          1                          0.25  = 1*2*-1
+      //-6          2                          0.125 = 1*2*-2
+      //-5          3                          2*-3
+      //-4          4                          2*-4
+      //-3          5                          2*-5
+      //-2          6                          2*-6
+      //-1          7                          2*-7
+      //0           8                          2*-8
+      return std::ldexp(1, qp.final_shr + 8);
+    }
   }
+
+
   /**
    * @brief This translates from the representation of:
    *    output[ch] = min(max((accu[ch] * multipler[ch]) + bias[ch]), INT8_MIN),
