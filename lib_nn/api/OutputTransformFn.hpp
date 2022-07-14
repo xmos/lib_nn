@@ -300,6 +300,95 @@ class OutputTransformFnInt8 : public OutputTransformFn {
     return canonical_values;
   }
 
+  static int32_t sat(int64_t a, int bits){
+    int64_t max_val = (1LL << bits)-1;
+    int64_t min_val = -(1LL << bits);
+
+    if(a > max_val)
+      return (int32_t)max_val;
+
+    if(a < min_val)
+      return (int32_t)min_val;
+
+    return a;
+  }
+
+  static int32_t shr(int32_t val, int shr_amount, int bits = 16 ){
+    if (shr_amount > 0){
+      return sat(((int64_t)val + (1LL << (shr_amount - 1))) >> shr_amount, bits);
+    } else {
+      return sat((int64_t)val << (-shr_amount), bits);
+    }
+  }
+
+  static int32_t add(int32_t a, int32_t b, int bits = 16 ){
+      return sat((int64_t)a + (int64_t)b, bits);
+  }
+
+  static int32_t mul(int32_t a, int32_t b, int bits = 16 ){
+      int64_t prod = (int64_t)a * (int64_t)b;
+      prod = prod + (1LL << (14-1));
+      return sat(prod>>14, bits);
+  }
+
+  /**
+   * Calculate the maximum average error between the reference and quantised implementations of the output 
+   * transform over each channel. The average is defined over the range of non-saturating accumulators, 
+   * i.e. accumulators that do not reach a saturating output in the int8 space. 
+   * The result is the maximum average for all of the channels. 
+   */
+  static double get_quant_error(MulsAndBias &mul_and_bias, QuantisationParams &qp, bool use_high_precision = false){
+    
+    if (use_high_precision){
+
+      double max_avg_abs_error = 0.0;
+
+      for (int idx=0; idx < mul_and_bias.size(); ++idx){
+        
+        int64_t abs_error_sum = 0;
+
+        for(int accu = mul_and_bias[idx].accu_min_val; accu <= mul_and_bias[idx].accu_max_val; ++accu){
+
+          int32_t t = shr(accu, qp.initial_shr); //vlsat
+          t = mul(t, qp.multipliers[idx]);       //vlmul
+          t = add(t, qp.biases[idx]);            //vladd
+          t = shr(t, qp.final_shr);              //vlashr
+          t = sat(shr(t, 8), 8);                 //vdepth8
+          
+          double v = (double)accu * mul_and_bias[idx].multiplier + mul_and_bias[idx].bias;
+
+          int expected = (int)std::round(v);
+
+          expected = std::min(expected, INT8_MAX);
+          expected = std::max(expected, INT8_MIN);
+
+          abs_error_sum += std::abs(expected - t);
+        }
+
+        int64_t interesting_accumulators =  mul_and_bias[idx].accu_max_val - mul_and_bias[idx].accu_min_val + 1;
+        
+        if (interesting_accumulators > 0){
+          double avg_abs_error = (double)abs_error_sum / (double)interesting_accumulators;
+          max_avg_abs_error = std::max(max_avg_abs_error, avg_abs_error);
+        }
+      }
+      return max_avg_abs_error;
+    } else {
+      //final_shr | number of decimal places | error
+      //-8          0                          0.5   = 1*2*0
+      //-7          1                          0.25  = 1*2*-1
+      //-6          2                          0.125 = 1*2*-2
+      //-5          3                          2*-3
+      //-4          4                          2*-4
+      //-3          5                          2*-5
+      //-2          6                          2*-6
+      //-1          7                          2*-7
+      //0           8                          2*-8
+      return std::ldexp(1, qp.final_shr + 8);
+    }
+  }
+
+
   /**
    * @brief This translates from the representation of:
    *    output[ch] = min(max((accu[ch] * multipler[ch]) + bias[ch]), INT8_MIN),
