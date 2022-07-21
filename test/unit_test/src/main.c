@@ -25,14 +25,6 @@ int main(void) {
   CALL(test_vpu_memcpy);
   CALL(test_vpu_memset);
 
-  CALL(test_maxpool2d);
-  CALL(test_avgpool2d_global);
-
-  CALL(test_requantize_16_to_8);
-  CALL(test_lookup8);
-
-  CALL(test_add_elementwise);
-
   CALL(test_bsign_8);
   CALL(test_pad);
   return UNITY_END();
