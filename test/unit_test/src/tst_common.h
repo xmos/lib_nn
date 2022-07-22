@@ -17,14 +17,6 @@
 #define WORD_ALIGNED
 #endif
 
-#ifndef QUICK_TEST
-#define QUICK_TEST 0
-#endif
-
-#define USE_ASM(FUNC) (defined(__XS3A__) && USE_ASM_##FUNC)
-
-#define IF_QUICK_TEST(X, Y) ((QUICK_TEST) ? X : Y)
-
 #define PRINTF(...)        \
   do {                     \
     if (DO_PRINT_EXTRA) {  \

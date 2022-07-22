@@ -390,7 +390,6 @@ void test_Conv2dPaddedIndirectDWRegression() {
 
                             nn::execute(&output[0], &input[0], &conv2d, &akp, &T[0]);
 
-                            int failed = 0;
                             for (int yh = 0; yh < Y.height; yh++) {
                               for (int yw = 0; yw < Y.width; yw++) {
                                 for (int yd = 0; yd < Y.depth; yd++) {
@@ -399,7 +398,6 @@ void test_Conv2dPaddedIndirectDWRegression() {
                                   int delta =
                                       (int)expected[idx] - (int)output[idx];
                                   if (delta < 0) delta = -delta;
-                                  failed |= (delta > 1);
 
                                   TEST_ASSERT_INT32_WITHIN(
                                       1, (int)expected[idx], (int)output[idx]);
