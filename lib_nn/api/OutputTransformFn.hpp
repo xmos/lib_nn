@@ -375,16 +375,16 @@ class OutputTransformFnInt8 : public OutputTransformFn {
       return max_avg_abs_error;
     } else {
       //final_shr | number of decimal places | error
-      //-8          0                          0.5   = 1*2*0
-      //-7          1                          0.25  = 1*2*-1
-      //-6          2                          0.125 = 1*2*-2
-      //-5          3                          2*-3
-      //-4          4                          2*-4
-      //-3          5                          2*-5
-      //-2          6                          2*-6
-      //-1          7                          2*-7
-      //0           8                          2*-8
-      return std::ldexp(1, qp.final_shr + 8);
+      //-8          0                          2   = 1*2^1
+      //-7          1                          1   = 1*2^0
+      //-6          2                          0.5 = 1*2^-1
+      //-5          3                          2^-2
+      //-4          4                          2^-3
+      //-3          5                          2^-4
+      //-2          6                          2^-5
+      //-1          7                          2^-6
+      //0           8                          2^-7
+      return std::ldexp(1, -(qp.final_shr + 7));
     }
   }
 
