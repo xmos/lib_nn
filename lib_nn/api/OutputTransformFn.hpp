@@ -359,8 +359,8 @@ class OutputTransformFnInt8 : public OutputTransformFn {
 
           int expected = (int)std::round(v);
 
-          expected = std::min(expected, INT8_MAX);
-          expected = std::max(expected, INT8_MIN);
+          expected = std::min((int)expected, (int)INT8_MAX);
+          expected = std::max((int)expected, (int)INT8_MIN);
 
           abs_error_sum += std::abs(expected - t);
         }
