@@ -58,7 +58,7 @@ VECT_INT8_MIN:
 #endif
 
 
-//int8_t *output_transform_fn_int_clamped_impl_asm(const OT_int8_clamped::Params *params, int8_t *Y,
+//int8_t *output_transform_fn_int_clamped_impl_asm(const OTPerGroupClamped::Params *params, int8_t *Y,
 //                                 VPURingBuffer *A, int32_t output_channel_group,
 //                                 int16_t *offsets_multipliers_and_biases) {
     

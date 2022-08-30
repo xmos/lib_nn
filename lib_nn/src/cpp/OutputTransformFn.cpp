@@ -15,7 +15,37 @@ extern "C"
 
 using namespace nn;
 
-const int VLMUL_SHR = 14;
+  static int32_t sat(int64_t a, int bits){
+    int64_t max_val = (1LL << bits)-1;
+    int64_t min_val = -(1LL << bits);
+
+    if(a > max_val)
+      return (int32_t)max_val;
+
+    if(a < min_val)
+      return (int32_t)min_val;
+
+    return a;
+  }
+
+  static int32_t shr(int32_t val, int shr_amount, int bits = 16 ){
+    if (shr_amount > 0){
+      return sat(((int64_t)val + (1LL << (shr_amount - 1))) >> shr_amount, bits);
+    } else {
+      return sat((int64_t)val << (-shr_amount), bits);
+    }
+  }
+
+  static int32_t add(int32_t a, int32_t b, int bits = 16 ){
+      return sat((int64_t)a + (int64_t)b, bits);
+  }
+
+  static int32_t mul(int32_t a, int32_t b, int bits = 16 ){
+      int64_t prod = (int64_t)a * (int64_t)b;
+      prod = prod + (1LL << (14-1));
+      return sat(prod>>14, bits);
+  }
+
 
 static int64_t saturate_non_sym(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
@@ -83,13 +113,26 @@ void recitfy_min_max(T &v_min, T &v_max) {
   v_min = std::min(v_min, v_max);
   v_max = actual_max;
 }
+  template <class activationT>
+  static int get_max_exponent(activationT f) {
+    int e;
+    std::frexp(f, &e);
+    return e;
+  }
+
+  template <class activationT>
+  static int get_max_exponent(std::vector<activationT> &arr) {
+    int m = INT32_MIN;
+    for (auto f : arr) m = std::max(m, get_max_exponent(f));
+    return m;
+  }
 
 // Select A, M such that
 // ((accu * 2**A) * (mul * 2**M) + bias*2**B) gives the most precision
 // accu_min and accu_max should be pairwise correct, i.e. min is the min, max is
 // the max for each channel.
 
-std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams,
+std::tuple<int, int> solve_for_constraints(OutputTransformFn::MulsAndBias &activationParams, int vlmul_shr,
                                            bool verbose = false) {
   int accu_bits_max = 0;
   int max_multiplier_exponent = INT32_MIN;
@@ -102,19 +145,19 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams,
   for (auto activationParam : activationParams) {
     if (activationParam.accu_max_val) {
       int accu_max_bits =
-          OutputTransformFn::get_max_exponent(activationParam.accu_max_val);
+          get_max_exponent(activationParam.accu_max_val);
       accu_bits_max = std::max(accu_bits_max, accu_max_bits);
       accu_range_defined |= true;
     }
     if (activationParam.accu_min_val) {
       int accu_min_bits =
-          OutputTransformFn::get_max_exponent(activationParam.accu_min_val);
+          get_max_exponent(activationParam.accu_min_val);
       accu_bits_max = std::max(accu_bits_max, accu_min_bits);
       accu_range_defined |= true;
     }
     if (activationParam.multiplier) {
       int multiplier_bits =
-          OutputTransformFn::get_max_exponent(activationParam.multiplier);
+          get_max_exponent(activationParam.multiplier);
       max_multiplier_exponent =
           std::max(max_multiplier_exponent, multiplier_bits);
       multiplier_range_defined |= true;
@@ -131,8 +174,8 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams,
     // Then we only care about the biases -> we know they will always fit in an
     // 8 bit number so a bias exp of 0 will do fine.
     int A = 0;
-    int M = VLMUL_SHR;
-    int B = A + M - VLMUL_SHR;
+    int M = vlmul_shr;
+    int B = A + M - vlmul_shr;
     assert(B == 0);
     return std::make_tuple(A, M);
   }
@@ -210,10 +253,10 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams,
       }
 
       int64_t bias_16 =
-          std::round(ldexp(activationParam.bias, A + M - VLMUL_SHR));
+          std::round(ldexp(activationParam.bias, A + M - vlmul_shr));
 
-      int64_t prod_max = shl(accu_max_16 * mul_16, -VLMUL_SHR);
-      int64_t prod_min = shl(accu_min_16 * mul_16, -VLMUL_SHR);
+      int64_t prod_max = shl(accu_max_16 * mul_16, -vlmul_shr);
+      int64_t prod_min = shl(accu_min_16 * mul_16, -vlmul_shr);
 
       max_group_prod = std::max(max_group_prod, prod_max);
       min_group_prod = std::min(min_group_prod, prod_min);
@@ -276,99 +319,95 @@ int64_t round_up(float x) { return std::ceil(x); }
 
 int64_t round_down(float x) { return std::floor(x); }
 
-void backprop_output_clamps_to_accu_limits(MulsAndBias &activationParams,
-                                           bool verbose = false) {
+void nn::OutputTransformFn::ActivationParams::backprop_output_clamps_to_accu_limits(
+  int64_t output_high,
+  int64_t output_low,
+  bool verbose) {
+  
   // adjust accu_min and max to account for the saturation on the output
-  for (auto &activationParam : activationParams) {
-    if (activationParam.multiplier == 0.0) continue;
-
-    double hi =
-        ((double)INT8_MAX - activationParam.bias) / activationParam.multiplier;
-    double lo =
-        ((double)INT8_MIN - activationParam.bias) / activationParam.multiplier;
-
-    int64_t accu_meaningful_max = round_up(hi);
-    int64_t accu_meaningful_min = round_down(lo);
-
-    recitfy_min_max(accu_meaningful_min, accu_meaningful_max);
-
-    if (verbose) {
-      printf("accu_meaningful_min: %lld accu_meaningful_max: %lld\n",
-             accu_meaningful_min, accu_meaningful_max);
-      printf(
-          "activationParam.accu_min_val: %d activationParam.accu_max_val: %d\n",
-          activationParam.accu_min_val, activationParam.accu_max_val);
-    }
-
-    if (accu_meaningful_max < (int64_t)activationParam.accu_max_val) {
-      // ------accu_max------accu_meaningful_max++++++...
-
-      // The input range of the accumulator is restricted by the output clamp.
-      if (accu_meaningful_max < (int64_t)activationParam.accu_min_val) {
-        // ------accu_max------accu_min------accu_meaningful_max------...
-        // There is no overlap between what the accumulator can be and what
-        // could contribute to the output
-
-        int32_t singular_output_value = std::max(
-            std::min((int32_t)INT8_MAX, (int32_t)activationParam.original_bias),
-            (int32_t)INT8_MIN);
-
-        activationParam.multiplier = 0.0;
-        activationParam.bias = singular_output_value;
-
-        activationParam.accu_max_val = 0;
-        activationParam.accu_min_val = 0;
-
-      } else {
-        // ------accu_max------accu_meaningful_max++++++accu_min------...
-        activationParam.accu_max_val = accu_meaningful_max;
-        if (accu_meaningful_min > (int64_t)activationParam.accu_min_val) {
-          // ------accu_max------accu_meaningful_max++++++accu_meaningful_min------accu_min------...
-          activationParam.accu_min_val = accu_meaningful_min;
-        } else {
-          // ------accu_max------accu_meaningful_max++++++accu_min------accu_meaningful_min------...
-          // activationParam.accu_min_val = activationParam.accu_min_val;
-        }
-      }
-    } else {
-      // ------accu_meaningful_max------accu_max++++++...
-      if (accu_meaningful_min > (int64_t)activationParam.accu_max_val) {
-        // ------accu_meaningful_max------accu_meaningful_min------accu_max------...
-        // There is no overlap between what the accumulator can be and what
-        // could contribute to the output
-        int32_t singular_output_value = std::max(
-            std::min((int32_t)INT8_MAX, (int32_t)activationParam.original_bias),
-            (int32_t)INT8_MIN);
-
-        activationParam.multiplier = 0.0;
-        activationParam.bias = singular_output_value;
-        activationParam.accu_max_val = 0;
-        activationParam.accu_min_val = 0;
-
-      } else {
-        // ------accu_meaningful_max------accu_max++++++accu_meaningful_min------...
-        // activationParam.accu_max_val = activationParam.accu_max_val;
-
-        if (accu_meaningful_min > (int64_t)activationParam.accu_min_val) {
-          // ------accu_meaningful_max------accu_max++++++accu_meaningful_min------accu_min------...
-          activationParam.accu_min_val = accu_meaningful_min;
-        } else {
-          // ------accu_meaningful_max------accu_max++++++accu_min------accu_meaningful_min------...
-          // activationParam.accu_min_val = activationParam.accu_min_val;
-        }
-      }
-    }
+  if (multiplier == 0.0) {
+    multiplier = 0.0;
+    bias = 0.0;
+    accu_min_val = 0;
+    accu_max_val = 0;
+    return;
   }
+  recitfy_min_max(output_low, output_high);
+
+  double hi =
+      ((double)output_high - bias) / multiplier;
+  double lo =
+      ((double)output_low - bias) / multiplier;
+
+  int64_t accu_meaningful_max = round_up(hi);
+  int64_t accu_meaningful_min = round_down(lo);
+
+  recitfy_min_max(accu_meaningful_min, accu_meaningful_max);
 
   if (verbose) {
-    printf("ActivationParams\n");
-    for (auto a : activationParams) {
-      printf("bias        : %f -> %f\n", a.original_bias, a.bias);
-      printf("multiplier  : %f -> %f\n", a.original_multiplier, a.multiplier);
-      printf("accu_min_val: %d -> %d\n", a.original_accu_min_val,
-             a.accu_min_val);
-      printf("accu_max_val: %d -> %d\n", a.original_accu_max_val,
-             a.accu_max_val);
+    printf("accu_meaningful_min: %lld accu_meaningful_max: %lld\n",
+            accu_meaningful_min, accu_meaningful_max);
+    printf(
+        "accu_min_val: %d accu_max_val: %d\n",
+        accu_min_val, accu_max_val);
+  }
+
+  if (accu_meaningful_max < (int64_t)accu_max_val) {
+    // ------accu_max------accu_meaningful_max++++++...
+
+    // The input range of the accumulator is restricted by the output clamp.
+    if (accu_meaningful_max < (int64_t)accu_min_val) {
+      // ------accu_max------accu_min------accu_meaningful_max------...
+      // There is no overlap between what the accumulator can be and what
+      // could contribute to the output
+
+      int32_t singular_output_value = std::max(
+          std::min((int32_t)output_high, (int32_t)original_bias),
+          (int32_t)output_low);
+
+      multiplier = 0.0;
+      bias = singular_output_value;
+
+      accu_max_val = 0;
+      accu_min_val = 0;
+
+    } else {
+      // ------accu_max------accu_meaningful_max++++++accu_min------...
+      accu_max_val = accu_meaningful_max;
+      if (accu_meaningful_min > (int64_t)accu_min_val) {
+        // ------accu_max------accu_meaningful_max++++++accu_meaningful_min------accu_min------...
+        accu_min_val = accu_meaningful_min;
+      } else {
+        // ------accu_max------accu_meaningful_max++++++accu_min------accu_meaningful_min------...
+        // accu_min_val = accu_min_val;
+      }
+    }
+  } else {
+    // ------accu_meaningful_max------accu_max++++++...
+    if (accu_meaningful_min > (int64_t)accu_max_val) {
+      // ------accu_meaningful_max------accu_meaningful_min------accu_max------...
+      // There is no overlap between what the accumulator can be and what
+      // could contribute to the output
+      int32_t singular_output_value = std::max(
+          std::min((int32_t)output_high, (int32_t)original_bias),
+          (int32_t)output_low);
+
+      multiplier = 0.0;
+      bias = singular_output_value;
+      accu_max_val = 0;
+      accu_min_val = 0;
+
+    } else {
+      // ------accu_meaningful_max------accu_max++++++accu_meaningful_min------...
+      // accu_max_val = accu_max_val;
+
+      if (accu_meaningful_min > (int64_t)accu_min_val) {
+        // ------accu_meaningful_max------accu_max++++++accu_meaningful_min------accu_min------...
+        accu_min_val = accu_meaningful_min;
+      } else {
+        // ------accu_meaningful_max------accu_max++++++accu_min------accu_meaningful_min------...
+        // accu_min_val = accu_min_val;
+      }
     }
   }
 }
@@ -384,42 +423,37 @@ int16_t float_to_int16(T f, int e) {
   return (int16_t)v;
 }
 
-QuantisationParams OutputTransformFnInt8::quantise_activation(
-    MulsAndBias &activationParams, bool verbose) {
+QuantisationPerGroupStrategy::QuantisationPerGroupStrategy(
+    OutputTransformFn::MulsAndBias &activationParams, 
+    bool verbose): QantisationStrategy(activationParams){
+
   if (activationParams.size() == 0) {
-    QuantisationParams q;
-    q.initial_shr = 0;
-    q.final_shr = 0;
-    return q;
+    initial_shr = 0;
+    final_shr = 0;
+    return;
   }
-
-  // Ensure the order is correct
-  for (auto &activationParam : activationParams)
-    recitfy_min_max(activationParam.accu_min_val, activationParam.accu_max_val);
-
-  backprop_output_clamps_to_accu_limits(activationParams, verbose);
 
   int A, M;
 
-  std::tie(A, M) = solve_for_constraints(activationParams, verbose);
+  int vlmul_shr = 14;
 
-  int B = A + M - VLMUL_SHR;
+  std::tie(A, M) = solve_for_constraints(activationParams, verbose, vlmul_shr);
 
-  QuantisationParams q;
+  int B = A + M - vlmul_shr;
 
-  q.initial_shr = -A;
-  q.final_shr = B - 8;
+  initial_shr = -A;
+  final_shr = B - 8;
 
   if (verbose) {
-    printf("final_shr: %d\n", q.final_shr);
+    printf("final_shr: %d\n", final_shr);
   }
 
   // Quantise the multiplier and bias
   for (int ch = 0; ch < activationParams.size(); ++ch) {
     int16_t m = float_to_int16(activationParams[ch].multiplier, M);
-    q.multipliers.push_back(m);
+    multipliers.push_back(m);
     int16_t b = float_to_int16(activationParams[ch].bias, B);
-    q.biases.push_back(b);
+    biases.push_back(b);
 
     if (verbose)
       printf("multiplier: %d(%f) original: %f\n", m, std::ldexp(m, -M),
@@ -428,17 +462,114 @@ QuantisationParams OutputTransformFnInt8::quantise_activation(
       printf("bias: %d(%f) original: %f %f\n", b, std::ldexp(b, -B),
              activationParams[ch].original_bias, activationParams[ch].bias);
   }
-
-  return q;
 }
 
-extern "C" int8_t *output_transform_fn_impl_asm(const OT_int8::Params *params,
+//this one quantises with a per channel shift
+QuantisationPerChannelStrategy::QuantisationPerChannelStrategy(
+    OutputTransformFn::MulsAndBias &activationParams, bool verbose): QantisationStrategy(activationParams)
+{
+  if (activationParams.size() == 0)
+    return;
+
+  std::vector<int> M;
+  std::vector<int> A;
+
+  for (int ch=0;ch<activationParams.size();ch++){
+    std::vector<OutputTransformFn::ActivationParams> slice;
+    slice.push_back(activationParams[ch]);
+    int a, m;
+    std::tie(a, m) = solve_for_constraints(activationParams, verbose, 15);
+    M.push_back(m);
+    A.push_back(a);
+  }
+  
+  //now combine the A
+
+}
+
+/**
+ * Calculate the maximum average error between the reference and quantised implementations of the output 
+ * transform over each channel. The average is defined over the range of non-saturating accumulators, 
+ * i.e. accumulators that do not reach a saturating output in the int8 space. 
+ * The result is the maximum average for all of the channels. 
+ */
+double QuantisationPerGroupStrategy::get_quant_error(
+  bool use_high_precision)
+{
+  
+  if (use_high_precision){
+
+    double max_avg_abs_error = 0.0;
+
+    for (int idx=0; idx < activation_params.size(); ++idx){
+      
+      int64_t abs_error_sum = 0;
+
+      for(int accu = activation_params[idx].accu_min_val; accu <= activation_params[idx].accu_max_val; ++accu){
+
+        int32_t t = shr(accu, initial_shr); //vlsat
+        t = mul(t, multipliers[idx]);       //vlmul
+        t = add(t, biases[idx]);            //vladd
+        t = shr(t, final_shr);              //vlashr
+        t = sat(shr(t, 8), 8);              //vdepth8
+        
+        double v = (double)accu * activation_params[idx].multiplier + activation_params[idx].bias;
+
+        int expected = (int)std::round(v);
+
+        expected = std::min(expected, INT8_MAX);
+        expected = std::max(expected, INT8_MIN);
+
+        abs_error_sum += std::abs(expected - t);
+      }
+
+      int64_t interesting_accumulators =  activation_params[idx].accu_max_val - activation_params[idx].accu_min_val + 1;
+      
+      if (interesting_accumulators > 0){
+        double avg_abs_error = (double)abs_error_sum / (double)interesting_accumulators;
+        max_avg_abs_error = std::max(max_avg_abs_error, avg_abs_error);
+      }
+    }
+    return max_avg_abs_error;
+  } else {
+    //final_shr | number of decimal places | error
+    //-8          0                          0.5   = 1*2*0
+    //-7          1                          0.25  = 1*2*-1
+    //-6          2                          0.125 = 1*2*-2
+    //-5          3                          2*-3
+    //-4          4                          2*-4
+    //-3          5                          2*-5
+    //-2          6                          2*-6
+    //-1          7                          2*-7
+    //0           8                          2*-8
+    return std::ldexp(1, final_shr + 8);
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+extern "C" int8_t *output_transform_fn_impl_asm(const OTPerGroup::Params *params,
                                                 int8_t *Y, VPURingBuffer *A,
                                                 int16_t *multipliers_and_biases,
                                                 int output_count);
 
 #ifndef NN_USE_REF
-int8_t *output_transform_fn_impl_asm_stub(const OT_int8::Params *params,
+int8_t *output_transform_fn_impl_asm_stub(const OTPerGroup::Params *params,
                                           int8_t *Y, VPURingBuffer *A,
                                           int32_t output_channel_group,
                                           int16_t *multipliers_and_biases) {
@@ -451,7 +582,7 @@ int8_t *output_transform_fn_impl_asm_stub(const OT_int8::Params *params,
 }
 #endif
 
-int8_t *output_transform_fn_impl(const OT_int8::Params *params, int8_t *Y,
+int8_t *output_transform_fn_impl(const OTPerGroup::Params *params, int8_t *Y,
                                  VPURingBuffer *A, int32_t output_channel_group,
                                  int16_t *multipliers_and_biases) {
   xs3_vpu vpu_mem;
@@ -502,7 +633,7 @@ int8_t *output_transform_fn_impl(const OT_int8::Params *params, int8_t *Y,
   return Y;
 }
 
-int8_t *OT_int8::output_transform_fn(int8_t *Y, VPURingBuffer *A,
+int8_t *OTPerGroup::output_transform_fn(int8_t *Y, VPURingBuffer *A,
                                      int32_t output_channel_group) {
 #ifdef NN_USE_REF
   return output_transform_fn_impl(this->params, Y, A, output_channel_group,
@@ -514,7 +645,7 @@ int8_t *OT_int8::output_transform_fn(int8_t *Y, VPURingBuffer *A,
 }
 
 int8_t *output_transform_fn_int_clamped_impl(
-    const OT_int8_clamped::Params *params, int8_t *Y, VPURingBuffer *A,
+    const OTPerGroupClamped::Params *params, int8_t *Y, VPURingBuffer *A,
     int32_t output_channel_group, int16_t *offsets_multipliers_and_biases) {
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
@@ -561,10 +692,10 @@ int8_t *output_transform_fn_int_clamped_impl(
 }
 
 extern "C" int8_t *output_transform_fn_int_clamped_impl_asm(
-    const OT_int8_clamped::Params *params, int8_t *Y, VPURingBuffer *A,
+    const OTPerGroupClamped::Params *params, int8_t *Y, VPURingBuffer *A,
     int32_t output_channel_group, int16_t *offsets_multipliers_and_biases);
 
-int8_t *OT_int8_clamped::output_transform_fn(int8_t *Y, VPURingBuffer *A,
+int8_t *OTPerGroupClamped::output_transform_fn(int8_t *Y, VPURingBuffer *A,
                                              int32_t output_channel_group) {
 #ifdef NN_USE_REF
 
@@ -611,7 +742,7 @@ extern "C" int8_t *output_transform_fn_binary_impl_asm(
     int8_t *Y, VPURingBuffer *A, int32_t output_channel_group,
     int16_t *thresholds);
 
-int8_t *OT_binary::output_transform_fn(int8_t *Y, VPURingBuffer *A,
+int8_t *OTBinary::output_transform_fn(int8_t *Y, VPURingBuffer *A,
                                        int32_t output_channel_group) {
 #ifdef NN_USE_REF
   return output_transform_fn_binary_impl(Y, A, output_channel_group,

@@ -160,43 +160,24 @@ void test_Conv2dPaddedIndirectRegression() {
 
                                 assert(eff_mult.size() > 0);
 
-                                MulsAndBias mul_and_biases =
-                                    OutputTransformFnInt8::
-                                        canonicalise_mul_and_bias(
+                                OutputTransformFn::MulsAndBias mul_and_biases =
+                                    OutputTransformFn::
+                                        canonicaliseConv2D(
                                             eff_mult, bias, weights,
                                             ks.input_zero_point,
                                             ks.output_zero_point, k_depth);
 
-                                QuantisationParams qp =
-                                    OutputTransformFnInt8::quantise_activation(
-                                        mul_and_biases);
+                                auto quant_strat = nn::QuantisationPerGroupStrategy(mul_and_biases);
 
-                                assert(qp.multipliers.size() > 0);
-                                assert(qp.biases.size() > 0);
+                                OTPerGroup::Params params;
+                                std::vector<int16_t> data;
 
-                                auto serialised_offsets_multipliers_and_biases =
-                                    OutputTransformFn::serialise_memory(
-                                        qp.multipliers, qp.biases);
+                                OTPerGroup::layout_for_hw(&params, data);
 
-                                // pad qp.multipliers_and_biases to a multiple
-                                // of VPU_INT16_EPV this is to work around array
-                                // over reads
-                                int16_t pad_val =
-                                    rng.rand<int16_t>();  // this is arbitrary
-                                OutputTransformFn::pad_final_access(
-                                    serialised_offsets_multipliers_and_biases,
-                                    VPU_INT16_EPV, pad_val);
 
-                                OT_int8::Params ot_params((int32_t)k_depth,
-                                                          qp.initial_shr,
-                                                          qp.final_shr);
+                                OTPerGroup ot(&params);
 
-                                OT_int8 ot(&ot_params);
-                                assert(qp.multipliers.size() > 0);
-                                assert(qp.biases.size() > 0);
-                                ot.setMultipliersAndBiases(
-                                    serialised_offsets_multipliers_and_biases
-                                        .data());
+                                ot.setMultipliersAndBiases(data.data());
 
                                 auto ir = ImageRegion(0, 0, 0, Y.height,
                                                       Y.width, Y.depth);
@@ -336,39 +317,59 @@ void test_Conv2dValidIndirectRegression() {
                                 MatMulInt8 aggregator(&p);
                                 aggregator.setWeights(rw.weights.data());
 
-                                MulsAndBias mul_and_biases =
-                                    OutputTransformFnInt8::
-                                        canonicalise_mul_and_bias(
+                                // MulsAndBias mul_and_biases =
+                                //     OutputTransformFnInt8::
+                                //         canonicalise_mul_and_bias(
+                                //             eff_mult, bias, weights,
+                                //             ks.input_zero_point,
+                                //             ks.output_zero_point, k_depth);
+
+                                // QuantisationParams qp =
+                                //     OutputTransformFnInt8::quantise_activation(
+                                //         mul_and_biases);
+
+                                // auto serialised_offsets_multipliers_and_biases =
+                                //     OutputTransformFn::serialise_memory(
+                                //         qp.multipliers, qp.biases);
+                                // // pad q.biases and  q.multipliers to a multiple
+                                // // of VPU_INT16_EPV this is to work around array
+                                // // over reads
+                                // int16_t pad_val =
+                                //     rng.rand<int16_t>();  // this is arbitrary
+                                // OutputTransformFn::pad_final_access(
+                                //     serialised_offsets_multipliers_and_biases,
+                                //     VPU_INT16_EPV, pad_val);
+
+                                // OTPerGroup::Params ot_params((int32_t)k_depth,
+                                //                           qp.initial_shr,
+                                //                           qp.final_shr);
+
+                                // OTPerGroup ot(&ot_params);
+                                // assert(serialised_offsets_multipliers_and_biases
+                                //            .size() > 0);
+                                // ot.setMultipliersAndBiases(
+                                //     serialised_offsets_multipliers_and_biases
+                                //         .data());
+
+                                OutputTransformFn::MulsAndBias mul_and_biases =
+                                    OutputTransformFn::
+                                        canonicaliseConv2D(
                                             eff_mult, bias, weights,
                                             ks.input_zero_point,
                                             ks.output_zero_point, k_depth);
 
-                                QuantisationParams qp =
-                                    OutputTransformFnInt8::quantise_activation(
-                                        mul_and_biases);
+                                auto quant_strat = nn::QuantisationPerGroupStrategy(mul_and_biases);
 
-                                auto serialised_offsets_multipliers_and_biases =
-                                    OutputTransformFn::serialise_memory(
-                                        qp.multipliers, qp.biases);
-                                // pad q.biases and  q.multipliers to a multiple
-                                // of VPU_INT16_EPV this is to work around array
-                                // over reads
-                                int16_t pad_val =
-                                    rng.rand<int16_t>();  // this is arbitrary
-                                OutputTransformFn::pad_final_access(
-                                    serialised_offsets_multipliers_and_biases,
-                                    VPU_INT16_EPV, pad_val);
+                                OTPerGroup::Params params;
+                                std::vector<int16_t> data;
 
-                                OT_int8::Params ot_params((int32_t)k_depth,
-                                                          qp.initial_shr,
-                                                          qp.final_shr);
+                                OTPerGroup::layout_for_hw(&params, data);
 
-                                OT_int8 ot(&ot_params);
-                                assert(serialised_offsets_multipliers_and_biases
-                                           .size() > 0);
-                                ot.setMultipliersAndBiases(
-                                    serialised_offsets_multipliers_and_biases
-                                        .data());
+
+                                OTPerGroup ot(&params);
+
+                                ot.setMultipliersAndBiases(data.data());
+
                                 auto ir = ImageRegion(0, 0, 0, Y.height,
                                                       Y.width, Y.depth);
 
@@ -504,39 +505,57 @@ void test_Conv2dValidDirectRegression() {
                                 MatMulDirectFn aggregator(&p);
                                 aggregator.setWeights(rw.weights.data());
 
-                                MulsAndBias mul_and_biases =
-                                    OutputTransformFnInt8::
-                                        canonicalise_mul_and_bias(
+                                // OutputTransformFn::MulsAndBias mul_and_biases =
+                                //     OutputTransformFn::
+                                //         canonicaliseConv2Ds(
+                                //             eff_mult, bias, weights,
+                                //             ks.input_zero_point,
+                                //             ks.output_zero_point, k_depth);
+
+                                // QuantisationParams qp =
+                                //     OutputTransformFnInt8::quantise_activation(
+                                //         mul_and_biases);
+
+                                // auto serialised_offsets_multipliers_and_biases =
+                                //     OutputTransformFn::serialise_memory(
+                                //         qp.multipliers, qp.biases);
+                                // // pad q.biases and  q.multipliers to a multiple
+                                // // of VPU_INT16_EPV this is to work around array
+                                // // over reads
+                                // int16_t pad_val =
+                                //     rng.rand<int16_t>();  // this is arbitrary
+                                // OutputTransformFn::pad_final_access(
+                                //     serialised_offsets_multipliers_and_biases,
+                                //     VPU_INT16_EPV, pad_val);
+
+                                // OTPerGroup::Params ot_params((int32_t)k_depth,
+                                //                           qp.initial_shr,
+                                //                           qp.final_shr);
+
+                                // OTPerGroup ot(&ot_params);
+                                // assert(serialised_offsets_multipliers_and_biases
+                                //            .size() > 0);
+                                // ot.setMultipliersAndBiases(
+                                //     serialised_offsets_multipliers_and_biases
+                                //         .data());
+
+                                OutputTransformFn::MulsAndBias mul_and_biases =
+                                    OutputTransformFn::
+                                        canonicaliseConv2D(
                                             eff_mult, bias, weights,
                                             ks.input_zero_point,
                                             ks.output_zero_point, k_depth);
 
-                                QuantisationParams qp =
-                                    OutputTransformFnInt8::quantise_activation(
-                                        mul_and_biases);
+                                auto quant_strat = nn::QuantisationPerGroupStrategy(mul_and_biases);
 
-                                auto serialised_offsets_multipliers_and_biases =
-                                    OutputTransformFn::serialise_memory(
-                                        qp.multipliers, qp.biases);
-                                // pad q.biases and  q.multipliers to a multiple
-                                // of VPU_INT16_EPV this is to work around array
-                                // over reads
-                                int16_t pad_val =
-                                    rng.rand<int16_t>();  // this is arbitrary
-                                OutputTransformFn::pad_final_access(
-                                    serialised_offsets_multipliers_and_biases,
-                                    VPU_INT16_EPV, pad_val);
+                                OTPerGroup::Params params;
+                                std::vector<int16_t> data;
 
-                                OT_int8::Params ot_params((int32_t)k_depth,
-                                                          qp.initial_shr,
-                                                          qp.final_shr);
+                                OTPerGroup::layout_for_hw(&params, data);
 
-                                OT_int8 ot(&ot_params);
-                                assert(serialised_offsets_multipliers_and_biases
-                                           .size() > 0);
-                                ot.setMultipliersAndBiases(
-                                    serialised_offsets_multipliers_and_biases
-                                        .data());
+                                OTPerGroup ot(&params);
+
+                                ot.setMultipliersAndBiases(data.data());
 
                                 auto ir = ImageRegion(0, 0, 0, Y.height,
                                                       Y.width, Y.depth);

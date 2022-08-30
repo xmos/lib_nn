@@ -66,6 +66,6 @@ TEST_F(Test_MatMulInt8Params, BasicTest) {
   test_serialisation<MatMulInt8::Params>();
 }
 
-class Test_OT_int8Params : public ::testing::Test {};
+class Test_OTPerGroupParams : public ::testing::Test {};
 
-TEST_F(Test_OT_int8Params, BasicTest) { test_serialisation<OT_int8::Params>(); }
+TEST_F(Test_OTPerGroupParams, BasicTest) { test_serialisation<OTPerGroup::Params>(); }

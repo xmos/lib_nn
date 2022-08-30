@@ -19,6 +19,9 @@
 
 namespace nn {
 
+
+
+
 /**
  * Interface implemented by all output transform handlers.
  *
@@ -29,6 +32,8 @@ namespace nn {
  * been performed. The ring buffer will then be transformed into an output
  * number space and written to the output tensor (Y).
  */
+
+//TODO maybe the output type should be templated
 class OutputTransformFn {
  public:
   class ActivationParams {
@@ -46,19 +51,40 @@ class OutputTransformFn {
     int32_t accu_min_val;
     int32_t accu_max_val;
 
+  private:
+    /*
+    This is used to complete the ActivationParams attributes 
+    */
+    void backprop_output_clamps_to_accu_limits(
+      int64_t output_high, int64_t output_low, bool verbose = false);
+
+  public:
     ActivationParams(double bias, double multiplier, int32_t accu_min_val,
-                     int32_t accu_max_val)
-        : original_bias(bias),
+                    int32_t accu_max_val,
+                    int64_t output_high = INT8_MAX,
+                    int64_t output_low = INT8_MIN 
+       ): original_bias(bias),
           original_multiplier(multiplier),
           original_accu_min_val(accu_min_val),
           original_accu_max_val(accu_max_val),
-          bias(bias),
+
+          // These are going to be adjusted to account for the output clamp  
+          bias(bias),     
           multiplier(multiplier),
           accu_min_val(accu_min_val),
           accu_max_val(accu_max_val) {
+      
+      //This asseumes a linear mapping between output and input, this might not 
+      //always be true in the future.
+      //TODO write tests for this
+      backprop_output_clamps_to_accu_limits(output_high, output_low);
+
       assert(accu_min_val <= accu_max_val);
+      assert(original_accu_min_val <= original_accu_max_val);
     }
   };
+
+  typedef std::vector<OutputTransformFn::ActivationParams> MulsAndBias;
 
   /**
    * Pads a vector to a boundary with a pad value
@@ -160,19 +186,20 @@ class OutputTransformFn {
     return serialised_memory;
   }
 
-  template <class activationT>
-  static int get_max_exponent(activationT f) {
-    int e;
-    std::frexp(f, &e);
-    return e;
-  }
+  static MulsAndBias canonicaliseConv2D(
+      const std::vector<float> &eff_mult, const std::vector<int32_t> &bias,
+      const std::vector<int8_t> &weights, int input_zero_point,
+      int output_zero_point, int output_channel_count) ;
 
-  template <class activationT>
-  static int get_max_exponent(std::vector<activationT> &arr) {
-    int m = INT32_MIN;
-    for (auto f : arr) m = std::max(m, get_max_exponent(f));
-    return m;
-  }
+  static MulsAndBias canonicaliseConv2DDepthwise(
+      const std::vector<float> &eff_mult, const std::vector<int32_t> &bias,
+      const std::vector<int8_t> &weights, const std::array<int, 4> &shape,
+      int input_zero_point, int output_zero_point, int output_channels);
+
+  static MulsAndBias canonicaliseConv2DClamped(
+      const std::vector<float> &post_activation_multiplier,
+      const std::vector<float> &post_activation_bias, int receptive_volume,
+      int32_t clamp_low, int32_t clamp_high, int output_channel_count);
 
   /**
    * @brief The method that will translate the accumulator into the output
@@ -186,235 +213,16 @@ class OutputTransformFn {
    */
   virtual int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
                                       int32_t output_channel_group) = 0;
+                                      
 };
 
-typedef std::vector<OutputTransformFn::ActivationParams> MulsAndBias;
+/*
+  Actual output transforms beneath here. These require a layout of the 
+  quantisation strat in a way that is efficient for the hardware. Also,
+  these dont allocate memory.
+*/
 
-struct QuantisationParams {
-  /**
-   * The amount to shift all the 32 bit accumulators right by to reduce them to
-   * 16 bit scalars. This will be non-negative. It is used to control the VLSAT.
-   * Note, some may saturate in the 16 bit conversion as the output clamp may
-   * have been back propagated.
-   */
-  int16_t initial_shr;
-
-  /**
-   * The amount to shift all the 16 bit biased and scaled accumulators right by
-   * to reduce them to 8 bit scalars. It is used to control the VLASHR. Also the
-   * result may be bigger than the int8 range as clamping is expected to follow.
-   */
-  int16_t final_shr;
-
-  /**
-   * The mutipliers and biases are interleaved into a single array. They are
-   * arranged as channel groups of 16 multipliers and 16 biases until the final
-   * group of N multipliers and N biases where N is the remaining number of
-   * channels after all the full channel groups.
-   */
-  std::vector<int16_t> multipliers;
-  std::vector<int16_t> biases;
-};
-
-class OutputTransformFnInt8 : public OutputTransformFn {
- public:
-  static MulsAndBias canonicalise_mul_and_bias_dw(
-      const std::vector<float> &eff_mult, const std::vector<int32_t> &bias,
-      const std::vector<int8_t> &weights, const std::array<int, 4> &shape,
-      int input_zero_point, int output_zero_point, int output_channels) {
-    MulsAndBias canonical_values;
-
-    assert(shape[0] == 1);
-
-    int elements_per_channel = weights.size() / output_channels;
-    assert((weights.size() % output_channels) == 0);
-
-    for (int out_chan = 0; out_chan < output_channels; out_chan++) {
-      int32_t max_accu_sum = 0;
-      int32_t min_accu_sum = 0;
-
-      int32_t coefs_sum = 0;
-
-      for (int e = 0; e < elements_per_channel; e++) {
-        int idx = out_chan + output_channels * e;
-
-        int32_t coef = (int32_t)weights[idx];
-        coefs_sum += coef;
-
-        if (coef > 0) {
-          max_accu_sum += coef * (int32_t)INT8_MAX;
-          min_accu_sum += coef * (int32_t)INT8_MIN;
-        } else {
-          max_accu_sum += coef * (int32_t)INT8_MIN;
-          min_accu_sum += coef * (int32_t)INT8_MAX;
-        }
-      }
-
-      double canonical_bias =
-          (bias[out_chan] - input_zero_point * coefs_sum) * eff_mult[out_chan] +
-          output_zero_point;
-
-      OutputTransformFn::ActivationParams a(canonical_bias, eff_mult[out_chan],
-                                            min_accu_sum, max_accu_sum);
-      canonical_values.push_back(a);
-    }
-    return canonical_values;
-  }
-
-  static MulsAndBias canonicalise_mul_and_bias(
-      const std::vector<float> &eff_mult, const std::vector<int32_t> &bias,
-      const std::vector<int8_t> &weights, int input_zero_point,
-      int output_zero_point, int output_channel_count) {
-    MulsAndBias canonical_values;
-
-    int elements_per_channel = weights.size() / output_channel_count;
-    assert((weights.size() % output_channel_count) == 0);
-
-    for (int out_chan = 0; out_chan < output_channel_count; out_chan++) {
-      int32_t max_accu_sum = 0;
-      int32_t min_accu_sum = 0;
-
-      int32_t coefs_sum = 0;
-      for (int e = 0; e < elements_per_channel; e++) {
-        int idx = out_chan * elements_per_channel + e;
-        int32_t coef = (int32_t)weights[idx];
-        coefs_sum += coef;
-
-        if (coef > 0) {
-          max_accu_sum += coef * (int32_t)INT8_MAX;
-          min_accu_sum += coef * (int32_t)INT8_MIN;
-        } else {
-          max_accu_sum += coef * (int32_t)INT8_MIN;
-          min_accu_sum += coef * (int32_t)INT8_MAX;
-        }
-      }
-
-      double canonical_bias =
-          (bias[out_chan] - input_zero_point * coefs_sum) * eff_mult[out_chan] +
-          output_zero_point;
-
-      OutputTransformFn::ActivationParams a(canonical_bias, eff_mult[out_chan],
-                                            min_accu_sum, max_accu_sum);
-      canonical_values.push_back(a);
-    }
-    return canonical_values;
-  }
-
-  static int32_t sat(int64_t a, int bits){
-    int64_t max_val = (1LL << bits)-1;
-    int64_t min_val = -(1LL << bits);
-
-    if(a > max_val)
-      return (int32_t)max_val;
-
-    if(a < min_val)
-      return (int32_t)min_val;
-
-    return a;
-  }
-
-  static int32_t shr(int32_t val, int shr_amount, int bits = 16 ){
-    if (shr_amount > 0){
-      return sat(((int64_t)val + (1LL << (shr_amount - 1))) >> shr_amount, bits);
-    } else {
-      return sat((int64_t)val << (-shr_amount), bits);
-    }
-  }
-
-  static int32_t add(int32_t a, int32_t b, int bits = 16 ){
-      return sat((int64_t)a + (int64_t)b, bits);
-  }
-
-  static int32_t mul(int32_t a, int32_t b, int bits = 16 ){
-      int64_t prod = (int64_t)a * (int64_t)b;
-      prod = prod + (1LL << (14-1));
-      return sat(prod>>14, bits);
-  }
-
-  /**
-   * Calculate the maximum average error between the reference and quantised implementations of the output 
-   * transform over each channel. The average is defined over the range of non-saturating accumulators, 
-   * i.e. accumulators that do not reach a saturating output in the int8 space. 
-   * The result is the maximum average for all of the channels. 
-   */
-  static double get_quant_error(MulsAndBias &mul_and_bias, QuantisationParams &qp, bool use_high_precision = false){
-    
-    if (use_high_precision){
-
-      double max_avg_abs_error = 0.0;
-
-      for (int idx=0; idx < mul_and_bias.size(); ++idx){
-        
-        int64_t abs_error_sum = 0;
-
-        for(int accu = mul_and_bias[idx].accu_min_val; accu <= mul_and_bias[idx].accu_max_val; ++accu){
-
-          int32_t t = shr(accu, qp.initial_shr); //vlsat
-          t = mul(t, qp.multipliers[idx]);       //vlmul
-          t = add(t, qp.biases[idx]);            //vladd
-          t = shr(t, qp.final_shr);              //vlashr
-          t = sat(shr(t, 8), 8);                 //vdepth8
-          
-          double v = (double)accu * mul_and_bias[idx].multiplier + mul_and_bias[idx].bias;
-
-          int expected = (int)std::round(v);
-
-          expected = std::min(expected, INT8_MAX);
-          expected = std::max(expected, INT8_MIN);
-
-          abs_error_sum += std::abs(expected - t);
-        }
-
-        int64_t interesting_accumulators =  mul_and_bias[idx].accu_max_val - mul_and_bias[idx].accu_min_val + 1;
-        
-        if (interesting_accumulators > 0){
-          double avg_abs_error = (double)abs_error_sum / (double)interesting_accumulators;
-          max_avg_abs_error = std::max(max_avg_abs_error, avg_abs_error);
-        }
-      }
-      return max_avg_abs_error;
-    } else {
-      //final_shr | number of decimal places | error
-      //-8          0                          0.5   = 1*2*0
-      //-7          1                          0.25  = 1*2*-1
-      //-6          2                          0.125 = 1*2*-2
-      //-5          3                          2*-3
-      //-4          4                          2*-4
-      //-3          5                          2*-5
-      //-2          6                          2*-6
-      //-1          7                          2*-7
-      //0           8                          2*-8
-      return std::ldexp(1, qp.final_shr + 8);
-    }
-  }
-
-
-  /**
-   * @brief This translates from the representation of:
-   *    output[ch] = min(max((accu[ch] * multipler[ch]) + bias[ch]), INT8_MIN),
-   * INT8_MAX) to a form that can be efficiently implemented on the VPU. The
-   * accu_min and accu_max allow the quantisiation logic to achieve maximum
-   * resolution on the quantised representations of the multipler and bias.
-   *
-   * @param output_transform_multiplier Vector of the multipier for each
-   * channel.
-   * @param output_transform_bias Vector of the bias for each channel.
-   * @param accu_min Vector of the minimum possible accumulator for each
-   * channel.
-   * @param accu_max Vector of the maximum possible accumulator for each
-   * channel.
-   * @return QuantisationParams
-   */
-  static QuantisationParams quantise_activation(MulsAndBias &activation_params,
-                                                bool verbose = false);
-};
-
-/**
- * @brief Output Transform class to converting 32 bit accumulators to an 8 bit
- * output space.
- *
- */
-class OT_int8 : public OutputTransformFnInt8 {
+class OTPerGroup : public OutputTransformFn {
  public:
   class Params : public Serialisable {
    public:
@@ -434,8 +242,12 @@ class OT_int8 : public OutputTransformFnInt8 {
         : output_slice_channel_count(output_slice_channel_count),
           initial_shift(initial_shift),
           final_shr(final_shr) {}
-  };
 
+    Params()
+        : output_slice_channel_count(0),
+          initial_shift(0),
+          final_shr(0) {}
+  };
  private:
   /**
    * @brief This describes the channels over which this class will perform its
@@ -445,7 +257,50 @@ class OT_int8 : public OutputTransformFnInt8 {
   int16_t *multipliers_and_biases;
 
  public:
-  OT_int8(Params *params) : params(params){};
+  OTPerGroup(Params *params) : params(params){};
+
+  int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
+                              int32_t output_channel_group);
+
+
+  static void layout_for_hw(Params * params, std::vector<int16_t> &data){
+
+  }
+
+  void setMultipliersAndBiases(int16_t *m) {
+    multipliers_and_biases = m;
+    assert(m != nullptr);
+    assert(is_aligned(multipliers_and_biases, 4));
+  }
+};
+
+class OTPerChannel : public OutputTransformFn {
+ public:
+  class Params : public Serialisable {
+   public:
+    int32_t output_slice_channel_count;
+
+   public:
+    /**
+     * @brief Construct a new Params object
+     *
+     * @param output_slice_channel_count The count of output channels to be
+     * computed by this parameter set.
+     */
+    Params(int32_t output_slice_channel_count)
+        : output_slice_channel_count(output_slice_channel_count){};
+
+  };
+ private:
+  /**
+   * @brief This describes the channels over which this class will perform its
+   * operation(OutputTransform) and how each channel will transformed.
+   */
+  Params *params;
+  int16_t *multipliers_and_biases;
+
+ public:
+  OTPerChannel(Params *params) : params(params){};
 
   int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
                               int32_t output_channel_group);
@@ -457,12 +312,45 @@ class OT_int8 : public OutputTransformFnInt8 {
   }
 };
 
-/**
- * @brief Output Transform class to converting 32 bit accumulators to an 8 bit
- * output space.
- *
- */
-class OT_int8_clamped : public OutputTransformFnInt8 {
+class OT32BitBias : public OutputTransformFn {
+ public:
+  class Params : public Serialisable {
+   public:
+    int32_t output_slice_channel_count;
+
+   public:
+    /**
+     * @brief Construct a new Params object
+     *
+     * @param output_slice_channel_count The count of output channels to be
+     * computed by this parameter set.
+     */
+    Params(int32_t output_slice_channel_count)
+        : output_slice_channel_count(output_slice_channel_count){};
+
+  };
+ private:
+  /**
+   * @brief This describes the channels over which this class will perform its
+   * operation(OutputTransform) and how each channel will transformed.
+   */
+  Params *params;
+  int16_t *multipliers_and_biases;
+
+ public:
+  OT32BitBias(Params *params) : params(params){};
+
+  int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
+                              int32_t output_channel_group);
+
+  void setMultipliersAndBiases(int16_t *m) {
+    multipliers_and_biases = m;
+    assert(m != nullptr);
+    assert(is_aligned(multipliers_and_biases, 4));
+  }
+};
+
+class OTPerGroupClamped : public OutputTransformFn {
  public:
   class Params : public Serialisable {
    public:
@@ -482,6 +370,11 @@ class OT_int8_clamped : public OutputTransformFnInt8 {
         : output_slice_channel_count(output_slice_channel_count),
           initial_shift(initial_shift),
           final_shr(final_shr) {}
+
+    Params()
+        : output_slice_channel_count(0),
+          initial_shift(0),
+          final_shr(0) {}
   };
 
  private:
@@ -493,7 +386,11 @@ class OT_int8_clamped : public OutputTransformFnInt8 {
   int16_t *offsets_multipliers_and_biases;
 
  public:
-  OT_int8_clamped(Params *params) : params(params){};
+  OTPerGroupClamped(Params *params) : params(params){};
+
+  static void layout_for_hw(Params * params, std::vector<int16_t> &data){
+
+  }
 
   int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
                               int32_t output_channel_group);
@@ -504,54 +401,9 @@ class OT_int8_clamped : public OutputTransformFnInt8 {
     assert(is_aligned(offsets_multipliers_and_biases, 4));
   }
 
-  static MulsAndBias canonicalise_mul_and_bias(
-      const std::vector<float> &post_activation_multiplier,
-      const std::vector<float> &post_activation_bias, int receptive_volume,
-      int32_t clamp_low, int32_t clamp_high, int output_channel_count) {
-    MulsAndBias canonical_values;
 
-    int32_t xcore_clamp_low = clamp_low - receptive_volume / 2;
-    int32_t xcore_clamp_high = clamp_high - receptive_volume / 2;
 
-    /*
-        Larq assumes xor-popcount is used for the aggregation but the xcore uses
-        sum(xor * 2 - 1)/2. Over a receptive volume this means
-        sum(xor * 2 - 1)/2 = xor-popcount - receptive_field/2
-        or
-        xor-popcount = sum(xor * 2 - 1)/2 + receptive_field/2
 
-        We are implementing:
-
-                std::int32_t x = accum << 1;
-                x = std::max<std::int32_t>(std::min<std::int32_t>(x, clamp_max),
-       clamp_min);
-                // The linear transformation is done in float
-                float y =
-                    static_cast<float>(x) * multiplier[out_channel] +
-       bias[out_channel];
-                // And then we round back to int32 and clamp to the int8 range
-                return saturate(round(y));
-
-        Which is why we have a spurious x3 below.
-    */
-    for (int out_chan = 0; out_chan < output_channel_count; out_chan++) {
-      float xcore_multiplier = -post_activation_multiplier[out_chan] * 2;
-
-      // Here we add on M*R/2 to account for the way xcore computes the macc as
-      // opposed to xor-popcount.
-      float xcore_bias =
-          post_activation_bias[out_chan] +
-          post_activation_multiplier[out_chan] * receptive_volume;
-
-      // This is considering the perspective of the accumulator after a VPOS has
-      // been performed on it
-      OutputTransformFn::ActivationParams a(xcore_bias, xcore_multiplier,
-                                            xcore_clamp_low, xcore_clamp_high);
-
-      canonical_values.push_back(a);
-    }
-    return canonical_values;
-  }
   static std::vector<int16_t> get_accumulator_overlaps(
       int receptive_volume, int output_channel_count,
       Conv2dReorderedWeights &reordered_weights) {
@@ -581,19 +433,13 @@ class OT_int8_clamped : public OutputTransformFnInt8 {
   }
 };
 
-/**
- * @brief Output Transform class to converting 32 bit accumulators to a 1 bit
- * output space.
- *
- */
-
 typedef int16_t threshold_t;
-class OT_binary : public OutputTransformFn {
+class OTBinary : public OutputTransformFn {
  private:
   threshold_t *thresholds;
 
  public:
-  OT_binary(){};
+  OTBinary(){};
 
   int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
                               int32_t output_channel_group);
@@ -641,6 +487,92 @@ class OT_binary : public OutputTransformFn {
     assert(th != nullptr);
     assert(is_aligned(thresholds, 4));
   }
+};
+
+
+/*
+  Quantisation strategys - these convert the MulsAndBias into a quantised 
+  representation.
+*/
+
+class QantisationStrategy {
+  protected:
+  OutputTransformFn::MulsAndBias &activation_params;
+  
+  public:
+  virtual double get_quant_error(bool use_high_precision = false) = 0;
+
+  QantisationStrategy(OutputTransformFn::MulsAndBias &activation_params):activation_params(activation_params){};
+};
+
+class QuantisationPerGroupStrategy : public QantisationStrategy {
+
+  std::vector<int16_t> multipliers;
+  std::vector<int16_t> biases;
+  int16_t initial_shr;
+  int16_t final_shr;
+
+public:
+  QuantisationPerGroupStrategy(OutputTransformFn::MulsAndBias &activation_params, bool verbose = false);
+
+  double get_quant_error(bool use_high_precision);
+
+  // void layout_for_hw(OTPerGroup::Params * params, std::vector<int16_t> &data){
+      // QuantisationParams qp =
+        //     OutputTransformFnInt8::quantise_activation(
+        //         mul_and_biases);
+
+        // assert(qp.multipliers.size() > 0);
+        // assert(qp.biases.size() > 0);
+
+        // auto serialised_offsets_multipliers_and_biases =
+        //     OutputTransformFn::serialise_memory(
+        //         qp.multipliers, qp.biases);
+
+        // // pad qp.multipliers_and_biases to a multiple
+        // // of VPU_INT16_EPV this is to work around array
+        // // over reads
+        // int16_t pad_val =
+        //     rng.rand<int16_t>();  // this is arbitrary
+        // OutputTransformFn::pad_final_access(
+        //     serialised_offsets_multipliers_and_biases,
+        //     VPU_INT16_EPV, pad_val);
+  // };
+
+};
+
+class QuantisationPerChannelStrategy : public QantisationStrategy {
+
+  std::vector<int16_t> multipliers;
+  std::vector<int16_t> biases;
+  std::vector<int16_t> initial_shr;
+  std::vector<int16_t> final_shr;
+
+public:
+  QuantisationPerChannelStrategy(OutputTransformFn::MulsAndBias &activation_params, bool verbose = false);
+
+  double get_quant_error(bool use_high_precision){ return 0.0;}
+  
+  void layout_for_hw(OTPerChannel::Params * params, std::vector<int16_t> &data){
+
+  };
+};
+
+class QuantisationParams32BitBiasStratergy : public QantisationStrategy {
+
+  std::vector<int16_t> multipliers;
+  std::vector<int32_t> biases;
+  int32_t initial_shr;
+  int32_t final_shr;
+
+public:
+  double get_quant_error(bool use_high_precision = false);
+
+  QuantisationParams32BitBiasStratergy(OutputTransformFn::MulsAndBias &activation_params, bool verbose);
+  
+  void layout_for_hw(OT32BitBias::Params * params, std::vector<int16_t> &data){
+
+  };
 };
 
 }  // namespace nn

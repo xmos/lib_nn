@@ -199,7 +199,7 @@ void test_Conv2dValidIndirectBinaryRegression() {
                                 // adjust the thresholds from xorpopcount space
                                 // to xcore space
                                 auto adjusted_thresholds =
-                                    OT_binary::adjust_thresholds(
+                                    OTBinary::adjust_thresholds(
                                         thresholds, x_channels, K, rw);
 
                                 assert(adjusted_thresholds.size() > 0);
@@ -214,7 +214,7 @@ void test_Conv2dValidIndirectBinaryRegression() {
                                     adjusted_thresholds, VPU_INT16_EPV,
                                     pad_val);
 
-                                OT_binary ot;
+                                OTBinary ot;
                                 ot.setThresholds(adjusted_thresholds.data());
                                 auto ir = ImageRegion(0, 0, 0, Y.height,
                                                       Y.width, Y.depth);
@@ -369,7 +369,7 @@ void test_Conv2dValidDirectBinaryRegression() {
                                 // adjust the thresholds from xorpopcount space
                                 // to xcore space
                                 auto adjusted_thresholds =
-                                    OT_binary::adjust_thresholds(
+                                    OTBinary::adjust_thresholds(
                                         thresholds, x_channels, K, rw);
 
                                 assert(adjusted_thresholds.size() > 0);
@@ -384,7 +384,7 @@ void test_Conv2dValidDirectBinaryRegression() {
                                     adjusted_thresholds, VPU_INT16_EPV,
                                     pad_val);
 
-                                OT_binary ot;
+                                OTBinary ot;
 
                                 ot.setThresholds(adjusted_thresholds.data());
                                 auto ir = ImageRegion(0, 0, 0, Y.height,
@@ -559,45 +559,64 @@ void test_Conv2dValidIndirectInt8Regression() {
                                 int receptive_volume =
                                     k_height * k_width * x_channels;
 
-                                MulsAndBias mul_and_biases =
-                                    OT_int8_clamped::canonicalise_mul_and_bias(
-                                        post_activation_multiplier,
-                                        post_activation_bias, receptive_volume,
-                                        clamp_low, clamp_high, k_depth);
+                                // OutputTransformFn::MulsAndBias mul_and_biases =
+                                //     OTPerGroupClamped::canonicalise_mul_and_bias(
+                                //         post_activation_multiplier,
+                                //         post_activation_bias, receptive_volume,
+                                //         clamp_low, clamp_high, k_depth);
 
-                                auto accu_overlaps =
-                                    OT_int8_clamped::get_accumulator_overlaps(
-                                        receptive_volume, k_depth, rw);
+                                // auto accu_overlaps =
+                                //     OTPerGroupClamped::get_accumulator_overlaps(
+                                //         receptive_volume, k_depth, rw);
 
-                                QuantisationParams qp =
-                                    OutputTransformFnInt8::quantise_activation(
-                                        mul_and_biases);
+                                // QuantisationParams qp =
+                                //     OutputTransformFnInt8::quantise_activation(
+                                //         mul_and_biases);
 
-                                auto serialised_offsets_multipliers_and_biases =
-                                    OutputTransformFn::serialise_memory(
-                                        accu_overlaps, qp.multipliers,
-                                        qp.biases);
+                                // auto serialised_offsets_multipliers_and_biases =
+                                //     OutputTransformFn::serialise_memory(
+                                //         accu_overlaps, qp.multipliers,
+                                //         qp.biases);
 
-                                // pad qp.adjusted_thresholds to a multiple
-                                // of VPU_INT16_EPV this is to work around array
-                                // over reads
-                                threshold_t pad_val =
-                                    rng.rand<threshold_t>();  // this is
-                                                              // arbitrary
-                                OutputTransformFn::pad_final_access(
-                                    serialised_offsets_multipliers_and_biases,
-                                    VPU_INT16_EPV, pad_val);
+                                // // pad qp.adjusted_thresholds to a multiple
+                                // // of VPU_INT16_EPV this is to work around array
+                                // // over reads
+                                // threshold_t pad_val =
+                                //     rng.rand<threshold_t>();  // this is
+                                //                               // arbitrary
+                                // OutputTransformFn::pad_final_access(
+                                //     serialised_offsets_multipliers_and_biases,
+                                //     VPU_INT16_EPV, pad_val);
 
-                                OT_int8_clamped::Params ot_params(
-                                    (int32_t)k_depth, qp.initial_shr,
-                                    qp.final_shr);
+                                // OTPerGroupClamped::Params ot_params(
+                                //     (int32_t)k_depth, qp.initial_shr,
+                                //     qp.final_shr);
 
-                                OT_int8_clamped ot(&ot_params);
-                                assert(serialised_offsets_multipliers_and_biases
-                                           .size() > 0);
-                                ot.setOffsetsMultipliersAndBiases(
-                                    serialised_offsets_multipliers_and_biases
-                                        .data());
+                                // OTPerGroupClamped ot(&ot_params);
+                                // assert(serialised_offsets_multipliers_and_biases
+                                //            .size() > 0);
+                                // ot.setOffsetsMultipliersAndBiases(
+                                //     serialised_offsets_multipliers_and_biases
+                                //         .data());
+
+                                OutputTransformFn::MulsAndBias mul_and_biases =
+                                    OutputTransformFn::
+                                        canonicaliseConv2DClamped(
+                                            post_activation_multiplier,
+                                            post_activation_bias, receptive_volume,
+                                            clamp_low, clamp_high, k_depth);
+
+                                auto quant_strat = nn::QuantisationPerGroupStrategy(mul_and_biases);
+
+                                OTPerGroupClamped::Params params;
+                                std::vector<int16_t> data;
+
+                                OTPerGroupClamped::layout_for_hw(&params, data);
+
+
+                                OTPerGroupClamped ot(&params);
+
+                                ot.setOffsetsMultipliersAndBiases(data.data());
 
                                 auto ir = ImageRegion(0, 0, 0, Y.height,
                                                       Y.width, Y.depth);
@@ -753,46 +772,64 @@ void test_Conv2dValidDirectInt8Regression() {
                                 int receptive_volume =
                                     k_height * k_width * x_channels;
 
-                                MulsAndBias mul_and_biases =
-                                    OT_int8_clamped::canonicalise_mul_and_bias(
-                                        post_activation_multiplier,
-                                        post_activation_bias, receptive_volume,
-                                        clamp_low, clamp_high, k_depth);
+                                // OutputTransformFn::MulsAndBias mul_and_biases =
+                                //     OTPerGroupClamped::canonicalise_mul_and_bias(
+                                //         post_activation_multiplier,
+                                //         post_activation_bias, receptive_volume,
+                                //         clamp_low, clamp_high, k_depth);
 
-                                auto accu_overlaps =
-                                    OT_int8_clamped::get_accumulator_overlaps(
-                                        receptive_volume, k_depth, rw);
+                                // auto accu_overlaps =
+                                //     OTPerGroupClamped::get_accumulator_overlaps(
+                                //         receptive_volume, k_depth, rw);
 
-                                QuantisationParams qp =
-                                    OutputTransformFnInt8::quantise_activation(
-                                        mul_and_biases);
+                                // QuantisationParams qp =
+                                //     OutputTransformFnInt8::quantise_activation(
+                                //         mul_and_biases);
 
-                                auto serialised_offsets_multipliers_and_biases =
-                                    OutputTransformFn::serialise_memory(
-                                        accu_overlaps, qp.multipliers,
-                                        qp.biases);
+                                // auto serialised_offsets_multipliers_and_biases =
+                                //     OutputTransformFn::serialise_memory(
+                                //         accu_overlaps, qp.multipliers,
+                                //         qp.biases);
 
-                                // pad q.biases and  q.multipliers to a multiple
-                                // of VPU_INT16_EPV this is to work around array
-                                // over reads
-                                int16_t pad_val =
-                                    rng.rand<int16_t>();  // this is arbitrary
+                                // // pad q.biases and  q.multipliers to a multiple
+                                // // of VPU_INT16_EPV this is to work around array
+                                // // over reads
+                                // int16_t pad_val =
+                                //     rng.rand<int16_t>();  // this is arbitrary
 
-                                OutputTransformFn::pad_final_access(
-                                    serialised_offsets_multipliers_and_biases,
-                                    VPU_INT16_EPV, pad_val);
+                                // OutputTransformFn::pad_final_access(
+                                //     serialised_offsets_multipliers_and_biases,
+                                //     VPU_INT16_EPV, pad_val);
 
-                                OT_int8_clamped::Params ot_params(
-                                    (int32_t)k_depth, qp.initial_shr,
-                                    qp.final_shr);
+                                // OTPerGroupClamped::Params ot_params(
+                                //     (int32_t)k_depth, qp.initial_shr,
+                                //     qp.final_shr);
 
-                                OT_int8_clamped ot(&ot_params);
+                                // OTPerGroupClamped ot(&ot_params);
 
-                                assert(serialised_offsets_multipliers_and_biases
-                                           .size() > 0);
-                                ot.setOffsetsMultipliersAndBiases(
-                                    serialised_offsets_multipliers_and_biases
-                                        .data());
+                                // assert(serialised_offsets_multipliers_and_biases
+                                //            .size() > 0);
+                                // ot.setOffsetsMultipliersAndBiases(
+                                //     serialised_offsets_multipliers_and_biases
+                                //         .data());
+
+                                OutputTransformFn::MulsAndBias mul_and_biases =
+                                    OutputTransformFn::
+                                        canonicaliseConv2DClamped(
+                                            post_activation_multiplier,
+                                            post_activation_bias, receptive_volume,
+                                            clamp_low, clamp_high, k_depth);
+                                
+                                auto quant_strat = nn::QuantisationPerGroupStrategy(mul_and_biases);
+
+                                OTPerGroupClamped::Params params;
+                                std::vector<int16_t> data;
+
+                                OTPerGroupClamped::layout_for_hw(&params, data);
+
+                                OTPerGroupClamped ot(&params);
+
+                                ot.setOffsetsMultipliersAndBiases(data.data());
 
                                 auto ir = ImageRegion(0, 0, 0, Y.height,
                                                       Y.width, Y.depth);

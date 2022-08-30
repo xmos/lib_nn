@@ -71,7 +71,7 @@ VECT_INT8_MIN:
 
 #define t                    r11 
 
-    //int8_t *OT_int8::output_transform_fn( OT_int8::Params *params,         r0
+    //int8_t *OTPerGroup::output_transform_fn( OTPerGroup::Params *params,         r0
     //                                      int8_t *Y,                       r1
     //                                      VPURingBuffer *A                 r2
     //                                      int16_t *multipliers_and_biases  r3

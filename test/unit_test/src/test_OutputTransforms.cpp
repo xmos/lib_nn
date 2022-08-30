@@ -78,7 +78,7 @@ void test_big_range(int coef_count, int N, int product_range, int bias_range,
 
   for (int output_ch_count = 4; output_ch_count <= 64; output_ch_count += 4) {
     for (int itt = 0; itt < 8; itt++) {
-      MulsAndBias mul_and_biases;
+      OutputTransformFn::MulsAndBias mul_and_biases;
       for (int ch = 0; ch < output_ch_count; ++ch) {
         int accu_min, accu_max;
         // get the accu bounds for a given coef_count
@@ -104,8 +104,11 @@ void test_big_range(int coef_count, int N, int product_range, int bias_range,
         mul_and_biases.push_back(a);
       }
 
-      QuantisationParams qp =
-          OutputTransformFnInt8::quantise_activation(mul_and_biases);
+      auto qp = nn::QuantisationPerGroupStrategy(mul_and_biases);
+
+
+      // QuantisationParams qp =
+      //     OutputTransformFnInt8::quantise_activation(mul_and_biases);
 
       seen_final_shr.insert(qp.final_shr);
       seen_initial_shr.insert(qp.initial_shr);
@@ -113,17 +116,17 @@ void test_big_range(int coef_count, int N, int product_range, int bias_range,
       // pad q.multipliers_and_biases to a multiple of VPU_INT16_EPV
       // this is to work around array over reads - padding wont effect the
       // result.
-      int16_t pad_val = rng.rand<int16_t>();
+      // int16_t pad_val = rng.rand<int16_t>();
 
-      auto serialised_multipliers_and_biases =
-          OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
+      // auto serialised_multipliers_and_biases =
+      //     OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
 
-      OutputTransformFn::pad_final_access(serialised_multipliers_and_biases,
-                                          VPU_INT16_EPV, pad_val);
+      // OutputTransformFn::pad_final_access(serialised_multipliers_and_biases,
+      //                                     VPU_INT16_EPV, pad_val);
 
-      OT_int8::Params p((int32_t)output_ch_count, qp.initial_shr, qp.final_shr);
+      OTPerGroup::Params p((int32_t)output_ch_count, qp.initial_shr, qp.final_shr);
 
-      OT_int8 ot(&p);
+      OTPerGroup ot(&p);
       ot.setMultipliersAndBiases(serialised_multipliers_and_biases.data());
 
       int8_t Y[output_ch_count];
@@ -227,9 +230,9 @@ void test_small_range(const int accu_min, const int accu_max,
     OutputTransformFn::pad_final_access(serialised_multipliers_and_biases,
                                         VPU_INT16_EPV, pad_val);
 
-    OT_int8::Params p((int32_t)output_ch_count, qp.initial_shr, qp.final_shr);
+    OTPerGroup::Params p((int32_t)output_ch_count, qp.initial_shr, qp.final_shr);
 
-    OT_int8 ot(&p);
+    OTPerGroup ot(&p);
     ot.setMultipliersAndBiases(serialised_multipliers_and_biases.data());
 
     int8_t Y[output_ch_count];
@@ -282,41 +285,41 @@ void test_small_range(const int accu_min, const int accu_max,
   }
 }
 
-void Test_OT_int8_range() { test_small_range(INT8_MIN, INT8_MAX, 0); }
+void Test_OTPerGroup_range() { test_small_range(INT8_MIN, INT8_MAX, 0); }
 
-void Test_OT_int8_range_small_bias() {
+void Test_OTPerGroup_range_small_bias() {
   test_small_range(INT8_MIN, INT8_MAX, 1);
 }
 
-void Test_OT_int8_range_small_bias2() {
+void Test_OTPerGroup_range_small_bias2() {
   test_small_range(INT8_MIN, INT8_MAX, -1);
 }
 
-void Test_OT_int8_small_range() {
+void Test_OTPerGroup_small_range() {
   test_small_range(INT8_MIN - 10, INT8_MAX + 10, 0);
 }
 
-void Test_OT_int8_small_range_bias() {
+void Test_OTPerGroup_small_range_bias() {
   test_small_range(INT8_MIN - 10, INT8_MAX + 10, 1);
 }
-void Test_OT_int8_small_range_bias2() {
+void Test_OTPerGroup_small_range_bias2() {
   test_small_range(INT8_MIN - 10, INT8_MAX + 10, -1);
 }
 
-void Test_OT_int8_small_range_wide_bias_range() {
+void Test_OTPerGroup_small_range_wide_bias_range() {
   for (int bias = INT8_MIN * 2 - 10; bias < 48; bias++) {
     test_small_range(INT8_MIN, INT8_MAX, bias);
   }
 }
 
-void Test_OT_int8_small_range_massive_bias_range() {
+void Test_OTPerGroup_small_range_massive_bias_range() {
   for (int itt = 0; itt < 32; ++itt) {
     int32_t bias = rng.rand<int32_t>(1 << 15, 1 << 30);
     test_small_range(INT8_MIN, INT8_MAX, bias);
   }
 }
 
-void Test_OT_int8_big_range() {
+void Test_OTPerGroup_big_range() {
   std::set<int> seen_initial_shift;
   std::set<int> seen_final_shr;
   for (int product_range = -3; product_range < 3; product_range++) {
@@ -349,13 +352,13 @@ void Test_OT_int8_big_range() {
 extern "C" void test_output_transforms();
 void test_output_transforms() {
   UNITY_SET_FILE();
-  RUN_TEST(Test_OT_int8_range);
-  RUN_TEST(Test_OT_int8_range_small_bias);
-  RUN_TEST(Test_OT_int8_range_small_bias2);
-  RUN_TEST(Test_OT_int8_small_range);
-  RUN_TEST(Test_OT_int8_small_range_bias);
-  RUN_TEST(Test_OT_int8_small_range_bias2);
-  RUN_TEST(Test_OT_int8_small_range_massive_bias_range);
-  RUN_TEST(Test_OT_int8_small_range_wide_bias_range);
-  RUN_TEST(Test_OT_int8_big_range);
+  RUN_TEST(Test_OTPerGroup_range);
+  RUN_TEST(Test_OTPerGroup_range_small_bias);
+  RUN_TEST(Test_OTPerGroup_range_small_bias2);
+  RUN_TEST(Test_OTPerGroup_small_range);
+  RUN_TEST(Test_OTPerGroup_small_range_bias);
+  RUN_TEST(Test_OTPerGroup_small_range_bias2);
+  RUN_TEST(Test_OTPerGroup_small_range_massive_bias_range);
+  RUN_TEST(Test_OTPerGroup_small_range_wide_bias_range);
+  RUN_TEST(Test_OTPerGroup_big_range);
 }
