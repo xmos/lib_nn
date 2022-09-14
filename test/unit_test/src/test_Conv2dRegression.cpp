@@ -168,7 +168,7 @@ void test_Conv2dPaddedIndirectRegression() {
                                             ks.output_zero_point, k_depth);
 
                                 QuantisationParams qp =
-                                    OutputTransformFnInt8::quantise_activation(
+                                    OutputTransformFnInt8::group_quantise_activation(
                                         mul_and_biases);
 
                                 assert(qp.multipliers.size() > 0);
@@ -344,7 +344,7 @@ void test_Conv2dValidIndirectRegression() {
                                             ks.output_zero_point, k_depth);
 
                                 QuantisationParams qp =
-                                    OutputTransformFnInt8::quantise_activation(
+                                    OutputTransformFnInt8::group_quantise_activation(
                                         mul_and_biases);
 
                                 auto serialised_offsets_multipliers_and_biases =
@@ -512,7 +512,7 @@ void test_Conv2dValidDirectRegression() {
                                             ks.output_zero_point, k_depth);
 
                                 QuantisationParams qp =
-                                    OutputTransformFnInt8::quantise_activation(
+                                    OutputTransformFnInt8::group_quantise_activation(
                                         mul_and_biases);
 
                                 auto serialised_offsets_multipliers_and_biases =

@@ -175,7 +175,7 @@ void test_Conv2dValidDirectDWRegression() {
                                     x_channels);
 
                             QuantisationParams qp =
-                                OutputTransformFnInt8::quantise_activation(
+                                OutputTransformFnInt8::group_quantise_activation(
                                     mul_and_biases);
 
                             auto serialised_multipliers_and_biases =
@@ -354,7 +354,7 @@ void test_Conv2dPaddedIndirectDWRegression() {
                                     x_channels);
 
                             QuantisationParams qp =
-                                OutputTransformFnInt8::quantise_activation(
+                                OutputTransformFnInt8::group_quantise_activation(
                                     mul_and_biases);
 
                             auto serialised_multipliers_and_biases =

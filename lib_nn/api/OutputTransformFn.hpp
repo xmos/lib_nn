@@ -56,9 +56,14 @@ class OutputTransformFn {
           multiplier(multiplier),
           accu_min_val(accu_min_val),
           accu_max_val(accu_max_val) {
+      backprop_output_clamps_to_accu_limits(false);
+      //printf("init mult: %d, bias: %d\n", multiplier, bias);
       assert(accu_min_val <= accu_max_val);
     }
+    private:
+      void backprop_output_clamps_to_accu_limits(bool verbose = false);
   };
+
 
   /**
    * Pads a vector to a boundary with a pad value
@@ -212,6 +217,7 @@ struct QuantisationParams {
    * group of N multipliers and N biases where N is the remaining number of
    * channels after all the full channel groups.
    */
+  std::vector<int16_t> initial_shifts;
   std::vector<int16_t> multipliers;
   std::vector<int16_t> biases;
 };
@@ -405,7 +411,26 @@ class OutputTransformFnInt8 : public OutputTransformFn {
    * channel.
    * @return QuantisationParams
    */
-  static QuantisationParams quantise_activation(MulsAndBias &activation_params,
+  static QuantisationParams group_quantise_activation(MulsAndBias &activation_params,
+                                                bool verbose = false);
+  
+    /**
+   * @brief This translates from the representation of:
+   *    output[ch] = min(max((accu[ch] * multipler[ch]) + bias[ch]), INT8_MIN),
+   * INT8_MAX) to a form that can be efficiently implemented on the VPU. The
+   * accu_min and accu_max allow the quantisiation logic to achieve maximum
+   * resolution on the quantised representations of the multipler and bias.
+   *
+   * @param output_transform_multiplier Vector of the multipier for each
+   * channel.
+   * @param output_transform_bias Vector of the bias for each channel.
+   * @param accu_min Vector of the minimum possible accumulator for each
+   * channel.
+   * @param accu_max Vector of the maximum possible accumulator for each
+   * channel.
+   * @return QuantisationParams
+   */
+  static QuantisationParams channelwise_quantise_activation(MulsAndBias &activation_params,
                                                 bool verbose = false);
 };
 
@@ -454,6 +479,54 @@ class OT_int8 : public OutputTransformFnInt8 {
     multipliers_and_biases = m;
     assert(m != nullptr);
     assert(is_aligned(multipliers_and_biases, 4));
+  }
+};
+
+/**
+ * @brief Output Transform class to converting 32 bit accumulators to an 8 bit
+ * output space using floating point arithmetic (per channel).
+ *
+ */
+class OT_int8_channelwise : public OutputTransformFnInt8 {
+ public:
+  class Params : public Serialisable {
+   public:
+    int32_t output_slice_channel_count;
+    int16_t initial_shift;
+    int16_t final_shr;
+
+   public:
+    /**
+     * @brief Construct a new Params object
+     *
+     * @param output_slice_channel_count The count of output channels to be
+     * computed by this parameter set.
+     */
+    Params(int32_t output_slice_channel_count, int16_t initial_shift,
+           int16_t final_shr)
+        : output_slice_channel_count(output_slice_channel_count),
+          initial_shift(initial_shift),
+          final_shr(final_shr) {}
+  };
+
+ private:
+  /**
+   * @brief This describes the channels over which this class will perform its
+   * operation(OutputTransform) and how each channel will transformed.
+   */
+  Params *params;
+  int16_t *shifts_multipliers_and_biases;
+
+ public:
+  OT_int8_channelwise(Params *params) : params(params){};
+
+  int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
+                              int32_t output_channel_group);
+
+  void setMultipliersAndBiases(int16_t *m) {
+    shifts_multipliers_and_biases = m;
+    assert(m != nullptr);
+    assert(is_aligned(shifts_multipliers_and_biases, 8));
   }
 };
 
