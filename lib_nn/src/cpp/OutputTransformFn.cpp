@@ -287,7 +287,7 @@ std::tuple<std::vector<int>, std::vector<int>> solve_for_constraints_channelwise
       }
   }
   global_B = 15 - global_B;
-  printf("global_B: %d\n", global_B);
+  //printf("global_B: %d\n", global_B);
 
   //for each set of mults + biases
   for (auto activationParam : activationParams) {
@@ -378,7 +378,7 @@ std::tuple<std::vector<int>, std::vector<int>> solve_for_constraints_channelwise
         // bias*(2**(A+B)) fit in 32 bits
         if (A >= 0) {
           A--;
-          printf("reduce a\n");
+          //printf("reduce a\n");
           trying = true;
         }
 
@@ -453,7 +453,7 @@ std::tuple<std::vector<int>, std::vector<int>> solve_for_constraints_channelwise
     } 
   }
 
-  printf("As size: %d, params size: %d\n", Ms.size(), activationParams.size());
+  //printf("As size: %d, params size: %d\n", Ms.size(), activationParams.size());
   assert(As.size() == activationParams.size());
   assert(Ms.size() == activationParams.size());
 
@@ -463,7 +463,7 @@ std::tuple<std::vector<int>, std::vector<int>> solve_for_constraints_channelwise
       trying = false;
       if(global_B > (As[ch] + Ms[ch] - vlmul_shr)){
         global_B--;
-        printf("Reduce global B to %d\n", global_B);
+        //printf("Reduce global B to %d\n", global_B);
         trying = true;
       }
     }
@@ -493,10 +493,10 @@ std::tuple<std::vector<int>, std::vector<int>> solve_for_constraints_channelwise
     while(trying){
       trying = false;
       if(global_B < (As[ch] + Ms[ch] - vlmul_shr)){
-        printf("Reduce A or M\n");
+        //printf("Reduce A or M\n");
         trying = true;
         if(accu_sig_bits > mul_sig_bits){
-          printf("A is: %d\n", As[ch]);
+          //printf("A is: %d\n", As[ch]);
           As[ch]--;
           accu_sig_bits--;
           if (verbose) {
@@ -504,7 +504,7 @@ std::tuple<std::vector<int>, std::vector<int>> solve_for_constraints_channelwise
           }
         }
         else {
-          printf("M is: %d\n", Ms[ch]);
+          //printf("M is: %d\n", Ms[ch]);
           Ms[ch]--;
           mul_sig_bits--;
           if (verbose) {
@@ -705,8 +705,8 @@ QuantisationParams OutputTransformFnInt8::channelwise_quantise_activation(
   for (int ch = 0; ch < activationParams.size(); ++ch) {
     int A = As[ch];
     int M = Ms[ch];
-    printf("act params init shift: %d, mult:%d, bias:%d\n", -A, activationParams[ch].multiplier, activationParams[ch].bias);
-    printf("A: %d, M: %d, B: %d\n", A, M, B);
+    //printf("act params init shift: %d, mult:%d, bias:%d\n", -A, activationParams[ch].multiplier, activationParams[ch].bias);
+    //printf("A: %d, M: %d, B: %d\n", A, M, B);
     assert(B == A + M - VLMUL_SHR);
     q.initial_shifts.push_back(-A);
     

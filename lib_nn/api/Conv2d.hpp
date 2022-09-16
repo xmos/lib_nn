@@ -19,8 +19,8 @@ class Conv2dValidIndirect : public Filter2D {
  public:
   // Valid only
   // Arbitrary input + output channel count
-  Conv2dValidIndirect(ImToColValid *memcpy,
-                      MatMulInt8 *aggregator, OT_int8 *ot)
+  template <typename T> Conv2dValidIndirect(ImToColValid *memcpy,
+                      MatMulInt8 *aggregator, T *ot)
       : Filter2D(memcpy, aggregator, ot) {}
 };
 
@@ -28,8 +28,8 @@ class Conv2dPaddedInDirect : public Filter2D {
  public:
   // Padded
   // Arbitrary input + output channel count
-  Conv2dPaddedInDirect(ImToColPadded *memcpy,
-                       MatMulInt8 *aggregator, OT_int8 *ot)
+  template <typename T> Conv2dPaddedInDirect(ImToColPadded *memcpy,
+                       MatMulInt8 *aggregator, T *ot)
       : Filter2D(memcpy, aggregator, ot) {}
 };
 
