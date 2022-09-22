@@ -103,9 +103,9 @@ void test_big_range(int coef_count, int N, int product_range, int bias_range,
                                               accu_max);
         mul_and_biases.push_back(a);
       }
-
-      QuantisationParams qp =
-          OutputTransformFnInt8::group_quantise_activation(mul_and_biases);
+      auto quantizer = OutputTransformFnInt8_Group::Quantizer();
+      OutputTransformFnInt8_Group::QuantisationParams qp =
+          quantizer.quantise_activation(mul_and_biases, false);
 
       seen_final_shr.insert(qp.final_shr);
       seen_initial_shr.insert(qp.initial_shr);
@@ -241,8 +241,9 @@ void test_big_range_channelwise(int coef_count, int N, int product_range, int bi
         mul_and_biases.push_back(a);
       }
 
-      QuantisationParams qp =
-          OutputTransformFnInt8::channelwise_quantise_activation(mul_and_biases, false);
+      auto quantizer = OutputTransformFnInt8_Channelwise::Quantizer();
+      OutputTransformFnInt8_Channelwise::QuantisationParams qp =
+          quantizer.quantise_activation(mul_and_biases, false);
 
       seen_final_shr.insert(qp.final_shr);
       seen_initial_shr.insert(qp.initial_shifts[0]);
@@ -351,8 +352,9 @@ void test_small_range(const int accu_min, const int accu_max,
       mul_and_biases.push_back(a);
     }
 
-    QuantisationParams qp =
-        OutputTransformFnInt8::group_quantise_activation(mul_and_biases);
+    auto quantizer = OutputTransformFnInt8_Group::Quantizer();
+      OutputTransformFnInt8_Group::QuantisationParams qp =
+          quantizer.quantise_activation(mul_and_biases, false);
 
     auto serialised_multipliers_and_biases =
         OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
@@ -435,8 +437,9 @@ void test_small_range_channelwise(const int accu_min, const int accu_max,
       mul_and_biases.push_back(a);
     }
 
-    QuantisationParams qp =
-        OutputTransformFnInt8::channelwise_quantise_activation(mul_and_biases);
+    auto quantizer = OutputTransformFnInt8_Channelwise::Quantizer();
+      OutputTransformFnInt8_Channelwise::QuantisationParams qp =
+          quantizer.quantise_activation(mul_and_biases, false);
 
     auto serialised_multipliers_and_biases =
         OutputTransformFn::serialise_memory(qp.initial_shifts, qp.multipliers, qp.biases);
@@ -504,6 +507,7 @@ void test_small_range_channelwise(const int accu_min, const int accu_max,
 }
 
 void Test_OT_int8_range() { test_small_range(INT8_MIN, INT8_MAX, 0); }
+void Test_OT_int8_channelwise_range() { test_small_range_channelwise(INT8_MIN, INT8_MAX, 0); }
 
 void Test_OT_int8_range_small_bias() {
   test_small_range(INT8_MIN, INT8_MAX, 1);
@@ -517,15 +521,29 @@ void Test_OT_int8_range_small_bias2() {
   test_small_range(INT8_MIN, INT8_MAX, -1);
 }
 
+void Test_OT_int8_channelwise_range_small_bias2() {
+  test_small_range_channelwise(INT8_MIN, INT8_MAX, -1);
+}
+
 void Test_OT_int8_small_range() {
   test_small_range(INT8_MIN - 10, INT8_MAX + 10, 0);
+}
+
+void Test_OT_int8_channelwise_small_range() {
+  test_small_range_channelwise(INT8_MIN - 10, INT8_MAX + 10, 0);
 }
 
 void Test_OT_int8_small_range_bias() {
   test_small_range(INT8_MIN - 10, INT8_MAX + 10, 1);
 }
+void Test_OT_int8_channelwise_small_range_bias() {
+  test_small_range_channelwise(INT8_MIN - 10, INT8_MAX + 10, 1);
+}
 void Test_OT_int8_small_range_bias2() {
   test_small_range(INT8_MIN - 10, INT8_MAX + 10, -1);
+}
+void Test_OT_int8_channelwise_small_range_bias2() {
+  test_small_range_channelwise(INT8_MIN - 10, INT8_MAX + 10, -1);
 }
 
 void Test_OT_int8_small_range_wide_bias_range() {
@@ -534,10 +552,23 @@ void Test_OT_int8_small_range_wide_bias_range() {
   }
 }
 
+void Test_OT_int8_channelwise_small_range_wide_bias_range() {
+  for (int bias = INT8_MIN * 2 - 10; bias < 48; bias++) {
+    test_small_range_channelwise(INT8_MIN, INT8_MAX, bias);
+  }
+}
+
 void Test_OT_int8_small_range_massive_bias_range() {
   for (int itt = 0; itt < 32; ++itt) {
     int32_t bias = rng.rand<int32_t>(1 << 15, 1 << 30);
     test_small_range(INT8_MIN, INT8_MAX, bias);
+  }
+}
+
+void Test_OT_int8_channelwise_small_range_massive_bias_range() {
+  for (int itt = 0; itt < 32; ++itt) {
+    int32_t bias = rng.rand<int32_t>(1 << 15, 1 << 30);
+    test_small_range_channelwise(INT8_MIN, INT8_MAX, bias);
   }
 }
 
@@ -563,11 +594,11 @@ void Test_OT_int8_big_range() {
 
   for (int i = INITIAL_SHR_RANGE_MIN; i <= INITIAL_SHR_RANGE_MAX; i++) {
     const bool is_in = seen_initial_shift.find(i) != seen_initial_shift.end();
-    //TEST_ASSERT_TRUE(is_in);
+    TEST_ASSERT_TRUE(is_in);
   }
   for (int i = FINAL_SHR_RANGE_MIN; i <= FINAL_SHR_RANGE_MAX; i++) {
     const bool is_in = seen_final_shr.find(i) != seen_final_shr.end();
-    //TEST_ASSERT_TRUE(is_in);
+    TEST_ASSERT_TRUE(is_in);
   }
 }
 
@@ -591,13 +622,16 @@ void Test_OT_int8_channelwise_big_range() {
 #define FINAL_SHR_RANGE_MAX 6
 #define FINAL_SHR_RANGE_MIN -8
 
+  for(auto ini_shift : seen_initial_shift) printf("seen initial shift: %d\n", ini_shift);
+  for(auto ini_shift : seen_final_shr) printf("seen final shift: %d\n", ini_shift);
   for (int i = INITIAL_SHR_RANGE_MIN; i <= INITIAL_SHR_RANGE_MAX; i++) {
     const bool is_in = seen_initial_shift.find(i) != seen_initial_shift.end();
-    //TEST_ASSERT_TRUE(is_in);
+    
+    TEST_ASSERT_TRUE(is_in);
   }
   for (int i = FINAL_SHR_RANGE_MIN; i <= FINAL_SHR_RANGE_MAX; i++) {
     const bool is_in = seen_final_shr.find(i) != seen_final_shr.end();
-    //TEST_ASSERT_TRUE(is_in);
+    TEST_ASSERT_TRUE(is_in);
   }
 }
 
@@ -605,14 +639,21 @@ extern "C" void test_output_transforms();
 void test_output_transforms() {
   UNITY_SET_FILE();
   RUN_TEST(Test_OT_int8_range);
+  RUN_TEST(Test_OT_int8_channelwise_range);
   RUN_TEST(Test_OT_int8_range_small_bias);
-  //RUN_TEST(Test_OT_int8_channelwise_range_small_bias);
+  RUN_TEST(Test_OT_int8_channelwise_range_small_bias);
   RUN_TEST(Test_OT_int8_range_small_bias2);
+  RUN_TEST(Test_OT_int8_channelwise_range_small_bias2);
   RUN_TEST(Test_OT_int8_small_range);
+  RUN_TEST(Test_OT_int8_channelwise_small_range);
   RUN_TEST(Test_OT_int8_small_range_bias);
+  RUN_TEST(Test_OT_int8_channelwise_small_range_bias);
   RUN_TEST(Test_OT_int8_small_range_bias2);
+  RUN_TEST(Test_OT_int8_channelwise_small_range_bias2);
   RUN_TEST(Test_OT_int8_small_range_massive_bias_range);
+  RUN_TEST(Test_OT_int8_channelwise_small_range_massive_bias_range);
   RUN_TEST(Test_OT_int8_small_range_wide_bias_range);
+  RUN_TEST(Test_OT_int8_channelwise_small_range_wide_bias_range);
   RUN_TEST(Test_OT_int8_big_range);
   RUN_TEST(Test_OT_int8_channelwise_big_range);
 }

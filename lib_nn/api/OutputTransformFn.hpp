@@ -195,35 +195,34 @@ class OutputTransformFn {
 
 typedef std::vector<OutputTransformFn::ActivationParams> MulsAndBias;
 
-struct QuantisationParams {
-  /**
-   * The amount to shift all the 32 bit accumulators right by to reduce them to
-   * 16 bit scalars. This will be non-negative. It is used to control the VLSAT.
-   * Note, some may saturate in the 16 bit conversion as the output clamp may
-   * have been back propagated.
-   */
-  int16_t initial_shr;
-
-  /**
-   * The amount to shift all the 16 bit biased and scaled accumulators right by
-   * to reduce them to 8 bit scalars. It is used to control the VLASHR. Also the
-   * result may be bigger than the int8 range as clamping is expected to follow.
-   */
-  int16_t final_shr;
-
-  /**
-   * The mutipliers and biases are interleaved into a single array. They are
-   * arranged as channel groups of 16 multipliers and 16 biases until the final
-   * group of N multipliers and N biases where N is the remaining number of
-   * channels after all the full channel groups.
-   */
-  std::vector<int16_t> initial_shifts;
-  std::vector<int16_t> multipliers;
-  std::vector<int16_t> biases;
-};
-
 class OutputTransformFnInt8 : public OutputTransformFn {
  public:
+  struct QuantisationParams {
+        /**
+         * The amount to shift all the 32 bit accumulators right by to reduce them to
+         * 16 bit scalars. This will be non-negative. It is used to control the VLSAT.
+         * Note, some may saturate in the 16 bit conversion as the output clamp may
+         * have been back propagated.
+         */
+        int16_t initial_shr;
+
+        /**
+         * The amount to shift all the 16 bit biased and scaled accumulators right by
+         * to reduce them to 8 bit scalars. It is used to control the VLASHR. Also the
+         * result may be bigger than the int8 range as clamping is expected to follow.
+         */
+        int16_t final_shr;
+
+        /**
+         * The mutipliers and biases are interleaved into a single array. They are
+         * arranged as channel groups of 16 multipliers and 16 biases until the final
+         * group of N multipliers and N biases where N is the remaining number of
+         * channels after all the full channel groups.
+         */
+        std::vector<int16_t> multipliers;
+        std::vector<int16_t> biases;
+      };
+
   static MulsAndBias canonicalise_mul_and_bias_dw(
       const std::vector<float> &eff_mult, const std::vector<int32_t> &bias,
       const std::vector<int8_t> &weights, const std::array<int, 4> &shape,
@@ -411,8 +410,8 @@ class OutputTransformFnInt8 : public OutputTransformFn {
    * channel.
    * @return QuantisationParams
    */
-  static QuantisationParams group_quantise_activation(MulsAndBias &activation_params,
-                                                bool verbose = false);
+  // static QuantisationParams group_quantise_activation(MulsAndBias &activation_params,
+  //                                               bool verbose = false);
   
     /**
    * @brief This translates from the representation of:
@@ -430,8 +429,62 @@ class OutputTransformFnInt8 : public OutputTransformFn {
    * channel.
    * @return QuantisationParams
    */
-  static QuantisationParams channelwise_quantise_activation(MulsAndBias &activation_params,
-                                                bool verbose = false);
+//   static QuantisationParams channelwise_quantise_activation(MulsAndBias &activation_params,
+//                                                 bool verbose = false);
+};
+
+class OutputTransformFnInt8_Group : public OutputTransformFnInt8 {
+  public:
+    class Quantizer {
+      public:
+        QuantisationParams quantise_activation(
+          MulsAndBias &activationParams, bool verbose);
+      private:
+        std::tuple<int, int> solve_for_constraints(
+          MulsAndBias &activationParams, int vlmul_shr,
+          bool verbose = false);
+    };
+
+};
+
+class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
+  public:
+    struct QuantisationParams {
+        /**
+         * The amount to shift all the 32 bit accumulators right by to reduce them to
+         * 16 bit scalars. This will be non-negative. It is used to control the VLSAT.
+         * Note, some may saturate in the 16 bit conversion as the output clamp may
+         * have been back propagated.
+         */
+        int16_t initial_shr;
+
+        /**
+         * The amount to shift all the 16 bit biased and scaled accumulators right by
+         * to reduce them to 8 bit scalars. It is used to control the VLASHR. Also the
+         * result may be bigger than the int8 range as clamping is expected to follow.
+         */
+        int16_t final_shr;
+
+        /**
+         * The mutipliers and biases are interleaved into a single array. They are
+         * arranged as channel groups of 16 multipliers and 16 biases until the final
+         * group of N multipliers and N biases where N is the remaining number of
+         * channels after all the full channel groups.
+         */
+        std::vector<int16_t> initial_shifts;
+        std::vector<int16_t> multipliers;
+        std::vector<int16_t> biases;
+      };
+
+    class Quantizer {
+      public:
+        QuantisationParams quantise_activation(
+          MulsAndBias &activationParams, bool verbose);
+      private:
+        std::tuple<std::vector<int>, std::vector<int>> solve_for_constraints(
+          MulsAndBias &activationParams, int vlmul_shr,
+          bool verbose = false);
+    };
 };
 
 /**
@@ -439,14 +492,13 @@ class OutputTransformFnInt8 : public OutputTransformFn {
  * output space.
  *
  */
-class OT_int8 : public OutputTransformFnInt8 {
+class OT_int8 : public OutputTransformFnInt8_Group {
  public:
   class Params : public Serialisable {
    public:
     int32_t output_slice_channel_count;
     int16_t initial_shift;
     int16_t final_shr;
-
    public:
     /**
      * @brief Construct a new Params object
@@ -487,7 +539,7 @@ class OT_int8 : public OutputTransformFnInt8 {
  * output space using floating point arithmetic (per channel).
  *
  */
-class OT_int8_channelwise : public OutputTransformFnInt8 {
+class OT_int8_channelwise : public OutputTransformFnInt8_Channelwise {
  public:
   class Params : public Serialisable {
    public:
@@ -535,7 +587,7 @@ class OT_int8_channelwise : public OutputTransformFnInt8 {
  * output space.
  *
  */
-class OT_int8_clamped : public OutputTransformFnInt8 {
+class OT_int8_clamped : public OutputTransformFnInt8_Group {
  public:
   class Params : public Serialisable {
    public:

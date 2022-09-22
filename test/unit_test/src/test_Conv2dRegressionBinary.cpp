@@ -569,9 +569,9 @@ void test_Conv2dValidIndirectInt8Regression() {
                                     OT_int8_clamped::get_accumulator_overlaps(
                                         receptive_volume, k_depth, rw);
 
-                                QuantisationParams qp =
-                                    OutputTransformFnInt8::group_quantise_activation(
-                                        mul_and_biases);
+                                auto quantizer = OutputTransformFnInt8_Group::Quantizer();
+                                OutputTransformFnInt8_Group::QuantisationParams qp =
+                                    quantizer.quantise_activation(mul_and_biases, false);
 
                                 auto serialised_offsets_multipliers_and_biases =
                                     OutputTransformFn::serialise_memory(
@@ -763,9 +763,9 @@ void test_Conv2dValidDirectInt8Regression() {
                                     OT_int8_clamped::get_accumulator_overlaps(
                                         receptive_volume, k_depth, rw);
 
-                                QuantisationParams qp =
-                                    OutputTransformFnInt8::group_quantise_activation(
-                                        mul_and_biases);
+                                auto quantizer = OutputTransformFnInt8_Group::Quantizer();
+                                OutputTransformFnInt8_Group::QuantisationParams qp =
+                                    quantizer.quantise_activation(mul_and_biases, false);
 
                                 auto serialised_offsets_multipliers_and_biases =
                                     OutputTransformFn::serialise_memory(

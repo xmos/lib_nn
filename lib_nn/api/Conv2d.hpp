@@ -10,8 +10,8 @@ class Conv2dValidDirect : public Filter2D {
  public:
   // Valid only
   // Multiple of 32 input and 16 output channels
-  Conv2dValidDirect(DerefInputFn *memcpy,
-                    MatMulDirectFn *aggregator, OT_int8 *ot)
+  template <typename T> Conv2dValidDirect(DerefInputFn *memcpy,
+                    MatMulDirectFn *aggregator, T *ot)
       : Filter2D(memcpy, aggregator, ot) {}
 };
 
@@ -37,8 +37,8 @@ class Conv2dDepthwiseValidDirect : public Filter2D_DW {
  public:
   // Valid only
   // Multiple of 4 input and 4 output channels
-  Conv2dDepthwiseValidDirect(DerefInputFn *memcpy,
-                             MatMulDirectFn_DW *aggregator, OT_int8 *ot)
+  template <typename T> Conv2dDepthwiseValidDirect(DerefInputFn *memcpy,
+                             MatMulDirectFn_DW *aggregator, T *ot)
       : Filter2D_DW(memcpy, aggregator, ot) {}
 };
 
@@ -46,8 +46,8 @@ class Conv2dDepthwisePaddedIndirect : public Filter2D_DW {
  public:
   // Valid only
   // Multiple of 4 input and 4 output channels
-  Conv2dDepthwisePaddedIndirect(ImToColPadded *memcpy,
-                                MatMulDirectFn_DW *aggregator, OT_int8 *ot)
+  template <typename T> Conv2dDepthwisePaddedIndirect(ImToColPadded *memcpy,
+                                MatMulDirectFn_DW *aggregator, T *ot)
       : Filter2D_DW(memcpy, aggregator, ot) {}
 };
 

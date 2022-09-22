@@ -89,8 +89,8 @@ void recitfy_min_max(T &v_min, T &v_max) {
 // accu_min and accu_max should be pairwise correct, i.e. min is the min, max is
 // the max for each channel.
 
-std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams, int vlmul_shr,
-                                           bool verbose = false) {
+std::tuple<int, int> OutputTransformFnInt8_Group::Quantizer::solve_for_constraints(MulsAndBias &activationParams, int vlmul_shr,
+                                           bool verbose) {
   int accu_bits_max = 0;
   int max_multiplier_exponent = INT32_MIN;
 
@@ -272,8 +272,11 @@ std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams, int vl
   return std::make_tuple(A, M);
 }
 
-std::tuple<std::vector<int>, std::vector<int>> solve_for_constraints_channelwise(MulsAndBias &activationParams, int vlmul_shr,
-                                           bool verbose = false) {
+// Select an A and M for each set of Activation Parameters such that for
+// a fixed B (that gives most precision for range of parameters),
+// B = A + M - vlmul_shr, and A, M give most precision for each parameter set
+std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(MulsAndBias &activationParams, int vlmul_shr,
+                                           bool verbose) {
   std::vector<int> As, Ms;
   int global_B = 0;
 
@@ -638,7 +641,7 @@ int16_t float_to_int16(T f, int e) {
   return (int16_t)v;
 }
 
-QuantisationParams OutputTransformFnInt8::group_quantise_activation(
+OutputTransformFnInt8_Group::QuantisationParams OutputTransformFnInt8_Group::Quantizer::quantise_activation(
     MulsAndBias &activationParams, bool verbose) {
   if (activationParams.size() == 0) {
     QuantisationParams q;
@@ -683,7 +686,7 @@ QuantisationParams OutputTransformFnInt8::group_quantise_activation(
   return q;
 }
 
-QuantisationParams OutputTransformFnInt8::channelwise_quantise_activation(
+OutputTransformFnInt8_Channelwise::QuantisationParams OutputTransformFnInt8_Channelwise::Quantizer::quantise_activation(
     MulsAndBias &activationParams, bool verbose) {
   if (activationParams.size() == 0) {
     QuantisationParams q;
@@ -692,7 +695,7 @@ QuantisationParams OutputTransformFnInt8::channelwise_quantise_activation(
     return q;
   }
   std::vector<int> As, Ms;
-  std::tie(As, Ms) = solve_for_constraints_channelwise(activationParams, VLMUL_SHR, false);
+  std::tie(As, Ms) = solve_for_constraints(activationParams, VLMUL_SHR, false);
   int B = As[0] + Ms[0] - VLMUL_SHR;
   // Ensure the order is correct
   for (auto &activationParam : activationParams)
@@ -723,6 +726,7 @@ QuantisationParams OutputTransformFnInt8::channelwise_quantise_activation(
       printf("bias: %d(%f) original: %f %f\n", b, std::ldexp(b, -B),
              activationParams[ch].original_bias, activationParams[ch].bias);
   }
+  q.initial_shr = q.initial_shifts[0];
 
   return q;
 }
