@@ -342,7 +342,8 @@ class OutputTransformFnInt8 : public OutputTransformFn {
    * i.e. accumulators that do not reach a saturating output in the int8 space. 
    * The result is the maximum average for all of the channels. 
    */
-  static double get_quant_error(MulsAndBias &mul_and_bias, QuantisationParams &qp, bool use_high_precision = false){
+  template <class QParams>
+  static double get_quant_error(MulsAndBias &mul_and_bias, QParams &qp, bool use_high_precision = false){
     
     if (use_high_precision){
 
