@@ -57,7 +57,6 @@ class OutputTransformFn {
           accu_min_val(accu_min_val),
           accu_max_val(accu_max_val) {
       backprop_output_clamps_to_accu_limits(false);
-      //printf("init mult: %d, bias: %d\n", multiplier, bias);
       assert(accu_min_val <= accu_max_val);
     }
     private:
@@ -393,51 +392,20 @@ class OutputTransformFnInt8 : public OutputTransformFn {
       return std::ldexp(1, -(qp.final_shr + 7));
     }
   }
-
-
-  /**
-   * @brief This translates from the representation of:
-   *    output[ch] = min(max((accu[ch] * multipler[ch]) + bias[ch]), INT8_MIN),
-   * INT8_MAX) to a form that can be efficiently implemented on the VPU. The
-   * accu_min and accu_max allow the quantisiation logic to achieve maximum
-   * resolution on the quantised representations of the multipler and bias.
-   *
-   * @param output_transform_multiplier Vector of the multipier for each
-   * channel.
-   * @param output_transform_bias Vector of the bias for each channel.
-   * @param accu_min Vector of the minimum possible accumulator for each
-   * channel.
-   * @param accu_max Vector of the maximum possible accumulator for each
-   * channel.
-   * @return QuantisationParams
-   */
-  // static QuantisationParams group_quantise_activation(MulsAndBias &activation_params,
-  //                                               bool verbose = false);
-  
-    /**
-   * @brief This translates from the representation of:
-   *    output[ch] = min(max((accu[ch] * multipler[ch]) + bias[ch]), INT8_MIN),
-   * INT8_MAX) to a form that can be efficiently implemented on the VPU. The
-   * accu_min and accu_max allow the quantisiation logic to achieve maximum
-   * resolution on the quantised representations of the multipler and bias.
-   *
-   * @param output_transform_multiplier Vector of the multipier for each
-   * channel.
-   * @param output_transform_bias Vector of the bias for each channel.
-   * @param accu_min Vector of the minimum possible accumulator for each
-   * channel.
-   * @param accu_max Vector of the maximum possible accumulator for each
-   * channel.
-   * @return QuantisationParams
-   */
-//   static QuantisationParams channelwise_quantise_activation(MulsAndBias &activation_params,
-//                                                 bool verbose = false);
 };
 
+//Class containing quantisation strategy for the groupwise output transforms
 class OutputTransformFnInt8_Group : public OutputTransformFnInt8 {
   public:
     class Quantizer {
       public:
+         /**
+         * @brief This translates from the representation of:
+         *    output[ch] = min(max((accu[ch] * multipler[ch]) + bias[ch]), INT8_MIN),
+         * INT8_MAX) to a form that can be efficiently implemented on the VPU.
+         * @param activationParams Set of multpliers and biases for each channel.
+         * @return QuantisationParams
+         */
         QuantisationParams quantise_activation(
           MulsAndBias &activationParams, bool verbose);
       private:
@@ -448,6 +416,7 @@ class OutputTransformFnInt8_Group : public OutputTransformFnInt8 {
 
 };
 
+//Class containing quantisation strategy for channelwise output transforms
 class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
   public:
     struct QuantisationParams {
@@ -467,9 +436,9 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
         int16_t final_shr;
 
         /**
-         * The mutipliers and biases are interleaved into a single array. They are
-         * arranged as channel groups of 16 multipliers and 16 biases until the final
-         * group of N multipliers and N biases where N is the remaining number of
+         * The initial_shifts, mutipliers and biases are interleaved into a single array. They are
+         * arranged as channel groups of 16 initial shifts, 16 multipliers and 16 biases until the final
+         * group of N initial shifts, N multipliers and N biases where N is the remaining number of
          * channels after all the full channel groups.
          */
         std::vector<int16_t> initial_shifts;
@@ -479,6 +448,15 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
 
     class Quantizer {
       public:
+        /**
+         * @brief This translates from the representation of:
+         *    output[ch] = min(max((accu[ch] * multipler[ch]) + bias[ch]), INT8_MIN),
+         * INT8_MAX) to a form that can be efficiently implemented on the VPU. This version 
+         * calculates an initial shift for each channel in addition, increasing memory requirements
+         * but improves performance for cases where channels have diverse dynamic ranges.
+         * @param activationParams Set of initial shifts, multpliers and biases for each channel.
+         * @return QuantisationParams
+         */
         QuantisationParams quantise_activation(
           MulsAndBias &activationParams, bool verbose);
       private:
@@ -490,7 +468,7 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
 
 /**
  * @brief Output Transform class to converting 32 bit accumulators to an 8 bit
- * output space.
+ * output space on a groupwise quantisation scheme.
  *
  */
 class OT_int8 : public OutputTransformFnInt8_Group {
@@ -506,6 +484,8 @@ class OT_int8 : public OutputTransformFnInt8_Group {
      *
      * @param output_slice_channel_count The count of output channels to be
      * computed by this parameter set.
+     * @param initial_shift Overall initial shift.
+     * @param final_shr Overall final shift
      */
     Params(int32_t output_slice_channel_count, int16_t initial_shift,
            int16_t final_shr)
@@ -515,10 +495,7 @@ class OT_int8 : public OutputTransformFnInt8_Group {
   };
 
  private:
-  /**
-   * @brief This describes the channels over which this class will perform its
-   * operation(OutputTransform) and how each channel will transformed.
-   */
+
   Params *params;
   int16_t *multipliers_and_biases;
 
@@ -545,7 +522,6 @@ class OT_int8_channelwise : public OutputTransformFnInt8_Channelwise {
   class Params : public Serialisable {
    public:
     int32_t output_slice_channel_count;
-    int16_t initial_shift;
     int16_t final_shr;
 
    public:
@@ -554,19 +530,16 @@ class OT_int8_channelwise : public OutputTransformFnInt8_Channelwise {
      *
      * @param output_slice_channel_count The count of output channels to be
      * computed by this parameter set.
+     * @param final_shr Overall final shift.
      */
-    Params(int32_t output_slice_channel_count, int16_t initial_shift,
+    Params(int32_t output_slice_channel_count,
            int16_t final_shr)
         : output_slice_channel_count(output_slice_channel_count),
-          initial_shift(initial_shift),
           final_shr(final_shr) {}
   };
 
  private:
-  /**
-   * @brief This describes the channels over which this class will perform its
-   * operation(OutputTransform) and how each channel will transformed.
-   */
+ 
   Params *params;
   int16_t *shifts_multipliers_and_biases;
 
