@@ -363,7 +363,6 @@ void test_Conv2dPaddedIndirectRegression_channelwise() {
                                     VPU_INT16_EPV, pad_val);
 
                                 OT_int8_channelwise::Params ot_params((int32_t)k_depth,
-                                                          qp.initial_shr,
                                                           qp.final_shr);
 
                                 OT_int8_channelwise ot(&ot_params);
@@ -710,7 +709,6 @@ void test_Conv2dValidIndirectRegression_channelwise() {
                                     VPU_INT16_EPV, pad_val);
 
                                 OT_int8_channelwise::Params ot_params((int32_t)k_depth,
-                                                          qp.initial_shr,
                                                           qp.final_shr);
 
                                 OT_int8_channelwise ot(&ot_params);
@@ -1043,7 +1041,6 @@ void test_Conv2dValidDirectRegression_channelwise() {
                                     VPU_INT16_EPV, pad_val);
 
                                 OT_int8_channelwise::Params ot_params((int32_t)k_depth,
-                                                          qp.initial_shr,
                                                           qp.final_shr);
 
                                 OT_int8_channelwise ot(&ot_params);

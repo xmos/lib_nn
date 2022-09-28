@@ -259,7 +259,7 @@ void test_big_range_channelwise(int coef_count, int N, int product_range, int bi
       OutputTransformFn::pad_final_access(serialised_multipliers_and_biases,
                                           VPU_INT16_EPV, pad_val);
 
-      OT_int8_channelwise::Params p((int32_t)output_ch_count, qp.initial_shifts[0], qp.final_shr);
+      OT_int8_channelwise::Params p((int32_t)output_ch_count, qp.final_shr);
 
       OT_int8_channelwise ot(&p);
       ot.setMultipliersAndBiases(serialised_multipliers_and_biases.data());
@@ -451,7 +451,7 @@ void test_small_range_channelwise(const int accu_min, const int accu_max,
     OutputTransformFn::pad_final_access(serialised_multipliers_and_biases,
                                         VPU_INT16_EPV, pad_val);
 
-    OT_int8_channelwise::Params p((int32_t)output_ch_count, qp.initial_shr, qp.final_shr);
+    OT_int8_channelwise::Params p((int32_t)output_ch_count, qp.final_shr);
 
     OT_int8_channelwise ot(&p);
     ot.setMultipliersAndBiases(serialised_multipliers_and_biases.data());

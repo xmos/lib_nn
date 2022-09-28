@@ -362,7 +362,6 @@ void test_Conv2dValidDirectDWRegression_channelwise() {
                                 VPU_INT16_EPV, pad_val);
 
                             OT_int8_channelwise::Params ot_params((int32_t)x_channels,
-                                                      qp.initial_shr,
                                                       qp.final_shr);
 
                             OT_int8_channelwise ot(&ot_params);
@@ -381,7 +380,6 @@ void test_Conv2dValidDirectDWRegression_channelwise() {
                                 Y.height * Y.width * Y.depth);
 
                             nn::execute(&output[0], &input[0], &conv2d, &akp);
-
                             for (int yh = 0; yh < Y.height; yh++) {
                               for (int yw = 0; yw < Y.width; yw++) {
                                 for (int yd = 0; yd < Y.depth; yd++) {
@@ -389,7 +387,7 @@ void test_Conv2dValidDirectDWRegression_channelwise() {
                                             yw * Y.depth + yd;
 
                                   TEST_ASSERT_INT32_WITHIN(
-                                      1, (int)expected[idx], (int)output[idx]);
+                                      3, (int)expected[idx], (int)output[idx]);
                                   output_count[(int)expected[idx] - INT8_MIN]++;
                                 }
                               }
@@ -723,7 +721,6 @@ void test_Conv2dPaddedIndirectDWRegression_channelwise() {
                                 serialised_multipliers_and_biases,
                                 VPU_INT16_EPV, pad_val);
                             OT_int8_channelwise::Params ot_params((int32_t)x_channels,
-                                                      qp.initial_shr,
                                                       qp.final_shr);
 
                             OT_int8_channelwise ot(&ot_params);
@@ -753,7 +750,7 @@ void test_Conv2dPaddedIndirectDWRegression_channelwise() {
                                   if (delta < 0) delta = -delta;
 
                                   TEST_ASSERT_INT32_WITHIN(
-                                      1, (int)expected[idx], (int)output[idx]);
+                                      3, (int)expected[idx], (int)output[idx]);
 
                                   output_count[(int)expected[idx] - INT8_MIN]++;
                                 }
