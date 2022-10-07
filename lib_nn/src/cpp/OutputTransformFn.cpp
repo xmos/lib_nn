@@ -279,34 +279,29 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
                                            bool verbose) {
   std::vector<int> As, Ms;
   int global_B = 0;
-
-  //1 Find global B
-  for(auto activationParam: activationParams){
+  
+  //GET B
+  for(auto activationParam: activationParams) {
+    //printf("Act params Mult: %d, Bias: %d, Acc min: %d, Acc max: %d\n", activationParam.multiplier, activationParam.bias, activationParam.accu_min_val, activationParam.accu_max_val);
     if (activationParam.bias) {
-        int bias_bits =
-            OutputTransformFn::get_max_exponent(activationParam.bias);
-        global_B =
-            std::max(global_B, bias_bits);
+      int bias_bits = OutputTransformFn::get_max_exponent(activationParam.bias);
+      int64_t bias_16 = std::round(ldexp(activationParam.bias, 15 - bias_bits));
+      if(check_val_fits(bias_16 , 16)) {
+        global_B = std::max(global_B, bias_bits);
       }
+    }
   }
   global_B = 15 - global_B;
-  //printf("global_B: %d\n", global_B);
-
-  //for each set of mults + biases
+  assert(global_B > 0);
+  //printf("initial B: %d\n", global_B);
   for (auto activationParam : activationParams) {
-    //2 Check B fits
-    int64_t bias_16 =
-        std::round(ldexp(activationParam.bias, global_B));
-      if(!check_val_fits(bias_16, 16)){
-        global_B--;
-        printf("global bias reduced to fit in 16 bits\n");
-      }
+    int M, A;
+
+    int64_t bias_16 = std::round(ldexp(activationParam.bias, global_B));
 
     int accu_bits_max = 0;
     int max_multiplier_exponent = INT32_MIN;
 
-    // If all the accumulators or multipliers are zero then there is no defined
-    // range.
     bool accu_range_defined = false;
     bool multiplier_range_defined = false;
 
@@ -331,13 +326,13 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
     // If either of the ranges are undefined(i.e. all zero) then the result is the
     // same: the product contributes nothing
     bool product_range_defined = multiplier_range_defined && accu_range_defined;
-    int M, A;
+    //printf("mult range %d, acc range %d\n", multiplier_range_defined, accu_range_defined);
     if (!product_range_defined) {
-      if (verbose) printf("undefined product range\n");
+      //printf("undefined product range\n");
 
       // Then we only care about the biases -> we know they will always fit in an
       // 8 bit number so a bias exp of 0 will do fine.
-      A = -1;
+      A = 0;
       M = global_B - A + vlmul_shr;
       As.push_back(A);
       Ms.push_back(M);
@@ -345,9 +340,12 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
     else {
       int max_A = 15 - accu_bits_max;
       int max_M = 15 - max_multiplier_exponent;
-
+      //printf("ELSE\n");
       A = max_A;
       M = max_M;
+      //printf("initial A: %d\n", A);
+      //printf("initial M: %d\n", M);
+      //printf("M: %d, A: %d\n", M, A);
       int mul_sig_bits = 0, accu_sig_bits = 0;
 
       //multiplier raised to exponent M
@@ -359,8 +357,7 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
       int64_t accu_max_16 = shl(activationParam.accu_max_val, A);
       int64_t accu_min_16 = shl(activationParam.accu_min_val, A);
       //greatest sig bits
-      accu_sig_bits = std::max(accu_sig_bits, std::max(count_bits(accu_max_16),
-                                                      count_bits(accu_min_16)));
+      accu_sig_bits = std::max(accu_sig_bits, std::max(count_bits(accu_max_16), count_bits(accu_min_16)));
 
       int64_t max_group_prod, min_group_prod, max_group_sum, min_group_sum;
       bool trying = true;
@@ -379,16 +376,12 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
         // (must be representable by 16bit *
         // (1<<x)) (accu*2**A)*(mul*2**B) fit in 32 bits (accu*2**A)*(mul*2**B) +
         // bias*(2**(A+B)) fit in 32 bits
-        if (A >= 0) {
-          A--;
-          //printf("reduce a\n");
-          trying = true;
-        }
 
         int64_t accu_max_16 = shl(activationParam.accu_max_val, A);
         int64_t accu_min_16 = shl(activationParam.accu_min_val, A);
         if (!check_val_fits(accu_max_16, 16) ||
             !check_val_fits(accu_min_16, 16)) {
+              //printf("A doesnt fit\n");
           A--;
           accu_sig_bits--;
           trying = true;
@@ -397,11 +390,14 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
             printf("Accu too big\n   accu_sig_bits: %d\n   A: %d\n",
                   accu_sig_bits, A);
           }
-          //break;
+          // break;
         }
 
         int64_t mul_16 = std::round(ldexp(activationParam.multiplier, M));
         if (!check_val_fits(mul_16, 16)) {
+          //printf("M doesnt fit\n");
+          //printf("M: %d\n", M);
+          //if(M <= 20) printf("M: %d reducing\n", M);
           M--;
           mul_sig_bits--;
           trying = true;
@@ -410,7 +406,7 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
             printf("mul too big\n   mul_sig_bits: %d\n   M: %d\n", mul_sig_bits,
                   M);
           }
-          //break;
+          // break;
         }
 
 
@@ -430,8 +426,7 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
 
         // at least one of these must be true
         // one of them can saturate
-        if (!check_val_fits(prod_max, 16) || !check_val_fits(prod_min, 16) ||
-            !check_val_fits(sum_max, 16) || !check_val_fits(sum_min, 16)) {
+        if (!check_val_fits(prod_max, 16) || !check_val_fits(prod_min, 16)) {
           if (verbose) printf("overflow in prod or sum \n");
           if (A >= 0 || accu_sig_bits > mul_sig_bits) {
             A--;
@@ -446,9 +441,8 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
               printf("   mul_sig_bits: %d\n   M: %d\n", mul_sig_bits, M);
             }
           }
-
           trying = true;
-          //break;
+          // break;
         }
       }
       As.push_back(A);
@@ -456,17 +450,34 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
     } 
   }
 
-  //printf("As size: %d, params size: %d\n", Ms.size(), activationParams.size());
   assert(As.size() == activationParams.size());
   assert(Ms.size() == activationParams.size());
+
+  int Amax = 0;
+  for(int ch = 0; ch < activationParams.size(); ch++){
+    bool trying = true;
+    while(trying){
+      trying = false;
+      if (As[ch] > 0) {
+        Amax = std::max(Amax, As[ch]+1);
+        As[ch]--;
+        trying = true;
+      }
+    }
+  }
+  //global_B = global_B - Amax;
+  //printf("max_A %d\n", Amax);
 
   for(int ch = 0; ch < activationParams.size(); ch++){
     bool trying = true;
     while(trying){
       trying = false;
       if(global_B > (As[ch] + Ms[ch] - vlmul_shr)){
+        //printf("%d, %d\n", As[ch], Ms[ch]);
+        //printf("reducing B to match As and Ms: %d\n", global_B);
         global_B--;
         //printf("Reduce global B to %d\n", global_B);
+        //printf("A: %d, M: %d, VLMULSHR: %d\n", As[ch], Ms[ch], vlmul_shr);
         trying = true;
       }
     }
@@ -496,10 +507,11 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
     while(trying){
       trying = false;
       if(global_B < (As[ch] + Ms[ch] - vlmul_shr)){
+        //printf("global b: %d, A: %d, M: %d\n", global_B, As[ch], Ms[ch]);
         //printf("Reduce A or M\n");
         trying = true;
         if(accu_sig_bits > mul_sig_bits){
-          //printf("A is: %d\n", As[ch]);
+          //printf("A is reducing as B is small: %d\n", As[ch]);
           As[ch]--;
           accu_sig_bits--;
           if (verbose) {
@@ -507,7 +519,6 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
           }
         }
         else {
-          //printf("M is: %d\n", Ms[ch]);
           Ms[ch]--;
           mul_sig_bits--;
           if (verbose) {
@@ -516,8 +527,9 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
         }
       }
     }
-
+    assert(As[ch]<=0);
   }
+  //for(int ch = 0; ch < activationParams.size(); ch++) printf("B: %d, A: %d, M: %d, LEN=%d\n", global_B, As[ch], Ms[ch], Ms.size());
   return std::make_tuple(As, Ms);
 }
 
@@ -633,9 +645,9 @@ void nn::OutputTransformFn::ActivationParams::backprop_output_clamps_to_accu_lim
 template <class T>
 int16_t float_to_int16(T f, int e) {
   int32_t v = (int32_t)round(ldexp(f, e));
-
-  assert(v <= INT16_MAX);
-  assert(v >= INT16_MIN);
+  //if(v > INT16_MAX) printf("%d, %d, %d\n", f, e, v);
+  // assert(v <= INT16_MAX);
+  // assert(v >= INT16_MIN);
   v = std::min((int32_t)INT16_MAX, v);
   v = std::max((int32_t)INT16_MIN, v);
   return (int16_t)v;
@@ -670,8 +682,10 @@ OutputTransformFnInt8_Group::QuantisationParams OutputTransformFnInt8_Group::Qua
 
   // Quantise the multiplier and bias
   for (int ch = 0; ch < activationParams.size(); ++ch) {
+    //printf("mult M: %d\n", M);
     int16_t m = float_to_int16(activationParams[ch].multiplier, M);
     q.multipliers.push_back(m);
+    //printf("bias B: %d\n", B);
     int16_t b = float_to_int16(activationParams[ch].bias, B);
     q.biases.push_back(b);
 
@@ -682,7 +696,6 @@ OutputTransformFnInt8_Group::QuantisationParams OutputTransformFnInt8_Group::Qua
       printf("bias: %d(%f) original: %f %f\n", b, std::ldexp(b, -B),
              activationParams[ch].original_bias, activationParams[ch].bias);
   }
-
   return q;
 }
 
@@ -708,6 +721,7 @@ OutputTransformFnInt8_Channelwise::QuantisationParams OutputTransformFnInt8_Chan
   for (int ch = 0; ch < activationParams.size(); ++ch) {
     int A = As[ch];
     int M = Ms[ch];
+
     //printf("act params init shift: %d, mult:%d, bias:%d\n", -A, activationParams[ch].multiplier, activationParams[ch].bias);
     //printf("A: %d, M: %d, B: %d\n", A, M, B);
     assert(B == A + M - VLMUL_SHR);
@@ -769,6 +783,9 @@ int8_t *output_transform_fn_impl(const OT_int8::Params *params, int8_t *Y,
 
   int16_t *cur_post_activation_bias = cur_post_activation_mul + output_count;
 
+  for(int i{0}; i<16;i++){
+  //printf("mult: %d, bias: %d\n", cur_post_activation_mul[i], cur_post_activation_bias[i]);
+  }
   VSETC(vpu, MODE_S16);
 
   //Load accumulator into D and R Registers
@@ -840,7 +857,8 @@ int8_t *output_transform_fn_int_channelwise_impl(
   int16_t *cur_post_activation_mul = cur_initial_shift + output_count;
 
   int16_t *cur_post_activation_bias = cur_post_activation_mul + output_count;
-
+  // for(int i{0}; i<output_count;i++) printf("internal shf: %d, mult: %d, bias: %d\n", cur_initial_shift[i], cur_post_activation_mul[i], cur_post_activation_bias[i]);
+  // printf("\n");
   VSETC(vpu, MODE_S16);
 
   //Load accumulator into D and R Registers
@@ -850,18 +868,10 @@ int8_t *output_transform_fn_int_channelwise_impl(
   vpu_vector_t temp_mem;
 
   //Saturate to fit in 16 bits?
-  if (cur_initial_shift[0] > 0) {
-    for(int i=0; i< output_count; i++) temp_mem.s16[i] = cur_initial_shift[i];
-    for(int i=output_count; i<VPU_INT16_EPV; i++) temp_mem.s16[i] = 0;
-    VLSAT(vpu, &temp_mem);
+  for(int i=0; i< output_count; i++) temp_mem.s16[i] = cur_initial_shift[i];
+  for(int i=output_count; i<VPU_INT16_EPV; i++) temp_mem.s16[i] = 0;
+  VLSAT(vpu, &temp_mem);
 
-  } else {
-    for (int i = 0; i < VPU_INT16_EPV; ++i) temp_mem.s16[i] = cur_initial_shift[i];
-    VLSAT(vpu, &temp_mem);
-
-    VSTR(vpu, &temp_mem);
-    VLASHR(vpu, &temp_mem, cur_initial_shift[0]);
-  }
 
   //multiply by set val 
   //for(int i=0; i< VPU_INT16_EPV; i++) printf("cur mul: %d\n", cur_post_activation_mul[i]);
