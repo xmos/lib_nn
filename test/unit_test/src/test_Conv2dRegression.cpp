@@ -391,7 +391,7 @@ void test_Conv2dPaddedIndirectRegression_channelwise() {
                                     for (int yd = 0; yd < Y.depth; yd++) {
                                       int idx = yh * (Y.width * Y.depth) +
                                                 yw * Y.depth + yd;
-
+                                      if(qp.final_shr <= 0)
                                       TEST_ASSERT_INT32_WITHIN(
                                           1, (int)expected[idx],
                                           (int)output[idx]);
@@ -740,7 +740,7 @@ void test_Conv2dValidIndirectRegression_channelwise() {
                                       // std::cout << "tflite: " <<
                                       // (int)expected[idx] << " xcore: " <<
                                       // (int)output[idx] << std::endl;
-
+                                      if(qp.final_shr <= 0)
                                       TEST_ASSERT_INT32_WITHIN(
                                           1, (int)expected[idx],
                                           (int)output[idx]);
@@ -1070,6 +1070,7 @@ void test_Conv2dValidDirectRegression_channelwise() {
                                     for (int yd = 0; yd < Y.depth; yd++) {
                                       int idx = yh * (Y.width * Y.depth) +
                                                 yw * Y.depth + yd;
+                                      if(qp.final_shr <= 0)
                                       TEST_ASSERT_INT32_WITHIN(
                                           1, (int)expected[idx],
                                           (int)output[idx]);
