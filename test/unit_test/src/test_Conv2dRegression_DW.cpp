@@ -379,17 +379,17 @@ void test_Conv2dValidDirectDWRegression_channelwise() {
                             auto output = std::vector<int8_t>(
                                 Y.height * Y.width * Y.depth);
 
-                            if(qp.final_shr <= 0) {
-                              nn::execute(&output[0], &input[0], &conv2d, &akp);
-                              for (int yh = 0; yh < Y.height; yh++) {
-                                for (int yw = 0; yw < Y.width; yw++) {
-                                  for (int yd = 0; yd < Y.depth; yd++) {
-                                    int idx = yh * (Y.width * Y.depth) +
-                                              yw * Y.depth + yd;
-                                    TEST_ASSERT_INT32_WITHIN(
-                                        1, (int)expected[idx], (int)output[idx]);
-                                    output_count[(int)expected[idx] - INT8_MIN]++;
-                                  }
+
+                            nn::execute(&output[0], &input[0], &conv2d, &akp);
+                            for (int yh = 0; yh < Y.height; yh++) {
+                              for (int yw = 0; yw < Y.width; yw++) {
+                                for (int yd = 0; yd < Y.depth; yd++) {
+                                  int idx = yh * (Y.width * Y.depth) +
+                                            yw * Y.depth + yd;
+                                  if(qp.final_shr <= 0)
+                                  TEST_ASSERT_INT32_WITHIN(
+                                      1, (int)expected[idx], (int)output[idx]);
+                                  output_count[(int)expected[idx] - INT8_MIN]++;
                                 }
                               }
                             }
@@ -738,23 +738,22 @@ void test_Conv2dPaddedIndirectDWRegression_channelwise() {
 
                             auto output = std::vector<int8_t>(
                                 Y.height * Y.width * Y.depth);
-                            if(qp.final_shr <= 0){
-                              nn::execute(&output[0], &input[0], &conv2d, &akp, &T[0]);
+                            
+                            nn::execute(&output[0], &input[0], &conv2d, &akp, &T[0]);
 
-                              for (int yh = 0; yh < Y.height; yh++) {
-                                for (int yw = 0; yw < Y.width; yw++) {
-                                  for (int yd = 0; yd < Y.depth; yd++) {
-                                    int idx = yh * (Y.width * Y.depth) +
-                                              yw * Y.depth + yd;
-                                    int delta =
-                                        (int)expected[idx] - (int)output[idx];
-                                    if (delta < 0) delta = -delta;
-                                    
-                                    TEST_ASSERT_INT32_WITHIN(
-                                        1, (int)expected[idx], (int)output[idx]);
+                            for (int yh = 0; yh < Y.height; yh++) {
+                              for (int yw = 0; yw < Y.width; yw++) {
+                                for (int yd = 0; yd < Y.depth; yd++) {
+                                  int idx = yh * (Y.width * Y.depth) +
+                                            yw * Y.depth + yd;
+                                  int delta =
+                                      (int)expected[idx] - (int)output[idx];
+                                  if (delta < 0) delta = -delta;
+                                  if(qp.final_shr <= 0)
+                                  TEST_ASSERT_INT32_WITHIN(
+                                      1, (int)expected[idx], (int)output[idx]);
 
-                                    output_count[(int)expected[idx] - INT8_MIN]++;
-                                  }
+                                  output_count[(int)expected[idx] - INT8_MIN]++;
                                 }
                               }
                             }

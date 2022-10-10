@@ -257,9 +257,6 @@ std::tuple<int, int> OutputTransformFnInt8_Group::Quantizer::solve_for_constrain
         break;
       }
     }
-
-    // want to have the same number of significant bits of accu and mul
-    // must use as all 16 bits of the bias
   }
   if (verbose) {
     printf(
@@ -280,9 +277,8 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
   std::vector<int> As, Ms;
   int global_B = 0;
   
-  //GET B
+  //Select largest valid B
   for(auto activationParam: activationParams) {
-    //printf("Act params Mult: %d, Bias: %d, Acc min: %d, Acc max: %d\n", activationParam.multiplier, activationParam.bias, activationParam.accu_min_val, activationParam.accu_max_val);
     if (activationParam.bias) {
       int bias_bits = OutputTransformFn::get_max_exponent(activationParam.bias);
       int64_t bias_16 = std::round(ldexp(activationParam.bias, 15 - bias_bits));
@@ -293,7 +289,8 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
   }
   global_B = 15 - global_B;
   assert(global_B > 0);
-  //printf("initial B: %d\n", global_B);
+  
+  // Select A and M
   for (auto activationParam : activationParams) {
     int M, A;
 
@@ -326,12 +323,10 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
     // If either of the ranges are undefined(i.e. all zero) then the result is the
     // same: the product contributes nothing
     bool product_range_defined = multiplier_range_defined && accu_range_defined;
-    //printf("mult range %d, acc range %d\n", multiplier_range_defined, accu_range_defined);
+    
     if (!product_range_defined) {
-      //printf("undefined product range\n");
-
-      // Then we only care about the biases -> we know they will always fit in an
-      // 8 bit number so a bias exp of 0 will do fine.
+      // As B is constant for all values, set A as maximum valid value and later A is adjusted
+      // to fit constraints
       A = 0;
       M = global_B - A + vlmul_shr;
       As.push_back(A);
@@ -340,12 +335,11 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
     else {
       int max_A = 15 - accu_bits_max;
       int max_M = 15 - max_multiplier_exponent;
-      //printf("ELSE\n");
+
+      //Maximum valid A and M for activation param set
       A = max_A;
       M = max_M;
-      //printf("initial A: %d\n", A);
-      //printf("initial M: %d\n", M);
-      //printf("M: %d, A: %d\n", M, A);
+
       int mul_sig_bits = 0, accu_sig_bits = 0;
 
       //multiplier raised to exponent M
@@ -372,16 +366,13 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
         // check
         // accu*2**A fit in 16 bits
         // mul*2**B fit in 16 bits
-        // bias*(2**(A+B-VLMUL_SHR)) fit in 16 bits
         // (must be representable by 16bit *
         // (1<<x)) (accu*2**A)*(mul*2**B) fit in 32 bits (accu*2**A)*(mul*2**B) +
-        // bias*(2**(A+B)) fit in 32 bits
 
         int64_t accu_max_16 = shl(activationParam.accu_max_val, A);
         int64_t accu_min_16 = shl(activationParam.accu_min_val, A);
         if (!check_val_fits(accu_max_16, 16) ||
             !check_val_fits(accu_min_16, 16)) {
-              //printf("A doesnt fit\n");
           A--;
           accu_sig_bits--;
           trying = true;
@@ -390,14 +381,10 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
             printf("Accu too big\n   accu_sig_bits: %d\n   A: %d\n",
                   accu_sig_bits, A);
           }
-          // break;
         }
 
         int64_t mul_16 = std::round(ldexp(activationParam.multiplier, M));
         if (!check_val_fits(mul_16, 16)) {
-          //printf("M doesnt fit\n");
-          //printf("M: %d\n", M);
-          //if(M <= 20) printf("M: %d reducing\n", M);
           M--;
           mul_sig_bits--;
           trying = true;
@@ -406,7 +393,6 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
             printf("mul too big\n   mul_sig_bits: %d\n   M: %d\n", mul_sig_bits,
                   M);
           }
-          // break;
         }
 
 
@@ -442,7 +428,6 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
             }
           }
           trying = true;
-          // break;
         }
       }
       As.push_back(A);
@@ -453,6 +438,7 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
   assert(As.size() == activationParams.size());
   assert(Ms.size() == activationParams.size());
 
+  //Check A is zero or negative
   int Amax = 0;
   for(int ch = 0; ch < activationParams.size(); ch++){
     bool trying = true;
@@ -465,25 +451,19 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
       }
     }
   }
-  //global_B = global_B - Amax;
-  //printf("max_A %d\n", Amax);
 
+  // Reduce B to fit smallest A and M
   for(int ch = 0; ch < activationParams.size(); ch++){
     bool trying = true;
     while(trying){
       trying = false;
       if(global_B > (As[ch] + Ms[ch] - vlmul_shr)){
-        //printf("%d, %d\n", As[ch], Ms[ch]);
-        //printf("reducing B to match As and Ms: %d\n", global_B);
         global_B--;
-        //printf("Reduce global B to %d\n", global_B);
-        //printf("A: %d, M: %d, VLMULSHR: %d\n", As[ch], Ms[ch], vlmul_shr);
         trying = true;
       }
     }
   }
 
-  //reduce As and Ms to fit
   for(int ch = 0; ch < activationParams.size(); ch++) {
     int mul_sig_bits = 0, accu_sig_bits = 0;
 
@@ -506,12 +486,11 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
     bool trying = true;
     while(trying){
       trying = false;
+
+      // Reduce largest A and M to match B
       if(global_B < (As[ch] + Ms[ch] - vlmul_shr)){
-        //printf("global b: %d, A: %d, M: %d\n", global_B, As[ch], Ms[ch]);
-        //printf("Reduce A or M\n");
         trying = true;
         if(accu_sig_bits > mul_sig_bits){
-          //printf("A is reducing as B is small: %d\n", As[ch]);
           As[ch]--;
           accu_sig_bits--;
           if (verbose) {
@@ -529,7 +508,7 @@ std::tuple<std::vector<int>, std::vector<int>> OutputTransformFnInt8_Channelwise
     }
     assert(As[ch]<=0);
   }
-  //for(int ch = 0; ch < activationParams.size(); ch++) printf("B: %d, A: %d, M: %d, LEN=%d\n", global_B, As[ch], Ms[ch], Ms.size());
+ 
   return std::make_tuple(As, Ms);
 }
 
@@ -645,9 +624,9 @@ void nn::OutputTransformFn::ActivationParams::backprop_output_clamps_to_accu_lim
 template <class T>
 int16_t float_to_int16(T f, int e) {
   int32_t v = (int32_t)round(ldexp(f, e));
-  //if(v > INT16_MAX) printf("%d, %d, %d\n", f, e, v);
-  // assert(v <= INT16_MAX);
-  // assert(v >= INT16_MIN);
+  if(v > INT16_MAX) v--;
+  assert(v <= INT16_MAX);
+  assert(v >= INT16_MIN);
   v = std::min((int32_t)INT16_MAX, v);
   v = std::max((int32_t)INT16_MIN, v);
   return (int16_t)v;
@@ -682,10 +661,8 @@ OutputTransformFnInt8_Group::QuantisationParams OutputTransformFnInt8_Group::Qua
 
   // Quantise the multiplier and bias
   for (int ch = 0; ch < activationParams.size(); ++ch) {
-    //printf("mult M: %d\n", M);
     int16_t m = float_to_int16(activationParams[ch].multiplier, M);
     q.multipliers.push_back(m);
-    //printf("bias B: %d\n", B);
     int16_t b = float_to_int16(activationParams[ch].bias, B);
     q.biases.push_back(b);
 
@@ -722,8 +699,6 @@ OutputTransformFnInt8_Channelwise::QuantisationParams OutputTransformFnInt8_Chan
     int A = As[ch];
     int M = Ms[ch];
 
-    //printf("act params init shift: %d, mult:%d, bias:%d\n", -A, activationParams[ch].multiplier, activationParams[ch].bias);
-    //printf("A: %d, M: %d, B: %d\n", A, M, B);
     assert(B == A + M - VLMUL_SHR);
     q.initial_shifts.push_back(-A);
     
