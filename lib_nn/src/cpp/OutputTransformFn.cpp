@@ -751,16 +751,12 @@ int8_t *output_transform_fn_impl(const OT_int8::Params *params, int8_t *Y,
   int output_count = std::min(
       params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
       (int32_t)VPU_INT16_EPV);
-  //printf("outout_count: %d, output_channel_group: %d, output_slice_channel_count: %d\n"
-  //, output_count, output_channel_group, params->output_slice_channel_count);
+  
   int16_t *cur_post_activation_mul =
       multipliers_and_biases + output_channel_group * VPU_INT16_EPV * 2;
 
   int16_t *cur_post_activation_bias = cur_post_activation_mul + output_count;
 
-  for(int i{0}; i<16;i++){
-  //printf("mult: %d, bias: %d\n", cur_post_activation_mul[i], cur_post_activation_bias[i]);
-  }
   VSETC(vpu, MODE_S16);
 
   //Load accumulator into D and R Registers
@@ -832,8 +828,7 @@ int8_t *output_transform_fn_int_channelwise_impl(
   int16_t *cur_post_activation_mul = cur_initial_shift + output_count;
 
   int16_t *cur_post_activation_bias = cur_post_activation_mul + output_count;
-  // for(int i{0}; i<output_count;i++) printf("internal shf: %d, mult: %d, bias: %d\n", cur_initial_shift[i], cur_post_activation_mul[i], cur_post_activation_bias[i]);
-  // printf("\n");
+  
   VSETC(vpu, MODE_S16);
 
   //Load accumulator into D and R Registers
@@ -843,18 +838,15 @@ int8_t *output_transform_fn_int_channelwise_impl(
   vpu_vector_t temp_mem;
 
   //Saturate to fit in 16 bits?
-  for(int i=0; i< output_count; i++) temp_mem.s16[i] = cur_initial_shift[i];
+  for(int i=0; i< VPU_INT16_EPV; i++) temp_mem.s16[i] = cur_initial_shift[i];
   for(int i=output_count; i<VPU_INT16_EPV; i++) temp_mem.s16[i] = 0;
   VLSAT(vpu, &temp_mem);
 
 
   //multiply by set val 
-  //for(int i=0; i< VPU_INT16_EPV; i++) printf("cur mul: %d\n", cur_post_activation_mul[i]);
-  //for(int i=0; i< VPU_INT16_EPV; i++) printf("acc val: %d - %d\n", vpu->vD.s16[i], vpu->vR.s16[i]);
   VLMUL(vpu, cur_post_activation_mul);
 
   //add set bias
-  //for(int i=0; i< VPU_INT16_EPV; i++) printf("cur bias: %d\n", cur_post_activation_bias[i]);
   VLADD(vpu, cur_post_activation_bias);
 
   //store, load then do final shift right
