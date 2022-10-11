@@ -84,9 +84,8 @@ FUNCTION_NAME:
     {vldr r11[0]                       ; add r11, r2, r11}
     {vldd r11[0]                       ; shl r11, r2, 3}
     ldw r2, sp[S_OUTPUT_COUNT]
-    //vsetc into 16 bit mode (256), r11 = output count*2
     {vsetc r11                         ; shl r11, r2, 1}
-    {vlsat r3[0]                       ; add r11, r11, r2}
+    {vlsat r3[0]                       ; nop }
     {bu vlsat_done                     ; add r3, r3, r11 }
     
 vlsat_done: 
