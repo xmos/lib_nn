@@ -541,7 +541,7 @@ class OT_int8_channelwise : public OutputTransformFnInt8_Channelwise {
  private:
  
   Params *params;
-  int16_t *shifts_multipliers_and_biases;
+  int16_t *multipliers_and_biases;
 
  public:
   OT_int8_channelwise(Params *params) : params(params){};
@@ -550,9 +550,9 @@ class OT_int8_channelwise : public OutputTransformFnInt8_Channelwise {
                               int32_t output_channel_group);
 
   void setMultipliersAndBiases(int16_t *m) {
-    shifts_multipliers_and_biases = m;
+    multipliers_and_biases = m;
     assert(m != nullptr);
-    assert(is_aligned(shifts_multipliers_and_biases, 8));
+    assert(is_aligned(multipliers_and_biases, 8));
   }
 };
 

@@ -811,9 +811,28 @@ int8_t *OT_int8::output_transform_fn(int8_t *Y, VPURingBuffer *A,
 //-----------------------
 
 //INT8 CHANNELWISE
+extern "C" int8_t *output_transform_fn_int_channelwise_impl_asm(const OT_int8_channelwise::Params *params,
+                                                int8_t *Y, VPURingBuffer *A,
+                                                int16_t *multipliers_and_biases,
+                                                int output_count);
+
+#ifndef NN_USE_REF
+int8_t *output_transform_fn_int_channelwise_impl_asm_stub(const OT_int8_channelwise::Params *params,
+                                          int8_t *Y, VPURingBuffer *A,
+                                          int32_t output_channel_group,
+                                          int16_t *multipliers_and_biases) {
+  int output_count = std::min(
+      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
+      (int32_t)VPU_INT16_EPV);
+  multipliers_and_biases += output_channel_group * VPU_INT16_EPV * 3;
+  return output_transform_fn_int_channelwise_impl_asm(params, Y, A, multipliers_and_biases,
+                                      output_count);
+}
+#endif
+
 int8_t *output_transform_fn_int_channelwise_impl(
     const OT_int8_channelwise::Params *params, int8_t *Y, VPURingBuffer *A,
-    int32_t output_channel_group, int16_t *shifts_multipliers_and_biases) {
+    int32_t output_channel_group, int16_t *multipliers_and_biases) {
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
 
@@ -823,7 +842,7 @@ int8_t *output_transform_fn_int_channelwise_impl(
       (int32_t)VPU_INT16_EPV);
 
   int16_t *cur_initial_shift =
-      shifts_multipliers_and_biases + output_channel_group * VPU_INT16_EPV * 3;
+      multipliers_and_biases + output_channel_group * VPU_INT16_EPV * 3;
 
   int16_t *cur_post_activation_mul = cur_initial_shift + output_count;
 
@@ -863,20 +882,14 @@ int8_t *output_transform_fn_int_channelwise_impl(
   return Y;
 }
 
-extern "C" int8_t *output_transform_fn_int_channelwise_impl_asm(
-    const OT_int8_channelwise::Params *params, int8_t *Y, VPURingBuffer *A,
-    int32_t output_channel_group, int16_t *shifts_multipliers_and_biases);
-
 int8_t *OT_int8_channelwise::output_transform_fn(int8_t *Y, VPURingBuffer *A,
-                                             int32_t output_channel_group) {
+                                     int32_t output_channel_group) {
 #ifdef NN_USE_REF
-
-  return output_transform_fn_int_channelwise_impl(
-      this->params, Y, A, output_channel_group, shifts_multipliers_and_biases);
+  return output_transform_fn_int_channelwise_impl(this->params, Y, A, output_channel_group,
+                                  multipliers_and_biases);
 #else
-
-  return output_transform_fn_int_channelwise_impl_asm(
-      this->params, Y, A, output_channel_group, shifts_multipliers_and_biases);
+  return output_transform_fn_int_channelwise_impl_asm_stub(
+      this->params, Y, A, output_channel_group, multipliers_and_biases);
 #endif  // NN_USE_REF
 }
 //-----------------------
@@ -904,7 +917,7 @@ int8_t *output_transform_fn_int_clamped_impl(
 
   VSETC(vpu, MODE_S16);
   VLDR(vpu, &A->vR);
-  ;
+  
   VLADD(vpu, cur_post_activation_offset);
 
   // Remove the kernel overlap
