@@ -13,8 +13,8 @@
 #include "vpu.hpp"
 
 #ifdef _MSC_VER
-#  include <intrin.h>
-#  define __builtin_popcount __popcnt
+#include <intrin.h>
+#define __builtin_popcount __popcnt
 #endif
 
 namespace nn {
@@ -30,9 +30,9 @@ namespace nn {
  * number space and written to the output tensor (Y).
  */
 class OutputTransformFn {
- public:
+public:
   class ActivationParams {
-   public:
+  public:
     /*
     The originals exist for further optimisation in the future
     */
@@ -48,30 +48,27 @@ class OutputTransformFn {
 
     ActivationParams(double bias, double multiplier, int32_t accu_min_val,
                      int32_t accu_max_val)
-        : original_bias(bias),
-          original_multiplier(multiplier),
+        : original_bias(bias), original_multiplier(multiplier),
           original_accu_min_val(accu_min_val),
-          original_accu_max_val(accu_max_val),
-          bias(bias),
-          multiplier(multiplier),
-          accu_min_val(accu_min_val),
+          original_accu_max_val(accu_max_val), bias(bias),
+          multiplier(multiplier), accu_min_val(accu_min_val),
           accu_max_val(accu_max_val) {
       backprop_output_clamps_to_accu_limits(false);
       assert(accu_min_val <= accu_max_val);
     }
-    private:
-      void backprop_output_clamps_to_accu_limits(bool verbose = false);
-  };
 
+  private:
+    void backprop_output_clamps_to_accu_limits(bool verbose = false);
+  };
 
   /**
    * Pads a vector to a boundary with a pad value
    */
   template <class T>
   static void pad(std::vector<T> &vec, int pad_boundary, T pad_val) {
-    vec.resize(
-        vec.size() + (pad_boundary - vec.size() % pad_boundary) % pad_boundary,
-        pad_val);
+    vec.resize(vec.size() +
+                   (pad_boundary - vec.size() % pad_boundary) % pad_boundary,
+               pad_val);
   }
   /**
    * Pads a vector such that the final access of the vector has access_count
@@ -87,9 +84,9 @@ class OutputTransformFn {
   }
 
   template <class T>
-  static std::vector<T> serialise_memory(
-      std::vector<T> &first_array, std::vector<T> &second_array,
-      int elements_per_group = VPU_INT16_EPV) {
+  static std::vector<T>
+  serialise_memory(std::vector<T> &first_array, std::vector<T> &second_array,
+                   int elements_per_group = VPU_INT16_EPV) {
     std::vector<T> serialised_memory;
 
     assert(first_array.size() == second_array.size());
@@ -120,9 +117,10 @@ class OutputTransformFn {
   }
 
   template <class T>
-  static std::vector<T> serialise_memory(
-      std::vector<T> &first_array, std::vector<T> &second_array,
-      std::vector<T> &third_array, int elements_per_group = VPU_INT16_EPV) {
+  static std::vector<T>
+  serialise_memory(std::vector<T> &first_array, std::vector<T> &second_array,
+                   std::vector<T> &third_array,
+                   int elements_per_group = VPU_INT16_EPV) {
     std::vector<T> serialised_memory;
 
     assert(first_array.size() == second_array.size());
@@ -164,8 +162,7 @@ class OutputTransformFn {
     return serialised_memory;
   }
 
-  template <class activationT>
-  static int get_max_exponent(activationT f) {
+  template <class activationT> static int get_max_exponent(activationT f) {
     int e;
     std::frexp(f, &e);
     return e;
@@ -174,7 +171,8 @@ class OutputTransformFn {
   template <class activationT>
   static int get_max_exponent(std::vector<activationT> &arr) {
     int m = INT32_MIN;
-    for (auto f : arr) m = std::max(m, get_max_exponent(f));
+    for (auto f : arr)
+      m = std::max(m, get_max_exponent(f));
     return m;
   }
 
@@ -195,32 +193,33 @@ class OutputTransformFn {
 typedef std::vector<OutputTransformFn::ActivationParams> MulsAndBias;
 
 class OutputTransformFnInt8 : public OutputTransformFn {
- public:
+public:
   struct QuantisationParams {
-        /**
-         * The amount to shift all the 32 bit accumulators right by to reduce them to
-         * 16 bit scalars. This will be non-negative. It is used to control the VLSAT.
-         * Note, some may saturate in the 16 bit conversion as the output clamp may
-         * have been back propagated.
-         */
-        int16_t initial_shr;
+    /**
+     * The amount to shift all the 32 bit accumulators right by to reduce them
+     * to 16 bit scalars. This will be non-negative. It is used to control the
+     * VLSAT. Note, some may saturate in the 16 bit conversion as the output
+     * clamp may have been back propagated.
+     */
+    int16_t initial_shr;
 
-        /**
-         * The amount to shift all the 16 bit biased and scaled accumulators right by
-         * to reduce them to 8 bit scalars. It is used to control the VLASHR. Also the
-         * result may be bigger than the int8 range as clamping is expected to follow.
-         */
-        int16_t final_shr;
+    /**
+     * The amount to shift all the 16 bit biased and scaled accumulators right
+     * by to reduce them to 8 bit scalars. It is used to control the VLASHR.
+     * Also the result may be bigger than the int8 range as clamping is expected
+     * to follow.
+     */
+    int16_t final_shr;
 
-        /**
-         * The mutipliers and biases are interleaved into a single array. They are
-         * arranged as channel groups of 16 multipliers and 16 biases until the final
-         * group of N multipliers and N biases where N is the remaining number of
-         * channels after all the full channel groups.
-         */
-        std::vector<int16_t> multipliers;
-        std::vector<int16_t> biases;
-      };
+    /**
+     * The mutipliers and biases are interleaved into a single array. They are
+     * arranged as channel groups of 16 multipliers and 16 biases until the
+     * final group of N multipliers and N biases where N is the remaining number
+     * of channels after all the full channel groups.
+     */
+    std::vector<int16_t> multipliers;
+    std::vector<int16_t> biases;
+  };
 
   static MulsAndBias canonicalise_mul_and_bias_dw(
       const std::vector<float> &eff_mult, const std::vector<int32_t> &bias,
@@ -304,63 +303,68 @@ class OutputTransformFnInt8 : public OutputTransformFn {
     return canonical_values;
   }
 
-  static int32_t sat(int64_t a, int bits){
-    int64_t max_val = (1LL << bits)-1;
+  static int32_t sat(int64_t a, int bits) {
+    int64_t max_val = (1LL << bits) - 1;
     int64_t min_val = -(1LL << bits);
 
-    if(a > max_val)
+    if (a > max_val)
       return (int32_t)max_val;
 
-    if(a < min_val)
+    if (a < min_val)
       return (int32_t)min_val;
 
     return a;
   }
 
-  static int32_t shr(int32_t val, int shr_amount, int bits = 16 ){
-    if (shr_amount > 0){
-      return sat(((int64_t)val + (1LL << (shr_amount - 1))) >> shr_amount, bits);
+  static int32_t shr(int32_t val, int shr_amount, int bits = 16) {
+    if (shr_amount > 0) {
+      return sat(((int64_t)val + (1LL << (shr_amount - 1))) >> shr_amount,
+                 bits);
     } else {
       return sat((int64_t)val << (-shr_amount), bits);
     }
   }
 
-  static int32_t add(int32_t a, int32_t b, int bits = 16 ){
-      return sat((int64_t)a + (int64_t)b, bits);
+  static int32_t add(int32_t a, int32_t b, int bits = 16) {
+    return sat((int64_t)a + (int64_t)b, bits);
   }
 
-  static int32_t mul(int32_t a, int32_t b, int bits = 16 ){
-      int64_t prod = (int64_t)a * (int64_t)b;
-      prod = prod + (1LL << (14-1));
-      return sat(prod>>14, bits);
+  static int32_t mul(int32_t a, int32_t b, int bits = 16) {
+    int64_t prod = (int64_t)a * (int64_t)b;
+    prod = prod + (1LL << (14 - 1));
+    return sat(prod >> 14, bits);
   }
 
   /**
-   * Calculate the maximum average error between the reference and quantised implementations of the output 
-   * transform over each channel. The average is defined over the range of non-saturating accumulators, 
-   * i.e. accumulators that do not reach a saturating output in the int8 space. 
-   * The result is the maximum average for all of the channels. 
+   * Calculate the maximum average error between the reference and quantised
+   * implementations of the output transform over each channel. The average is
+   * defined over the range of non-saturating accumulators, i.e. accumulators
+   * that do not reach a saturating output in the int8 space. The result is the
+   * maximum average for all of the channels.
    */
   template <class QParams>
-  static double get_quant_error(MulsAndBias &mul_and_bias, QParams &qp, bool use_high_precision = false){
-    
-    if (use_high_precision){
+  static double get_quant_error(MulsAndBias &mul_and_bias, QParams &qp,
+                                bool use_high_precision = false) {
+
+    if (use_high_precision) {
 
       double max_avg_abs_error = 0.0;
 
-      for (int idx=0; idx < mul_and_bias.size(); ++idx){
-        
+      for (int idx = 0; idx < mul_and_bias.size(); ++idx) {
+
         int64_t abs_error_sum = 0;
 
-        for(int accu = mul_and_bias[idx].accu_min_val; accu <= mul_and_bias[idx].accu_max_val; ++accu){
+        for (int accu = mul_and_bias[idx].accu_min_val;
+             accu <= mul_and_bias[idx].accu_max_val; ++accu) {
 
-          int32_t t = shr(accu, qp.initial_shr); //vlsat
-          t = mul(t, qp.multipliers[idx]);       //vlmul
-          t = add(t, qp.biases[idx]);            //vladd
-          t = shr(t, qp.final_shr);              //vlashr
-          t = sat(shr(t, 8), 8);                 //vdepth8
-          
-          double v = (double)accu * mul_and_bias[idx].multiplier + mul_and_bias[idx].bias;
+          int32_t t = shr(accu, qp.initial_shr); // vlsat
+          t = mul(t, qp.multipliers[idx]);       // vlmul
+          t = add(t, qp.biases[idx]);            // vladd
+          t = shr(t, qp.final_shr);              // vlashr
+          t = sat(shr(t, 8), 8);                 // vdepth8
+
+          double v = (double)accu * mul_and_bias[idx].multiplier +
+                     mul_and_bias[idx].bias;
 
           int expected = (int)std::round(v);
 
@@ -370,16 +374,18 @@ class OutputTransformFnInt8 : public OutputTransformFn {
           abs_error_sum += std::abs(expected - t);
         }
 
-        int64_t interesting_accumulators =  mul_and_bias[idx].accu_max_val - mul_and_bias[idx].accu_min_val + 1;
-        
-        if (interesting_accumulators > 0){
-          double avg_abs_error = (double)abs_error_sum / (double)interesting_accumulators;
+        int64_t interesting_accumulators =
+            mul_and_bias[idx].accu_max_val - mul_and_bias[idx].accu_min_val + 1;
+
+        if (interesting_accumulators > 0) {
+          double avg_abs_error =
+              (double)abs_error_sum / (double)interesting_accumulators;
           max_avg_abs_error = std::max(max_avg_abs_error, avg_abs_error);
         }
       }
       return max_avg_abs_error;
     } else {
-      //final_shr | number of decimal places | error
+      // final_shr | number of decimal places | error
       //-8          0                          2   = 1*2^1
       //-7          1                          1   = 1*2^0
       //-6          2                          0.5 = 1*2^-1
@@ -388,82 +394,88 @@ class OutputTransformFnInt8 : public OutputTransformFn {
       //-3          5                          2^-4
       //-2          6                          2^-5
       //-1          7                          2^-6
-      //0           8                          2^-7
+      // 0           8                          2^-7
       return std::ldexp(1, -(qp.final_shr + 7));
     }
   }
 };
 
-//Class containing quantisation strategy for the groupwise output transforms
+// Class containing quantisation strategy for the groupwise output transforms
 class OutputTransformFnInt8_Group : public OutputTransformFnInt8 {
+public:
+  class Quantizer {
   public:
-    class Quantizer {
-      public:
-         /**
-         * @brief This translates from the representation of:
-         *    output[ch] = min(max((accu[ch] * multipler[ch]) + bias[ch]), INT8_MIN),
-         * INT8_MAX) to a form that can be efficiently implemented on the VPU.
-         * @param activationParams Set of multpliers and biases for each channel.
-         * @return QuantisationParams
-         */
-        QuantisationParams quantise_activation(
-          MulsAndBias &activationParams, bool verbose);
-      private:
-        std::tuple<int, int> solve_for_constraints(
-          MulsAndBias &activationParams, int vlmul_shr,
-          bool verbose = false);
-    };
+    /**
+     * @brief This translates from the representation of:
+     *    output[ch] = min(max((accu[ch] * multipler[ch]) + bias[ch]),
+     * INT8_MIN), INT8_MAX) to a form that can be efficiently implemented on the
+     * VPU.
+     * @param activationParams Set of multpliers and biases for each channel.
+     * @return QuantisationParams
+     */
+    QuantisationParams quantise_activation(MulsAndBias &activationParams,
+                                           bool verbose);
 
+  private:
+    std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams,
+                                               int vlmul_shr,
+                                               bool verbose = false);
+  };
 };
 
-//Class containing quantisation strategy for channelwise output transforms
+// Class containing quantisation strategy for channelwise output transforms
 class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
+public:
+  struct QuantisationParams {
+    /**
+     * The amount to shift all the 32 bit accumulators right by to reduce them
+     * to 16 bit scalars. This will be non-negative. It is used to control the
+     * VLSAT. Note, some may saturate in the 16 bit conversion as the output
+     * clamp may have been back propagated.
+     */
+    int16_t initial_shr;
+
+    /**
+     * The amount to shift all the 16 bit biased and scaled accumulators right
+     * by to reduce them to 8 bit scalars. It is used to control the VLASHR.
+     * Also the result may be bigger than the int8 range as clamping is expected
+     * to follow.
+     */
+    int16_t final_shr;
+
+    /**
+     * The initial_shifts, mutipliers and biases are interleaved into a single
+     * array. They are arranged as channel groups of 16 initial shifts, 16
+     * multipliers and 16 biases until the final group of N initial shifts, N
+     * multipliers and N biases where N is the remaining number of channels
+     * after all the full channel groups.
+     */
+    std::vector<int16_t> initial_shifts;
+    std::vector<int16_t> multipliers;
+    std::vector<int16_t> biases;
+  };
+
+  class Quantizer {
   public:
-    struct QuantisationParams {
-        /**
-         * The amount to shift all the 32 bit accumulators right by to reduce them to
-         * 16 bit scalars. This will be non-negative. It is used to control the VLSAT.
-         * Note, some may saturate in the 16 bit conversion as the output clamp may
-         * have been back propagated.
-         */
-        int16_t initial_shr;
+    /**
+     * @brief This translates from the representation of:
+     *    output[ch] = min(max((accu[ch] * multipler[ch]) + bias[ch]),
+     * INT8_MIN), INT8_MAX) to a form that can be efficiently implemented on the
+     * VPU. This version calculates an initial shift for each channel in
+     * addition, increasing memory requirements but improves performance for
+     * cases where channels have diverse dynamic ranges.
+     * @param activationParams Set of initial shifts, multpliers and biases for
+     * each channel.
+     * @return QuantisationParams
+     */
+    QuantisationParams quantise_activation(MulsAndBias &activationParams,
+                                           bool verbose);
 
-        /**
-         * The amount to shift all the 16 bit biased and scaled accumulators right by
-         * to reduce them to 8 bit scalars. It is used to control the VLASHR. Also the
-         * result may be bigger than the int8 range as clamping is expected to follow.
-         */
-        int16_t final_shr;
-
-        /**
-         * The initial_shifts, mutipliers and biases are interleaved into a single array. They are
-         * arranged as channel groups of 16 initial shifts, 16 multipliers and 16 biases until the final
-         * group of N initial shifts, N multipliers and N biases where N is the remaining number of
-         * channels after all the full channel groups.
-         */
-        std::vector<int16_t> initial_shifts;
-        std::vector<int16_t> multipliers;
-        std::vector<int16_t> biases;
-      };
-
-    class Quantizer {
-      public:
-        /**
-         * @brief This translates from the representation of:
-         *    output[ch] = min(max((accu[ch] * multipler[ch]) + bias[ch]), INT8_MIN),
-         * INT8_MAX) to a form that can be efficiently implemented on the VPU. This version 
-         * calculates an initial shift for each channel in addition, increasing memory requirements
-         * but improves performance for cases where channels have diverse dynamic ranges.
-         * @param activationParams Set of initial shifts, multpliers and biases for each channel.
-         * @return QuantisationParams
-         */
-        QuantisationParams quantise_activation(
-          MulsAndBias &activationParams, bool verbose);
-      private:
-        std::tuple<std::vector<int>, std::vector<int>> solve_for_constraints(
-          MulsAndBias &activationParams, int vlmul_shr,
-          bool verbose = false);
-    };
+  private:
+    std::tuple<std::vector<int>, std::vector<int>>
+    solve_for_constraints(MulsAndBias &activationParams, int vlmul_shr,
+                          bool verbose = false);
+  };
 };
 
 /**
@@ -472,13 +484,14 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
  *
  */
 class OT_int8 : public OutputTransformFnInt8_Group {
- public:
+public:
   class Params : public Serialisable {
-   public:
+  public:
     int32_t output_slice_channel_count;
     int16_t initial_shift;
     int16_t final_shr;
-   public:
+
+  public:
     /**
      * @brief Construct a new Params object
      *
@@ -490,16 +503,14 @@ class OT_int8 : public OutputTransformFnInt8_Group {
     Params(int32_t output_slice_channel_count, int16_t initial_shift,
            int16_t final_shr)
         : output_slice_channel_count(output_slice_channel_count),
-          initial_shift(initial_shift),
-          final_shr(final_shr) {}
+          initial_shift(initial_shift), final_shr(final_shr) {}
   };
 
- private:
-
+private:
   Params *params;
   int16_t *multipliers_and_biases;
 
- public:
+public:
   OT_int8(Params *params) : params(params){};
 
   int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
@@ -518,13 +529,13 @@ class OT_int8 : public OutputTransformFnInt8_Group {
  *
  */
 class OT_int8_channelwise : public OutputTransformFnInt8_Channelwise {
- public:
+public:
   class Params : public Serialisable {
-   public:
+  public:
     int32_t output_slice_channel_count;
     int16_t final_shr;
 
-   public:
+  public:
     /**
      * @brief Construct a new Params object
      *
@@ -532,18 +543,16 @@ class OT_int8_channelwise : public OutputTransformFnInt8_Channelwise {
      * computed by this parameter set.
      * @param final_shr Overall final shift.
      */
-    Params(int32_t output_slice_channel_count,
-           int16_t final_shr)
+    Params(int32_t output_slice_channel_count, int16_t final_shr)
         : output_slice_channel_count(output_slice_channel_count),
           final_shr(final_shr) {}
   };
 
- private:
- 
+private:
   Params *params;
   int16_t *multipliers_and_biases;
 
- public:
+public:
   OT_int8_channelwise(Params *params) : params(params){};
 
   int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
@@ -562,14 +571,14 @@ class OT_int8_channelwise : public OutputTransformFnInt8_Channelwise {
  *
  */
 class OT_int8_clamped : public OutputTransformFnInt8_Group {
- public:
+public:
   class Params : public Serialisable {
-   public:
+  public:
     int32_t output_slice_channel_count;
     int16_t initial_shift;
     int16_t final_shr;
 
-   public:
+  public:
     /**
      * @brief Construct a new Params object
      *
@@ -579,11 +588,10 @@ class OT_int8_clamped : public OutputTransformFnInt8_Group {
     Params(int32_t output_slice_channel_count, int16_t initial_shift,
            int16_t final_shr)
         : output_slice_channel_count(output_slice_channel_count),
-          initial_shift(initial_shift),
-          final_shr(final_shr) {}
+          initial_shift(initial_shift), final_shr(final_shr) {}
   };
 
- private:
+private:
   /**
    * @brief This describes the channels over which this class will perform its
    * operation(OutputTransform) and how each channel will transformed.
@@ -591,7 +599,7 @@ class OT_int8_clamped : public OutputTransformFnInt8_Group {
   Params *params;
   int16_t *offsets_multipliers_and_biases;
 
- public:
+public:
   OT_int8_clamped(Params *params) : params(params){};
 
   int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
@@ -651,15 +659,16 @@ class OT_int8_clamped : public OutputTransformFnInt8_Group {
     }
     return canonical_values;
   }
-  static std::vector<int16_t> get_accumulator_overlaps(
-      int receptive_volume, int output_channel_count,
-      Conv2dReorderedWeights &reordered_weights) {
+  static std::vector<int16_t>
+  get_accumulator_overlaps(int receptive_volume, int output_channel_count,
+                           Conv2dReorderedWeights &reordered_weights) {
     int receptive_bytes = receptive_volume / CHAR_BIT;
 
     const int vpu_vector_byte_count = VPU_INT8_EPV;
 
     int final_load_bytes = (receptive_bytes % vpu_vector_byte_count);
-    if (final_load_bytes == 0) final_load_bytes = vpu_vector_byte_count;
+    if (final_load_bytes == 0)
+      final_load_bytes = vpu_vector_byte_count;
 
     std::vector<int16_t> accumulator_overlaps;
     for (int out_chan = 0; out_chan < output_channel_count; out_chan++) {
@@ -688,18 +697,19 @@ class OT_int8_clamped : public OutputTransformFnInt8_Group {
 
 typedef int16_t threshold_t;
 class OT_binary : public OutputTransformFn {
- private:
+private:
   threshold_t *thresholds;
 
- public:
+public:
   OT_binary(){};
 
   int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
                               int32_t output_channel_group);
 
-  static std::vector<threshold_t> adjust_thresholds(
-      const std::vector<int32_t> &thresholds, int input_channels, const WindowGeometry &K,
-      Conv2dReorderedWeights &reordered_weights) {
+  static std::vector<threshold_t>
+  adjust_thresholds(const std::vector<int32_t> &thresholds, int input_channels,
+                    const WindowGeometry &K,
+                    Conv2dReorderedWeights &reordered_weights) {
     std::vector<threshold_t> adjusted_thresholds(thresholds.size());
 
     const int vpu_vector_byte_count = VPU_INT8_EPV;
@@ -714,7 +724,8 @@ class OT_binary : public OutputTransformFn {
 
     // the number of useful bytes loaded on the final load of the kernel
     int final_load_bytes = (receptive_bytes % vpu_vector_byte_count);
-    if (final_load_bytes == 0) final_load_bytes = vpu_vector_byte_count;
+    if (final_load_bytes == 0)
+      final_load_bytes = vpu_vector_byte_count;
 
     assert(final_load_bytes > 0);
     for (int ch = 0; ch < thresholds.size(); ++ch) {
@@ -742,5 +753,5 @@ class OT_binary : public OutputTransformFn {
   }
 };
 
-}  // namespace nn
-#endif  // LIB_NN_OUTPUT_TRANSFORM_FN_H_
+} // namespace nn
+#endif // LIB_NN_OUTPUT_TRANSFORM_FN_H_
