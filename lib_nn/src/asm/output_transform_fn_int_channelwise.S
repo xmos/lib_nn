@@ -85,25 +85,21 @@ FUNCTION_NAME:
     {vldd r11[0]                       ; shl r11, r2, 3}
     ldw r2, sp[S_OUTPUT_COUNT]
     {vsetc r11                         ; shl r11, r2, 1}
-    {vlsat r3[0]                       ; nop }
-    {bu vlsat_done                     ; add r3, r3, r11 }
-    
-vlsat_done: 
+    {vlsat r3[0]                       ; ldc r4, PARAMS_final_shr}
+    {ld16s r4, r0[r4]                  ; add r3, r3, r11 }
 
     OPTIONAL_DDR_SPILL(r3) // destroys r5
     { vlmul r3[0]                       ; add r3, r3, r11 }
 
     OPTIONAL_DDR_SPILL(r3) // destroys r5
     { vladd r3[0]                       ; ldaw r11, sp[S_TEMP_VECTOR] }
-    { vstr r11[0]                       ; ldc r4, PARAMS_final_shr }
-    
-    { ld16s r4, r0[r4]                  ; nop }
+    { vstr r11[0]                       ; mkmsk r3, 2 }
 
     vlashr r11[0], r4
 
-    {vstr r11[0]                        ; ldap r11, VECT_INT16_MAX }             //store off the unmodified vector
+    {vstr r11[0]                        ; ldap r11, VECT_INT16_MAX }
 
-    {vladd r11[0]                       ; mkmsk r3, 2}
+    {vladd r11[0]                       ; nop }
     {vdepth1                            ; ldaw r11, sp[S_MASK]}
 
     vstrpv r11[0], r3
@@ -111,7 +107,7 @@ vlsat_done:
     ldap r11, VECT_INT8_MIN
     {vldr r11[0]                        ; ldaw r11, sp[S_TEMP_VECTOR] } 
 
-    { ldw r4, sp[S_OUTPUT_COUNT]       ; nop }
+    { ldw r4, sp[S_OUTPUT_COUNT]        ; nop }
     { mkmsk r3, r4                      ; ldw r2, sp[S_MASK] }
     vstrpv r1[0], r3                                          //store the int8_mins to output Y
 
