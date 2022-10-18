@@ -20,12 +20,14 @@ This document assumes familiarity with the XMOS xCORE architecture, the XMOS too
 
 ## Building
 For an XCore build:
+
     mkdir -p build_xcore
     cd build_xcore
     cmake -DCMAKE_TOOLCHAIN_FILE=../etc/xmos_toolchain.cmake ..
     make
 
 For an x86 build:
+
     mkdir -p build_x86
     cd build_x86
     cmake ..

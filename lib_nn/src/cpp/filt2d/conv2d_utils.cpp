@@ -67,10 +67,7 @@ static Conv2dChannelParams computeConv2dChannelParams(
 
   if (offset_scale != 0) offset = int16_t(roundf(raw_offset / offset_scale));
 
-  return Conv2dChannelParams{shift_pre,
-                             scale,
-                             offset_scale,
-                             offset,
+  return Conv2dChannelParams{shift_pre, scale, offset_scale, offset,
                              shift_post};
 }
 

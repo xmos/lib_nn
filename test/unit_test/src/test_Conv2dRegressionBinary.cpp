@@ -230,8 +230,8 @@ void test_Conv2dValidIndirectBinaryRegression() {
                                 std::memset(output, 0x55, sizeof(output));
 
                                 nn::execute((int8_t *)&output[0],
-                                            (int8_t *)&input[0],
-                                            &conv2d, &akp, &T[0]);
+                                            (int8_t *)&input[0], &conv2d, &akp,
+                                            &T[0]);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
@@ -400,10 +400,9 @@ void test_Conv2dValidDirectBinaryRegression() {
                                     int32_t output[Y.height * Y.width *
                                                    Y.depth / chans_per_int32];
                                 std::memset(output, 0x55, sizeof(output));
-                                
+
                                 nn::execute((int8_t *)&output[0],
-                                            (int8_t *)&input[0],
-                                            &conv2d, &akp);
+                                            (int8_t *)&input[0], &conv2d, &akp);
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
                                     for (int yd = 0;
@@ -569,9 +568,11 @@ void test_Conv2dValidIndirectInt8Regression() {
                                     OT_int8_clamped::get_accumulator_overlaps(
                                         receptive_volume, k_depth, rw);
 
-                                QuantisationParams qp =
-                                    OutputTransformFnInt8::quantise_activation(
-                                        mul_and_biases);
+                                auto quantizer =
+                                    OutputTransformFnInt8_Group::Quantizer();
+                                OutputTransformFnInt8_Group::QuantisationParams
+                                    qp = quantizer.quantise_activation(
+                                        mul_and_biases, false);
 
                                 auto serialised_offsets_multipliers_and_biases =
                                     OutputTransformFn::serialise_memory(
@@ -612,8 +613,7 @@ void test_Conv2dValidIndirectInt8Regression() {
                                 std::memset(output, 0x55, sizeof(output));
 
                                 nn::execute(output, (int8_t *)&input[0],
-                                            &conv2d, &akp,
-                                            &T[0]);
+                                            &conv2d, &akp, &T[0]);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
@@ -763,9 +763,11 @@ void test_Conv2dValidDirectInt8Regression() {
                                     OT_int8_clamped::get_accumulator_overlaps(
                                         receptive_volume, k_depth, rw);
 
-                                QuantisationParams qp =
-                                    OutputTransformFnInt8::quantise_activation(
-                                        mul_and_biases);
+                                auto quantizer =
+                                    OutputTransformFnInt8_Group::Quantizer();
+                                OutputTransformFnInt8_Group::QuantisationParams
+                                    qp = quantizer.quantise_activation(
+                                        mul_and_biases, false);
 
                                 auto serialised_offsets_multipliers_and_biases =
                                     OutputTransformFn::serialise_memory(
@@ -808,8 +810,8 @@ void test_Conv2dValidDirectInt8Regression() {
                                 std::memset(output, 0x55, sizeof(output));
 
                                 nn::execute((int8_t *)output,
-                                            (int8_t *)input.data(),
-                                            &conv2d, &akp);
+                                            (int8_t *)input.data(), &conv2d,
+                                            &akp);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
