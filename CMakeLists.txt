@@ -19,6 +19,7 @@ list(APPEND BUILD_FLAGS_Darwin "-fsanitize=undefined" )
 list(APPEND BUILD_FLAGS_Darwin "-fsanitize=integer" )
 list(APPEND BUILD_FLAGS_Darwin "-fsanitize=implicit-conversion" )
 list(APPEND BUILD_FLAGS_Darwin "-fsanitize-recover=address" )
+list(APPEND BUILD_FLAGS_Darwin "-fsanitize=address" )
 
 
 set(BUILD_FLAGS_XCORE "-march=xs3a")

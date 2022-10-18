@@ -623,10 +623,8 @@ void nn::OutputTransformFn::ActivationParams::
 
 template <class T> int16_t float_to_int16(T f, int e) {
   int32_t v = (int32_t)round(ldexp(f, e));
-  if (v > INT16_MAX)
-    v--;
-  assert(v <= INT16_MAX);
-  assert(v >= INT16_MIN);
+  // assert(v <= INT16_MAX);
+  // assert(v >= INT16_MIN);
   v = std::min((int32_t)INT16_MAX, v);
   v = std::max((int32_t)INT16_MIN, v);
   return (int16_t)v;
