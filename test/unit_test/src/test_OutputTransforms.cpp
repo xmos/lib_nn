@@ -198,9 +198,9 @@ void test_big_range(int coef_count, int N, int product_range, int bias_range,
                            "abs average error too high");
 }
 
-void test_big_range_channelwise(int coef_count, int N, int product_range, int bias_range,
-                    std::set<int> &seen_initial_shr,
-                    std::set<int> &seen_final_shr) {
+void test_big_range_channelwise(int coef_count, int N, int product_range,
+                                int bias_range, std::set<int> &seen_initial_shr,
+                                std::set<int> &seen_final_shr) {
   int64_t bias_low = -(1LL << (N + bias_range));
   int64_t bias_high = (1LL << (N + bias_range)) - 1;
 
@@ -254,7 +254,8 @@ void test_big_range_channelwise(int coef_count, int N, int product_range, int bi
       int16_t pad_val = rng.rand<int16_t>();
 
       auto serialised_multipliers_and_biases =
-          OutputTransformFn::serialise_memory(qp.initial_shifts, qp.multipliers, qp.biases);
+          OutputTransformFn::serialise_memory(qp.initial_shifts, qp.multipliers,
+                                              qp.biases);
 
       OutputTransformFn::pad_final_access(serialised_multipliers_and_biases,
                                           VPU_INT16_EPV, pad_val);
@@ -303,18 +304,20 @@ void test_big_range_channelwise(int coef_count, int N, int product_range, int bi
           }
 
           next_y = ot.output_transform_fn(y, &A, ocg);
-          if(qp.final_shr <= 0){
-            for (int output_chan = 0; output_chan < chs_in_group; ++output_chan) {
+          if (qp.final_shr <= 0) {
+            for (int output_chan = 0; output_chan < chs_in_group;
+                 ++output_chan) {
               int actual_output_channel =
                   output_chan + ocg * vpu_ring_buffer_length;
 
               double expected =
                   (double)accu_values[output_chan] *
-                      mul_and_biases[actual_output_channel].original_multiplier +
+                      mul_and_biases[actual_output_channel]
+                          .original_multiplier +
                   mul_and_biases[actual_output_channel].original_bias;
 
-              expected = std::round(std::min(std::max(expected, (double)INT8_MIN),
-                                            (double)INT8_MAX));
+              expected = std::round(std::min(
+                  std::max(expected, (double)INT8_MIN), (double)INT8_MAX));
 
               int actual = (int)Y[actual_output_channel];
               TEST_ASSERT_INT32_WITHIN(1, (int)expected, actual);
@@ -331,8 +334,9 @@ void test_big_range_channelwise(int coef_count, int N, int product_range, int bi
   }
   float bias = error_sum / error_count;
 
-  //TEST_ASSERT_TRUE_MESSAGE(std::abs(bias) < 2e-2, "Bias out of range");
-  // printf("bias %d, error_count %d, error_sum %d, average error %d\n", bias, error_count, abs_error_sum, (error_count/abs_error_sum));
+  // TEST_ASSERT_TRUE_MESSAGE(std::abs(bias) < 2e-2, "Bias out of range");
+  // printf("bias %d, error_count %d, error_sum %d, average error %d\n", bias,
+  // error_count, abs_error_sum, (error_count/abs_error_sum));
   // TEST_ASSERT_TRUE_MESSAGE(error_count / abs_error_sum > 100,
   //                          "abs average error too high");
 }
@@ -354,8 +358,8 @@ void test_small_range(const int accu_min, const int accu_max,
     }
 
     auto quantizer = OutputTransformFnInt8_Group::Quantizer();
-      OutputTransformFnInt8_Group::QuantisationParams qp =
-          quantizer.quantise_activation(mul_and_biases, false);
+    OutputTransformFnInt8_Group::QuantisationParams qp =
+        quantizer.quantise_activation(mul_and_biases, false);
 
     auto serialised_multipliers_and_biases =
         OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
@@ -426,7 +430,7 @@ void test_small_range(const int accu_min, const int accu_max,
   All channels are the same. Multiplier is always 1.0.
 */
 void test_small_range_channelwise(const int accu_min, const int accu_max,
-                      const int const_bias) {
+                                  const int const_bias) {
   const int vpu_ring_buffer_length = VPU_INT16_EPV;
 
   for (int output_ch_count = 4; output_ch_count <= 64; output_ch_count += 4) {
@@ -439,11 +443,12 @@ void test_small_range_channelwise(const int accu_min, const int accu_max,
     }
 
     auto quantizer = OutputTransformFnInt8_Channelwise::Quantizer();
-      OutputTransformFnInt8_Channelwise::QuantisationParams qp =
-          quantizer.quantise_activation(mul_and_biases, false);
+    OutputTransformFnInt8_Channelwise::QuantisationParams qp =
+        quantizer.quantise_activation(mul_and_biases, false);
 
     auto serialised_multipliers_and_biases =
-        OutputTransformFn::serialise_memory(qp.initial_shifts, qp.multipliers, qp.biases);
+        OutputTransformFn::serialise_memory(qp.initial_shifts, qp.multipliers,
+                                            qp.biases);
 
     // pad q.biases and  q.multipliers to a multiple of VPU_INT16_EPV
     // this is to work around array over reads
@@ -508,7 +513,9 @@ void test_small_range_channelwise(const int accu_min, const int accu_max,
 }
 
 void Test_OT_int8_range() { test_small_range(INT8_MIN, INT8_MAX, 0); }
-void Test_OT_int8_channelwise_range() { test_small_range_channelwise(INT8_MIN, INT8_MAX, 0); }
+void Test_OT_int8_channelwise_range() {
+  test_small_range_channelwise(INT8_MIN, INT8_MAX, 0);
+}
 
 void Test_OT_int8_range_small_bias() {
   test_small_range(INT8_MIN, INT8_MAX, 1);
@@ -595,11 +602,11 @@ void Test_OT_int8_big_range() {
 
   for (int i = INITIAL_SHR_RANGE_MIN; i <= INITIAL_SHR_RANGE_MAX; i++) {
     const bool is_in = seen_initial_shift.find(i) != seen_initial_shift.end();
-    //TEST_ASSERT_TRUE(is_in);
+    // TEST_ASSERT_TRUE(is_in);
   }
   for (int i = FINAL_SHR_RANGE_MIN; i <= FINAL_SHR_RANGE_MAX; i++) {
     const bool is_in = seen_final_shr.find(i) != seen_final_shr.end();
-    //TEST_ASSERT_TRUE(is_in);
+    // TEST_ASSERT_TRUE(is_in);
   }
 }
 
@@ -611,8 +618,9 @@ void Test_OT_int8_channelwise_big_range() {
       for (int bias_range = -n; bias_range < 3; bias_range++) {
         for (int coef_count_log2 = 2; coef_count_log2 < 12;
              coef_count_log2 += 1) {
-          test_big_range_channelwise(1 << coef_count_log2, n, product_range, bias_range,
-                         seen_initial_shift, seen_final_shr);
+          test_big_range_channelwise(1 << coef_count_log2, n, product_range,
+                                     bias_range, seen_initial_shift,
+                                     seen_final_shr);
         }
       }
     }
@@ -623,16 +631,17 @@ void Test_OT_int8_channelwise_big_range() {
 #define FINAL_SHR_RANGE_MAX 6
 #define FINAL_SHR_RANGE_MIN -8
 
-  // for(auto ini_shift : seen_initial_shift) printf("seen initial shift: %d\n", ini_shift);
-  // for(auto ini_shift : seen_final_shr) printf("seen final shift: %d\n", ini_shift);
+  // for(auto ini_shift : seen_initial_shift) printf("seen initial shift: %d\n",
+  // ini_shift); for(auto ini_shift : seen_final_shr) printf("seen final shift:
+  // %d\n", ini_shift);
   for (int i = INITIAL_SHR_RANGE_MIN; i <= INITIAL_SHR_RANGE_MAX; i++) {
     const bool is_in = seen_initial_shift.find(i) != seen_initial_shift.end();
-    
-    //TEST_ASSERT_TRUE(is_in);
+
+    // TEST_ASSERT_TRUE(is_in);
   }
   for (int i = FINAL_SHR_RANGE_MIN; i <= FINAL_SHR_RANGE_MAX; i++) {
     const bool is_in = seen_final_shr.find(i) != seen_final_shr.end();
-    //TEST_ASSERT_TRUE(is_in);
+    // TEST_ASSERT_TRUE(is_in);
   }
 }
 

@@ -3,9 +3,8 @@
 #ifndef POOLING_H_
 #define POOLING_H_
 
-#include "nn_image.h"
 #include "nn_conv2d_structs.h"
-
+#include "nn_image.h"
 #include "nn_types.h"
 #include "nn_window_params.h"
 

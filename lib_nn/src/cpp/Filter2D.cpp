@@ -7,8 +7,7 @@ using namespace nn;
 constexpr bool Filter2D::UsesPerGroupMemCopy;
 constexpr bool Filter2D_DW::UsesPerGroupMemCopy;
 
-Filter2D::Filter2D(MemCpyFn *memcpy_handler,
-                   AggregateFn *aggregate_handler,
+Filter2D::Filter2D(MemCpyFn *memcpy_handler, AggregateFn *aggregate_handler,
                    OutputTransformFn *ot_handler)
     : AbstractKernel(),
       memcpy_handler(memcpy_handler),
@@ -73,9 +72,8 @@ void Filter2D_DW::calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h,
   }
 }
 
-void nn::execute(int8_t *Y, int8_t *X,
-                AbstractKernel *ak, AbstractKernel::Params *kparams,
-                int8_t *scratch) {
+void nn::execute(int8_t *Y, int8_t *X, AbstractKernel *ak,
+                 AbstractKernel::Params *kparams, int8_t *scratch) {
   int bytes_per_row =
       kparams->output_h_mem_stride +
       (kparams->w_end - kparams->w_begin) * kparams->output_w_mem_stride;
@@ -86,7 +84,7 @@ void nn::execute(int8_t *Y, int8_t *X,
   Y += kparams->output_channel_slice_offset;
   for (int32_t h = kparams->h_begin; h < kparams->h_end; h++) {
     for (int32_t w = kparams->w_begin; w < kparams->w_end; w++) {
-        ak->calc_output_pixel_slice(Y, X, h, w, scratch, kparams);
+      ak->calc_output_pixel_slice(Y, X, h, w, scratch, kparams);
       Y += kparams->output_w_mem_stride;
     }
     Y += kparams->output_h_mem_stride;

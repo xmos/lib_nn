@@ -2,8 +2,8 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #ifndef LAYERS_H_
 #define LAYERS_H_
-#include "nn_image.h"
 #include "nn_bin_types.h"
+#include "nn_image.h"
 
 /**
  * Struct represents the parameters needed by each `bsign_8()` job.
