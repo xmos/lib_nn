@@ -8,6 +8,6 @@ unsigned major_version = 0;
 unsigned minor_version = 1;
 unsigned patch_version = 0;
 
-} // namespace lib_nn
+}  // namespace lib_nn
 
-#endif // LIB_NN_VERSION_H_
+#endif  // LIB_NN_VERSION_H_

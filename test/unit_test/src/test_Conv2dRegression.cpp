@@ -167,9 +167,11 @@ void test_Conv2dPaddedIndirectRegression() {
                                             ks.input_zero_point,
                                             ks.output_zero_point, k_depth);
 
-                                auto quantizer = OutputTransformFnInt8_Group::Quantizer();
-                                OutputTransformFnInt8_Group::QuantisationParams qp =
-                                    quantizer.quantise_activation(mul_and_biases, false);
+                                auto quantizer =
+                                    OutputTransformFnInt8_Group::Quantizer();
+                                OutputTransformFnInt8_Group::QuantisationParams
+                                    qp = quantizer.quantise_activation(
+                                        mul_and_biases, false);
 
                                 assert(qp.multipliers.size() > 0);
                                 assert(qp.biases.size() > 0);
@@ -209,8 +211,8 @@ void test_Conv2dPaddedIndirectRegression() {
                                 alignas(4)
                                     int8_t output[Y.height * Y.width * Y.depth];
 
-                                nn::execute(&output[0], &input[0],
-                                            &conv2d, &akp, &T[0]);
+                                nn::execute(&output[0], &input[0], &conv2d,
+                                            &akp, &T[0]);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
@@ -341,9 +343,13 @@ void test_Conv2dPaddedIndirectRegression_channelwise() {
                                             ks.input_zero_point,
                                             ks.output_zero_point, k_depth);
 
-                                auto quantizer = OutputTransformFnInt8_Channelwise::Quantizer();
-                                OutputTransformFnInt8_Channelwise::QuantisationParams qp =
-                                    quantizer.quantise_activation(mul_and_biases, false);
+                                auto quantizer =
+                                    OutputTransformFnInt8_Channelwise::
+                                        Quantizer();
+                                OutputTransformFnInt8_Channelwise::
+                                    QuantisationParams qp =
+                                        quantizer.quantise_activation(
+                                            mul_and_biases, false);
 
                                 assert(qp.initial_shifts.size() > 0);
                                 assert(qp.multipliers.size() > 0);
@@ -351,7 +357,8 @@ void test_Conv2dPaddedIndirectRegression_channelwise() {
 
                                 auto serialised_multipliers_and_biases =
                                     OutputTransformFn::serialise_memory(
-                                      qp.initial_shifts, qp.multipliers, qp.biases);
+                                        qp.initial_shifts, qp.multipliers,
+                                        qp.biases);
 
                                 // pad qp.multipliers_and_biases to a multiple
                                 // of VPU_INT16_EPV this is to work around array
@@ -362,15 +369,14 @@ void test_Conv2dPaddedIndirectRegression_channelwise() {
                                     serialised_multipliers_and_biases,
                                     VPU_INT16_EPV, pad_val);
 
-                                OT_int8_channelwise::Params ot_params((int32_t)k_depth,
-                                                          qp.final_shr);
+                                OT_int8_channelwise::Params ot_params(
+                                    (int32_t)k_depth, qp.final_shr);
 
                                 OT_int8_channelwise ot(&ot_params);
                                 assert(qp.multipliers.size() > 0);
                                 assert(qp.biases.size() > 0);
                                 ot.setMultipliersAndBiases(
-                                    serialised_multipliers_and_biases
-                                        .data());
+                                    serialised_multipliers_and_biases.data());
 
                                 auto ir = ImageRegion(0, 0, 0, Y.height,
                                                       Y.width, Y.depth);
@@ -383,18 +389,18 @@ void test_Conv2dPaddedIndirectRegression_channelwise() {
                                 alignas(4)
                                     int8_t output[Y.height * Y.width * Y.depth];
 
-                                nn::execute(&output[0], &input[0],
-                                            &conv2d, &akp, &T[0]);
+                                nn::execute(&output[0], &input[0], &conv2d,
+                                            &akp, &T[0]);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
                                     for (int yd = 0; yd < Y.depth; yd++) {
                                       int idx = yh * (Y.width * Y.depth) +
                                                 yw * Y.depth + yd;
-                                      if(qp.final_shr <= 0)
-                                      TEST_ASSERT_INT32_WITHIN(
-                                          1, (int)expected[idx],
-                                          (int)output[idx]);
+                                      if (qp.final_shr <= 0)
+                                        TEST_ASSERT_INT32_WITHIN(
+                                            1, (int)expected[idx],
+                                            (int)output[idx]);
                                     }
                                   }
                                 }
@@ -517,9 +523,11 @@ void test_Conv2dValidIndirectRegression() {
                                             ks.input_zero_point,
                                             ks.output_zero_point, k_depth);
 
-                                auto quantizer = OutputTransformFnInt8_Group::Quantizer();
-                                OutputTransformFnInt8_Group::QuantisationParams qp =
-                                    quantizer.quantise_activation(mul_and_biases, false);
+                                auto quantizer =
+                                    OutputTransformFnInt8_Group::Quantizer();
+                                OutputTransformFnInt8_Group::QuantisationParams
+                                    qp = quantizer.quantise_activation(
+                                        mul_and_biases, false);
 
                                 auto serialised_offsets_multipliers_and_biases =
                                     OutputTransformFn::serialise_memory(
@@ -549,14 +557,14 @@ void test_Conv2dValidIndirectRegression() {
                                 Filter2D::Params akp(Y, ir,
                                                      VPU_INT8_ACC_PERIOD);
 
-                                Conv2dValidIndirect conv2d(&memcpy,
-                                                           &aggregator, &ot);
+                                Conv2dValidIndirect conv2d(&memcpy, &aggregator,
+                                                           &ot);
 
                                 auto output = std::vector<int8_t>(
                                     Y.height * Y.width * Y.depth);
 
-                                nn::execute(&output[0], &input[0],
-                                            &conv2d, &akp, &T[0]);
+                                nn::execute(&output[0], &input[0], &conv2d,
+                                            &akp, &T[0]);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
@@ -692,13 +700,18 @@ void test_Conv2dValidIndirectRegression_channelwise() {
                                             ks.input_zero_point,
                                             ks.output_zero_point, k_depth);
 
-                                auto quantizer = OutputTransformFnInt8_Channelwise::Quantizer();
-                                OutputTransformFnInt8_Channelwise::QuantisationParams qp =
-                                    quantizer.quantise_activation(mul_and_biases, false);
+                                auto quantizer =
+                                    OutputTransformFnInt8_Channelwise::
+                                        Quantizer();
+                                OutputTransformFnInt8_Channelwise::
+                                    QuantisationParams qp =
+                                        quantizer.quantise_activation(
+                                            mul_and_biases, false);
 
                                 auto serialised_offsets_multipliers_and_biases =
                                     OutputTransformFn::serialise_memory(
-                                        qp.initial_shifts, qp.multipliers, qp.biases);
+                                        qp.initial_shifts, qp.multipliers,
+                                        qp.biases);
                                 // pad q.biases and  q.multipliers to a multiple
                                 // of VPU_INT16_EPV this is to work around array
                                 // over reads
@@ -708,8 +721,8 @@ void test_Conv2dValidIndirectRegression_channelwise() {
                                     serialised_offsets_multipliers_and_biases,
                                     VPU_INT16_EPV, pad_val);
 
-                                OT_int8_channelwise::Params ot_params((int32_t)k_depth,
-                                                          qp.final_shr);
+                                OT_int8_channelwise::Params ot_params(
+                                    (int32_t)k_depth, qp.final_shr);
 
                                 OT_int8_channelwise ot(&ot_params);
                                 assert(serialised_offsets_multipliers_and_biases
@@ -723,14 +736,14 @@ void test_Conv2dValidIndirectRegression_channelwise() {
                                 Filter2D::Params akp(Y, ir,
                                                      VPU_INT8_ACC_PERIOD);
 
-                                Conv2dValidIndirect conv2d(&memcpy,
-                                                           &aggregator, &ot);
+                                Conv2dValidIndirect conv2d(&memcpy, &aggregator,
+                                                           &ot);
 
                                 auto output = std::vector<int8_t>(
                                     Y.height * Y.width * Y.depth);
 
-                                nn::execute(&output[0], &input[0],
-                                            &conv2d, &akp, &T[0]);
+                                nn::execute(&output[0], &input[0], &conv2d,
+                                            &akp, &T[0]);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
@@ -740,10 +753,10 @@ void test_Conv2dValidIndirectRegression_channelwise() {
                                       // std::cout << "tflite: " <<
                                       // (int)expected[idx] << " xcore: " <<
                                       // (int)output[idx] << std::endl;
-                                      if(qp.final_shr <= 0)
-                                      TEST_ASSERT_INT32_WITHIN(
-                                          1, (int)expected[idx],
-                                          (int)output[idx]);
+                                      if (qp.final_shr <= 0)
+                                        TEST_ASSERT_INT32_WITHIN(
+                                            1, (int)expected[idx],
+                                            (int)output[idx]);
                                     }
                                   }
                                 }
@@ -859,9 +872,11 @@ void test_Conv2dValidDirectRegression() {
                                             ks.input_zero_point,
                                             ks.output_zero_point, k_depth);
 
-                                auto quantizer = OutputTransformFnInt8_Group::Quantizer();
-                                OutputTransformFnInt8_Group::QuantisationParams qp =
-                                    quantizer.quantise_activation(mul_and_biases, false);
+                                auto quantizer =
+                                    OutputTransformFnInt8_Group::Quantizer();
+                                OutputTransformFnInt8_Group::QuantisationParams
+                                    qp = quantizer.quantise_activation(
+                                        mul_and_biases, false);
 
                                 auto serialised_offsets_multipliers_and_biases =
                                     OutputTransformFn::serialise_memory(
@@ -892,14 +907,14 @@ void test_Conv2dValidDirectRegression() {
                                 Filter2D::Params akp(Y, ir,
                                                      VPU_INT8_ACC_PERIOD);
 
-                                Conv2dValidDirect conv2d(&memcpy,
-                                                         &aggregator, &ot);
+                                Conv2dValidDirect conv2d(&memcpy, &aggregator,
+                                                         &ot);
 
                                 auto output = std::vector<int8_t>(
                                     Y.height * Y.width * Y.depth);
 
-                                nn::execute(&output[0], &input[0],
-                                            &conv2d, &akp);
+                                nn::execute(&output[0], &input[0], &conv2d,
+                                            &akp);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
@@ -1024,13 +1039,18 @@ void test_Conv2dValidDirectRegression_channelwise() {
                                             ks.input_zero_point,
                                             ks.output_zero_point, k_depth);
 
-                                auto quantizer = OutputTransformFnInt8_Channelwise::Quantizer();
-                                OutputTransformFnInt8_Channelwise::QuantisationParams qp =
-                                    quantizer.quantise_activation(mul_and_biases, false);
+                                auto quantizer =
+                                    OutputTransformFnInt8_Channelwise::
+                                        Quantizer();
+                                OutputTransformFnInt8_Channelwise::
+                                    QuantisationParams qp =
+                                        quantizer.quantise_activation(
+                                            mul_and_biases, false);
 
                                 auto serialised_offsets_multipliers_and_biases =
                                     OutputTransformFn::serialise_memory(
-                                        qp.initial_shifts, qp.multipliers, qp.biases);
+                                        qp.initial_shifts, qp.multipliers,
+                                        qp.biases);
                                 // pad q.biases and  q.multipliers to a multiple
                                 // of VPU_INT16_EPV this is to work around array
                                 // over reads
@@ -1040,8 +1060,8 @@ void test_Conv2dValidDirectRegression_channelwise() {
                                     serialised_offsets_multipliers_and_biases,
                                     VPU_INT16_EPV, pad_val);
 
-                                OT_int8_channelwise::Params ot_params((int32_t)k_depth,
-                                                          qp.final_shr);
+                                OT_int8_channelwise::Params ot_params(
+                                    (int32_t)k_depth, qp.final_shr);
 
                                 OT_int8_channelwise ot(&ot_params);
                                 assert(serialised_offsets_multipliers_and_biases
@@ -1056,24 +1076,24 @@ void test_Conv2dValidDirectRegression_channelwise() {
                                 Filter2D::Params akp(Y, ir,
                                                      VPU_INT8_ACC_PERIOD);
 
-                                Conv2dValidDirect conv2d(&memcpy,
-                                                         &aggregator, &ot);
+                                Conv2dValidDirect conv2d(&memcpy, &aggregator,
+                                                         &ot);
 
                                 auto output = std::vector<int8_t>(
                                     Y.height * Y.width * Y.depth);
 
-                                nn::execute(&output[0], &input[0],
-                                            &conv2d, &akp);
+                                nn::execute(&output[0], &input[0], &conv2d,
+                                            &akp);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
                                     for (int yd = 0; yd < Y.depth; yd++) {
                                       int idx = yh * (Y.width * Y.depth) +
                                                 yw * Y.depth + yd;
-                                      if(qp.final_shr <= 0)
-                                      TEST_ASSERT_INT32_WITHIN(
-                                          1, (int)expected[idx],
-                                          (int)output[idx]);
+                                      if (qp.final_shr <= 0)
+                                        TEST_ASSERT_INT32_WITHIN(
+                                            1, (int)expected[idx],
+                                            (int)output[idx]);
                                     }
                                   }
                                 }

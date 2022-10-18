@@ -43,8 +43,7 @@ static int clrsbll(long long x) {
 #else
   for (unsigned i = 0; i < 64; i++) {
     int y = (x << i) >> i;
-    if (y != x)
-      return (i - 1);
+    if (y != x) return (i - 1);
   }
   return 64;
 #endif
@@ -77,7 +76,8 @@ static bool check_val_fits(int64_t v, int bit_count) {
   return count_bits(v) <= bit_count;
 }
 
-template <class T> void recitfy_min_max(T &v_min, T &v_max) {
+template <class T>
+void recitfy_min_max(T &v_min, T &v_max) {
   T actual_max = std::max(v_min, v_max);
   v_min = std::min(v_min, v_max);
   v_max = actual_max;
@@ -128,8 +128,7 @@ OutputTransformFnInt8_Group::Quantizer::solve_for_constraints(
   bool product_range_defined = multiplier_range_defined && accu_range_defined;
 
   if (!product_range_defined) {
-    if (verbose)
-      printf("undefined product range\n");
+    if (verbose) printf("undefined product range\n");
 
     // Then we only care about the biases -> we know they will always fit in an
     // 8 bit number so a bias exp of 0 will do fine.
@@ -239,8 +238,7 @@ OutputTransformFnInt8_Group::Quantizer::solve_for_constraints(
       if (!check_val_fits(prod_max, 16) || !check_val_fits(prod_min, 16) ||
           !check_val_fits(sum_max, 16) || !check_val_fits(sum_min, 16) ||
           !check_val_fits(bias_16, 16)) {
-        if (verbose)
-          printf("overflow in prod or sum \n");
+        if (verbose) printf("overflow in prod or sum \n");
         if (A >= 0 || accu_sig_bits > mul_sig_bits) {
           A--;
           accu_sig_bits--;
@@ -261,11 +259,12 @@ OutputTransformFnInt8_Group::Quantizer::solve_for_constraints(
     }
   }
   if (verbose) {
-    printf("max_group_prod: %lld\nmin_group_prod: %lld\n"
-           "max_group_sum: %lldmin_group_sum: %lld\n"
-           "mul_sig_bits: %d\naccu_sig_bits: %d\n",
-           max_group_prod, min_group_prod, max_group_sum, min_group_sum,
-           mul_sig_bits, accu_sig_bits);
+    printf(
+        "max_group_prod: %lld\nmin_group_prod: %lld\n"
+        "max_group_sum: %lldmin_group_sum: %lld\n"
+        "mul_sig_bits: %d\naccu_sig_bits: %d\n",
+        max_group_prod, min_group_prod, max_group_sum, min_group_sum,
+        mul_sig_bits, accu_sig_bits);
   }
   return std::make_tuple(A, M);
 }
@@ -416,8 +415,7 @@ OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
         // at least one of these must be true
         // one of them can saturate
         if (!check_val_fits(prod_max, 16) || !check_val_fits(prod_min, 16)) {
-          if (verbose)
-            printf("overflow in prod or sum \n");
+          if (verbose) printf("overflow in prod or sum \n");
           if (A >= 0 || accu_sig_bits > mul_sig_bits) {
             A--;
             accu_sig_bits--;
@@ -621,7 +619,8 @@ void nn::OutputTransformFn::ActivationParams::
   }
 }
 
-template <class T> int16_t float_to_int16(T f, int e) {
+template <class T>
+int16_t float_to_int16(T f, int e) {
   int32_t v = (int32_t)round(ldexp(f, e));
   // assert(v <= INT16_MAX);
   // assert(v >= INT16_MIN);
@@ -730,9 +729,9 @@ int8_t *output_transform_fn_impl_asm_stub(const OT_int8::Params *params,
                                           int8_t *Y, VPURingBuffer *A,
                                           int32_t output_channel_group,
                                           int16_t *multipliers_and_biases) {
-  int output_count = std::min(params->output_slice_channel_count -
-                                  output_channel_group * VPU_INT16_EPV,
-                              (int32_t)VPU_INT16_EPV);
+  int output_count = std::min(
+      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
+      (int32_t)VPU_INT16_EPV);
   multipliers_and_biases += output_channel_group * VPU_INT16_EPV * 2;
   return output_transform_fn_impl_asm(params, Y, A, multipliers_and_biases,
                                       output_count);
@@ -747,9 +746,9 @@ int8_t *output_transform_fn_impl(const OT_int8::Params *params, int8_t *Y,
 
   // we need to know how many we are processing
 
-  int output_count = std::min(params->output_slice_channel_count -
-                                  output_channel_group * VPU_INT16_EPV,
-                              (int32_t)VPU_INT16_EPV);
+  int output_count = std::min(
+      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
+      (int32_t)VPU_INT16_EPV);
 
   int16_t *cur_post_activation_mul =
       multipliers_and_biases + output_channel_group * VPU_INT16_EPV * 2;
@@ -771,8 +770,7 @@ int8_t *output_transform_fn_impl(const OT_int8::Params *params, int8_t *Y,
 
     VLSAT(vpu, &temp_mem);
   } else {
-    for (int i = 0; i < VPU_INT16_EPV; ++i)
-      temp_mem.s16[i] = 0;
+    for (int i = 0; i < VPU_INT16_EPV; ++i) temp_mem.s16[i] = 0;
     VLSAT(vpu, &temp_mem);
 
     VSTR(vpu, &temp_mem);
@@ -806,7 +804,7 @@ int8_t *OT_int8::output_transform_fn(int8_t *Y, VPURingBuffer *A,
 #else
   return output_transform_fn_impl_asm_stub(
       this->params, Y, A, output_channel_group, multipliers_and_biases);
-#endif // NN_USE_REF
+#endif  // NN_USE_REF
 }
 //-----------------------
 
@@ -819,9 +817,9 @@ extern "C" int8_t *output_transform_fn_int_channelwise_impl_asm(
 int8_t *output_transform_fn_int_channelwise_impl_asm_stub(
     const OT_int8_channelwise::Params *params, int8_t *Y, VPURingBuffer *A,
     int32_t output_channel_group, int16_t *multipliers_and_biases) {
-  int output_count = std::min(params->output_slice_channel_count -
-                                  output_channel_group * VPU_INT16_EPV,
-                              (int32_t)VPU_INT16_EPV);
+  int output_count = std::min(
+      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
+      (int32_t)VPU_INT16_EPV);
   multipliers_and_biases += output_channel_group * VPU_INT16_EPV * 3;
   return output_transform_fn_int_channelwise_impl_asm(
       params, Y, A, multipliers_and_biases, output_count);
@@ -835,9 +833,9 @@ int8_t *output_transform_fn_int_channelwise_impl(
   xs3_vpu *vpu = &vpu_mem;
 
   // we need to know how many we are processing
-  int output_count = std::min(params->output_slice_channel_count -
-                                  output_channel_group * VPU_INT16_EPV,
-                              (int32_t)VPU_INT16_EPV);
+  int output_count = std::min(
+      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
+      (int32_t)VPU_INT16_EPV);
 
   int16_t *cur_initial_shift =
       multipliers_and_biases + output_channel_group * VPU_INT16_EPV * 3;
@@ -857,8 +855,7 @@ int8_t *output_transform_fn_int_channelwise_impl(
   // Set temp_mem to hold initial shifts up to output count
   for (int i = 0; i < VPU_INT16_EPV; i++)
     temp_mem.s16[i] = cur_initial_shift[i];
-  for (int i = output_count; i < VPU_INT16_EPV; i++)
-    temp_mem.s16[i] = 0;
+  for (int i = output_count; i < VPU_INT16_EPV; i++) temp_mem.s16[i] = 0;
   VLSAT(vpu, &temp_mem);
 
   // multiply by multipliers
@@ -890,7 +887,7 @@ int8_t *OT_int8_channelwise::output_transform_fn(int8_t *Y, VPURingBuffer *A,
 #else
   return output_transform_fn_int_channelwise_impl_asm_stub(
       this->params, Y, A, output_channel_group, multipliers_and_biases);
-#endif // NN_USE_REF
+#endif  // NN_USE_REF
 }
 //-----------------------
 
@@ -902,9 +899,9 @@ int8_t *output_transform_fn_int_clamped_impl(
   xs3_vpu *vpu = &vpu_mem;
 
   // we need to know how many we are processing
-  int output_count = std::min(params->output_slice_channel_count -
-                                  output_channel_group * VPU_INT16_EPV,
-                              (int32_t)VPU_INT16_EPV);
+  int output_count = std::min(
+      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
+      (int32_t)VPU_INT16_EPV);
 
   // The 3 is due to the serialisation of 3 arrays in chunks of VPU_INT16_EPV
   // elements
@@ -956,7 +953,7 @@ int8_t *OT_int8_clamped::output_transform_fn(int8_t *Y, VPURingBuffer *A,
 
   return output_transform_fn_int_clamped_impl_asm(
       this->params, Y, A, output_channel_group, offsets_multipliers_and_biases);
-#endif // NN_USE_REF
+#endif  // NN_USE_REF
 }
 //-----------------------
 
@@ -991,10 +988,9 @@ int8_t *output_transform_fn_binary_impl(int8_t *Y, VPURingBuffer *A,
   return Y;
 }
 
-extern "C" int8_t *
-output_transform_fn_binary_impl_asm(int8_t *Y, VPURingBuffer *A,
-                                    int32_t output_channel_group,
-                                    int16_t *thresholds);
+extern "C" int8_t *output_transform_fn_binary_impl_asm(
+    int8_t *Y, VPURingBuffer *A, int32_t output_channel_group,
+    int16_t *thresholds);
 
 int8_t *OT_binary::output_transform_fn(int8_t *Y, VPURingBuffer *A,
                                        int32_t output_channel_group) {
@@ -1004,6 +1000,6 @@ int8_t *OT_binary::output_transform_fn(int8_t *Y, VPURingBuffer *A,
 #else
   return output_transform_fn_binary_impl_asm(Y, A, output_channel_group,
                                              thresholds);
-#endif // NN_USE_REF
+#endif  // NN_USE_REF
 }
 //-----------------------

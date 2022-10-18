@@ -55,8 +55,9 @@ void pad_ref(char* y, char* x, const padding_sizes_t* p,
 
   for (unsigned h = 0; h < xp->height; h++) {
     for (unsigned w = 0; w < xp->width; w++) {
-      char *yt =  y + (h + top_pad) * y_height * y_width + (w + left_pad)* y_width;
-      char *xt =  x + h * x_height * x_width + w * x_width;
+      char* yt =
+          y + (h + top_pad) * y_height * y_width + (w + left_pad) * y_width;
+      char* xt = x + h * x_height * x_width + w * x_width;
       memcpy(yt, xt, bytes_per_pixel);
     }
   }
