@@ -130,7 +130,6 @@ class OutputTransformFn {
 
     int output_channel_groups = first_array.size() / elements_per_group;
 
-    // printf("output_channel_groups %d first_array.size():%d\n",
     // output_channel_groups, first_array.size());
     for (int ocg = 0; ocg < output_channel_groups; ++ocg) {
       for (int ch = ocg * elements_per_group;
