@@ -289,6 +289,7 @@ OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
     }
   }
   global_B = 15 - global_B;
+  if(!(global_B > 0)) global_B = 1;
   assert(global_B > 0);
 
   // Select A and M
