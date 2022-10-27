@@ -494,7 +494,6 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
           max_avg_abs_error = std::max(max_avg_abs_error, avg_abs_error);
         }
       }
-      printf("channelwise brute error: %f\n", max_avg_abs_error);
       return max_avg_abs_error;
     } else {
       // final_shr | number of decimal places | error
@@ -508,12 +507,9 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
       //-1          7                          2^-6
       // 0           8                          2^-7
       double abs_error_sum = mul_and_bias.size()*std::ldexp(1, -(qp.final_shr + 7));
-      printf("abs error sum: %d, final_shr %d\n", abs_error_sum, qp.final_shr);
       // for (int idx = 0; idx < mul_and_bias.size(); ++idx) {
       //   abs_error_sum -= std::ldexp(1, -(qp.initial_shifts[idx] +  7));
       // }
-      printf("abs error sum: %f\n", abs_error_sum);
-      printf("channelwise analytical error: %f\n", double(abs_error_sum/mul_and_bias.size()));
       return abs_error_sum/mul_and_bias.size();
     }
   }
