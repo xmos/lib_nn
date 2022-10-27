@@ -591,48 +591,6 @@ class OT_int8 : public OutputTransformFnInt8_Group {
  * output space using floating point arithmetic (per channel).
  *
  */
-class OT_int8_32bias : public OutputTransformFnInt8_32Bias {
- public:
-  class Params : public Serialisable {
-   public:
-    int32_t output_slice_channel_count;
-    int16_t final_shr;
-
-   public:
-    /**
-     * @brief Construct a new Params object
-     *
-     * @param output_slice_channel_count The count of output channels to be
-     * computed by this parameter set.
-     * @param final_shr Overall final shift.
-     */
-    Params(int32_t output_slice_channel_count, int16_t final_shr)
-        : output_slice_channel_count(output_slice_channel_count),
-          final_shr(final_shr) {}
-  };
-
- private:
-  Params *params;
-  int16_t *multipliers_and_biases;
-
- public:
-  OT_int8_32bias(Params *params) : params(params){};
-
-  int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
-                              int32_t output_channel_group);
-
-  void setMultipliersAndBiases(int16_t *m) {
-    multipliers_and_biases = m;
-    assert(m != nullptr);
-    assert(is_aligned(multipliers_and_biases, 8));
-  }
-};
-
-/**
- * @brief Output Transform class to converting 32 bit accumulators to an 8 bit
- * output space using floating point arithmetic (per channel).
- *
- */
 class OT_int8_channelwise : public OutputTransformFnInt8_Channelwise {
  public:
   class Params : public Serialisable {
