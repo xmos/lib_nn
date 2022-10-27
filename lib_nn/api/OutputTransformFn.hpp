@@ -450,6 +450,74 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
     std::vector<int16_t> biases;
   };
 
+  /**
+   * Calculate the maximum average error between the reference and quantised
+   * implementations of the output transform over each channel. The average is
+   * defined over the range of non-saturating accumulators, i.e. accumulators
+   * that do not reach a saturating output in the int8 space. The result is the
+   * maximum average for all of the channels.
+   */
+  template <class QParams>
+  static double get_quant_error(MulsAndBias &mul_and_bias, QParams &qp,
+                                bool use_high_precision = false) {
+    if (use_high_precision) {
+      double max_avg_abs_error = 0.0;
+
+      for (int idx = 0; idx < mul_and_bias.size(); ++idx) {
+        int64_t abs_error_sum = 0;
+
+        for (int accu = mul_and_bias[idx].accu_min_val;
+             accu <= mul_and_bias[idx].accu_max_val; ++accu) {
+          int32_t t = shr(accu, qp.initial_shifts[idx]);  // vlsat
+          t = mul(t, qp.multipliers[idx]);        // vlmul
+          t = add(t, qp.biases[idx]);             // vladd
+          t = shr(t, qp.final_shr);               // vlashr
+          t = sat(shr(t, 8), 8);                  // vdepth8
+
+          double v = (double)accu * mul_and_bias[idx].multiplier +
+                     mul_and_bias[idx].bias;
+
+          int expected = (int)std::round(v);
+
+          expected = std::min((int)expected, (int)INT8_MAX);
+          expected = std::max((int)expected, (int)INT8_MIN);
+
+          abs_error_sum += std::abs(expected - t);
+        }
+
+        int64_t interesting_accumulators =
+            mul_and_bias[idx].accu_max_val - mul_and_bias[idx].accu_min_val + 1;
+
+        if (interesting_accumulators > 0) {
+          double avg_abs_error =
+              (double)abs_error_sum / (double)interesting_accumulators;
+          max_avg_abs_error = std::max(max_avg_abs_error, avg_abs_error);
+        }
+      }
+      printf("channelwise brute error: %f\n", max_avg_abs_error);
+      return max_avg_abs_error;
+    } else {
+      // final_shr | number of decimal places | error
+      //-8          0                          2   = 1*2^1
+      //-7          1                          1   = 1*2^0
+      //-6          2                          0.5 = 1*2^-1
+      //-5          3                          2^-2
+      //-4          4                          2^-3
+      //-3          5                          2^-4
+      //-2          6                          2^-5
+      //-1          7                          2^-6
+      // 0           8                          2^-7
+      double abs_error_sum = mul_and_bias.size()*std::ldexp(1, -(qp.final_shr + 7));
+      printf("abs error sum: %d, final_shr %d\n", abs_error_sum, qp.final_shr);
+      // for (int idx = 0; idx < mul_and_bias.size(); ++idx) {
+      //   abs_error_sum -= std::ldexp(1, -(qp.initial_shifts[idx] +  7));
+      // }
+      printf("abs error sum: %f\n", abs_error_sum);
+      printf("channelwise analytical error: %f\n", double(abs_error_sum/mul_and_bias.size()));
+      return abs_error_sum/mul_and_bias.size();
+    }
+  }
+
   class Quantizer {
    public:
     /**
@@ -559,6 +627,7 @@ class OT_int8_channelwise : public OutputTransformFnInt8_Channelwise {
     assert(is_aligned(multipliers_and_biases, 8));
   }
 };
+
 
 /**
  * @brief Output Transform class to converting 32 bit accumulators to an 8 bit
