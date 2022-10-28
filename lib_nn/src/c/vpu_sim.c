@@ -296,8 +296,8 @@ void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
 
       if (shr >= 7)
         val = (val < 0) ? -1 : 0;
-      else if (shr >= 0)
-        val = val >> shr;
+      else if (shr > 0)
+        val = (val + (1<<(shr-1))) >> shr;
       else
         val = (unsigned)val << (-shr);
 
@@ -310,8 +310,8 @@ void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
       int32_t val = addr16[i];
       if (shr >= 15)
         val = (val < 0) ? -1 : 0;
-      else if (shr >= 0)
-        val = val >> shr;
+      else if (shr > 0)
+        val = (val + (1<<(shr-1))) >> shr;
       else
         val = (int32_t)((uint64_t)(uint32_t)val << (-shr));
       vpu->vR.s16[i] = vpu_saturate(val, 16);
@@ -323,8 +323,8 @@ void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
       int64_t val = addr32[i];
       if (shr >= 31)
         val = (val < 0) ? -1 : 0;
-      else if (shr >= 0)
-        val = val >> shr;
+      else if (shr > 0)
+        val = (val + (1<<(shr-1))) >> shr;
       else
         val = (unsigned)val << (-shr);
       vpu->vR.s32[i] = vpu_saturate(val, 32);
@@ -393,7 +393,7 @@ void VLMUL(xs3_vpu *vpu, const void *addr) {
     const int8_t *addr8 = (const int8_t *)addr;
     for (int i = 0; i < VPU_INT8_EPV; i++) {
       int32_t val = addr8[i];
-      int32_t res = ((int32_t)vpu->vR.s8[i] * val) >> 6;  // TODO use macros
+      int32_t res = ((int32_t)vpu->vR.s8[i] * val + (1<<5)) >> 6;  // TODO use macros
       vpu->vR.s8[i] = vpu_saturate(res, 8);
     }
   } else if (vpu->mode == MODE_S16) {
@@ -402,7 +402,7 @@ void VLMUL(xs3_vpu *vpu, const void *addr) {
     for (int i = 0; i < VPU_INT16_EPV; i++) {
       int64_t val = addr16[i];
       int64_t res =
-          ((int64_t)vpu->vR.s16[i] * (int64_t)val) >> 14;  // TODO use macros
+          ((int64_t)vpu->vR.s16[i] * (int64_t)val + (1<<13)) >> 14;  // TODO use macros
       vpu->vR.s16[i] = vpu_saturate(res, 16);
     }
   } else if (vpu->mode == MODE_S32) {
@@ -410,7 +410,7 @@ void VLMUL(xs3_vpu *vpu, const void *addr) {
 
     for (int i = 0; i < VPU_INT32_EPV; i++) {
       int64_t val = addr32[i];
-      int64_t res = (vpu->vR.s32[i] * val) >> 30;  // TODO use macros
+      int64_t res = (vpu->vR.s32[i] * val + (1<<29)) >> 30;  // TODO use macros
       vpu->vR.s32[i] = vpu_saturate(res, 32);
     }
   } else {
