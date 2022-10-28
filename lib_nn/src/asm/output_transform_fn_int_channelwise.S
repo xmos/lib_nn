@@ -9,14 +9,14 @@
 	.align 4
 
 VECT_INT16_MAX:
-	.word    0x7f007f00
-	.word    0x7f007f00
-	.word    0x7f007f00
-	.word    0x7f007f00
-	.word    0x7f007f00
-	.word    0x7f007f00
-	.word    0x7f007f00
-	.word    0x7f007f00
+	.word    0x7f807f80
+	.word    0x7f807f80
+	.word    0x7f807f80
+	.word    0x7f807f80
+	.word    0x7f807f80
+	.word    0x7f807f80
+	.word    0x7f807f80
+	.word    0x7f807f80
 
 VECT_INT8_MIN:
 	.word    0x80808080
