@@ -14,8 +14,8 @@ void add_asm(
     int output_end);
 
 typedef struct {
-        int8_t m1[16];
-        int8_t m2[16];
+        int16_t m1[16];
+        int16_t m2[16];
         int16_t shr[16];
         int16_t bias_hi[16];
         int16_t bias_lo[16];
