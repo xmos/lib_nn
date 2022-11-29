@@ -87,7 +87,7 @@ void add_elementwise_ref (int8_t y[], const int8_t x1[], const int8_t x2[],
       VLMACC(vpu, params->m2);
 
       VSETC(vpu, MODE_S8);
-      VLSAT(vpu, params->shift);
+      VLSAT_FIXED(vpu, params->shift);
       VSTRPV(vpu, &y[index], mask);
 
       index += vpu_epv;

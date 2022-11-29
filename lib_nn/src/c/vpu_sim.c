@@ -6,17 +6,34 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifndef __cplusplus
+#include <stdbool.h>
+#endif
+
 #ifdef _MSC_VER
 #include <intrin.h>
 #define __builtin_popcount __popcnt
 #endif
 
 /**
- * vpu_saturate to the relevent bounds.
+ * vpu_saturate to the relevant bounds.
  */
 int64_t vpu_saturate(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
   const int64_t min_val = -max_val;
+
+  return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
+}
+
+/**
+ * vpu_saturate to the relevant bounds. Fixed 8-bit saturation.
+ */
+int64_t vpu_saturate_fixed(const int64_t input, const unsigned bits) {
+  const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
+  int64_t min_val = -max_val;
+  if(bits == 8){
+    min_val = -128;
+  }
 
   return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
 }
@@ -239,7 +256,7 @@ void VLMACCR1(xs3_vpu *vpu, const void *addr) {
   SetAccumulator(vpu, 0, acc);
 }
 
-void VLSAT(xs3_vpu *vpu, const void *addr) {
+void _VLSAT_IMPL(xs3_vpu *vpu, const void *addr, bool fixed_saturation) {
   assert_word_aligned(addr);
   if (vpu->mode == MODE_S8) {
     const uint16_t *addr16 = (const uint16_t *)addr;
@@ -249,7 +266,12 @@ void VLSAT(xs3_vpu *vpu, const void *addr) {
 
       if (addr16[i] != 0) acc = acc + (1 << (addr16[i] - 1));  // Round
       acc = acc >> addr16[i];                                  // Shift
-      int8_t val = vpu_saturate(acc, 8);                       // vpu_saturate
+      int8_t val;
+      if(fixed_saturation){
+        val = vpu_saturate_fixed(acc, 8);                 // vpu_saturate
+      } else {
+        val = vpu_saturate(acc, 8);                       // vpu_saturate
+      }
 
       vpu->vR.s8[i] = val;
     }
@@ -284,6 +306,14 @@ void VLSAT(xs3_vpu *vpu, const void *addr) {
   } else {
     assert(0);  // How'd this happen?
   }
+}
+
+void VLSAT(xs3_vpu *vpu, const void *addr) {
+  _VLSAT_IMPL(vpu, addr, /*fixed_saturation=*/false);
+}
+
+void VLSAT_FIXED(xs3_vpu *vpu, const void *addr) {
+  _VLSAT_IMPL(vpu, addr, /*fixed_saturation=*/true);
 }
 
 void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {

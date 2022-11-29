@@ -52,6 +52,7 @@ C_API void VLMACCR(xs3_vpu* vpu, const void* addr);
 C_API void VLMACCR1(xs3_vpu* vpu, const void* addr);
 C_API void VPOS(xs3_vpu* vpu);
 C_API void VLSAT(xs3_vpu* vpu, const void* addr);
+C_API void VLSAT_FIXED(xs3_vpu* vpu, const void* addr);
 C_API void VLASHR(xs3_vpu* vpu, const void* addr, const int32_t shr);
 C_API void VLADD(xs3_vpu* vpu, const void* addr);
 C_API void VLSUB(xs3_vpu* vpu, const void* addr);
