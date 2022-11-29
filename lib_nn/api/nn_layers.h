@@ -150,4 +150,82 @@ void pad_ref(char* y, char* x, const padding_sizes_t* p,
              const nn_image_params_t* xp, const unsigned bytes_per_pixel,
              uint32_t pad_value);
 
+
+// /**
+//  * Describes the parameters needed for an @oper{add_elementwise} operator. @see add_elementwise().
+//  */
+// typedef struct {
+//     /**
+//      * The parameters that are applied to each input element.
+//      */
+//
+//     /**
+//     * `m1` and `m2` are the multiplers for the inputs.
+//     */
+//     int16_t m1[16];
+//     int16_t m2[16];
+
+//     /**
+//     * `shift` is the number of bits the 32-bit accumulator is
+//     * right-shifted by to obtain a final result for each element.
+//     */
+//     int16_t shift[16];
+
+//     /**
+//     * `bias_hi` and `bias_lo` are together, the 32-bit bias to
+//     * which the scaled inputs are added.
+//     */
+//     int16_t bias_lo[16];
+//     int16_t bias_hi[16];
+
+// } nn_add_params_t;
+
+typedef struct {
+        int16_t m1[16];
+        int16_t m2[16];
+        int16_t shift[16];
+        int16_t bias_hi[16];
+        int16_t bias_lo[16];
+} nn_add_params_t;
+
+/**
+ * @brief Invoke an @oper{add_elementwise} job.
+ *
+ * The @oper{add_elementwise} operator adds together two quantized 8-bit input vectors, @tensor{x_0} and @tensor{x_1}
+ * element-by-element to produce the output vector @tensor{y}. This function assumes that the input vectors and the 
+ * output vector each require different quantization parameters.
+ *
+ * In order to add together two quantized vectors, their quantization parameters must match. The contents of `params`
+ * indicate how to do this.
+ *
+ * @par Parameter Details
+ *
+ * `Y` points to the output vector @tensor{y} with shape @tensor_shape{N}.
+ *
+ * `X0` and `X1` respectively point to the first and second input vectors @tensor{x_0} and @tensor{x_1}, each with shape
+ * @tensor_shape{N}.
+ *
+ * `params` describes the parameters @math{s_i}, @math{m_i}, @math{b} and @math{s_{out}} which are applied for each
+ * output element.
+ *
+ * `elm_start` and `elm_count` together specify which output elements @math{y[k]} should be calculated by this
+ * invocation. Specifically, this invocation will calculate @math{y[k]} for which `elm_start` @math{\le k \lt}
+ * `(elm_start + elm_count)`.
+ *
+ * @param[out]  Y           The output vector @tensor{y}
+ * @param[in]   X0          The first input vector @tensor{x_0}
+ * @param[in]   X1          The second input vector @tensor{x_1}
+ * @param[in]   params      The scaling and bias parameters
+ * @param[in]   elm_start   Index of first output element to be computed
+ * @param[in]   elm_count   Number of output elements to be computed
+ */
+void add_elementwise(
+    int8_t Y[],
+    const int8_t X1[],
+    const int8_t X2[],
+    nn_add_params_t *p,
+    const int elm_start,
+    const int elm_count);
+
+
 #endif  // LAYERS_H_
