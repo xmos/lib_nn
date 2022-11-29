@@ -620,7 +620,7 @@ class OT_int8_channelwise : public OutputTransformFnInt8_Channelwise {
   void setMultipliersAndBiases(int16_t *m) {
     multipliers_and_biases = m;
     assert(m != nullptr);
-    assert(is_aligned(multipliers_and_biases, 8));
+    assert(is_aligned(multipliers_and_biases, 4));
   }
 };
 
