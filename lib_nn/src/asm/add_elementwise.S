@@ -22,11 +22,7 @@ typedef struct {
 } nn_add_params_t;
 */
 
-#ifndef XCORE
-  #define FUNCTION_NAME add_elementwise
-#else
-  #define FUNCTION_NAME add_elementwise_asm
-#endif // NN_USE_REF
+#define FUNCTION_NAME add_elementwise_asm
 
 #define NSTACKWORDS     (7 + 16 + 1) // 7 used + 16 for temp vecs + 1 to make even
     
@@ -142,7 +138,7 @@ FUNCTION_NAME:
     bt counter, label_store_with_mask
     // in last loop - make mask for remaining elements
     ldw tmp2, sp[STACK_OUT_COUNT]
-    zext tmp2, 5
+    zext tmp2, 4
     mkmsk tmp1, tmp2
 
  label_store_with_mask:
