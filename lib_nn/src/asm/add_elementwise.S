@@ -25,7 +25,7 @@ typedef struct {
 #define FUNCTION_NAME add_elementwise_asm
 
 #define NSTACKWORDS     (7 + 16 + 1) // 7 used + 16 for temp vecs + 1 to make even
-    
+
 .text
 .issue_mode  dual
 .globl FUNCTION_NAME
@@ -39,6 +39,7 @@ typedef struct {
 #define PARAMS_BIAS_HI    24
 #define PARAMS_BIAS_LO    32
 
+#define STACK_ORIG_DP     (NSTACKWORDS-17)
 #define STACK_VEC1_TMP    (NSTACKWORDS-16)
 #define STACK_VEC2_TMP    (NSTACKWORDS-8)
 #define STACK_OUT_START   (NSTACKWORDS+1)
@@ -68,92 +69,89 @@ FUNCTION_NAME:
     std r8, r9, sp[2]
     stw r10, sp[6]
 
-    // load vectors from params struct
-    ldc tmp1, PARAMS_BIAS_HI
-    ldaw bias_hi, arg_add_params_p[tmp1]
-    ldc tmp1, PARAMS_BIAS_LO
-    ldaw bias_lo, arg_add_params_p[tmp1]
-    ldc tmp1, PARAMS_M1
-    ldaw m1, arg_add_params_p[tmp1]
-    ldc tmp1, PARAMS_M2
-    ldaw m2, arg_add_params_p[tmp1]
-    ldc tmp1, PARAMS_SHR
-    ldaw shift, arg_add_params_p[tmp1]
-
-    // set vector mode to 8 bit
-    ldc r11, 32
-    shl r11, r11, 4
-    {vsetc r11}
-
-    // set up loop counter
-    ldw tmp2, sp[STACK_OUT_COUNT]
-    shr counter, tmp2, 4
-
-    // init start position
-    ldw tmp1, sp[STACK_OUT_START]
-    add arg_x1_p, arg_x1_p, tmp1
-    add arg_x2_p, arg_x2_p, tmp1
-    add arg_y_p, arg_y_p, tmp1
+    // Load vectors from params struct
+    {stw dp, sp[STACK_ORIG_DP]        ;     ldc r11, 16}
+    // Subtract 16 here from output pointer as an optmization
+    // to add 16 before use in loop_main
+    sub arg_y_p, arg_y_p, r11
+    {set dp, arg_add_params_p         ;     shl r11, r11, 5}
+    {ldaw bias_hi, dp[PARAMS_BIAS_HI] ;     ldaw bias_lo, dp[PARAMS_BIAS_LO]}
+    {ldaw m1, dp[PARAMS_M1]           ;     ldaw m2, dp[PARAMS_M2]}
+    // Load and init start position
+    {ldaw shift, dp[PARAMS_SHR]       ;     ldw tmp1, sp[STACK_OUT_START]}
+    // Set vector mode to 8 bit and set up loop counter
+    {ldw tmp2, sp[STACK_OUT_COUNT]    ;     add arg_x1_p, arg_x1_p, tmp1}
+    {vsetc r11                        ;     shr counter, tmp2, 4}
+    {add arg_x2_p, arg_x2_p, tmp1     ;     add arg_y_p, arg_y_p, tmp1}
 
   label_loop_main:
     // x1 and x2 are 8 bit inputs
-    // we load them and macc with vpu_vects_vec_0x01
+    // We load them and macc with vpu_vects_vec_0x01
     // to extend them into 16 bit
+    {vclrdr                           ;     ldaw r11, cp[vpu_vects_vec_0x01]}
+    {ldaw tmp1, sp[STACK_VEC1_TMP]    ;     ldaw tmp2, sp[STACK_VEC2_TMP]}
+    {vldc r11[0]                      ;     ldc r11, 16}
+    {vlmacc arg_x1_p[0]               ;     add arg_x1_p, arg_x1_p, r11}
+    {vstr tmp1[0]                     ;     add arg_y_p, arg_y_p, r11}
     vclrdr
-    ldap r11, vpu_vects_vec_0x01
-    ldaw tmp1, sp[STACK_VEC1_TMP]
-    ldaw tmp2, sp[STACK_VEC2_TMP]
-    vldc r11[0]
-    vlmacc arg_x1_p[0]
-    vstr tmp1[0]
-    vclrdr
-    vlmacc arg_x2_p[0]
-    vstr tmp2[0]
-
-    // load bias into acc
+    {vlmacc arg_x2_p[0]               ;     add arg_x2_p, arg_x2_p, r11}
+    // Load bias into acc
     // vldr - vR can only be loaded from r11
-    mov r11, bias_lo
-    vldr r11[0]
-    vldd bias_hi[0]
-
-    // set vector mode to 16 bit
-    ldc r11, 32
-    shl r11, r11, 3
-    {vsetc r11}
-
+    {vstr tmp2[0]                     ;     mov r11, bias_lo}
+    {vldr r11[0]                      ;     ldc r11, 32}
+    // Set vector mode to 16 bit
+    {vldd bias_hi[0]                  ;     shl r11, r11, 3}
+    vsetc r11
+    // Macc inputs with multipliers
     vldc tmp1[0]
     vlmacc m1[0]
-
     vldc tmp2[0]
     vlmacc m2[0]
 
-    // set vector mode from 16 to 8 bit before vlsat
-    shl r11, r11, 1
-    {vsetc r11}
+    // Saturation fix
+    // Save original 32-bit outputs
+    // We saturate the number to 16-bits.
+    // We then use the upper 16-bits to find out which numbers are
+    // going to be -128.
+    // -128's are written to output with a mask.
+    // The lower 16-bits are later saturated using vlsat and
+    // written with a mask to fill in remaining spaces.
+    vstd tmp2[0]
+    {vstr tmp1[0]                     ;     ldc tmp1, 32}
+    {vlsat shift[0]                   ;     shl tmp1, tmp1, 4}
+    {vldd tmp2[0]                     ;     ldaw r11, cp[vpu_vects_vec_0x007F]}
+    {vladd r11[0]                     ;     mov r11, tmp1}
+    vdepth1
+    // Switch to 8-bit mode
+    vsetc r11
+#define saturated_mask    tmp2
+#define mask              tmp1
+    // Store saturated_mask and set default mask to 16 elements
+    {vstr saturated_mask[0]           ;     mkmsk mask, 16}
 
-    vlsat shift[0]
-
-    // set default mask to 16 elements
-    mkmsk tmp1, 16
     bt counter, label_store_with_mask
-    // in last loop - make mask for remaining elements
+    // In last loop - make mask for remaining elements
     ldw tmp2, sp[STACK_OUT_COUNT]
     zext tmp2, 4
-    mkmsk tmp1, tmp2
+    mkmsk mask, tmp2
 
- label_store_with_mask:
-    vstrpv arg_y_p[0], tmp1
+  label_store_with_mask:
+    ldw saturated_mask, sp[STACK_VEC2_TMP]
+    {ldaw r11, cp[vpu_vects_vec_0x80] ;     and saturated_mask, saturated_mask, mask}
+    {vldr r11[0]                      ;     ldaw r11, sp[STACK_VEC1_TMP]}
+    // Store -128's
+    vstrpv arg_y_p[0], saturated_mask
 
-    // increment pointers by 16 elements
-    ldc tmp1, 16
-    add arg_y_p, arg_y_p, tmp1
-    add arg_x1_p, arg_x1_p, tmp1
-    add arg_x2_p, arg_x2_p, tmp1
+    {vldr r11[0]                      ;     andnot mask, saturated_mask}
+    vlsat shift[0]
+    // Store other elements
+    vstrpv arg_y_p[0], mask
 
-    {sub counter, counter, 1; bt counter, label_loop_main}
+    {sub counter, counter, 1          ;     bt counter, label_loop_main}
 
 .Lfunc_end:
-    // restore stack
+    // Restore stack
+    ldw dp, sp[STACK_ORIG_DP]
     ldd r4, r5, sp[0]
     ldd r6, r7, sp[1]
     ldd r8, r9, sp[2]
