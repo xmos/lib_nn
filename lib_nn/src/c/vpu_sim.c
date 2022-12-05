@@ -432,7 +432,7 @@ void VLMUL(xs3_vpu *vpu, const void *addr) {
     for (int i = 0; i < VPU_INT16_EPV; i++) {
       int64_t val = addr16[i];
       int64_t res =
-          ((int64_t)vpu->vR.s16[i] * (int64_t)val + (1<<13)) >> 14;  // TODO use macros
+          ((int64_t)vpu->vR.s16[i] * val >> 14;  // TODO use macros
       vpu->vR.s16[i] = vpu_saturate(res, 16);
     }
   } else if (vpu->mode == MODE_S32) {
