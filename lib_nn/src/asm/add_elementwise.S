@@ -88,7 +88,8 @@ FUNCTION_NAME:
     // x1 and x2 are 8 bit inputs
     // We load them and macc with vpu_vects_vec_0x01
     // to extend them into 16 bit
-    {vclrdr                           ;     ldap r11, vpu_vects_vec_0x01}
+    vclrdr
+    ldap r11, vpu_vects_vec_0x01
     {ldaw tmp1, sp[STACK_VEC1_TMP]    ;     ldaw tmp2, sp[STACK_VEC2_TMP]}
     {vldc r11[0]                      ;     ldc r11, 16}
     {vlmacc arg_x1_p[0]               ;     add arg_x1_p, arg_x1_p, r11}
@@ -119,7 +120,8 @@ FUNCTION_NAME:
     vstd tmp2[0]
     {vstr tmp1[0]                     ;     ldc tmp1, 32}
     {vlsat shift[0]                   ;     shl tmp1, tmp1, 4}
-    {vldd tmp2[0]                     ;     ldap r11, vpu_vects_vec_0x007F}
+    vldd tmp2[0]
+    ldap r11, vpu_vects_vec_0x007F
     {vladd r11[0]                     ;     mov r11, tmp1}
     vdepth1
     // Switch to 8-bit mode
@@ -137,7 +139,8 @@ FUNCTION_NAME:
 
   label_store_with_mask:
     ldw saturated_mask, sp[STACK_VEC2_TMP]
-    {ldap r11, vpu_vects_vec_0x80     ;     and saturated_mask, saturated_mask, mask}
+    ldap r11, vpu_vects_vec_0x80
+    and saturated_mask, saturated_mask, mask
     {vldr r11[0]                      ;     ldaw r11, sp[STACK_VEC1_TMP]}
     // Store -128's
     vstrpv arg_y_p[0], saturated_mask
