@@ -32,7 +32,7 @@ int64_t vpu_saturate_fixed(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
   int64_t min_val = -max_val;
   if(bits == 8){
-    min_val = -128;
+    min_val = INT8_MIN;
   }
 
   return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
