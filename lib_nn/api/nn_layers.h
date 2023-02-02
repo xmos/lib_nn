@@ -2,6 +2,7 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #ifndef LAYERS_H_
 #define LAYERS_H_
+#include "nn_api.h"
 #include "nn_bin_types.h"
 #include "nn_image.h"
 
@@ -123,7 +124,7 @@ typedef struct padding_sizes_t {
  * @param x                [in]   Look-up table @tensor{T}
  * @param bytes_per_pixel  [in]   Length @math{N} of input and output vectors
  */
-void pad_prepare(nn_pad_plan_t* plan, const padding_sizes_t* p,
+C_API void pad_prepare(nn_pad_plan_t* plan, const padding_sizes_t* p,
                  const nn_image_params_t* x, const unsigned bytes_per_pixel);
 
 /**
