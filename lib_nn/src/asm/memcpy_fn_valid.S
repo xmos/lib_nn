@@ -12,6 +12,7 @@
 #define PARAMS_T_rewind 5
 #define PARAMS_horizontal_mem_stride 6
 #define PARAMS_vertical_mem_stride 7
+#define PARAMS_vstrpv_mask 8
 
 //Registers
 
@@ -70,8 +71,8 @@ FUNCTION_NAME:
     {ldw vertical_mem_stride, params_p[PARAMS_vertical_mem_stride] ; nop }
     {ldw horizontal_mem_stride, params_p[PARAMS_horizontal_mem_stride] ; sub X_p, r2, vertical_mem_stride }
 
-    mkmsk r2, 32
-    shr   r2, r2, T_rewind
+    {ldw r2, params_p[PARAMS_vstrpv_mask] ; nop }
+    mkmsk r2, T_rewind
     ih_loop_asm:
         {mov iw, iw_init; add X_p, X_p, vertical_mem_stride}
         iw_loop_asm:
@@ -84,16 +85,16 @@ FUNCTION_NAME:
         skip_ic_loop_asm:
             {vldr   X_p[0]; add X_p, X_p, thirty_two}
             vstrpv  T_p[0], r2
-            add T_p, T_p, thirty_two    // This could be merged with the next SUB.
 
         {sub T_p, T_p, T_rewind; add X_p, X_p, horizontal_mem_stride}
         {bt iw, iw_loop_asm; sub iw, iw, 1}
 
     {bt ih, ih_loop_asm; sub ih, ih, 1}
 
+    {bt r2, dont_zero_asm                                ; nop }
     {vclrdr; nop}
     {vstd T_p[0];nop}
-
+dont_zero_asm:  
     ldd r4, r5, sp[0]
     ldd r6, r7, sp[1]
     ldd r8, r9, sp[2]
