@@ -17,7 +17,6 @@
 
 #define params_p          r0
 #define T_p               r1
-#define X_p               r2
 #define output_v_coord    r3
 #define T_rewind output_v_coord
 #define S_output_h_coord  1
@@ -32,6 +31,7 @@
 #define s                 r10
 #define vertical_mem_stride s
 #define t                 r11
+#define X_p               r11
 #define horizontal_mem_stride t
 
 #define FUNCTION_NAME im_to_col_valid_impl_asm
@@ -57,10 +57,10 @@ FUNCTION_NAME:
     {ldw t, sp[NSTACKWORDS + S_output_h_coord] ; nop }
     mul t, t, s
 
-    {ldw s, sp[NSTACKWORDS + S_output_c_coord]; add t, X_p, t}
+    {ldw s, sp[NSTACKWORDS + S_output_c_coord]; add t, r2, t}
     {ldw s, params_p[PARAMS_bytes_per_h_line]; add t, t, s}
     mul s, output_v_coord, s
-    {add X_p, t, s ; ldw ih, params_p[PARAMS_input_height] }
+    {add r2, t, s ; ldw ih, params_p[PARAMS_input_height] }
     
     {ldw iw_init, params_p[PARAMS_input_width]; ldc thirty_two, 32} 
 
@@ -68,17 +68,23 @@ FUNCTION_NAME:
 
     {ldw T_rewind, params_p[PARAMS_T_rewind] ; nop }
     {ldw vertical_mem_stride, params_p[PARAMS_vertical_mem_stride] ; nop }
-    {ldw horizontal_mem_stride, params_p[PARAMS_horizontal_mem_stride] ; sub X_p, X_p, vertical_mem_stride }
-    
+    {ldw horizontal_mem_stride, params_p[PARAMS_horizontal_mem_stride] ; sub X_p, r2, vertical_mem_stride }
+
+    mkmsk r2, r2, 32
+    shr   r2, r2, T_rewind
     ih_loop_asm:
         {mov iw, iw_init; add X_p, X_p, vertical_mem_stride}
         iw_loop_asm:
-            {mov ic, ic_init; nop}
+            {sub ic, ic_init, 1 ; bf  ic_init, skip_ic_loop_asm}
             
             ic_loop_asm:
                 {vldd X_p[0]; add X_p, X_p, thirty_two}
                 {vstd T_p[0]; add T_p, T_p, thirty_two}
             {bt ic, ic_loop_asm; sub ic, ic, 1}
+        skip_ic_loop_asm:
+            {vldr   X_p[0]; add X_p, X_p, thirty_two}
+            vstrpv  T_p[0], r2
+            add T_p, T_p, thirty_two    // This could be merged with the next SUB.
 
         {sub T_p, T_p, T_rewind; add X_p, X_p, horizontal_mem_stride}
         {bt iw, iw_loop_asm; sub iw, iw, 1}

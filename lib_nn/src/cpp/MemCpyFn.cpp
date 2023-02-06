@@ -237,11 +237,11 @@ int8_t *ImToColValid::memcopy_fn_impl(int8_t *T, int8_t *X,
                 output_h_coord * params->bytes_per_pixel + output_c_coord);
 
   int8_t *T_in = T;
-
+  uint32_t mask = (~0U) >> params->T_rewind;
   for (int32_t i_height = params->input_height; i_height >= 0; i_height--) {
     for (int32_t i_width = params->input_width; i_width >= 0; i_width--) {
       // This loop copies a whole pixel
-      for (int32_t i_ch_group = params->input_channel_groups; i_ch_group >= 0;
+      for (int32_t i_ch_group = params->input_channel_groups; i_ch_group > 0;
            i_ch_group--) {
         VLDD(vpu, X_cur_p);
         X_cur_p += XS3_VPU_VREG_WIDTH_BYTES;
@@ -249,6 +249,11 @@ int8_t *ImToColValid::memcopy_fn_impl(int8_t *T, int8_t *X,
         VSTD(vpu, T);
         T += XS3_VPU_VREG_WIDTH_BYTES;
       }
+      VLDR(vpu, X_cur_p);
+      X_cur_p += XS3_VPU_VREG_WIDTH_BYTES;
+
+      VSTRPV(vpu, T, mask);
+      T += XS3_VPU_VREG_WIDTH_BYTES;
 
       T -= params->T_rewind;
 
