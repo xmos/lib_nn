@@ -70,7 +70,7 @@ FUNCTION_NAME:
     {ldw vertical_mem_stride, params_p[PARAMS_vertical_mem_stride] ; nop }
     {ldw horizontal_mem_stride, params_p[PARAMS_horizontal_mem_stride] ; sub X_p, r2, vertical_mem_stride }
 
-    mkmsk r2, r2, 32
+    mkmsk r2, 32
     shr   r2, r2, T_rewind
     ih_loop_asm:
         {mov iw, iw_init; add X_p, X_p, vertical_mem_stride}
