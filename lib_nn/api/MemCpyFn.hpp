@@ -265,7 +265,7 @@ class ImToColValid : public MemCpyFn {
      * the input tensors channel count.
      */
     Params(const ImageGeometry &X, const WindowGeometry &K,
-           const int input_ch_per_output);
+           const int input_ch_per_output, const bool dontzero = false);
   };
 
  private:

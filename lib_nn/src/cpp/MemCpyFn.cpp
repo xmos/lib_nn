@@ -181,7 +181,7 @@ int8_t *ImToColPadded::memcopy_fn_impl(int8_t *T, int8_t *X,
 This constructor is used for testing
 */
 ImToColValid::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
-                             const int input_ch_per_output) {
+                             const int input_ch_per_output, const bool dontzero) {
   int bytes_per_copy_per_channel =
       (input_ch_per_output * X.element_bits) / CHAR_BIT;
 
@@ -200,7 +200,16 @@ ImToColValid::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
   int bytes_actually_copied =
       (input_channel_groups + 1) * XS3_VPU_VREG_WIDTH_BYTES;
   T_rewind = bytes_actually_copied - bytes_per_copy_per_channel - 32;
-  T_vstrpv_mask = (1U << (bytes_per_copy_per_channel & (XS3_VPU_VREG_WIDTH_BYTES - 1))) -1;
+  if (dontzero) {
+    uint bitsleft = bytes_per_copy_per_channel & (XS3_VPU_VREG_WIDTH_BYTES - 1);
+    if (bitsleft != 0) {
+      T_vstrpv_mask = (1ULL << bitsleft) -1;
+    } else {
+      T_vstrpv_mask = (1ULL << XS3_VPU_VREG_WIDTH_BYTES) -1;
+    }
+  } else {
+    T_vstrpv_mask = 0;
+  }
   input_height = K.shape.height;
   input_height -= 1;
   input_width = K.shape.width;
