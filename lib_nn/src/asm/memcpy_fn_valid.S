@@ -13,6 +13,7 @@
 #define PARAMS_horizontal_mem_stride 6
 #define PARAMS_vertical_mem_stride 7
 #define PARAMS_vstrpv_mask 8
+#define PARAMS_dontzero 9
 
 //Registers
 
@@ -90,7 +91,7 @@ FUNCTION_NAME:
         {bt iw, iw_loop_asm; sub iw, iw, 1}
 
     {bt ih, ih_loop_asm; sub ih, ih, 1}
-
+    {ldw r2, params_p[PARAMS_dontzero] ; nop }
     {bt r2, dont_zero_asm                                ; nop }
     {vclrdr; nop}
     {vstd T_p[0];nop}
