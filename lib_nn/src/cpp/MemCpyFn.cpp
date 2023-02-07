@@ -200,16 +200,13 @@ ImToColValid::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
   int bytes_actually_copied =
       (input_channel_groups + 1) * XS3_VPU_VREG_WIDTH_BYTES;
   T_rewind = bytes_actually_copied - bytes_per_copy_per_channel - 32;
-  if (dontzero) {
-    uint bitsleft = bytes_per_copy_per_channel & (XS3_VPU_VREG_WIDTH_BYTES - 1);
-    if (bitsleft != 0) {
-      T_vstrpv_mask = (1ULL << bitsleft) -1;
-    } else {
-      T_vstrpv_mask = (1ULL << XS3_VPU_VREG_WIDTH_BYTES) -1;
-    }
+  uint bitsleft = bytes_per_copy_per_channel & (XS3_VPU_VREG_WIDTH_BYTES - 1);
+  if (bitsleft != 0) {
+    T_vstrpv_mask = (1ULL << bitsleft) -1;
   } else {
-    T_vstrpv_mask = 0;
+    T_vstrpv_mask = (1ULL << XS3_VPU_VREG_WIDTH_BYTES) -1;
   }
+  T_dontzero = dontzero;
   input_height = K.shape.height;
   input_height -= 1;
   input_width = K.shape.width;
