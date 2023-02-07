@@ -247,9 +247,10 @@ class ImToColValid : public MemCpyFn {
     /**
      * mask that defines how many elements are to be copied in the last channel group.
      * Should be one of 0x0000000F, 0x000000FF, ..., 0xFFFFFFFF.
-     * Set to zero if the last bit must be zeroed
+     * Set to T_dontzero to 1 if the last bit must be not be zeroed
      */
      uint32_t T_vstrpv_mask;
+     uint32_t T_dontzero;
 
    public:
     /**
