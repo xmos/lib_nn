@@ -232,7 +232,7 @@ class ImToColValid : public MemCpyFn {
 
     /**
      * The difference between the number of bytes actually copied and the target
-     * number of bytes to copy.
+     * number of bytes to copy minus 32.
      */
     int32_t T_rewind;
 
@@ -243,6 +243,14 @@ class ImToColValid : public MemCpyFn {
     // and horizontally bacwards by the kernel width.
     // i.e. from X[h][w + kernel_width - 1] to X[h+1][w].
     int32_t vertical_mem_stride;
+
+    /**
+     * mask that defines how many elements are to be copied in the last channel group.
+     * Should be one of 0x0000000F, 0x000000FF, ..., 0xFFFFFFFF.
+     * Set to T_dontzero to 1 if the last bit must be not be zeroed
+     */
+     uint32_t T_vstrpv_mask;
+     uint32_t T_dontzero;
 
    public:
     /**
@@ -258,7 +266,7 @@ class ImToColValid : public MemCpyFn {
      * the input tensors channel count.
      */
     Params(const ImageGeometry &X, const WindowGeometry &K,
-           const int input_ch_per_output);
+           const int input_ch_per_output, const bool dontzero = false);
   };
 
  private:

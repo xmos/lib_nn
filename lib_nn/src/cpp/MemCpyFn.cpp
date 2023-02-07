@@ -181,7 +181,7 @@ int8_t *ImToColPadded::memcopy_fn_impl(int8_t *T, int8_t *X,
 This constructor is used for testing
 */
 ImToColValid::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
-                             const int input_ch_per_output) {
+                             const int input_ch_per_output, const bool dontzero) {
   int bytes_per_copy_per_channel =
       (input_ch_per_output * X.element_bits) / CHAR_BIT;
 
@@ -199,8 +199,14 @@ ImToColValid::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
 
   int bytes_actually_copied =
       (input_channel_groups + 1) * XS3_VPU_VREG_WIDTH_BYTES;
-  T_rewind = bytes_actually_copied - bytes_per_copy_per_channel;
-
+  T_rewind = bytes_actually_copied - bytes_per_copy_per_channel - 32;
+  uint bitsleft = bytes_per_copy_per_channel & (XS3_VPU_VREG_WIDTH_BYTES - 1);
+  if (bitsleft != 0) {
+    T_vstrpv_mask = (1ULL << bitsleft) -1;
+  } else {
+    T_vstrpv_mask = (1ULL << XS3_VPU_VREG_WIDTH_BYTES) -1;
+  }
+  T_dontzero = dontzero;
   input_height = K.shape.height;
   input_height -= 1;
   input_width = K.shape.width;
@@ -219,11 +225,11 @@ ImToColValid::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
 int ImToColValid::get_scratch_bytes() {
   return (params->input_height + 1) * (params->input_width + 1) *
              ((params->input_channel_groups + 1) * XS3_VPU_VREG_WIDTH_BYTES -
-              params->T_rewind) +
+              (params->T_rewind + 32)) +
          XS3_VPU_VREG_WIDTH_BYTES;
 }
 
-int ImToColValid::get_overread_bytes() { return params->T_rewind; }
+int ImToColValid::get_overread_bytes() { return params->T_rewind + 32; }
 
 int8_t *ImToColValid::memcopy_fn_impl(int8_t *T, int8_t *X,
                                       int32_t output_v_coord,
@@ -237,11 +243,11 @@ int8_t *ImToColValid::memcopy_fn_impl(int8_t *T, int8_t *X,
                 output_h_coord * params->bytes_per_pixel + output_c_coord);
 
   int8_t *T_in = T;
-
+  uint32_t mask = params->T_vstrpv_mask;
   for (int32_t i_height = params->input_height; i_height >= 0; i_height--) {
     for (int32_t i_width = params->input_width; i_width >= 0; i_width--) {
       // This loop copies a whole pixel
-      for (int32_t i_ch_group = params->input_channel_groups; i_ch_group >= 0;
+      for (int32_t i_ch_group = params->input_channel_groups; i_ch_group > 0;
            i_ch_group--) {
         VLDD(vpu, X_cur_p);
         X_cur_p += XS3_VPU_VREG_WIDTH_BYTES;
@@ -249,6 +255,10 @@ int8_t *ImToColValid::memcopy_fn_impl(int8_t *T, int8_t *X,
         VSTD(vpu, T);
         T += XS3_VPU_VREG_WIDTH_BYTES;
       }
+      VLDR(vpu, X_cur_p);
+      X_cur_p += XS3_VPU_VREG_WIDTH_BYTES;
+
+      VSTRPV(vpu, T, mask);
 
       T -= params->T_rewind;
 
@@ -260,9 +270,10 @@ int8_t *ImToColValid::memcopy_fn_impl(int8_t *T, int8_t *X,
     X_cur_p += params->vertical_mem_stride;
   }
 
-  // Write padding to the tail, zeros is fastest
-  VCLRDR(vpu);
-  VSTD(vpu, T);
+  if (!params->T_dontzero) {
+    VCLRDR(vpu);  // Write padding to the tail, zeros is fastest
+    VSTD(vpu, T);
+  }
 
   return T_in;
 }
