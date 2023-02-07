@@ -270,7 +270,7 @@ int8_t *ImToColValid::memcopy_fn_impl(int8_t *T, int8_t *X,
     X_cur_p += params->vertical_mem_stride;
   }
 
-  if (params->T_vstrpv_mask == 0) {
+  if (!params->T_dontzero) {
     VCLRDR(vpu);  // Write padding to the tail, zeros is fastest
     VSTD(vpu, T);
   }
