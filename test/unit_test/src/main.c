@@ -27,6 +27,7 @@ int main(void) {
 
   CALL(test_bsign_8);
   CALL(test_pad);
+  CALL(test_3_to_4);
   CALL(test_add_elementwise);
   return UNITY_END();
 }
