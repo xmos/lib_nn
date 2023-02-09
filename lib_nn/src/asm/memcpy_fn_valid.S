@@ -34,16 +34,16 @@
 #define vertical_mem_stride s
 #define t                 r11
 #define X_p               r11
-#define horizontal_mem_stride t
+#define horizontal_mem_stride r0
 
 #define FUNCTION_NAME im_to_col_valid_impl_asm
 
-#define NSTACKWORDS  8
+#define NSTACKWORDS  10
     
 .text
 .issue_mode  dual
 .globl FUNCTION_NAME
-.align 2
+.align 4
 .type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
@@ -54,6 +54,7 @@ FUNCTION_NAME:
     std r6, r7, sp[1]
     std r8, r9, sp[2]
     std r10, T_p, sp[3]
+    stw params_p, sp[8]
 
     {ldw s, params_p[PARAMS_bytes_per_pixel] ; nop }
     {ldw t, sp[NSTACKWORDS + S_output_h_coord] ; nop }
@@ -64,16 +65,13 @@ FUNCTION_NAME:
     mul s, output_v_coord, s
     {add r2, t, s ; ldw ih, params_p[PARAMS_input_height] }
     
-    {ldw iw_init, params_p[PARAMS_input_width]; ldc thirty_two, 32} 
-
-    {ldw ic_init, params_p[PARAMS_input_channel_groups] ; nop }
-
+    {ldw iw_init, params_p[PARAMS_input_width]; }
+    {ldw ic_init, params_p[PARAMS_input_channel_groups] ; ldc thirty_two, 32 }
     {ldw T_rewind, params_p[PARAMS_T_rewind] ; nop }
     {ldw vertical_mem_stride, params_p[PARAMS_vertical_mem_stride] ; nop }
-    {ldw horizontal_mem_stride, params_p[PARAMS_horizontal_mem_stride] ; sub X_p, r2, vertical_mem_stride }
+    {ldw r2, params_p[PARAMS_vstrpv_mask] ; sub X_p, r2, vertical_mem_stride }
+    {ldw horizontal_mem_stride, params_p[PARAMS_horizontal_mem_stride] ; nop}
 
-    {ldw r2, params_p[PARAMS_vstrpv_mask] ; nop }
-    mkmsk r2, T_rewind
     ih_loop_asm:
         {mov iw, iw_init; add X_p, X_p, vertical_mem_stride}
         iw_loop_asm:
@@ -91,6 +89,7 @@ FUNCTION_NAME:
         {bt iw, iw_loop_asm; sub iw, iw, 1}
 
     {bt ih, ih_loop_asm; sub ih, ih, 1}
+    ldw params_p, sp[8]
     {ldw r2, params_p[PARAMS_dontzero] ; nop }
     {bt r2, dont_zero_asm                                ; nop }
     {vclrdr; nop}
