@@ -4,6 +4,23 @@
 #include "nn_op_utils.h"
 #include "nn_operator.h"
 
+/** Function that pads an image with 3-byte values with a 0.
+ * This functions is highly optimised, but has constraints on the
+ * alignment of the input image and on the number of bytes to be copied
+ * Use ``pad_3_to_4`` to not have any constraints.
+ *
+ * The input image must be double word aligned.
+ * The output image must be word aligned.
+ * It copies the image in chunks of 24 bytes
+ *
+ * @param    outputs    output values, every word contains 3 bytes and a zero
+ * @param    inputs     input values, RGBRGBRGBRGB...
+ * @param    N_24       number of blocks of 24 bytes to copy
+ *
+ * @returns  The inner product
+ */
+extern void pad_3_to_4_asm(int32_t outputs[], int64_t inputs[], uint32_t N_24, uint32_t pad_val);
+
 void pad_3_to_4_prepare(uint32_t * n_3, 
     const unsigned height, 
     const unsigned width) {
@@ -68,7 +85,7 @@ void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pa
             }
         }
 #else
-        pad_3_to_4_asm(outputs, (int64_t *)inputs, N_24, pad_val);
+        pad_3_to_4_asm((int32_t * )outputs, (int64_t *)inputs, N_24, pad_val);
 #endif
     }
 
