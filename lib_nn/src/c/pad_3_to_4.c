@@ -15,17 +15,17 @@ void pad_3_to_4_prepare(uint32_t * n_3,
  * @param inputs   pointer to the input array - incremented by 3 bytes
  * @param N_3      number of pixels will be decremented by 1.
  */
-static inline void pad_3_to_4_single(int32_t **outputs, int8_t **inputs, uint32_t *N_3, uint32_t pad_val) {
+static inline void pad_3_to_4_single(int8_t **outputs, int8_t **inputs, uint32_t *N_3, uint32_t pad_val) {
     for(uint32_t i = 0; i < 3; i++) {
         (*(int8_t**)outputs)[i] = (*inputs)[i];
     }
     (*(int8_t**)outputs)[3] = (int8_t)pad_val;
     *inputs += 3;
-    *outputs += 1;
+    *outputs += 4;
     *N_3 -= 1;
 }
 
-void pad_3_to_4_ref(int32_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val){
+void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val){
 
     int8_t * output_p = (int8_t *)outputs;
     int8_t * input_p = (int8_t *)inputs;
@@ -39,7 +39,7 @@ void pad_3_to_4_ref(int32_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t p
     }
 }
 
-void pad_3_to_4_run(int32_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val) {
+void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val) {
     // First copy single pixels until the input pointer is aligned
     // That will happen as it is incremented in steps of 3
     // But we may run out of pixels before it happens
@@ -76,7 +76,7 @@ void pad_3_to_4_run(int32_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t p
     if (tail_N_3 != 0) {
         // Adjust the inputs and outputs pointer to point to the remainder.
         inputs +=  (N_24 << 3) * 3;
-        outputs += (N_24 << 3);
+        outputs += (N_24 << 3) * 4;
         while(tail_N_3 != 0) {
             pad_3_to_4_single(&outputs, &inputs, &tail_N_3, pad_val);
         }

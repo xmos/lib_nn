@@ -168,8 +168,8 @@ void pad_3_to_4_prepare(uint32_t * n_3,
  *
  * @returns  The inner product
  */
-extern void pad_3_to_4_run(int32_t outputs[], int8_t inputs[], uint32_t N_24, uint32_t pad_val);
-extern void pad_3_to_4_ref(int32_t outputs[], int8_t inputs[], uint32_t N_24, uint32_t pad_val);
+extern void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val);
+extern void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val);
 
 /** Function that pads an image with 3-byte values with a 0.
  * This functions is highly optimised, but has constraints on the
@@ -186,7 +186,7 @@ extern void pad_3_to_4_ref(int32_t outputs[], int8_t inputs[], uint32_t N_24, ui
  *
  * @returns  The inner product
  */
-extern void pad_3_to_4_asm(int32_t outputs[], int64_t inputs[], uint32_t N_24, uint32_t pad_val);
+extern void pad_3_to_4_asm(int8_t outputs[], int64_t inputs[], uint32_t N_24, uint32_t pad_val);
 
 // /**
 //  * Describes the parameters needed for an @oper{add_elementwise} operator. @see add_elementwise().
