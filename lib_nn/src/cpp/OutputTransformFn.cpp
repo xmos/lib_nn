@@ -49,7 +49,7 @@ static int clrsbll(long long x) {
 #endif
 }
 
-static int64_t shl(int32_t v, int amount_to_shl) {
+static int64_t shl(int64_t v, int amount_to_shl) {
   if (amount_to_shl >= 0) {
     // work around  the undefined behaviour
     uint64_t mask = (~0LLU) >> amount_to_shl;
@@ -81,6 +81,25 @@ void recitfy_min_max(T &v_min, T &v_max) {
   T actual_max = std::max(v_min, v_max);
   v_min = std::min(v_min, v_max);
   v_max = actual_max;
+}
+
+template <class T>
+int64_t float_to_int(T f, int e) {
+  return (int64_t)std::rint(ldexp(f, e));
+}
+
+template <class T>
+int16_t float_to_int16(T f, int e) {
+  int64_t v = float_to_int(f, e);
+  v = std::min((int64_t)INT16_MAX, v);
+  v = std::max((int64_t)INT16_MIN, v);
+  return (int16_t)v;
+}
+
+//this is to account for the double rounding in VLASHR+VDEPTH8
+template <class T>
+int16_t float_to_int16_with_bias(T f, int e) {
+  return float_to_int16(f - (1.0 / (1<<(e))), e);
 }
 
 // Select A, M such that
@@ -150,7 +169,7 @@ OutputTransformFnInt8_Group::Quantizer::solve_for_constraints(
 
   for (auto activationParam : activationParams) {
     // multiplier raised to exponent M
-    int64_t mul_16 = std::round(ldexp(activationParam.multiplier, M));
+    int64_t mul_16 = float_to_int(activationParam.multiplier, M);
     // Greatest sig bits
     mul_sig_bits = std::max(mul_sig_bits, count_bits(mul_16));
 
@@ -203,7 +222,7 @@ OutputTransformFnInt8_Group::Quantizer::solve_for_constraints(
         break;
       }
 
-      int64_t mul_16 = std::round(ldexp(activationParam.multiplier, M));
+      int64_t mul_16 = float_to_int(activationParam.multiplier, M);
       if (!check_val_fits(mul_16, 16)) {
         M--;
         mul_sig_bits--;
@@ -217,7 +236,7 @@ OutputTransformFnInt8_Group::Quantizer::solve_for_constraints(
       }
 
       int64_t bias_16 =
-          std::round(ldexp(activationParam.bias, A + M - vlmul_shr));
+          float_to_int(activationParam.bias, A + M - vlmul_shr);
 
       int64_t prod_max = shl(accu_max_16 * mul_16, -vlmul_shr);
       int64_t prod_min = shl(accu_min_16 * mul_16, -vlmul_shr);
@@ -282,7 +301,7 @@ OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
   for (auto activationParam : activationParams) {
     if (activationParam.bias) {
       int bias_bits = OutputTransformFn::get_max_exponent(activationParam.bias);
-      int64_t bias_16 = std::round(ldexp(activationParam.bias, 15 - bias_bits));
+      int64_t bias_16 = float_to_int(activationParam.bias, 15 - bias_bits);
       if (check_val_fits(bias_16, 16)) {
         global_B = std::max(global_B, bias_bits);
       }
@@ -296,7 +315,7 @@ OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
   for (auto activationParam : activationParams) {
     int M, A;
 
-    int64_t bias_16 = std::round(ldexp(activationParam.bias, global_B));
+    int64_t bias_16 = float_to_int(activationParam.bias, global_B);
 
     int accu_bits_max = 0;
     int max_multiplier_exponent = INT32_MIN;
@@ -344,7 +363,7 @@ OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
       int mul_sig_bits = 0, accu_sig_bits = 0;
 
       // multiplier raised to exponent M
-      int64_t mul_16 = std::round(ldexp(activationParam.multiplier, M));
+      int64_t mul_16 = float_to_int(activationParam.multiplier, M);
       // Greatest sig bits
       mul_sig_bits = std::max(mul_sig_bits, count_bits(mul_16));
 
@@ -387,7 +406,7 @@ OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
           }
         }
 
-        int64_t mul_16 = std::round(ldexp(activationParam.multiplier, M));
+        int64_t mul_16 = float_to_int(activationParam.multiplier, M);
         if (!check_val_fits(mul_16, 16)) {
           M--;
           mul_sig_bits--;
@@ -471,7 +490,7 @@ OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
     int mul_sig_bits = 0, accu_sig_bits = 0;
 
     // multiplier raised to exponent M
-    int64_t mul_16 = std::round(ldexp(activationParams[ch].multiplier, Ms[ch]));
+    int64_t mul_16 = float_to_int(activationParams[ch].multiplier, Ms[ch]);
     // Greatest sig bits
     mul_sig_bits = std::max(mul_sig_bits, count_bits(mul_16));
 
@@ -512,13 +531,6 @@ OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
   }
 
   return std::make_tuple(As, Ms);
-}
-
-int32_t round_away_from_zero(float x) {
-  if (x > 0)
-    return std::ceil(x);
-  else
-    return std::floor(x);
 }
 
 int64_t round_up(float x) { return std::ceil(x); }
@@ -620,16 +632,6 @@ void nn::OutputTransformFn::ActivationParams::
   }
 }
 
-template <class T>
-int16_t float_to_int16(T f, int e) {
-  int32_t v = (int32_t)round(ldexp(f, e));
-  // assert(v <= INT16_MAX);
-  // assert(v >= INT16_MIN);
-  v = std::min((int32_t)INT16_MAX, v);
-  v = std::max((int32_t)INT16_MIN, v);
-  return (int16_t)v;
-}
-
 OutputTransformFnInt8_Group::QuantisationParams
 OutputTransformFnInt8_Group::Quantizer::quantise_activation(
     MulsAndBias &activationParams, bool verbose) {
@@ -662,7 +664,7 @@ OutputTransformFnInt8_Group::Quantizer::quantise_activation(
   for (int ch = 0; ch < activationParams.size(); ++ch) {
     int16_t m = float_to_int16(activationParams[ch].multiplier, M);
     q.multipliers.push_back(m);
-    int16_t b = float_to_int16(activationParams[ch].bias, B);
+    int16_t b = float_to_int16_with_bias(activationParams[ch].bias, B);
     q.biases.push_back(b);
 
     if (verbose)
