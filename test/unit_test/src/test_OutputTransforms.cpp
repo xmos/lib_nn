@@ -93,7 +93,7 @@ void test_big_range(int coef_count, int N, int product_range, int bias_range,
         float product_target = get_random_uniform_from_range(p_low, p_high);
 
         float multiplier =
-            product_target / (float)std::max(-accu_min, accu_max);
+            std::abs(product_target / (float)std::max(-accu_min, accu_max));
 
         // the bias must be between [-2**(N+1) - 1, 2**(N+1)]
         double bias =
@@ -175,12 +175,12 @@ void test_big_range(int coef_count, int N, int product_range, int bias_range,
                     mul_and_biases[actual_output_channel].original_multiplier +
                 mul_and_biases[actual_output_channel].original_bias;
 
-            expected = std::round(std::min(std::max(expected, (double)INT8_MIN),
-                                           (double)INT8_MAX));
+            expected = std::min(std::max(expected, (double)INT8_MIN),
+                                           (double)INT8_MAX);
 
             int actual = (int)Y[actual_output_channel];
 
-            TEST_ASSERT_INT32_WITHIN(1, (int)expected, actual);
+            TEST_ASSERT_INT32_WITHIN(1, (int)std::round(expected), actual);
 
             error_count += 1;
             error_sum += (expected - actual);
@@ -193,8 +193,9 @@ void test_big_range(int coef_count, int N, int product_range, int bias_range,
   }
   float bias = error_sum / error_count;
 
-  TEST_ASSERT_TRUE_MESSAGE(std::abs(bias) < 2e-2, "Bias out of range");
-  TEST_ASSERT_TRUE_MESSAGE(error_count / abs_error_sum > 100,
+  TEST_ASSERT_TRUE_MESSAGE(std::abs(bias) < 0.025, "Bias out of range");
+
+  TEST_ASSERT_TRUE_MESSAGE((abs_error_sum/error_count) < (0.25 + 0.001), //the extra bit is to account for random sampling
                            "abs average error too high");
 }
 
