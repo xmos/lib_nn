@@ -581,7 +581,7 @@ void nn::OutputTransformFn::ActivationParams::
   int64_t union_max = std::min(accu_out_clamp_max, (int64_t)accu_max_val);
   int64_t union_min = std::max(accu_out_clamp_min, (int64_t)accu_min_val);
 
-  if( union_max == union_min){
+  if( union_max <= union_min){
       int32_t singular_output_value =
           std::max(std::min((int32_t)output_max_val, (int32_t)original_bias),
                    (int32_t)output_min_val);
@@ -597,8 +597,10 @@ void nn::OutputTransformFn::ActivationParams::
     bias = original_bias;
     accu_max_val = union_max;
     accu_min_val = union_min;
-    output_max_val = union_max * original_multiplier + original_bias;
-    output_min_val = union_min * original_multiplier + original_bias;
+    output_max_val =std::max(std::min((int32_t)output_max_val, (int32_t)std::round(union_max * original_multiplier + original_bias)),
+                   (int32_t)output_min_val);
+    output_min_val =std::max(std::min((int32_t)output_max_val, (int32_t)std::round(union_min * original_multiplier + original_bias)),
+                   (int32_t)output_min_val);
   }
 
   if (verbose) {
