@@ -545,82 +545,60 @@ void nn::OutputTransformFn::ActivationParams::
     bias = 0.0;
     accu_min_val = 0;
     accu_max_val = 0;
+    output_max_val = 0;
+    output_min_val = 0;
+    if(verbose){
+      printf("ActivationParams\n");
+      printf("bias        : %f -> %f\n", original_bias, bias);
+      printf("multiplier  : %f -> %f\n", original_multiplier, multiplier);
+      printf("accu_min_val: %d -> %d\n", original_accu_min_val, accu_min_val);
+      printf("accu_max_val: %d -> %d\n", original_accu_max_val, accu_max_val);
+      printf("output_max_val: %d -> %d\n", original_output_max_val, output_max_val);
+      printf("output_min_val: %d -> %d\n", original_output_min_val, output_min_val);
+    }
     return;
   }
 
-  double hi = ((double)INT8_MAX - bias) / multiplier;
-  double lo = ((double)INT8_MIN - bias) / multiplier;
+  double hi = ((double)original_output_max_val - original_bias) / original_multiplier;
+  double lo = ((double)original_output_min_val - original_bias) / original_multiplier;
 
-  int64_t accu_meaningful_max = round_up(hi);
-  int64_t accu_meaningful_min = round_down(lo);
+  recitfy_min_max(lo, hi);
 
-  recitfy_min_max(accu_meaningful_min, accu_meaningful_max);
+  //This is the min/max interesting accumultor range due to the output clamp.
+  int64_t accu_out_clamp_max = round_up(hi);
+  int64_t accu_out_clamp_min = round_down(lo);
+
+  recitfy_min_max(accu_min_val, accu_max_val);
 
   if (verbose) {
-    printf("accu_meaningful_min: %lld accu_meaningful_max: %lld\n",
-           accu_meaningful_min, accu_meaningful_max);
+    printf("accu_out_clamp_min: %lld accu_out_clamp_max: %lld\n",
+           accu_out_clamp_min, accu_out_clamp_max);
     printf(
         "activationParam.accu_min_val: %d activationParam.accu_max_val: %d\n",
         accu_min_val, accu_max_val);
   }
 
-  if (accu_meaningful_max < (int64_t)accu_max_val) {
-    // ------accu_max------accu_meaningful_max++++++...
+  int64_t union_max = std::min(accu_out_clamp_max, (int64_t)accu_max_val);
+  int64_t union_min = std::max(accu_out_clamp_min, (int64_t)accu_min_val);
 
-    // The input range of the accumulator is restricted by the output clamp.
-    if (accu_meaningful_max < (int64_t)accu_min_val) {
-      // ------accu_max------accu_min------accu_meaningful_max------...
-      // There is no overlap between what the accumulator can be and what
-      // could contribute to the output
-
+  if( union_max == union_min){
       int32_t singular_output_value =
-          std::max(std::min((int32_t)INT8_MAX, (int32_t)original_bias),
-                   (int32_t)INT8_MIN);
+          std::max(std::min((int32_t)output_max_val, (int32_t)original_bias),
+                   (int32_t)output_min_val);
 
       multiplier = 0.0;
       bias = singular_output_value;
-
       accu_max_val = 0;
       accu_min_val = 0;
-
-    } else {
-      // ------accu_max------accu_meaningful_max++++++accu_min------...
-      accu_max_val = accu_meaningful_max;
-      if (accu_meaningful_min > (int64_t)accu_min_val) {
-        // ------accu_max------accu_meaningful_max++++++accu_meaningful_min------accu_min------...
-        accu_min_val = accu_meaningful_min;
-      } else {
-        // ------accu_max------accu_meaningful_max++++++accu_min------accu_meaningful_min------...
-        // activationParam.accu_min_val = activationParam.accu_min_val;
-      }
-    }
+      output_max_val = singular_output_value;
+      output_min_val = singular_output_value;
   } else {
-    // ------accu_meaningful_max------accu_max++++++...
-    if (accu_meaningful_min > (int64_t)accu_max_val) {
-      // ------accu_meaningful_max------accu_meaningful_min------accu_max------...
-      // There is no overlap between what the accumulator can be and what
-      // could contribute to the output
-      int32_t singular_output_value =
-          std::max(std::min((int32_t)INT8_MAX, (int32_t)original_bias),
-                   (int32_t)INT8_MIN);
-
-      multiplier = 0.0;
-      bias = singular_output_value;
-      accu_max_val = 0;
-      accu_min_val = 0;
-
-    } else {
-      // ------accu_meaningful_max------accu_max++++++accu_meaningful_min------...
-      // activationParam.accu_max_val = activationParam.accu_max_val;
-
-      if (accu_meaningful_min > (int64_t)accu_min_val) {
-        // ------accu_meaningful_max------accu_max++++++accu_meaningful_min------accu_min------...
-        accu_min_val = accu_meaningful_min;
-      } else {
-        // ------accu_meaningful_max------accu_max++++++accu_min------accu_meaningful_min------...
-        // activationParam.accu_min_val = activationParam.accu_min_val;
-      }
-    }
+    multiplier = original_multiplier;
+    bias = original_bias;
+    accu_max_val = union_max;
+    accu_min_val = union_min;
+    output_max_val = union_max * original_multiplier + original_bias;
+    output_min_val = union_min * original_multiplier + original_bias;
   }
 
   if (verbose) {
@@ -629,6 +607,8 @@ void nn::OutputTransformFn::ActivationParams::
     printf("multiplier  : %f -> %f\n", original_multiplier, multiplier);
     printf("accu_min_val: %d -> %d\n", original_accu_min_val, accu_min_val);
     printf("accu_max_val: %d -> %d\n", original_accu_max_val, accu_max_val);
+    printf("output_max_val: %d -> %d\n", original_output_max_val, output_max_val);
+    printf("output_min_val: %d -> %d\n", original_output_min_val, output_min_val);
   }
 }
 

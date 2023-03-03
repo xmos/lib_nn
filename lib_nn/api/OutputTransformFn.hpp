@@ -40,23 +40,31 @@ class OutputTransformFn {
     double original_multiplier;
     int32_t original_accu_min_val;
     int32_t original_accu_max_val;
+    int8_t original_output_max_val;
+    int8_t original_output_min_val;
 
     double bias;
     double multiplier;
     int32_t accu_min_val;
     int32_t accu_max_val;
+    int8_t output_max_val;
+    int8_t output_min_val;
 
     ActivationParams(double bias, double multiplier, int32_t accu_min_val,
-                     int32_t accu_max_val)
+                     int32_t accu_max_val, bool verbose = false)
         : original_bias(bias),
           original_multiplier(multiplier),
           original_accu_min_val(accu_min_val),
           original_accu_max_val(accu_max_val),
+          original_output_max_val(INT8_MAX),
+          original_output_min_val(INT8_MIN),
           bias(bias),
           multiplier(multiplier),
           accu_min_val(accu_min_val),
-          accu_max_val(accu_max_val) {
-      backprop_output_clamps_to_accu_limits(false);
+          accu_max_val(accu_max_val),
+          output_max_val(INT8_MAX),
+          output_min_val(INT8_MIN) {
+      backprop_output_clamps_to_accu_limits(verbose);
       assert(accu_min_val <= accu_max_val);
     }
 
