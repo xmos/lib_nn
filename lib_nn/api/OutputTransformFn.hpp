@@ -233,7 +233,7 @@ class OutputTransformFnInt8 : public OutputTransformFn {
   static MulsAndBias canonicalise_mul_and_bias_dw(
       const std::vector<float> &eff_mult, const std::vector<int32_t> &bias,
       const std::vector<int8_t> &weights, const std::array<int, 4> &shape,
-      int input_zero_point, int output_zero_point, int output_channels) {
+      int input_zero_point, int output_zero_point, int output_channels, bool verbose = false) {
     MulsAndBias canonical_values;
 
     assert(shape[0] == 1);
@@ -267,7 +267,7 @@ class OutputTransformFnInt8 : public OutputTransformFn {
           output_zero_point;
 
       OutputTransformFn::ActivationParams a(canonical_bias, eff_mult[out_chan],
-                                            min_accu_sum, max_accu_sum);
+                                            min_accu_sum, max_accu_sum, verbose);
       canonical_values.push_back(a);
     }
     return canonical_values;
@@ -276,7 +276,7 @@ class OutputTransformFnInt8 : public OutputTransformFn {
   static MulsAndBias canonicalise_mul_and_bias(
       const std::vector<float> &eff_mult, const std::vector<int32_t> &bias,
       const std::vector<int8_t> &weights, int input_zero_point,
-      int output_zero_point, int output_channel_count) {
+      int output_zero_point, int output_channel_count, bool verbose = false) {
     MulsAndBias canonical_values;
 
     int elements_per_channel = weights.size() / output_channel_count;
@@ -306,7 +306,7 @@ class OutputTransformFnInt8 : public OutputTransformFn {
           output_zero_point;
 
       OutputTransformFn::ActivationParams a(canonical_bias, eff_mult[out_chan],
-                                            min_accu_sum, max_accu_sum);
+                                            min_accu_sum, max_accu_sum, verbose);
       canonical_values.push_back(a);
     }
     return canonical_values;
