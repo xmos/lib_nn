@@ -536,7 +536,7 @@ OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
 int64_t round_up(float x) { return std::ceil(x); }
 
 int64_t round_down(float x) { return std::floor(x); }
-
+ 
 void nn::OutputTransformFn::ActivationParams::
     backprop_output_clamps_to_accu_limits(bool verbose, bool debug) {
   // adjust accu_min and max to account for the saturation on the output

@@ -72,6 +72,25 @@ class OutputTransformFn {
     void backprop_output_clamps_to_accu_limits(bool verbose = false, bool debug = false);
   };
 
+  static void layerwise_stats(std::vector<OutputTransformFn::ActivationParams> &canonical_values){
+      double max_mul_log2 = -1e10;
+      double min_mul_log2 = -max_mul_log2;
+      double max_bias_log2 = -1e10;
+      double min_bias_log2 = -max_bias_log2;
+      for (auto act : canonical_values){
+        if (act.bias != 0.0){
+          double bias_log2 = std::log2(std::abs(act.bias));
+          max_bias_log2 = std::max(max_bias_log2, bias_log2);
+          min_bias_log2 = std::max(min_bias_log2, bias_log2);
+        }
+        if (act.bias != 0.0){
+          double mul_log2 = std::log2(std::abs(act.multiplier));
+          max_mul_log2 = std::max(max_mul_log2, mul_log2);
+          min_mul_log2 = std::min(min_mul_log2, mul_log2);
+        }
+      }
+      printf("mul dr: %.2f bias dr: %.2f\n",max_mul_log2 - min_mul_log2, max_bias_log2-min_bias_log2);
+  }
   /**
    * Pads a vector to a boundary with a pad value
    */
@@ -200,6 +219,8 @@ class OutputTransformFn {
 };
 
 typedef std::vector<OutputTransformFn::ActivationParams> MulsAndBias;
+
+
 
 class OutputTransformFnInt8 : public OutputTransformFn {
  public:
