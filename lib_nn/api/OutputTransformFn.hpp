@@ -81,7 +81,7 @@ class OutputTransformFn {
         if (act.bias != 0.0){
           double bias_log2 = std::log2(std::abs(act.bias));
           max_bias_log2 = std::max(max_bias_log2, bias_log2);
-          min_bias_log2 = std::max(min_bias_log2, bias_log2);
+          min_bias_log2 = std::min(min_bias_log2, bias_log2);
         }
         if (act.bias != 0.0){
           double mul_log2 = std::log2(std::abs(act.multiplier));
