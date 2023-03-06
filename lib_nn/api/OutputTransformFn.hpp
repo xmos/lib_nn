@@ -69,7 +69,7 @@ class OutputTransformFn {
     }
 
    private:
-    void backprop_output_clamps_to_accu_limits(bool verbose = false);
+    void backprop_output_clamps_to_accu_limits(bool verbose = false, bool debug = false);
   };
 
   /**

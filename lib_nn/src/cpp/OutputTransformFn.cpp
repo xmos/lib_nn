@@ -538,7 +538,7 @@ int64_t round_up(float x) { return std::ceil(x); }
 int64_t round_down(float x) { return std::floor(x); }
 
 void nn::OutputTransformFn::ActivationParams::
-    backprop_output_clamps_to_accu_limits(bool verbose) {
+    backprop_output_clamps_to_accu_limits(bool verbose, bool debug) {
   // adjust accu_min and max to account for the saturation on the output
   if (multiplier == 0.0) {
     multiplier = 0.0;
@@ -548,13 +548,10 @@ void nn::OutputTransformFn::ActivationParams::
     output_max_val = 0;
     output_min_val = 0;
     if(verbose){
-      printf("ActivationParams\n");
-      printf("bias        : %f -> %f\n", original_bias, bias);
-      printf("multiplier  : %f -> %f\n", original_multiplier, multiplier);
-      printf("accu_min_val: %d -> %d\n", original_accu_min_val, accu_min_val);
-      printf("accu_max_val: %d -> %d\n", original_accu_max_val, accu_max_val);
-      printf("output_max_val: %d -> %d\n", original_output_max_val, output_max_val);
-      printf("output_min_val: %d -> %d\n", original_output_min_val, output_min_val);
+      printf("bias: %f -> %f ", original_bias, bias);
+      printf("mult: %f -> %f\n", original_multiplier, multiplier);
+      printf("accu: [%d, %d] ", accu_min_val, accu_max_val);
+      printf("output: [%d, %d]\n", output_min_val, output_max_val);
     }
     return;
   }
@@ -570,7 +567,7 @@ void nn::OutputTransformFn::ActivationParams::
 
   recitfy_min_max(accu_min_val, accu_max_val);
 
-  if (verbose) {
+  if (debug) {
     printf("accu_out_clamp_min: %lld accu_out_clamp_max: %lld\n",
            accu_out_clamp_min, accu_out_clamp_max);
     printf(
@@ -604,13 +601,10 @@ void nn::OutputTransformFn::ActivationParams::
   }
 
   if (verbose) {
-    printf("ActivationParams\n");
-    printf("bias        : %f -> %f\n", original_bias, bias);
-    printf("multiplier  : %f -> %f\n", original_multiplier, multiplier);
-    printf("accu_min_val: %d -> %d\n", original_accu_min_val, accu_min_val);
-    printf("accu_max_val: %d -> %d\n", original_accu_max_val, accu_max_val);
-    printf("output_max_val: %d -> %d\n", original_output_max_val, output_max_val);
-    printf("output_min_val: %d -> %d\n", original_output_min_val, output_min_val);
+      printf("bias: %f -> %f ", original_bias, bias);
+      printf("mult: %f -> %f\n", original_multiplier, multiplier);
+      printf("accu: [%d, %d] ", accu_min_val, accu_max_val);
+      printf("output: [%d, %d]\n", output_min_val, output_max_val);
   }
 }
 
