@@ -576,7 +576,7 @@ void nn::OutputTransformFn::ActivationParams::
   if (verbose) {
       printf("bias: %f -> %f ", original_bias, bias);
       printf("mult: %f -> %f ", original_multiplier, multiplier);
-      printf("accu: [%d, %d] %f ", accu_min_val, accu_max_val, (float)(original_accu_max_val - original_accu_min_val) / (accu_max_val - accu_min_val) );
+      printf("accu:  [%d, %d] -> [%d, %d] %f ",original_accu_max_val, original_accu_min_val,  accu_min_val, accu_max_val, (float)(accu_max_val - accu_min_val) /(original_accu_max_val - original_accu_min_val) );
       printf("output: [%d, %d]\n", output_min_val, output_max_val);
   }
 }

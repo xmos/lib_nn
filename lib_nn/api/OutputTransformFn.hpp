@@ -77,13 +77,14 @@ class OutputTransformFn {
       double min_mul_log2 = -max_mul_log2;
       double max_bias_log2 = -1e10;
       double min_bias_log2 = -max_bias_log2;
+
       for (auto act : canonical_values){
         if (act.bias != 0.0){
           double bias_log2 = std::log2(std::abs(act.bias));
           max_bias_log2 = std::max(max_bias_log2, bias_log2);
           min_bias_log2 = std::min(min_bias_log2, bias_log2);
         }
-        if (act.bias != 0.0){
+        if (act.multiplier != 0.0){
           double mul_log2 = std::log2(std::abs(act.multiplier));
           max_mul_log2 = std::max(max_mul_log2, mul_log2);
           min_mul_log2 = std::min(min_mul_log2, mul_log2);
