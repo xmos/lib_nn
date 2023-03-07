@@ -147,8 +147,6 @@ OutputTransformFnInt8_Group::Quantizer::solve_for_constraints(
   bool product_range_defined = multiplier_range_defined && accu_range_defined;
 
   if (!product_range_defined) {
-    if (verbose) printf("undefined product range\n");
-
     // Then we only care about the biases -> we know they will always fit in an
     // 8 bit number so a bias exp of 0 will do fine.
     int A = 0;
@@ -182,11 +180,6 @@ OutputTransformFnInt8_Group::Quantizer::solve_for_constraints(
                                                      count_bits(accu_min_16)));
   }
 
-  if (verbose) {
-    printf("accu_sig_bits: %d\nmul_sig_bits: %d\nA: %d\n M: %d\n",
-           accu_sig_bits, mul_sig_bits, A, M);
-  }
-
   bool trying = true;
 
   int64_t max_group_prod, min_group_prod, max_group_sum, min_group_sum;
@@ -214,11 +207,6 @@ OutputTransformFnInt8_Group::Quantizer::solve_for_constraints(
         A--;
         accu_sig_bits--;
         trying = true;
-
-        if (verbose) {
-          printf("Accu too big\n   accu_sig_bits: %d\n   A: %d\n",
-                 accu_sig_bits, A);
-        }
         break;
       }
 
@@ -227,11 +215,6 @@ OutputTransformFnInt8_Group::Quantizer::solve_for_constraints(
         M--;
         mul_sig_bits--;
         trying = true;
-
-        if (verbose) {
-          printf("mul too big\n   mul_sig_bits: %d\n   M: %d\n", mul_sig_bits,
-                 M);
-        }
         break;
       }
 
@@ -257,19 +240,12 @@ OutputTransformFnInt8_Group::Quantizer::solve_for_constraints(
       if (!check_val_fits(prod_max, 16) || !check_val_fits(prod_min, 16) ||
           !check_val_fits(sum_max, 16) || !check_val_fits(sum_min, 16) ||
           !check_val_fits(bias_16, 16)) {
-        if (verbose) printf("overflow in prod or sum \n");
         if (A >= 0 || accu_sig_bits > mul_sig_bits) {
           A--;
           accu_sig_bits--;
-          if (verbose) {
-            printf("   accu_sig_bits: %d\n   A: %d\n", accu_sig_bits, A);
-          }
         } else {
           M--;
           mul_sig_bits--;
-          if (verbose) {
-            printf("   mul_sig_bits: %d\n   M: %d\n", mul_sig_bits, M);
-          }
         }
 
         trying = true;
@@ -279,10 +255,7 @@ OutputTransformFnInt8_Group::Quantizer::solve_for_constraints(
   }
   if (verbose) {
     printf(
-        "max_group_prod: %lld\nmin_group_prod: %lld\n"
-        "max_group_sum: %lldmin_group_sum: %lld\n"
         "mul_sig_bits: %d\naccu_sig_bits: %d\n",
-        max_group_prod, min_group_prod, max_group_sum, min_group_sum,
         mul_sig_bits, accu_sig_bits);
   }
   return std::make_tuple(A, M);
@@ -602,8 +575,8 @@ void nn::OutputTransformFn::ActivationParams::
 
   if (verbose) {
       printf("bias: %f -> %f ", original_bias, bias);
-      printf("mult: %f -> %f\n", original_multiplier, multiplier);
-      printf("accu: [%d, %d] ", accu_min_val, accu_max_val);
+      printf("mult: %f -> %f ", original_multiplier, multiplier);
+      printf("accu: [%d, %d] %f ", accu_min_val, accu_max_val, (float)(original_accu_max_val - original_accu_min_val) / (accu_max_val - accu_min_val) );
       printf("output: [%d, %d]\n", output_min_val, output_max_val);
   }
 }
@@ -633,7 +606,7 @@ OutputTransformFnInt8_Group::Quantizer::quantise_activation(
   q.final_shr = B - 8;
 
   if (verbose) {
-    printf("final_shr: %d\n", q.final_shr);
+    printf("final_shr: %d initial_shr: %d\n", q.final_shr, q.initial_shr);
   }
 
   // Quantise the multiplier and bias
