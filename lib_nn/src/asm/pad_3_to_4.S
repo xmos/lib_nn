@@ -27,8 +27,8 @@ pad_3_to_4_asm:
     std r4, r5, sp[0]
     std r6, r7, sp[1]
     std r8, r9, sp[2]
-    stw r10, sp[6]
-    {shr r3, r3, 24               ; nop}
+    { stw r10, sp[6]              ; mkmsk r4, 24 }
+    { andnot r3, r4               ; nop }
     { ldc r8, 0                   ; ldc r9, 8 }
 loop:
     ldd r4, r5, r1[0]
