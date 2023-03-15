@@ -43,7 +43,8 @@
 .text
 .issue_mode  dual
 .globl FUNCTION_NAME
-.align 4
+.align 16                         // This aligns the IW loop
+.skip  0                          // and fully contains the inner
 .type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 

@@ -9,6 +9,7 @@
 .globl vpu_memset32_asm.nstackwords
 .linkset vpu_memset32_asm.nstackwords,8
 .align 16
+.skip   0               // This aligns OMC_set_loop
 .issue_mode dual
 
 vpu_memset32_asm:
