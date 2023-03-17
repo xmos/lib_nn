@@ -1,3 +1,5 @@
+    
+#if defined(__XS3A__)
     // This function is the optimal FIR on a 1-bit signal with 16-bit coefficients.
     // r0: argument 1, output (word aligned)
     // r1: argument 2, input (word aligned)
@@ -67,3 +69,5 @@ loop:
     retsp NSTACKWORDS
     
     .cc_bottom pad_3_to_4_asm.func
+
+#endif

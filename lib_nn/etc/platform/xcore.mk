@@ -3,11 +3,9 @@
 PLATFORM_NAME = xcore.ai
 
 PLATFORM_FLAGS_DEFAULT := -Os                           \
-						-Wno-xcore-fptrgroup            \
 						-Wno-unused-variable            \
 						-report                         \
 						-MMD
-#                       -mcmodel=large
 #                       -DXCORE
 #                       -Wno-unknown-pragmas
 #                       -Wno-unknown-attributes
@@ -30,5 +28,3 @@ CXX_FLAGS := -std=c++11 -g
 LD_FLAGS :=
 
 AR_FLAGS := rc
-
-XSCOPE_CONFIG := config.xscope

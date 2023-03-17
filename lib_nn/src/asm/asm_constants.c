@@ -49,13 +49,13 @@ const int8_t vpu_vect_0x80[VPU_INT8_EPV] = {
 
 #if __xcore__
 
-asm(".set vpu_vects_vec_0x007F, (vpu_vects + 0x00); .global "
-    "vpu_vects_vec_0x007F");
-asm(".set vpu_vects_vec_0x01,   (vpu_vects + 0x20); .global "
-    "vpu_vects_vec_0x01");
-asm(".set vpu_vects_vec_0x0002, (vpu_vects + 0x30); .global "
-    "vpu_vects_vec_0x0002");
-asm(".set vpu_vects_vec_0x80,   (vpu_vects + 0x50); .global "
-    "vpu_vects_vec_0x80");
+// asm(".set vpu_vects_vec_0x007F, (vpu_vects + 0x00); .global "
+//     "vpu_vects_vec_0x007F");
+// asm(".set vpu_vects_vec_0x01,   (vpu_vects + 0x20); .global "
+//     "vpu_vects_vec_0x01");
+// asm(".set vpu_vects_vec_0x0002, (vpu_vects + 0x30); .global "
+//     "vpu_vects_vec_0x0002");
+// asm(".set vpu_vects_vec_0x80,   (vpu_vects + 0x50); .global "
+//     "vpu_vects_vec_0x80");
 
 #endif

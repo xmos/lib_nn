@@ -30,8 +30,6 @@ CXX_FLAGS := -g -O3 -std=c++11
 
 LD_FLAGS  := -L/usr/local/lib -lm -lstdc++
 
-XSCOPE_CONFIG := 
-
 ifeq ($(SANITIZE),true)
   CC:=clang
   CC_FLAGS  := $(CC_FLAGS) -fsanitize=address -fsanitize-recover=address

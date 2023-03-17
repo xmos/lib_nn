@@ -35,7 +35,7 @@ set(CMAKE_ASM_COMPILER_FORCED TRUE)
 set( XCORE ON CACHE BOOLEAN "Building for xCore" )
 
 if( NOT ( DEFINED XCORE_TARGET ) )
-  set( XCORE_TARGET "XCORE-AI-EXPLORER" CACHE STRING "xCore hardware target" )
+  set( XCORE_TARGET "QUAKE" CACHE STRING "xCore hardware target" )
 endif()
 
 message(STATUS "XCORE_TARGET is ${XCORE_TARGET}" )

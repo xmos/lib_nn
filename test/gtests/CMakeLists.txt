@@ -20,9 +20,6 @@ list(APPEND SOURCES ${SOURCES_C})
 list(APPEND SOURCES ${SOURCES_CPP})
 list(APPEND SOURCES ${SOURCES_${CMAKE_SYSTEM_NAME}})
 
-# set( XSCOPE_CONFIG config.xscope )
-get_filename_component(XSCOPE_CONFIG config.xscope ABSOLUTE)
-
 # Compile flags
 unset(COMPILE_FLAGS)
 list(APPEND COMPILE_FLAGS -Wno-unused-variable)
@@ -36,8 +33,6 @@ unset(LINKER_FLAGS_XCORE)
 list(APPEND LINKER_FLAGS_XCORE "-target=${XCORE_TARGET}")
 list(APPEND LINKER_FLAGS_XCORE "-report")
 list(APPEND LINKER_FLAGS_XCORE "-fcmdline-buffer-bytes=1024")
-list(APPEND LINKER_FLAGS_XCORE "${XSCOPE_CONFIG}")
-
 list(APPEND LINKER_FLAGS ${LINKER_FLAGS_${CMAKE_SYSTEM_NAME}})
 
 #
@@ -64,10 +59,5 @@ target_compile_options(${APP_NAME} PRIVATE ${COMPILE_FLAGS})
 # (because otherwise the set_target_properties command fails)
 string(REPLACE ";" " " LINKER_FLAGS_STR "${LINKER_FLAGS}")
 set_target_properties(${APP_NAME} PROPERTIES LINK_FLAGS "${LINKER_FLAGS_STR}")
-
-if(XCORE)
-  set_target_properties(${APP_NAME} PROPERTIES SUFFIX ".xe" LINK_DEPENDS
-                                                            ${XSCOPE_CONFIG})
-endif()
 
 add_unity_to_target(${APP_NAME} CONFIG)

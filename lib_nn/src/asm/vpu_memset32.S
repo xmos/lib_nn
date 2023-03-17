@@ -1,5 +1,6 @@
 // Copyright 2021 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
+#if defined(__XS3A__)
 #include <xs1.h>
 
 // r0 - dest addr            must be word aligned
@@ -29,3 +30,4 @@ OMC_set_loop:
 early_exit: 
 	retsp 8
 
+#endif
