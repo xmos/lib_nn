@@ -21,6 +21,7 @@
     .text
     .issue_mode dual
     .align 16
+    .skip   4                    // This aligns loop
 
 pad_3_to_4_asm:   
     dualentsp NSTACKWORDS

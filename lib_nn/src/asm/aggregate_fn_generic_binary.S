@@ -43,7 +43,8 @@ extern "C" void mat_mul_impl_asm(MatMulInt8::Params *params, VPURingBuffer *A, i
 .text
 .issue_mode  dual
 .globl FUNCTION_NAME
-.align 2
+.align 16                           // This aligns input_channel_loop
+.skip   0
 .type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 

@@ -53,7 +53,8 @@ void mat_mul_direct_dw_impl_asm(MatMulDirectFn_DW::Params *params,
 .text
 .issue_mode  dual
 .globl FUNCTION_NAME
-.align 2
+.align 16                   // This aligns the kh_loop and fully
+.skip  12                   // contains the inner loop
 .type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 

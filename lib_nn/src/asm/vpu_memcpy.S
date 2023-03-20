@@ -55,7 +55,7 @@ early_exit:
 .linkset vpu_memcpy_vector_int_asm.nstackwords,4
 
 .align 16
-
+.skip   4               // This aligns loop
 .issue_mode dual
 
 vpu_memcpy_vector_int_asm:
