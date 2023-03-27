@@ -22,6 +22,15 @@ typedef struct {
 } nn_add_params_t;
 */
 
+#ifdef USE_DDR_FIX
+#define OPTIONAL_DDR_SPILL(x, reg, val) { ldw reg, x[8]; nop} ; \
+                                        { ldw reg, x[0]; nop} ; \
+                                        { ldc reg, val ; nop }
+#warning ddr fix in use
+#else
+#define OPTIONAL_DDR_SPILL(x, reg, val) /* */
+#endif
+
 #define FUNCTION_NAME add_elementwise_asm
 
 #define NSTACKWORDS     (7 + 16 + 1) // 7 used + 16 for temp vecs + 1 to make even
@@ -92,9 +101,11 @@ FUNCTION_NAME:
     ldap r11, vpu_vects_vec_0x01
     {ldaw tmp1, sp[STACK_VEC1_TMP]    ;     ldaw tmp2, sp[STACK_VEC2_TMP]}
     {vldc r11[0]                      ;     ldc r11, 16}
+    OPTIONAL_DDR_SPILL(arg_x1_p, r11, 16)
     {vlmacc arg_x1_p[0]               ;     add arg_x1_p, arg_x1_p, r11}
     {vstr tmp1[0]                     ;     add arg_y_p, arg_y_p, r11}
     vclrdr
+    OPTIONAL_DDR_SPILL(arg_x2_p, r11, 16)
     {vlmacc arg_x2_p[0]               ;     add arg_x2_p, arg_x2_p, r11}
     // Load bias into acc
     // vldr - vR can only be loaded from r11
@@ -105,8 +116,10 @@ FUNCTION_NAME:
     vsetc r11
     // Macc inputs with multipliers
     vldc tmp1[0]
+    OPTIONAL_DDR_SPILL(m1, r11, 0)
     vlmacc m1[0]
     vldc tmp2[0]
+    OPTIONAL_DDR_SPILL(m2, r11, 0)
     vlmacc m2[0]
 
     // Saturation fix
@@ -119,6 +132,7 @@ FUNCTION_NAME:
     // written with a mask to fill in remaining spaces.
     vstd tmp2[0]
     {vstr tmp1[0]                     ;     ldc tmp1, 32}
+    OPTIONAL_DDR_SPILL(shift, r11, 0)
     {vlsat shift[0]                   ;     shl tmp1, tmp1, 4}
     vldd tmp2[0]
     ldap r11, vpu_vects_vec_0x007F
@@ -146,6 +160,7 @@ FUNCTION_NAME:
     vstrpv arg_y_p[0], saturated_mask
 
     {vldr r11[0]                      ;     andnot mask, saturated_mask}
+    OPTIONAL_DDR_SPILL(shift, r11, 0)
     vlsat shift[0]
     // Store other elements
     vstrpv arg_y_p[0], mask
