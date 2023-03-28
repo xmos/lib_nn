@@ -65,7 +65,7 @@ FUNCTION_NAME:
     mul s, output_v_coord, s
     {add r2, t, s ; ldw ih, params_p[PARAMS_input_height] }
     
-    {ldw iw_init, params_p[PARAMS_input_width]; }
+    {ldw iw_init, params_p[PARAMS_input_width]; nop}
     {ldw ic_init, params_p[PARAMS_input_channel_groups] ; ldc thirty_two, 32 }
     {ldw T_rewind, params_p[PARAMS_T_rewind] ; nop }
     {ldw vertical_mem_stride, params_p[PARAMS_vertical_mem_stride] ; nop }
@@ -115,6 +115,112 @@ dont_zero_asm:
     .issue_mode  single
 
 #endif
+
+
+#if defined(__VX4A__)
+
+
+#define PARAMS_bytes_per_h_line 0
+#define PARAMS_bytes_per_pixel 1
+#define PARAMS_input_height 2
+#define PARAMS_input_width 3
+#define PARAMS_input_channel_groups 4
+#define PARAMS_T_rewind 5
+#define PARAMS_horizontal_mem_stride 6
+#define PARAMS_vertical_mem_stride 7
+#define PARAMS_vstrpv_mask 8
+#define PARAMS_dontzero 9
+
+//Registers
+
+#define params_p          x10
+#define T_p               x11
+#define output_v_coord    x13
+#define T_rewind output_v_coord
+#define S_output_h_coord  x14
+#define S_output_c_coord  x15
+
+#define ih                x18
+#define iw                x19
+#define ic                x20
+#define iw_init           x21
+#define ic_init           x22
+#define thirty_two        x23
+#define s                 x24
+#define vertical_mem_stride s
+#define t                 x28
+#define X_p               x28
+#define horizontal_mem_stride x10
+
+#define FUNCTION_NAME im_to_col_valid_impl_asm
+
+#define NSTACKWORDS  16
+    
+.text
+.globl FUNCTION_NAME
+.p2align 2
+.type FUNCTION_NAME,@function
+
+FUNCTION_NAME:
+    x.entsp (NSTACKWORDS)*4
+
+    x.stdsp  x19, x18, 0
+    x.stdsp  x21, x20, 8
+    x.stdsp  x23, x22, 16
+    x.stdsp  T_p, x24, 24
+    x.stwsp params_p,  32
+
+    {x.ldwi s, (PARAMS_bytes_per_pixel)*4 (params_p); x.nop }
+    mul t, x14, s
+
+    //{x.ldwsp s, (NSTACKWORDS + S_output_c_coord)*4; add t, x12, t}
+    {x.nop; add t, x12, t}
+    addi s, x15, 0
+    {x.ldwi s, (PARAMS_bytes_per_h_line)*4(params_p); add t, t, s}
+    mul s, output_v_coord, s
+    {add x12, t, s ; x.ldwi ih, (PARAMS_input_height)*4 (params_p)}
+    
+    {x.ldwi iw_init, (PARAMS_input_width)*4(params_p); x.nop}
+    {x.ldwi ic_init, (PARAMS_input_channel_groups)*4 (params_p); x.ldcu thirty_two, 32 }
+    {x.ldwi T_rewind, (PARAMS_T_rewind)*4 (params_p); x.nop }
+    {x.ldwi vertical_mem_stride, (PARAMS_vertical_mem_stride)*4 (params_p); x.nop }
+    {x.ldwi x12, (PARAMS_vstrpv_mask)*4 (params_p); sub X_p, x12, vertical_mem_stride }
+    {x.ldwi horizontal_mem_stride, (PARAMS_horizontal_mem_stride)*4 (params_p); x.nop}
+
+    ih_loop_asm:
+        {addi iw, iw_init,0; add X_p, X_p, vertical_mem_stride}
+        iw_loop_asm:
+            {subi ic, ic_init, 1 ; x.brff  ic_init, skip_ic_loop_asm}
+            
+            ic_loop_asm:
+                {x.vldd X_p; add X_p, X_p, thirty_two}
+                {x.vstd T_p; add T_p, T_p, thirty_two}
+            {x.bt ic, ic_loop_asm; subi ic, ic, 1}
+        skip_ic_loop_asm:
+            {x.vldr   X_p; add X_p, X_p, thirty_two}
+            x.vstrpv  T_p, x12
+
+        {sub T_p, T_p, T_rewind; add X_p, X_p, horizontal_mem_stride}
+        {x.bt iw, iw_loop_asm; subi iw, iw, 1}
+
+    {x.bt ih, ih_loop_asm; subi ih, ih, 1}
+    x.ldwsp params_p, 32
+    {x.ldwi x12, (PARAMS_dontzero)*4 (params_p); x.nop }
+    {x.bt x12, dont_zero_asm                                ; x.nop }
+    {x.vclrdr; x.nop}
+    {x.vstd T_p;x.nop}
+dont_zero_asm:  
+    x.lddsp  x19,x18,0
+    x.lddsp  x21,x20,8
+    x.lddsp  x23,x22,16
+    x.lddsp  x10,x24,24
+    x.retsp (NSTACKWORDS)*4
+    
+.Ltmp0:
+    .size FUNCTION_NAME, .Ltmp0-FUNCTION_NAME
+
+#endif
+
 
 
 
