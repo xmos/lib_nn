@@ -29,6 +29,19 @@ void vpu_memcpy_vector_int(void* dst, const void* src, int vector_count) {
 
 #else
 
+#if defined(__VX4A__)
+// This keeps the API backwards compatable
+void vpu_memcpy(void* dst, const void* src, size_t byte_count){  vpu_memcpy_int_asm(dst, src, byte_count);};
+void vpu_memcpy_vector_ext_asm(void* dst, const void* src, size_t byte_count);
+void vpu_memcpy_vector_int_asm(void* dst, const void* src, size_t byte_count);
+void vpu_memcpy_int(void* dst, const void* src, size_t byte_count){vpu_memcpy_int_asm(dst, src, byte_count);}
+void vpu_memcpy_ext(void* dst, const void* src, size_t byte_count){vpu_memcpy_ext_asm(dst, src, byte_count);}
+void vpu_memcpy_vector_int(void* dst, const void* src, int vector_count){vpu_memcpy_int_asm(dst, src, vector_count*32);}
+void vpu_memcpy_vector_ext(void* dst, const void* src, int vector_count){vpu_memcpy_ext_asm(dst, src, vector_count*128);}
+#endif
+
+#if defined(__XS3A__)
+
 static inline void vpu_memcpy_base(void* dst, const void* src,
                                    size_t byte_count, void (*mem_cpy_func)(),
                                    size_t vector_bytes) {
@@ -93,5 +106,5 @@ void vpu_memcpy_vector_int(void* dst, const void* src, int vector_count) {
 
   vpu_memcpy_vector_int_asm(dst, src, vector_count);
 }
-
+#endif
 #endif  // NN_USE_REF

@@ -31,3 +31,35 @@ early_exit:
 	retsp 8
 
 #endif
+
+
+
+#if defined(__VX4A__)
+
+// x10 - dest addr            must be word aligned
+// x11 - src value            word to be stored
+// x12 - number of BLOBS:     0 or more
+.globl vpu_memset32_asm
+vpu_memset32_asm:
+
+    x.entsp 48
+    
+    beq x12, x0, early_exit
+    {x.ldcu x28, 32; subi x12, x12, 1}
+
+    x.stdsp x11, x11, 0
+    x.stdsp x11, x11, 8
+    x.stdsp x11, x11, 16
+    x.stdsp x11, x11, 24
+    
+    x.ldawsp x11, 0    
+    x.vldr x11  
+
+OMC_set_loop:
+    { x.vstr x10             ; add  x10, x10, x28 }
+    { x.bt x12, OMC_set_loop ; subi x12, x12, 1  }
+    
+early_exit: 
+    x.retsp 48
+
+#endif

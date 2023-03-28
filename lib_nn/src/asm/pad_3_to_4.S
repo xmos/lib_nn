@@ -71,3 +71,33 @@ loop:
     .cc_bottom pad_3_to_4_asm.func
 
 #endif
+
+
+#if defined(__VX4A__)
+    // This function is the optimal FIR on a 1-bit signal with 16-bit coefficients.
+    // x10: argument 1, output 
+    // x11: argument 2, input 
+    // x12: argument 3, count (3 byte chunks)
+    // x13: argument 4, pad_val(first 8 bits)
+#define NSTACKWORDS   16
+// void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val) {
+
+.globl pad_3_to_4_run
+pad_3_to_4_run:
+
+    x.entsp NSTACKWORDS
+    x.stdsp x18, x19, 0
+    {subi x12, x12, 1           ; x.mkmski x18, 24 }
+    slli x13, x13, 24
+loop:
+    {x.ldwi x19, 0(x11)   ; addi x11, x11, 3 }
+    and x19, x19, x18
+    or x19, x19, x13
+    { x.stwi x19, 0(x10)  ; addi x10, x10, 4 }
+    { x.bt x12, loop      ; subi x12, x12, 1 }
+
+    x.lddsp x18, x19, 0
+    x.retsp NSTACKWORDS
+
+#endif
+

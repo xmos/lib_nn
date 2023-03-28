@@ -72,3 +72,39 @@ loop:
 done:
 	retsp 0
 #endif
+
+#if defined(__VX4A__)
+
+// x10 - dest addr         
+// x11 - src addr   
+// x12 - byte_count
+
+//This isnt fast but it is simple.
+.globl vpu_memcpy_ext_asm  //TODO write this
+vpu_memcpy_ext_asm:
+.globl vpu_memcpy_int_asm
+vpu_memcpy_int_asm:
+
+    x.entsp 16
+    add x29, x13, x0
+    srli x13, x12, 5
+    beq x13, x0, check_remaining_bytes
+    {x.ldcu x28, 32; subi x13, x13, 1}
+
+loop:
+    {x.vldr x11; add x11, x11, x28}
+    {x.vstr x10; add x10, x10, x28}
+    {x.bt x13, loop; subi x13, x13, 1}
+
+check_remaining_bytes:
+    x.zexti x12, 5
+    beq x12, x0, exit
+
+    {x.vldr x11; x.mkmsk x28, x12}
+    x.vstrpv x10, x28
+
+    exit:
+    add x13, x29, x0
+    x.retsp 16
+
+#endif
