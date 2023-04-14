@@ -19,7 +19,6 @@ void bsign_8(
   #define FUNCTION_NAME bsign_8_asm
 #endif // NN_USE_REF
 
-#define NSTACKWORDS     (2)
     
 .text
 .issue_mode  dual
@@ -39,7 +38,21 @@ void bsign_8(
 #define tail_mask       r3
 #define tmp             r4
 #define _32             r5
+
+
 #define zero_pv         r11
+
+
+#ifdef USE_DDR_FIX
+#define NSTACKWORDS     (3)
+#define ddr_spill       r6
+#define OPTIONAL_DDR_SPILL(x) { ldw ddr_spill, x[8]; nop} ;\
+                              { ldw ddr_spill, x[0]; nop}
+#else
+#define NSTACKWORDS     (2)
+#define OPTIONAL_DDR_SPILL(x) /* */
+#endif
+
 
 #define JOB_START       0
 #define JOB_LENGTH      1
@@ -50,6 +63,9 @@ void bsign_8(
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
     std r4, r5, sp[0]
+#ifdef USE_DDR_FIX
+    {stw ddr_spill, sp[2]                       ;   nop                                    }
+#endif
 
     {   ldw tmp, arg_job[JOB_START]             ;   ldc _32, 32                             }
     {   add X, X, tmp                           ;                                           }
@@ -63,6 +79,7 @@ FUNCTION_NAME:
 
 .L_loop_top:
     {   sub length, length, 1                   ;   vldr zero_pv[0]                         }
+    OPTIONAL_DDR_SPILL(X)
     {   add X, X, _32                           ;   vlsub X[0]                              }
     {                                           ;   vdepth1                                 }
     {   vstrpv Y[0], tmp                        }
@@ -70,12 +87,17 @@ FUNCTION_NAME:
 .L_loop_end:
     {                                           ;   bf tail_mask, .Lfunc_end                }
     {                                           ;   vldr zero_pv[0]                         }
+    OPTIONAL_DDR_SPILL(X)
     {                                           ;   vlsub X[0]                              }
     {                                           ;   vdepth1                                 }
     {                                           ;   stw length, Y[0]                        } // Store 0 to upper bytes of tail
     {   vstrpv Y[0], tail_mask                  }
 
 .Lfunc_end:
+
+#ifdef USE_DDR_FIX
+    {ldw ddr_spill, sp[2]                       ;   nop                                    }
+#endif
     ldd r4, r5, sp[0]
     retsp NSTACKWORDS
 
