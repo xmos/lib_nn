@@ -85,6 +85,8 @@ FUNCTION_NAME:
     {vldd r11[0]                       ; shl r11, r2, 3}
     ldw r2, sp[S_OUTPUT_COUNT]
     {vsetc r11                         ; shl r11, r2, 1}
+
+    OPTIONAL_DDR_SPILL(r3) // destroys r5
     {vlsat r3[0]                       ; ldc r4, PARAMS_final_shr}
     {ld16s r4, r0[r4]                  ; add r3, r3, r11 }
 
