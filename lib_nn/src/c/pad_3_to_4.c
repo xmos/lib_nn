@@ -39,7 +39,7 @@ void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pa
     }
 }
 
-#ifdef __XS3A__
+#if defined(__XS3A__) || defined(NN_USE_REF) 
 
 /** Function that pads an image with 3-byte values with a 0.
  * This functions is highly optimised, but has constraints on the

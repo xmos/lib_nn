@@ -39,7 +39,7 @@
 	.type FUNCTION_NAME,@function
 
 FUNCTION_NAME:
-    {dualentsp NSTACKWORDS}
+    {dualentsp NSTACKWORDS;nop}
 
 #define MODE_S16 0x100
     ldc t, MODE_S16

@@ -9,17 +9,17 @@ option(BUILD_DDR_FIX "Build XCore binary with DDR fix enabled" OFF)
 # Build flags
 set(BUILD_FLAGS "-g")
 list(APPEND BUILD_FLAGS "-DTF_LITE_DISABLE_X86_NEON" )
-list(APPEND BUILD_FLAGS "-O3" )
+list(APPEND BUILD_FLAGS "-Os" )
 
 set(BUILD_FLAGS_Darwin "-DNN_USE_REF")
 set(BUILD_FLAGS_Linux "-DNN_USE_REF")
 
 list(APPEND BUILD_FLAGS_Darwin "-Wall" )
-# list(APPEND BUILD_FLAGS_Darwin "-fsanitize=undefined" )
-# list(APPEND BUILD_FLAGS_Darwin "-fsanitize=integer" )
-# list(APPEND BUILD_FLAGS_Darwin "-fsanitize=implicit-conversion" )
-# list(APPEND BUILD_FLAGS_Darwin "-fsanitize-recover=address" )
-# list(APPEND BUILD_FLAGS_Darwin "-fsanitize=address" )
+list(APPEND BUILD_FLAGS_Darwin "-fsanitize=undefined" )
+list(APPEND BUILD_FLAGS_Darwin "-fsanitize=integer" )
+list(APPEND BUILD_FLAGS_Darwin "-fsanitize=implicit-conversion" )
+list(APPEND BUILD_FLAGS_Darwin "-fsanitize-recover=address" )
+list(APPEND BUILD_FLAGS_Darwin "-fsanitize=address" )
 
 
 set(BUILD_FLAGS_XCORE "")

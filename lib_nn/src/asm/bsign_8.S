@@ -52,11 +52,11 @@ FUNCTION_NAME:
     std r4, r5, sp[0]
 
     {   ldw tmp, arg_job[JOB_START]             ;   ldc _32, 32                             }
-    {   add X, X, tmp                           ;                                           }
-    {   ldc r11, VSR_VALUE                      }
+    {   add X, X, tmp                           ;   nop                                     }
+    {   ldc r11, VSR_VALUE                      ;   nop                                     }
     {   shr tmp, tmp, 3                         ;   vsetc r11                               }    
     {   ldw tail_mask, arg_job[JOB_LENGTH]      ;   mov zero_pv, arg_zero_pv                } // tail_mask holds length
-    {   add Y, Y, tmp                           ;                                           }
+    {   add Y, Y, tmp                           ;   nop                                     }
     {   zext tail_mask, 5                       ;   shr length, tail_mask, 5                } // length holds length (in "vectors")
     {   shr tail_mask, tail_mask, 3             ;   mkmsk tmp, 4                            }
     {   mkmsk tail_mask, tail_mask              ;   bf length, .L_loop_end                  } // tail_mask is a byte mask
@@ -64,16 +64,16 @@ FUNCTION_NAME:
 .L_loop_top:
     {   sub length, length, 1                   ;   vldr zero_pv[0]                         }
     {   add X, X, _32                           ;   vlsub X[0]                              }
-    {                                           ;   vdepth1                                 }
-    {   vstrpv Y[0], tmp                        }
+    {   nop                                     ;   vdepth1                                 }
+        vstrpv Y[0], tmp                        
     {   add Y, Y, 4                             ;   bt length, .L_loop_top                  }
 .L_loop_end:
-    {                                           ;   bf tail_mask, .Lfunc_end                }
-    {                                           ;   vldr zero_pv[0]                         }
-    {                                           ;   vlsub X[0]                              }
-    {                                           ;   vdepth1                                 }
-    {                                           ;   stw length, Y[0]                        } // Store 0 to upper bytes of tail
-    {   vstrpv Y[0], tail_mask                  }
+    {   nop                                     ;   bf tail_mask, .Lfunc_end                }
+    {   nop                                     ;   vldr zero_pv[0]                         }
+    {   nop                                     ;   vlsub X[0]                              }
+    {   nop                                     ;   vdepth1                                 }
+    {   nop                                     ;   stw length, Y[0]                        } // Store 0 to upper bytes of tail
+        vstrpv Y[0], tail_mask                  
 
 .Lfunc_end:
     ldd r4, r5, sp[0]

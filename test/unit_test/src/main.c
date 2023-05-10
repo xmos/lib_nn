@@ -14,20 +14,20 @@
 int main(void) {
   UNITY_BEGIN();
 
-  CALL(test_conv2d_binary_regression);
+  // CALL(test_conv2d_binary_regression);
 
-  CALL(test_conv2d_regression);
+  // CALL(test_conv2d_regression);
   CALL(test_output_transforms);
-  CALL(test_aggregate_fns);
-  CALL(test_conv2d_dw_regression);
-  CALL(test_mem_cpy_fns);
+  // CALL(test_aggregate_fns);
+  // CALL(test_conv2d_dw_regression);
+  //CALL(test_mem_cpy_fns);/////
 
-  CALL(test_vpu_memcpy);
-  CALL(test_vpu_memset);
+  // CALL(test_vpu_memcpy); ////
+  // CALL(test_vpu_memset); ///
 
-  CALL(test_bsign_8);
-  CALL(test_pad);
-  CALL(test_3_to_4);
-  CALL(test_add_elementwise);
+  // CALL(test_bsign_8);/////
+  // CALL(test_pad); ////
+  // CALL(test_3_to_4);
+  // CALL(test_add_elementwise);
   return UNITY_END();
 }

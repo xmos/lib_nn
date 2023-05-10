@@ -124,26 +124,36 @@ class OutputTransformFn {
 
     int output_channel_groups = first_array.size() / elements_per_group;
 
+    // printf("body\n");
     for (int ocg = 0; ocg < output_channel_groups; ++ocg) {
       for (int ch = ocg * elements_per_group;
            ch < (ocg + 1) * elements_per_group; ++ch) {
         serialised_memory.push_back(first_array[ch]);
+        // printf("%04x ", first_array[ch]);
       }
+      // printf("\n");
 
       for (int ch = ocg * elements_per_group;
            ch < (ocg + 1) * elements_per_group; ++ch) {
         serialised_memory.push_back(second_array[ch]);
+        // printf("%04x ", second_array[ch]);
       }
+      // printf("\n");
     }
 
+    // printf("tail\n");
     for (int ch = output_channel_groups * elements_per_group;
          ch < first_array.size(); ++ch) {
       serialised_memory.push_back(first_array[ch]);
+        // printf("%04x ", first_array[ch]);
     }
+      // printf("\n");
     for (int ch = output_channel_groups * elements_per_group;
          ch < first_array.size(); ++ch) {
       serialised_memory.push_back(second_array[ch]);
+        // printf("%04x ", second_array[ch]);
     }
+      // printf("\n");
     return serialised_memory;
   }
 
@@ -224,7 +234,10 @@ typedef std::vector<OutputTransformFn::ActivationParams> MulsAndBias;
 
 
 class OutputTransformFnInt8 : public OutputTransformFn {
+
  public:
+  static const int XS3_VLMUL_SHR = 14;
+  static const int VX4_VLMUL_SHR = 15;
   struct QuantisationParams {
     /**
      * The amount to shift all the 32 bit accumulators right by to reduce them
@@ -439,7 +452,7 @@ class OutputTransformFnInt8_Group : public OutputTransformFnInt8 {
      * @return QuantisationParams
      */
     QuantisationParams quantise_activation(MulsAndBias &activationParams,
-                                           bool verbose);
+                                           bool verbose, unsigned vlmul_shr = XS3_VLMUL_SHR);
 
    private:
     std::tuple<int, int> solve_for_constraints(MulsAndBias &activationParams,
@@ -558,7 +571,7 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
      * @return QuantisationParams
      */
     QuantisationParams quantise_activation(MulsAndBias &activationParams,
-                                           bool verbose);
+                                           bool verbose, unsigned vlmul_shr = XS3_VLMUL_SHR);
 
    private:
     std::tuple<std::vector<int>, std::vector<int>> solve_for_constraints(

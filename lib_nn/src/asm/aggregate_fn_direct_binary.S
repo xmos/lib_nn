@@ -64,7 +64,7 @@ FUNCTION_NAME:
     std r6, r7, sp[1]
     std r8, r9, sp[2]
     #ifdef USE_DDR_FIX
-    {stw  ddr_spill, sp[6]}
+    {stw  ddr_spill, sp[6]; nop}
     #endif
 
     {vclrdr; ldc t, 32}

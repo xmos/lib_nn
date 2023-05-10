@@ -76,10 +76,10 @@ FUNCTION_NAME:
     K_p_adjust_lbl_asm:
 
     {lss thirty_two, t, thirty_two; ldc step, 32}
-    bf thirty_two, step_adjust_lbl_asm; 
+    {bf thirty_two, step_adjust_lbl_asm; nop} 
         mul step, step, t 
     step_adjust_lbl_asm:
-    {ldc thirty_two, 32;}
+    {ldc thirty_two, 32; nop}
     {bf ic_group_count, calc_step_asm; sub ic_group_count, ic_group_count, 1}
     input_channel_loop_asm:
 
@@ -122,8 +122,8 @@ FUNCTION_NAME:
     {bt ic_group_count, input_channel_loop_asm; sub ic_group_count, ic_group_count, 1}
     
     calc_step_asm:
-    {ashr step, step, 5}
-    {ldc t, (VPU_INT16_EPV-1)}
+    {ashr step, step, 5; nop}
+    {ldc t, (VPU_INT16_EPV-1); nop}
     {add step, step, t; nop}
     {sub step, step, 1; nop} //subtract one for now 
 

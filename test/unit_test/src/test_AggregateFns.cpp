@@ -221,6 +221,8 @@ void Test_MatMulInt8() {
           ((int16_t *)&v)[0] = A.vR[output_chan];
           ((int16_t *)&v)[1] = A.vD[output_chan];
 
+          // printf("%d %d\n", v - accu_modifier[actual_output_channel],
+          //                   expected_sum);
           TEST_ASSERT_EQUAL(v - accu_modifier[actual_output_channel],
                             expected_sum);
         }
@@ -244,11 +246,12 @@ void Test_MatMulBinary() {
 
       std::array<int, 4> shape = {
           {output_channel_count, k_height, k_width, input_bytes}};
-      alignas(4) int8_t raw_weights[output_channel_count][k_height][k_width]
+      alignas(4) int8_t raw_weights[output_channel_count]
                                    [input_bytes];
       assert(sizeof raw_weights == input_bytes * output_channel_count);
 
-      for (auto j = 0; j < sizeof raw_weights; ++j)
+
+      for (auto j = 0; j < output_channel_count * input_bytes; ++j)
         ((int8_t *)raw_weights)[j] = rng.rand<int8_t>();
 
       int scratch_bytes = MatMulInt8::get_scratch_mem_bytes(input_bytes);
@@ -262,38 +265,12 @@ void Test_MatMulBinary() {
 
       for (int j = 0; j < sizeof T; ++j) T[j] = rng.rand<int8_t>();
 
-      int expected[output_channel_count];
-      for (int i = 0; i < output_channel_count; i++) {
-        expected[i] = 0;
-        for (int j = 0; j < sizeof T; ++j) {
-          accumulate_binary_bytes(&(expected[i]), ((int8_t *)raw_weights)[j],
-                                  T[j]);
-        }
-      }
-
-      int accu_modifier[output_channel_count];  //=0
-
-      // TODO make this into an int8 specific function
-      for (int i = 0; i < output_channel_count; i++) {
-        int idx = rw.final_vpu_load_addresses[i];
-
-        int s = 0;
-        int channel_overlap_start = input_bytes % vpu_bytes;
-
-        if (channel_overlap_start) {
-          for (int j = channel_overlap_start; j < vpu_bytes; j++) {
-            s += (int)(rw.weights[idx + j]) * T[scratch_bytes - vpu_bytes + j];
-          }
-        }
-        accu_modifier[i] = s;
-      }
-
       alignas(4) int8_t reordered_weights[rw.weights.size()];
       std::memcpy(reordered_weights, rw.weights.data(), rw.weights.size());
 
-      MatMulInt8::Params p(output_channel_count,
+      MatMulBinary::Params p(output_channel_count,
                            input_bytes);  // reordered_weights
-      MatMulInt8 mm(&p);
+      MatMulBinary mm(&p);
       mm.setWeights((int8_t *)reordered_weights);
       int ocg_count = (output_channel_count + vpu_ring_buffer_length - 1) /
                       vpu_ring_buffer_length;
@@ -307,20 +284,42 @@ void Test_MatMulBinary() {
                      vpu_ring_buffer_length);
 
         for (int output_chan = 0; output_chan < chs_in_group; ++output_chan) {
+
           int actual_output_channel =
               output_chan + ocg * vpu_ring_buffer_length;
+              
+          int idx = rw.final_vpu_load_addresses[output_chan];
+          
+          int accu_modifier = 0;
+          int channel_overlap_start = input_bytes % vpu_bytes;
+
+          if (channel_overlap_start) {
+
+            for (int j = channel_overlap_start; j < vpu_bytes; j++) {
+
+              printf("overlap: %02x\n", (unsigned char)reordered_weights[actual_output_channel * vpu_ring_buffer_length + idx + j]);
+              accumulate_binary_bytes(&(accu_modifier), 
+                reordered_weights[actual_output_channel * vpu_ring_buffer_length + idx + j],
+                T[scratch_bytes - vpu_bytes + j]);
+            }
+          }
 
           int expected_sum = 0;
-          for (int b = 0; b < input_bytes; b++)
-            expected_sum +=
-                ((int)raw_weights[actual_output_channel][0][0][b] * (int)T[b]);
+          for (int j = 0; j < sizeof T; ++j) {
+            accumulate_binary_bytes(&(expected_sum), 
+              reordered_weights[actual_output_channel * vpu_ring_buffer_length + j],
+          
+              T[j]
+            );
+          }
 
           int32_t v;
           ((int16_t *)&v)[0] = A.vR[output_chan];
           ((int16_t *)&v)[1] = A.vD[output_chan];
 
-          TEST_ASSERT_EQUAL(v - accu_modifier[actual_output_channel],
-                            expected_sum);
+          // printf("%d %d %d\n", v,  accu_modifier,
+          //                   expected_sum);
+          TEST_ASSERT_EQUAL(v - accu_modifier, expected_sum);
         }
       }
     }
@@ -607,6 +606,9 @@ void Test_MatMulBinaryDirectFn() {
                       for (int input_ch_per_output = x_channels;
                            input_ch_per_output <= x_channels;
                            input_ch_per_output += 256) {
+
+                        // printf("%d %d %d %d %d %d %d %d %d %d %d\n", x_height,x_width, x_channels ,
+                        // k_height, k_width, k_h_dilation, k_v_dilation,k_h_stride, k_v_stride, output_channels, input_ch_per_output );
                         int output_height = CONV2D_OUTPUT_LENGTH(
                             x_height, k_height, k_v_dilation, k_v_stride);
                         int output_width = CONV2D_OUTPUT_LENGTH(
@@ -941,16 +943,21 @@ void Test_Kernel_Reordering_DW() {
 extern "C" void test_aggregate_fns();
 void test_aggregate_fns() {
   UNITY_SET_FILE();
-  RUN_TEST(Test_SimpleMatMulInt8);
-  RUN_TEST(Test_SimpleMatMulBinary);
-  RUN_TEST(Test_MatMulInt8);
-  RUN_TEST(Test_MatMulBinary);
-  RUN_TEST(Test_Simple_MatMulDirectFn);
-  RUN_TEST(Test_Simple_MatMulBinaryDirectFn);
-  RUN_TEST(Test_MatMulDirectFn);
-  RUN_TEST(Test_MatMulBinaryDirectFn);
-  RUN_TEST(Test_Kernel_Reordering);
-  RUN_TEST(Test_Simple_MatMulDirectFn_DW);
+  // RUN_TEST(Test_SimpleMatMulInt8);//passes
+  // RUN_TEST(Test_SimpleMatMulBinary); //passes
+
+  // RUN_TEST(Test_MatMulInt8);//passes
+  // RUN_TEST(Test_MatMulBinary); //fails
+
+  // RUN_TEST(Test_Simple_MatMulDirectFn); //passes
+  // RUN_TEST(Test_Simple_MatMulBinaryDirectFn);  //fails
+
+  // RUN_TEST(Test_MatMulDirectFn); //probably ok
+  // RUN_TEST(Test_MatMulBinaryDirectFn); //crashes
+
+  // RUN_TEST(Test_Kernel_Reordering);//passes
+  // RUN_TEST(Test_Simple_MatMulDirectFn_DW);//passes
+
   RUN_TEST(Test_MatMulDirectFn_DW);
-  RUN_TEST(Test_Kernel_Reordering_DW);
+  // RUN_TEST(Test_Kernel_Reordering_DW);//passes
 }

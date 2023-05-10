@@ -14,8 +14,6 @@ extern "C" {
 
 using namespace nn;
 
-const int VLMUL_SHR = 14;
-
 static int64_t saturate_non_sym(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
   const int64_t min_val = -max_val - 1;
@@ -195,7 +193,7 @@ OutputTransformFnInt8_Group::Quantizer::solve_for_constraints(
       // check
       // accu*2**A fit in 16 bits
       // mul*2**B fit in 16 bits
-      // bias*(2**(A+B-VLMUL_SHR)) fit in 16 bits
+      // bias*(2**(A+B-vlmul_shr)) fit in 16 bits
       // (must be representable by 16bit *
       // (1<<x)) (accu*2**A)*(mul*2**B) fit in 32 bits (accu*2**A)*(mul*2**B) +
       // bias*(2**(A+B)) fit in 32 bits
@@ -583,7 +581,7 @@ void nn::OutputTransformFn::ActivationParams::
 
 OutputTransformFnInt8_Group::QuantisationParams
 OutputTransformFnInt8_Group::Quantizer::quantise_activation(
-    MulsAndBias &activationParams, bool verbose) {
+    MulsAndBias &activationParams, bool verbose, unsigned vlmul_shr) {
   if (activationParams.size() == 0) {
     QuantisationParams q;
     q.initial_shr = 0;
@@ -597,8 +595,8 @@ OutputTransformFnInt8_Group::Quantizer::quantise_activation(
 
   int A, M;
 
-  std::tie(A, M) = solve_for_constraints(activationParams, VLMUL_SHR, verbose);
-  int B = A + M - VLMUL_SHR;
+  std::tie(A, M) = solve_for_constraints(activationParams, vlmul_shr, verbose);
+  int B = A + M - vlmul_shr;
 
   QuantisationParams q;
 
@@ -628,7 +626,7 @@ OutputTransformFnInt8_Group::Quantizer::quantise_activation(
 
 OutputTransformFnInt8_Channelwise::QuantisationParams
 OutputTransformFnInt8_Channelwise::Quantizer::quantise_activation(
-    MulsAndBias &activationParams, bool verbose) {
+    MulsAndBias &activationParams, bool verbose, unsigned vlmul_shr) {
   if (activationParams.size() == 0) {
     QuantisationParams q;
     q.initial_shr = 0;
@@ -636,8 +634,8 @@ OutputTransformFnInt8_Channelwise::Quantizer::quantise_activation(
     return q;
   }
   std::vector<int> As, Ms;
-  std::tie(As, Ms) = solve_for_constraints(activationParams, VLMUL_SHR, false);
-  int B = As[0] + Ms[0] - VLMUL_SHR;
+  std::tie(As, Ms) = solve_for_constraints(activationParams, vlmul_shr, false);
+  int B = As[0] + Ms[0] - vlmul_shr;
   // Ensure the order is correct
   for (auto &activationParam : activationParams)
     recitfy_min_max(activationParam.accu_min_val, activationParam.accu_max_val);
@@ -650,7 +648,7 @@ OutputTransformFnInt8_Channelwise::Quantizer::quantise_activation(
     int A = As[ch];
     int M = Ms[ch];
 
-    assert(B == A + M - VLMUL_SHR);
+    assert(B == A + M - vlmul_shr);
     q.initial_shifts.push_back(-A);
 
     int16_t m = float_to_int16(activationParams[ch].multiplier, M);
@@ -671,12 +669,23 @@ OutputTransformFnInt8_Channelwise::Quantizer::quantise_activation(
 }
 
 // INT8
+
+#ifdef __VX4A__
+
+extern "C" int8_t *output_transform_fn_impl_asm(const OT_int8::Params *params,
+                                          int8_t *Y, VPURingBuffer *A,
+                                          int32_t output_channel_group,
+                                          int16_t *multipliers_and_biases);
+
+#endif
+
+#ifdef __XS3A__
+
 extern "C" int8_t *output_transform_fn_impl_asm(const OT_int8::Params *params,
                                                 int8_t *Y, VPURingBuffer *A,
                                                 int16_t *multipliers_and_biases,
                                                 int output_count);
 
-#ifndef NN_USE_REF
 int8_t *output_transform_fn_impl_asm_stub(const OT_int8::Params *params,
                                           int8_t *Y, VPURingBuffer *A,
                                           int32_t output_channel_group,
@@ -754,8 +763,14 @@ int8_t *OT_int8::output_transform_fn(int8_t *Y, VPURingBuffer *A,
   return output_transform_fn_impl(this->params, Y, A, output_channel_group,
                                   multipliers_and_biases);
 #else
+#ifdef __XS3A__
   return output_transform_fn_impl_asm_stub(
       this->params, Y, A, output_channel_group, multipliers_and_biases);
+#endif
+#ifdef __VX4A__
+  return output_transform_fn_impl_asm(
+      this->params, Y, A, output_channel_group, multipliers_and_biases);
+#endif
 #endif  // NN_USE_REF
 }
 //-----------------------

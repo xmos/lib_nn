@@ -70,6 +70,10 @@ Conv2dReorderedWeights MatMulBase::reorder_kernel_weights(
             deref2d(raw_weights, bytes_per_output_channel,
                     ocg_offset + reversed_out_ch, vpu_bytes_per_word * icg);
 
+        // for(int i=0;i<bytes_in_this_vpu_copy;i++)
+        //   printf("%4d %2x\n", reordered_weights.weights.size()+i,(unsigned char) *(src + i));
+        
+        
         reordered_weights.weights.insert(reordered_weights.weights.end(), src,
                                          src + bytes_in_this_vpu_copy);
 
@@ -84,6 +88,9 @@ Conv2dReorderedWeights MatMulBase::reorder_kernel_weights(
   }
   assert(dst_offset <= kernel_size);
 
+  // for(int i=0;i<kernel_size - dst_offset;i++)
+  //     printf("%4d %2x\n", reordered_weights.weights.size()+i,(unsigned char) pad_value);
+    
   reordered_weights.weights.resize(kernel_size, pad_value);
   return reordered_weights;
 }
@@ -308,6 +315,7 @@ C_API void mat_mul_binary_generic_impl_asm(MatMulInt8::Params *params,
 
 void MatMulDirectFn::aggregate_fn(VPURingBuffer *A, int8_t *T,
                                   int32_t output_channel_group) {
+                                    // printf("mat_mul_int8_direct_impl_asm\n");
 #ifdef NN_USE_REF
   mat_mul_int8_direct_impl(this->params, A, T, output_channel_group, weights);
 #else
@@ -318,6 +326,7 @@ void MatMulDirectFn::aggregate_fn(VPURingBuffer *A, int8_t *T,
 
 void MatMulBinaryDirectFn::aggregate_fn(VPURingBuffer *A, int8_t *T,
                                         int32_t output_channel_group) {
+                                    // printf("mat_mul_binary_direct_impl_asm\n");
 #ifdef NN_USE_REF
   mat_mul_binary_direct_impl(this->params, A, T, output_channel_group, weights);
 #else
@@ -328,6 +337,7 @@ void MatMulBinaryDirectFn::aggregate_fn(VPURingBuffer *A, int8_t *T,
 
 void MatMulInt8::aggregate_fn(VPURingBuffer *A, int8_t *T,
                               int32_t output_channel_group) {
+                                    // printf("mat_mul_int8_generic_impl_asm\n");
 #ifdef NN_USE_REF
   mat_mul_int8_generic_impl(this->params, A, T, output_channel_group, weights);
 #else
@@ -337,6 +347,7 @@ void MatMulInt8::aggregate_fn(VPURingBuffer *A, int8_t *T,
 }
 void MatMulBinary::aggregate_fn(VPURingBuffer *A, int8_t *T,
                                 int32_t output_channel_group) {
+                                    // printf("mat_mul_binary_generic_impl_asm\n");
 #ifdef NN_USE_REF
   mat_mul_binary_generic_impl(this->params, A, T, output_channel_group,
                               weights);
