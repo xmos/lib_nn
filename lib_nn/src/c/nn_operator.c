@@ -95,15 +95,17 @@ void lookup8_ref(uint8_t* Y, const uint8_t* X, const uint8_t* lut,
 }
 
 #ifdef NN_USE_REF
-
 void requantize_16_to_8(int8_t* y, const int16_t* x, const unsigned elm_start,
                         const unsigned elm_count) {
   requantize_16_to_8_ref(y, x, elm_start, elm_count);
 }
+#endif // NN_USE_REF
 
 void lookup8(uint8_t* Y, const uint8_t* X, const uint8_t* lut,
              const unsigned elm_start, const unsigned elm_count) {
+#ifdef NN_USE_REF
   lookup8_ref(Y, X, lut, elm_start, elm_count);
+#else
+  lookup8_asm(Y, X, lut, elm_start, elm_count);
+#endif // NN_USE_REF
 }
-
-#endif  // NN_USE_REF

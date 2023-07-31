@@ -249,5 +249,34 @@ void add_elementwise(
     const int elm_start,
     const int elm_count);
 
+/** 
+ * @brief Execute @oper{lookup8} job.
+ * 
+ * See @oper_ref{lookup8} for more details about the @oper{lookup8} operator.
+ * 
+ * Unlike other operators, instances of @oper{lookup8} do not require plans or jobs and no initialization is
+ * necessary.
+ * 
+ * `Y` points to the output vector @tensor{y} with length @math{N}.
+ * 
+ * `X` points to the input vector @tensor{x} with length @math{N}. 
+ * 
+ * `lut` points to the look-up table @math{T} with shape @tensor_shape{256}.
+ * 
+ * `N` is the length @math{N} of the input vector @tensor{x}.
+ * 
+ * @requires_word_alignment{Y,X}
+ *
+ * @param Y      [out]  The output vector @tensor{y}
+ * @param X      [in]   The input vector @tensor{x}
+ * @param lut    [in]   Look-up table @tensor{T}
+ * @param N      [in]   Length @math{N} of input and output vectors
+ */
+void lookup8(
+    uint8_t* Y,
+    const uint8_t* X,
+    const uint8_t* lut,
+    const unsigned elm_start,
+    const unsigned elm_count);
 
 #endif  // LAYERS_H_
