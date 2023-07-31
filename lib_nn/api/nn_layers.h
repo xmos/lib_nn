@@ -247,8 +247,7 @@ void add_elementwise(
     const int8_t X2[],
     nn_add_params_t *p,
     const int elm_start,
-    const int elm_count,
-    const int x2_size);
+    const int elm_count);
 
 /** 
  * @brief Execute @oper{lookup8} job.
