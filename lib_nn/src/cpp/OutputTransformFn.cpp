@@ -748,6 +748,64 @@ int8_t *output_transform_fn_impl(const OT_int8::Params *params, int8_t *Y,
   return Y;
 }
 
+int8_t *nn::output_transform_fn_impl(const Output_Transform_Params_t *params, int8_t *Y,
+                                 VPURingBuffer *A, int32_t output_channel_group,
+                                 int16_t *multipliers_and_biases) {
+  xs3_vpu vpu_mem;
+  xs3_vpu *vpu = &vpu_mem;
+
+  // we need to know how many we are processing
+
+  int output_count = std::min(
+      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
+      (int32_t)VPU_INT16_EPV);
+
+  int16_t *cur_post_activation_mul =
+      multipliers_and_biases + output_channel_group * VPU_INT16_EPV * 2;
+
+  int16_t *cur_post_activation_bias = cur_post_activation_mul + output_count;
+
+  VSETC(vpu, MODE_S16);
+
+  // Load accumulator into D and R Registers
+  VLDR(vpu, &A->vR);
+  VLDD(vpu, &A->vD);
+
+  vpu_vector_t temp_mem;
+
+  // Saturate to fit in 16 bits?
+  if (params->initial_shift > 0) {
+    for (int i = 0; i < VPU_INT16_EPV; ++i)
+      temp_mem.s16[i] = params->initial_shift;
+
+    VLSAT(vpu, &temp_mem);
+  } else {
+    for (int i = 0; i < VPU_INT16_EPV; ++i) temp_mem.s16[i] = 0;
+    VLSAT(vpu, &temp_mem);
+
+    VSTR(vpu, &temp_mem);
+    VLASHR(vpu, &temp_mem, params->initial_shift);
+  }
+
+  // multiply by set val
+  VLMUL(vpu, cur_post_activation_mul);
+
+  // add set bias
+  VLADD(vpu, cur_post_activation_bias);
+
+  // store, load then do final shift right
+  VSTR(vpu, &temp_mem);
+  VLASHR(vpu, &temp_mem, params->final_shr);
+
+  VDEPTH8_FIXED(vpu);
+
+  int mask = (1 << output_count) - 1;
+  VSTRPV(vpu, Y, mask);
+  Y += output_count;
+
+  return Y;
+}
+
 int8_t *OT_int8::output_transform_fn(int8_t *Y, VPURingBuffer *A,
                                      int32_t output_channel_group) {
 #ifdef NN_USE_REF

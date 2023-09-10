@@ -63,10 +63,17 @@ class MemCpyFn {
   virtual int get_overread_bytes() = 0;
 };
 
+struct Deref_MemcpyFn_Params_t {
+    int32_t bytes_per_h_line;
+    int32_t bytes_per_pixel;
+};
+
 /**
  *
  */
 class DerefInputFn : public MemCpyFn {
+  private:
+  Deref_MemcpyFn_Params_t p;
  public:
   class Params : public Serialisable {
    public:
@@ -109,10 +116,16 @@ class DerefInputFn : public MemCpyFn {
 
  public:
   DerefInputFn(Params *params) : params(params){};
+  DerefInputFn(const ImageGeometry &input, const WindowGeometry &window);
+  Deref_MemcpyFn_Params_t getParams() {return p;};
   int8_t *memcopy_fn(int8_t *T, int8_t *X, int32_t h, int32_t w, int32_t c);
   int get_scratch_bytes();
   int get_overread_bytes();
 };
+
+int8_t *deref_memcopy_fn(const Deref_MemcpyFn_Params_t *params, int8_t *T, int8_t *X, int32_t output_v_coord,
+                                 int32_t output_h_coord,
+                                 int32_t output_c_coord);
 
 /**
  *

@@ -566,12 +566,20 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
   };
 };
 
+struct Output_Transform_Params_t{
+    int32_t output_slice_channel_count;
+    int16_t initial_shift;
+    int16_t final_shr;
+};
+
 /**
  * @brief Output Transform class to converting 32 bit accumulators to an 8 bit
  * output space on a groupwise quantisation scheme.
  *
  */
 class OT_int8 : public OutputTransformFnInt8_Group {
+  private:
+  Output_Transform_Params_t p;
  public:
   class Params : public Serialisable {
    public:
@@ -601,7 +609,9 @@ class OT_int8 : public OutputTransformFnInt8_Group {
 
  public:
   OT_int8(Params *params) : params(params){};
-
+  OT_int8(int32_t output_slice_channel_count, int16_t initial_shift,
+           int16_t final_shr) : p{output_slice_channel_count, initial_shift, final_shr} {}
+  Output_Transform_Params_t getParams() {return p;};
   int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
                               int32_t output_channel_group);
 
@@ -611,6 +621,10 @@ class OT_int8 : public OutputTransformFnInt8_Group {
     assert(is_aligned(multipliers_and_biases, 4));
   }
 };
+
+int8_t *output_transform_fn_impl(const Output_Transform_Params_t *params, int8_t *Y,
+                                 VPURingBuffer *A, int32_t output_channel_group,
+                                 int16_t *multipliers_and_biases);
 
 /**
  * @brief Output Transform class to converting 32 bit accumulators to an 8 bit

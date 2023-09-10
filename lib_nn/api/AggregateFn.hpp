@@ -150,7 +150,18 @@ class MatMulBinary : public MatMulBase {
   void aggregate_fn(VPURingBuffer *A, int8_t *T, int32_t output_channel_group);
 };
 
+struct Direct_AggFn_Params_t{
+    int32_t bytes_per_kernel_channel;
+    int32_t k_height_loop_counter;
+    int32_t k_width_loop_counter;
+    int32_t input_channel_loop_counter;
+    int32_t inner_x_h_step;
+    int32_t inner_x_v_step;
+};
+
 class MatMulDirectFn : public AggregateFn {
+  private:
+  Direct_AggFn_Params_t p;
  public:
   class Params : public Serialisable {
    public:
@@ -194,6 +205,9 @@ class MatMulDirectFn : public AggregateFn {
 
  public:
   MatMulDirectFn(Params *params) : params(params){};
+  MatMulDirectFn(const ImageGeometry &X, const WindowGeometry &K,
+                               const int input_ch_per_output);
+  Direct_AggFn_Params_t getParams() {return p;};
 
   void aggregate_fn(VPURingBuffer *A, int8_t *T, int32_t output_channel_group);
 
@@ -202,6 +216,10 @@ class MatMulDirectFn : public AggregateFn {
    */
   void setWeights(int8_t *reordered_weights) { weights = reordered_weights; }
 };
+
+void mat_mul_fn_int8_direct_impl(const Direct_AggFn_Params_t *params, VPURingBuffer *A,
+                              int8_t *X, int32_t output_channel_group,
+                              int8_t *weights);
 
 class MatMulBinaryDirectFn : public MatMulDirectFn {
  public:

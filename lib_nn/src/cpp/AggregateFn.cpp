@@ -241,6 +241,29 @@ MatMulDirectFn::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
                    (int)K.shape.width * bytes_per_pixel * (int)K.dilation.col;
 }
 
+MatMulDirectFn::MatMulDirectFn(const ImageGeometry &X, const WindowGeometry &K,
+                               const int input_ch_per_output) {
+  int bytes_per_copy_per_channel =
+      (input_ch_per_output * X.element_bits) / CHAR_BIT;
+
+  p.k_height_loop_counter = K.shape.height - 1;
+  p.k_width_loop_counter = K.shape.width - 1;
+
+  p.input_channel_loop_counter =
+      (bytes_per_copy_per_channel / XS3_VPU_VREG_WIDTH_BYTES) - 1;
+
+  p.bytes_per_kernel_channel = K.shape.height * K.shape.width *
+                             bytes_per_copy_per_channel * VPU_INT16_EPV;
+
+  int bytes_per_pixel = X.PixelBytes();
+
+  assert(bytes_per_pixel == bytes_per_copy_per_channel);
+  p.inner_x_h_step =
+      bytes_per_pixel * K.dilation.col - bytes_per_copy_per_channel;
+  p.inner_x_v_step = bytes_per_pixel * (int)X.width * (int)K.dilation.row -
+                   (int)K.shape.width * bytes_per_pixel * (int)K.dilation.col;
+}
+
 void mat_mul_direct_impl(MatMulDirectFn::Params *params, VPURingBuffer *A,
                          int8_t *X, int32_t output_channel_group,
                          int8_t *weights,
@@ -275,6 +298,48 @@ void mat_mul_direct_impl(MatMulDirectFn::Params *params, VPURingBuffer *A,
   // save off the accumulator
   VSTR(vpu, &A->vR);
   VSTD(vpu, &A->vD);
+}
+
+void mat_mul_fn_direct_impl(const Direct_AggFn_Params_t *params, VPURingBuffer *A,
+                         int8_t *X, int32_t output_channel_group,
+                         int8_t *weights,
+                         void (*macc_inst)(xs3_vpu *vpu, const void *addr)) {
+  xs3_vpu vpu_mem;
+  xs3_vpu *vpu = &vpu_mem;
+
+  VSETC(vpu, MODE_S8);
+  VCLRDR(vpu);
+
+  int8_t *X_cur_p = X;
+
+  int8_t *K_p = (int8_t *)weights +
+                params->bytes_per_kernel_channel * output_channel_group;
+  for (int kh = params->k_height_loop_counter; kh >= 0; kh--) {
+    for (int kw = params->k_width_loop_counter; kw >= 0; kw--) {
+      for (int ic = params->input_channel_loop_counter; ic >= 0; ic--) {
+        VLDC(vpu, X_cur_p);
+
+        X_cur_p += XS3_VPU_VREG_WIDTH_BYTES;
+
+        for (unsigned l = 0; l < VPU_INT16_EPV; l++) {
+          macc_inst(vpu, K_p);
+          K_p += XS3_VPU_VREG_WIDTH_BYTES;
+        }
+      }
+      X_cur_p += params->inner_x_h_step;
+    }
+    X_cur_p += params->inner_x_v_step;
+  }
+
+  // save off the accumulator
+  VSTR(vpu, &A->vR);
+  VSTD(vpu, &A->vD);
+}
+
+void nn::mat_mul_fn_int8_direct_impl(const Direct_AggFn_Params_t *params, VPURingBuffer *A,
+                              int8_t *X, int32_t output_channel_group,
+                              int8_t *weights) {
+  mat_mul_fn_direct_impl(params, A, X, output_channel_group, weights, VLMACCR);
 }
 
 void mat_mul_int8_direct_impl(MatMulDirectFn::Params *params, VPURingBuffer *A,

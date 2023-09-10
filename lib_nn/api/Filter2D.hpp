@@ -161,6 +161,26 @@ class Filter2D_DW : public AbstractKernel {
 void execute(int8_t *Y, int8_t *X, AbstractKernel *ak,
              AbstractKernel::Params *kparams, int8_t *scratch = nullptr);
 
+
+struct nn_conv_params_t{
+    void *mem_p;
+    void *agg_p;
+    void *ot_p;
+    int8_t* (*memcopy_fn)(const void *params, int8_t *T, int8_t *X, int32_t output_v_coord,
+                                 int32_t output_h_coord,
+                                 int32_t output_c_coord);
+    void (*aggregate_fn)(const void *params, VPURingBuffer *A,
+                              int8_t *X, int32_t output_channel_group,
+                              int8_t *weights);
+    int8_t* (*output_transform_fn)(const void *params, int8_t *Y,
+                                 VPURingBuffer *A, int32_t output_channel_group,
+                                 int16_t *multipliers_and_biases);
+};
+
+void execute_p(int8_t *Y, int8_t *X, nn_conv_params_t *ak,
+             AbstractKernel_Params_t *kparams, int8_t* weights, int16_t* muls_and_biases, int8_t *scratch = nullptr);
+
+
 }  // namespace nn
 
 #endif  // LIB_NN_FILTER2D_HPP_

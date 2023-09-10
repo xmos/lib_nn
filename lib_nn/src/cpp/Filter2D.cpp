@@ -90,3 +90,37 @@ void nn::execute(int8_t *Y, int8_t *X, AbstractKernel *ak,
     Y += kparams->output_h_mem_stride;
   }
 }
+
+void calc_output_pixel_slice_p(int8_t *Y, int8_t *X, int32_t h,
+                                       int32_t w, int8_t *scratch_mem,
+                                       AbstractKernel_Params_t *kparams, nn_conv_params_t *p, int8_t* weights, int16_t* muls_and_biases) {
+  int8_t *input_img = p->memcopy_fn(p->mem_p,
+      scratch_mem, X, h, w, 0);  // copy all input channels, channel start is implicitly 0.
+  for (int32_t output_chan_group = 0;
+       output_chan_group < kparams->output_channel_group_count;
+       ++output_chan_group) {
+    VPURingBuffer A;
+    p->aggregate_fn(p->agg_p, &A, input_img, output_chan_group, weights);
+
+    Y = p->output_transform_fn(p->ot_p, Y, &A, output_chan_group, muls_and_biases);
+  }
+}
+
+void nn::execute_p(int8_t *Y, int8_t *X, nn_conv_params_t *ak,
+             AbstractKernel_Params_t *kparams, int8_t* weights, int16_t* muls_and_biases, int8_t *scratch) {
+  int bytes_per_row =
+      kparams->output_h_mem_stride +
+      (kparams->w_end - kparams->w_begin) * kparams->output_w_mem_stride;
+
+  Y += kparams->h_begin * bytes_per_row +
+       kparams->w_begin * kparams->output_w_mem_stride;
+
+  Y += kparams->output_channel_slice_offset;
+  for (int32_t h = kparams->h_begin; h < kparams->h_end; h++) {
+    for (int32_t w = kparams->w_begin; w < kparams->w_end; w++) {
+      calc_output_pixel_slice_p(Y, X, h, w, scratch, kparams, ak, weights, muls_and_biases);
+      Y += kparams->output_w_mem_stride;
+    }
+    Y += kparams->output_h_mem_stride;
+  }
+}

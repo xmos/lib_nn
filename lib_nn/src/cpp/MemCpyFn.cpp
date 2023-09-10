@@ -32,6 +32,18 @@ int8_t *DerefInputFn::memcopy_fn(int8_t *T, int8_t *X, int32_t output_v_coord,
                    output_h_coord * params->bytes_per_pixel + output_c_coord);
 }
 
+DerefInputFn::DerefInputFn(const ImageGeometry &input,
+                             const WindowGeometry &window)
+    : p{input.GetStride(window.stride.row, 0, 0), input.GetStride(0, window.stride.col, 0)} {}
+
+
+int8_t *nn::deref_memcopy_fn(const Deref_MemcpyFn_Params_t *params, int8_t *T, int8_t *X, int32_t output_v_coord,
+                                 int32_t output_h_coord,
+                                 int32_t output_c_coord) {
+  return X + (int)(output_v_coord * params->bytes_per_h_line +
+                   output_h_coord * params->bytes_per_pixel + output_c_coord);
+}
+
 int ImToColPadded::get_scratch_bytes() {
   return params->kernel_height * params->kernel_width *
              params->bytes_per_copy_per_channel +
