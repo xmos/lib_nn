@@ -7,7 +7,6 @@
 #include <memory>
 #include <vector>
 
-#include "Conv2d.hpp"
 #include "Rand.hpp"
 #include "RefOps.hpp"
 #include "geom/Filter2dGeometry.hpp"
