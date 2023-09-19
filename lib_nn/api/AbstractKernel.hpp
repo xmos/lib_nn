@@ -87,24 +87,18 @@ class AbstractKernel {
 
 };
 
+typedef int8_t* (*MemFnType)(const void*, int8_t*, int8_t*, int32_t, int32_t, int32_t);
+typedef void (*AggFnType)(const void *, VPURingBuffer*, int8_t*, int32_t, int8_t*);
+typedef int8_t* (*OtFnType)(const void*, int8_t *, VPURingBuffer*, int32_t, int16_t*);
+
 struct conv_params_t{
     void *mem_p;
     void *agg_p;
     void *ot_p;
-    int8_t* (*memcopy_fn)(const void *params, int8_t *T, int8_t *X, int32_t output_v_coord,
-                                 int32_t output_h_coord,
-                                 int32_t output_c_coord);
-    void (*aggregate_fn)(const void *params, VPURingBuffer *A,
-                              int8_t *X, int32_t output_channel_group,
-                              int8_t *weights);
-    int8_t* (*output_transform_fn)(const void *params, int8_t *Y,
-                                 VPURingBuffer *A, int32_t output_channel_group,
-                                 int16_t *multipliers_and_biases);
+    MemFnType memcopy_fn;
+    AggFnType aggregate_fn;
+    OtFnType output_transform_fn;
 };
-
-typedef int8_t* (*MemFnType)(const void*, int8_t*, int8_t*, int32_t, int32_t, int32_t);
-typedef void (*AggFnType)(const void *, VPURingBuffer*, int8_t*, int32_t, int8_t*);
-typedef int8_t* (*OtFnType)(const void*, int8_t *, VPURingBuffer*, int32_t, int16_t*);
 
 /**
  * Execute this kernel using the output image pointed to by `Y` and input
