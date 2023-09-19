@@ -108,18 +108,18 @@ int MatMulDirectFn_DW::get_scratch_mem_bytes(std::array<int, 4> &shape) {
   return shape[1] * shape[2] * VPU_INT16_VLMACC_ELMS + XS3_VPU_VREG_WIDTH_BYTES;
 }
 
-MatMulDirectFn_DW::Params::Params(const ImageGeometry &X,
+MatMulDirectFn_DW::MatMulDirectFn_DW(const ImageGeometry &X,
                                   const WindowGeometry &K) {
-  k_height_loop_counter = K.shape.height - 1;
-  k_width_loop_counter = K.shape.width - 1;
+  p.k_height_loop_counter = K.shape.height - 1;
+  p.k_width_loop_counter = K.shape.width - 1;
 
-  bytes_per_kernel_channel_group =
+  p.bytes_per_kernel_channel_group =
       K.shape.height * K.shape.width * VPU_INT16_VLMACC_ELMS;
 
   int bytes_per_pixel = X.PixelBytes();
 
-  inner_x_h_step = bytes_per_pixel * K.dilation.col;
-  inner_x_v_step = bytes_per_pixel * (int)X.width * (int)K.dilation.row -
+  p.inner_x_h_step = bytes_per_pixel * K.dilation.col;
+  p.inner_x_v_step = bytes_per_pixel * (int)X.width * (int)K.dilation.row -
                    (int)K.shape.width * bytes_per_pixel * (int)K.dilation.col;
 }
 
@@ -128,18 +128,18 @@ This is the constructor for when the input has been flattened to a single
 vector, i.e. for when we are using im2col (padding) then multiplying depthwise
 with the scrach
 */
-MatMulDirectFn_DW::Params::Params(const WindowGeometry &K) {
-  k_height_loop_counter = 0;
-  k_width_loop_counter = K.shape.height * K.shape.width - 1;
+MatMulDirectFn_DW::MatMulDirectFn_DW(const WindowGeometry &K) {
+  p.k_height_loop_counter = 0;
+  p.k_width_loop_counter = K.shape.height * K.shape.width - 1;
 
-  bytes_per_kernel_channel_group =
+  p.bytes_per_kernel_channel_group =
       K.shape.height * K.shape.width * VPU_INT16_VLMACC_ELMS;
 
-  inner_x_h_step = VPU_INT16_VLMACC_ELMS;
-  inner_x_v_step = 0;
+  p.inner_x_h_step = VPU_INT16_VLMACC_ELMS;
+  p.inner_x_v_step = 0;
 }
 
-void mat_mul_direct_dw_impl(MatMulDirectFn_DW::Params *params, VPURingBuffer *A,
+void mat_mul_dw_direct_impl(const mat_mul_dw_direct_params_t *params, VPURingBuffer *A,
                             int8_t *X, int32_t output_channel_group,
                             int8_t *weights) {
   xs3_vpu vpu_mem;
@@ -167,16 +167,16 @@ void mat_mul_direct_dw_impl(MatMulDirectFn_DW::Params *params, VPURingBuffer *A,
   VSTD(vpu, &A->vD);
 }
 
-C_API void mat_mul_direct_dw_impl_asm(MatMulDirectFn_DW::Params *params,
+C_API void mat_mul_dw_direct_impl_asm(const mat_mul_dw_direct_params_t *params,
                                       VPURingBuffer *A, int8_t *X,
                                       int32_t output_channel_group,
                                       int8_t *weights);
 
-void MatMulDirectFn_DW::aggregate_fn(VPURingBuffer *A, int8_t *T,
-                                     int32_t output_channel_group) {
+void nn::mat_mul_dw_direct(const mat_mul_dw_direct_params_t *params, VPURingBuffer *A, int8_t *T,
+                                     int32_t output_channel_group, int8_t *weights) {
 #ifdef NN_USE_REF
-  mat_mul_direct_dw_impl(this->params, A, T, output_channel_group, weights);
+  mat_mul_dw_direct_impl(params, A, T, output_channel_group, weights);
 #else
-  mat_mul_direct_dw_impl_asm(this->params, A, T, output_channel_group, weights);
+  mat_mul_dw_direct_impl_asm(params, A, T, output_channel_group, weights);
 #endif  // NN_USE_REF
 }

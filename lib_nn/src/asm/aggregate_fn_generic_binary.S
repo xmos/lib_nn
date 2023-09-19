@@ -28,7 +28,7 @@
 extern "C" void mat_mul_impl_asm(MatMulInt8::Params *params, VPURingBuffer *A, int8_t *X, int32_t output_channel_group);
 */
 
-#define FUNCTION_NAME mat_mul_binary_generic_impl_asm
+#define FUNCTION_NAME mat_mul_generic_binary_impl_asm
 
 
 #ifdef USE_DDR_FIX
