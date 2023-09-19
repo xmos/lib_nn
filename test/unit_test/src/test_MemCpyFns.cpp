@@ -44,9 +44,8 @@ void Test_ImToColValid() {
                                        k_v_stride, k_h_stride, 1, k_v_dilation,
                                        k_h_dilation);
 
-                      ImToColValid::Params p(X, K, input_ch_per_output);
-                      ImToColValid cpy(&p);
-
+                      ImToColValid cpy(X, K, input_ch_per_output);
+                      memcpyfn_imtocol_valid_params_t p = cpy.getParams();
                       size_t scratch_bytes =
                           cpy.get_scratch_bytes();  // TODO add test that
                                                     // crashes when this is one
@@ -77,7 +76,7 @@ void Test_ImToColValid() {
 
                             std::memset(T, 0x55, sizeof T);
 
-                            cpy.memcopy_fn(T, X_mem, output_h, output_w,
+                            memcpyfn_imtocol_valid(&p, T, X_mem, output_h, output_w,
                                            output_c);
 
                             int t_idx = 0;
@@ -165,10 +164,9 @@ void Test_ImToColPadded() {
 
                               int8_t pad_val = 0x55;
 
-                              ImToColPadded::Params p(
+                              ImToColPadded cpy(
                                   X, K, padding, input_ch_per_output, pad_val);
-                              ImToColPadded cpy(&p);
-
+                              memcpyfn_imtocol_padded_params_t p = cpy.getParams();
                               size_t scratch_bytes =
                                   cpy.get_scratch_bytes();  // TODO add test
                                                             // that crashes when
@@ -225,7 +223,7 @@ void Test_ImToColPadded() {
 
                                     std::memset(T, 0xaa, sizeof T);
 
-                                    cpy.memcopy_fn(T, X_mem_with_overread,
+                                    memcpyfn_imtocol_padded(&p, T, X_mem_with_overread,
                                                    output_h, output_w,
                                                    output_c);
 
@@ -292,8 +290,8 @@ void Test_DerefInputFn() {
                 WindowGeometry K(k_height, k_width, 0, 0, 0, k_v_stride,
                                  k_h_stride, 0, k_v_dilation, k_h_dilation);
 
-                DerefInputFn::Params p(X, K);
-                DerefInputFn deref(&p);
+                DerefInputFn memcpy(X,K);
+                memcpyfn_deref_params_t m = memcpy.getParams();
 
                 int8_t X_mem[x_height][x_width][x_channels];
 
@@ -303,7 +301,7 @@ void Test_DerefInputFn() {
                 for (int h = 0; h < output_height; ++h) {
                   for (int w = 0; w < output_width; ++w) {
                     for (int c = 0; c < x_channels; ++c) {
-                      int8_t *p = deref.memcopy_fn(0, (int8_t *)X_mem, h, w, c);
+                      int8_t *p = memcpyfn_deref(&m, 0, (int8_t *)X_mem, h, w, c);
                       int x = (int)X_mem[k_v_stride * h][k_h_stride * w][c];
                       TEST_ASSERT_EQUAL((int)*p, x);
                     }
