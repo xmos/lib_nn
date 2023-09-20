@@ -71,17 +71,15 @@ class AbstractKernel {
    */
   AbstractKernel(const ImageGeometry &output_image, const ImageRegion &output_region,
            const int channels_per_output_group) :
-          p{.h_begin = output_region.start.row,
-          .h_end = output_region.EndVect().row,
-          .w_begin = output_region.start.col,
-          .w_end = output_region.EndVect().col,
-          .output_channel_group_count =
-              (output_region.shape.depth + channels_per_output_group - 1) /
-              channels_per_output_group,
-          .output_channel_slice_offset = output_region.start.channel,
-          .output_h_mem_stride =
-              output_image.GetStride(1, -output_region.shape.width, 0),
-          .output_w_mem_stride = output_image.GetStride(0, 1, 0)} {};
+          p{output_region.start.row,
+          output_region.EndVect().row,
+          output_region.start.col,
+          output_region.EndVect().col,
+            (output_region.shape.depth + channels_per_output_group - 1) /
+            channels_per_output_group,
+          output_region.start.channel,
+          output_image.GetStride(1, -output_region.shape.width, 0),
+          output_image.GetStride(0, 1, 0)} {};
   
   abstract_kernel_params_t getParams() {return p;};
 
