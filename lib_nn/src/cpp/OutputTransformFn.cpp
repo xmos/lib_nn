@@ -671,13 +671,13 @@ OutputTransformFnInt8_Channelwise::Quantizer::quantise_activation(
 }
 
 // INT8
-extern "C" int8_t *output_transform_fn_impl_asm(const OT_int8::Params *params,
+extern "C" int8_t *output_transform_fn_impl_asm(const otfn_int8_params_t *params,
                                                 int8_t *Y, VPURingBuffer *A,
                                                 int16_t *multipliers_and_biases,
                                                 int output_count);
 
 #ifndef NN_USE_REF
-int8_t *output_transform_fn_impl_asm_stub(const OT_int8::Params *params,
+int8_t *output_transform_fn_impl_asm_stub(const otfn_int8_params_t *params,
                                           int8_t *Y, VPURingBuffer *A,
                                           int32_t output_channel_group,
                                           int16_t *multipliers_and_biases) {
@@ -690,7 +690,7 @@ int8_t *output_transform_fn_impl_asm_stub(const OT_int8::Params *params,
 }
 #endif
 
-int8_t *output_transform_fn_impl(const OT_int8::Params *params, int8_t *Y,
+int8_t *output_transform_fn_impl(const otfn_int8_params_t *params, int8_t *Y,
                                  VPURingBuffer *A, int32_t output_channel_group,
                                  int16_t *multipliers_and_biases) {
   xs3_vpu vpu_mem;
@@ -748,26 +748,26 @@ int8_t *output_transform_fn_impl(const OT_int8::Params *params, int8_t *Y,
   return Y;
 }
 
-int8_t *OT_int8::output_transform_fn(int8_t *Y, VPURingBuffer *A,
-                                     int32_t output_channel_group) {
+int8_t *nn::otfn_int8(const otfn_int8_params_t *params, int8_t *Y, VPURingBuffer *A,
+                                     int32_t output_channel_group, int16_t *multipliers_and_biases) {
 #ifdef NN_USE_REF
-  return output_transform_fn_impl(this->params, Y, A, output_channel_group,
+  return output_transform_fn_impl(params, Y, A, output_channel_group,
                                   multipliers_and_biases);
 #else
   return output_transform_fn_impl_asm_stub(
-      this->params, Y, A, output_channel_group, multipliers_and_biases);
+      params, Y, A, output_channel_group, multipliers_and_biases);
 #endif  // NN_USE_REF
 }
 //-----------------------
 
 // INT8 CHANNELWISE
 extern "C" int8_t *output_transform_fn_int_channelwise_impl_asm(
-    const OT_int8_channelwise::Params *params, int8_t *Y, VPURingBuffer *A,
+    const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
     int16_t *multipliers_and_biases, int output_count);
 
 #ifndef NN_USE_REF
 int8_t *output_transform_fn_int_channelwise_impl_asm_stub(
-    const OT_int8_channelwise::Params *params, int8_t *Y, VPURingBuffer *A,
+    const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
     int32_t output_channel_group, int16_t *multipliers_and_biases) {
   int output_count = std::min(
       params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
@@ -779,7 +779,7 @@ int8_t *output_transform_fn_int_channelwise_impl_asm_stub(
 #endif
 
 int8_t *output_transform_fn_int_channelwise_impl(
-    const OT_int8_channelwise::Params *params, int8_t *Y, VPURingBuffer *A,
+    const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
     int32_t output_channel_group, int16_t *multipliers_and_biases) {
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
@@ -831,21 +831,21 @@ int8_t *output_transform_fn_int_channelwise_impl(
   return Y;
 }
 
-int8_t *OT_int8_channelwise::output_transform_fn(int8_t *Y, VPURingBuffer *A,
-                                                 int32_t output_channel_group) {
+int8_t *nn::otfn_int8_channelwise(const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
+                                                 int32_t output_channel_group, int16_t *multipliers_and_biases) {
 #ifdef NN_USE_REF
   return output_transform_fn_int_channelwise_impl(
-      this->params, Y, A, output_channel_group, multipliers_and_biases);
+      params, Y, A, output_channel_group, multipliers_and_biases);
 #else
   return output_transform_fn_int_channelwise_impl_asm_stub(
-      this->params, Y, A, output_channel_group, multipliers_and_biases);
+      params, Y, A, output_channel_group, multipliers_and_biases);
 #endif  // NN_USE_REF
 }
 //-----------------------
 
 // INT8 CLAMPED
 int8_t *output_transform_fn_int_clamped_impl(
-    const OT_int8_clamped::Params *params, int8_t *Y, VPURingBuffer *A,
+    const otfn_int8_clamped_params_t *params, int8_t *Y, VPURingBuffer *A,
     int32_t output_channel_group, int16_t *offsets_multipliers_and_biases) {
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
@@ -892,19 +892,19 @@ int8_t *output_transform_fn_int_clamped_impl(
 }
 
 extern "C" int8_t *output_transform_fn_int_clamped_impl_asm(
-    const OT_int8_clamped::Params *params, int8_t *Y, VPURingBuffer *A,
+    const otfn_int8_clamped_params_t *params, int8_t *Y, VPURingBuffer *A,
     int32_t output_channel_group, int16_t *offsets_multipliers_and_biases);
 
-int8_t *OT_int8_clamped::output_transform_fn(int8_t *Y, VPURingBuffer *A,
-                                             int32_t output_channel_group) {
+int8_t *nn::otfn_int8_clamped(const otfn_int8_clamped_params_t *params, int8_t *Y, VPURingBuffer *A,
+                                             int32_t output_channel_group, int16_t *offsets_multipliers_and_biases) {
 #ifdef NN_USE_REF
 
   return output_transform_fn_int_clamped_impl(
-      this->params, Y, A, output_channel_group, offsets_multipliers_and_biases);
+      params, Y, A, output_channel_group, offsets_multipliers_and_biases);
 #else
 
   return output_transform_fn_int_clamped_impl_asm(
-      this->params, Y, A, output_channel_group, offsets_multipliers_and_biases);
+      params, Y, A, output_channel_group, offsets_multipliers_and_biases);
 #endif  // NN_USE_REF
 }
 //-----------------------
@@ -944,8 +944,8 @@ extern "C" int8_t *output_transform_fn_binary_impl_asm(
     int8_t *Y, VPURingBuffer *A, int32_t output_channel_group,
     int16_t *thresholds);
 
-int8_t *OT_binary::output_transform_fn(int8_t *Y, VPURingBuffer *A,
-                                       int32_t output_channel_group) {
+int8_t *nn::otfn_binary(void *p, int8_t *Y, VPURingBuffer *A,
+                                       int32_t output_channel_group, int16_t *thresholds) {
 #ifdef NN_USE_REF
   return output_transform_fn_binary_impl(Y, A, output_channel_group,
                                          thresholds);

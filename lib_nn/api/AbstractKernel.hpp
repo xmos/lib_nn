@@ -1,27 +1,13 @@
 #ifndef LIB_NN_ABSTRACT_KERNEL_HPP_
 #define LIB_NN_ABSTRACT_KERNEL_HPP_
 
-#include "Serialisable.hpp"
+#include "vpu.hpp"
 #include "geom/Filter2dGeometry.hpp"
 
 namespace nn {
 
-/**
- * Class representing an executable filter kernel. A concrete instance of this
- * class processes a particular region of the output image associated with the
- * filter.
- */
-class AbstractKernel {
- public:
-  /**
-   * Struct indicating a (3D) rectangular sub-region of an image, as well as how
-   * to iterate through pixels within that region of the image.
-   *
-   * @see AbstractKernel
-   */
-  class Params : public Serialisable {
-   public:
-    /**
+struct abstract_kernel_params_t {
+      /**
      * The first (`h_begin`; inclusive) and final (`h_end`; exclusive) rows of
      * the output image to be processed when the corresponding filter is
      * executed.
@@ -69,41 +55,74 @@ class AbstractKernel {
      * to the adjecent pixel to the right.
      */
     int32_t output_w_mem_stride;
+};
 
-    Params(const ImageGeometry &output_image, const ImageRegion &output_region,
-           const int channels_per_output_group)
-        : h_begin(output_region.start.row),
-          h_end(output_region.EndVect().row),
-          w_begin(output_region.start.col),
-          w_end(output_region.EndVect().col),
-          output_channel_group_count(
-              (output_region.shape.depth + channels_per_output_group - 1) /
-              channels_per_output_group),
-          output_channel_slice_offset(output_region.start.channel),
-          output_h_mem_stride(
-              output_image.GetStride(1, -output_region.shape.width, 0)),
-          output_w_mem_stride(output_image.GetStride(0, 1, 0)) {}
-  };
-
+/**
+ * Class representing an executable filter kernel. A concrete instance of this
+ * class processes a particular region of the output image associated with the
+ * filter.
+ */
+class AbstractKernel {
+  private:
+  abstract_kernel_params_t p;
  public:
   /**
-   * Parameters describing the region of the output image to be processed by
-   * this filter, as well as how to iterate over the region.
-   */
-
-  virtual void calc_output_pixel_slice(int8_t *output_image,
-                                       int8_t *input_image, int32_t output_row,
-                                       int32_t output_col, int8_t *scratch,
-                                       AbstractKernel::Params *kparams) = 0;
-
-  /**
    * Constructor.
-   *
-   * @param [in] kparams  Parameters describing the output region to be
-   * processed.
    */
-  AbstractKernel() {}
+  AbstractKernel(const ImageGeometry &output_image, const ImageRegion &output_region,
+           const int channels_per_output_group) :
+          p{output_region.start.row,
+          output_region.EndVect().row,
+          output_region.start.col,
+          output_region.EndVect().col,
+            (output_region.shape.depth + channels_per_output_group - 1) /
+            channels_per_output_group,
+          output_region.start.channel,
+          output_image.GetStride(1, -output_region.shape.width, 0),
+          output_image.GetStride(0, 1, 0)} {};
+  
+  abstract_kernel_params_t getParams() {return p;};
+
 };
+
+typedef int8_t* (*MemFnType)(const void*, int8_t*, int8_t*, int32_t, int32_t, int32_t);
+typedef void (*AggFnType)(const void *, VPURingBuffer*, int8_t*, int32_t, int8_t*);
+typedef int8_t* (*OtFnType)(const void*, int8_t *, VPURingBuffer*, int32_t, int16_t*);
+
+struct conv_params_t{
+    void *mem_p;
+    void *agg_p;
+    void *ot_p;
+    MemFnType memcopy_fn;
+    AggFnType aggregate_fn;
+    OtFnType output_transform_fn;
+};
+
+/**
+ * Execute this kernel using the output image pointed to by `Y` and input
+ * image pointed to by `X`, using the given filter object and kernel parameters.
+ *
+ * @TODO: astew: It isn't clear whether `Y` and `X` are supposed to point at
+ * the base address of the output and input images, or if they're supposed to
+ * point at the (first channel of the) first pixel of the images needed by
+ * this filter. [update]: From looking at the output transformer
+ * implementation, it looks like Y is _not_ supposed to be the image base
+ * address, but instead a pointer to the first output pixel to be processed by
+ * this filter. At the same time, looking at the MemCpyFn's, it looks like `X`
+ * _is_ supposed to be the image base address. Doesn't this seem unnecessarily
+ * confusing? Why is there an output channel offset built into kparams, but
+ * not an output row or column offset?
+ *
+ * @param [in] Y       Pointer to the output image.
+ * @param [in] X       Pointer to the input image.
+ * @param [in] ak      Pointer to Filter2D object on which to operate
+ * @param [in] kparams Pointer to Kernel Parameter object which identifies
+ *                     what area to operate on
+ * @param [in] scratch Pointer to scratch memory
+ */
+void execute(int8_t *Y, int8_t *X, conv_params_t *ak,
+             abstract_kernel_params_t *kparams, int8_t* weights, int16_t* muls_and_biases, bool isConv, int8_t *scratch = nullptr);
+
 
 }  // namespace nn
 

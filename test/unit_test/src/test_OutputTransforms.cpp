@@ -121,10 +121,8 @@ void test_big_range(int coef_count, int N, int product_range, int bias_range,
       OutputTransformFn::pad_final_access(serialised_multipliers_and_biases,
                                           VPU_INT16_EPV, pad_val);
 
-      OT_int8::Params p((int32_t)output_ch_count, qp.initial_shr, qp.final_shr);
-
-      OT_int8 ot(&p);
-      ot.setMultipliersAndBiases(serialised_multipliers_and_biases.data());
+      OT_int8 ot((int32_t)output_ch_count, qp.initial_shr, qp.final_shr);
+      otfn_int8_params_t p = ot.getParams();
 
       int8_t Y[output_ch_count];
       memset(Y, 0, sizeof Y);
@@ -164,7 +162,7 @@ void test_big_range(int coef_count, int N, int product_range, int bias_range,
             A.vD[output_chan] = ((int16_t *)&v)[1];
           }
 
-          next_y = ot.output_transform_fn(y, &A, ocg);
+          next_y = otfn_int8(&p, y, &A, ocg, serialised_multipliers_and_biases.data());
 
           for (int output_chan = 0; output_chan < chs_in_group; ++output_chan) {
             int actual_output_channel =
@@ -261,10 +259,8 @@ void test_big_range_channelwise(int coef_count, int N, int product_range,
       OutputTransformFn::pad_final_access(serialised_multipliers_and_biases,
                                           VPU_INT16_EPV, pad_val);
 
-      OT_int8_channelwise::Params p((int32_t)output_ch_count, qp.final_shr);
-
-      OT_int8_channelwise ot(&p);
-      ot.setMultipliersAndBiases(serialised_multipliers_and_biases.data());
+      OT_int8_channelwise ot((int32_t)output_ch_count, qp.final_shr);
+      otfn_int8_channelwise_params_t p = ot.getParams();
 
       int8_t Y[output_ch_count];
       memset(Y, 0, sizeof Y);
@@ -304,7 +300,7 @@ void test_big_range_channelwise(int coef_count, int N, int product_range,
             A.vD[output_chan] = ((int16_t *)&v)[1];
           }
 
-          next_y = ot.output_transform_fn(y, &A, ocg);
+          next_y = otfn_int8_channelwise(&p, y, &A, ocg, serialised_multipliers_and_biases.data());
           if (qp.final_shr <= 0) {
             for (int output_chan = 0; output_chan < chs_in_group;
                  ++output_chan) {
@@ -372,10 +368,8 @@ void test_small_range(const int accu_min, const int accu_max,
     OutputTransformFn::pad_final_access(serialised_multipliers_and_biases,
                                         VPU_INT16_EPV, pad_val);
 
-    OT_int8::Params p((int32_t)output_ch_count, qp.initial_shr, qp.final_shr);
-
-    OT_int8 ot(&p);
-    ot.setMultipliersAndBiases(serialised_multipliers_and_biases.data());
+    OT_int8 ot((int32_t)output_ch_count, qp.initial_shr, qp.final_shr);
+    otfn_int8_params_t p = ot.getParams();
 
     int8_t Y[output_ch_count];
     memset(Y, 0, sizeof Y);
@@ -405,7 +399,7 @@ void test_small_range(const int accu_min, const int accu_max,
           A.vD[output_chan] = ((int16_t *)&v)[1];
         }
 
-        next_y = ot.output_transform_fn(y, &A, ocg);
+        next_y = otfn_int8(&p, y, &A, ocg, serialised_multipliers_and_biases.data());
 
         for (int output_chan = 0; output_chan < chs_in_group; ++output_chan) {
           int actual_output_channel =
@@ -458,10 +452,8 @@ void test_small_range_channelwise(const int accu_min, const int accu_max,
     OutputTransformFn::pad_final_access(serialised_multipliers_and_biases,
                                         VPU_INT16_EPV, pad_val);
 
-    OT_int8_channelwise::Params p((int32_t)output_ch_count, qp.final_shr);
-
-    OT_int8_channelwise ot(&p);
-    ot.setMultipliersAndBiases(serialised_multipliers_and_biases.data());
+    OT_int8_channelwise ot((int32_t)output_ch_count, qp.final_shr);
+    otfn_int8_channelwise_params_t p = ot.getParams();
 
     int8_t Y[output_ch_count];
     memset(Y, 0, sizeof Y);
@@ -491,7 +483,7 @@ void test_small_range_channelwise(const int accu_min, const int accu_max,
           A.vD[output_chan] = ((int16_t *)&v)[1];
         }
 
-        next_y = ot.output_transform_fn(y, &A, ocg);
+        next_y = otfn_int8_channelwise(&p, y, &A, ocg, serialised_multipliers_and_biases.data());
 
         for (int output_chan = 0; output_chan < chs_in_group; ++output_chan) {
           int actual_output_channel =

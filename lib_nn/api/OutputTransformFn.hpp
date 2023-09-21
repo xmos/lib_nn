@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "AggregateFn.hpp"
-#include "Serialisable.hpp"
 #include "Utils.hpp"
 #include "geom/WindowGeometry.hpp"
 #include "vpu.hpp"
@@ -204,19 +203,6 @@ class OutputTransformFn {
     for (auto f : arr) m = std::max(m, get_max_exponent(f));
     return m;
   }
-
-  /**
-   * @brief The method that will translate the accumulator into the output
-   * number space.
-   *
-   * @param Y Pointer to output tensor.
-   * @param A Pointer to a copy of the VPU ring buffer. This is where the output
-   * of an aggregate fn will be stored.
-   * @param output_channel_group Denotes which channel group will be computed.
-   * @return int8_t*
-   */
-  virtual int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
-                                      int32_t output_channel_group) = 0;
 };
 
 typedef std::vector<OutputTransformFn::ActivationParams> MulsAndBias;
@@ -566,50 +552,34 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
   };
 };
 
+struct otfn_int8_params_t{
+    int32_t output_slice_channel_count;
+    int16_t initial_shift;
+    int16_t final_shr;
+};
+
 /**
  * @brief Output Transform class to converting 32 bit accumulators to an 8 bit
  * output space on a groupwise quantisation scheme.
  *
  */
 class OT_int8 : public OutputTransformFnInt8_Group {
+  private:
+  otfn_int8_params_t p;
  public:
-  class Params : public Serialisable {
-   public:
+  OT_int8(int32_t output_slice_channel_count, int16_t initial_shift,
+           int16_t final_shr) : p{output_slice_channel_count, initial_shift, final_shr} {}
+  otfn_int8_params_t getParams() {return p;};
+};
+
+int8_t *otfn_int8(const otfn_int8_params_t *params, int8_t *Y,
+                                 VPURingBuffer *A, int32_t output_channel_group,
+                                 int16_t *multipliers_and_biases);
+
+
+struct otfn_int8_channelwise_params_t{
     int32_t output_slice_channel_count;
-    int16_t initial_shift;
     int16_t final_shr;
-
-   public:
-    /**
-     * @brief Construct a new Params object
-     *
-     * @param output_slice_channel_count The count of output channels to be
-     * computed by this parameter set.
-     * @param initial_shift Overall initial shift.
-     * @param final_shr Overall final shift
-     */
-    Params(int32_t output_slice_channel_count, int16_t initial_shift,
-           int16_t final_shr)
-        : output_slice_channel_count(output_slice_channel_count),
-          initial_shift(initial_shift),
-          final_shr(final_shr) {}
-  };
-
- private:
-  Params *params;
-  int16_t *multipliers_and_biases;
-
- public:
-  OT_int8(Params *params) : params(params){};
-
-  int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
-                              int32_t output_channel_group);
-
-  void setMultipliersAndBiases(int16_t *m) {
-    multipliers_and_biases = m;
-    assert(m != nullptr);
-    assert(is_aligned(multipliers_and_biases, 4));
-  }
 };
 
 /**
@@ -618,42 +588,24 @@ class OT_int8 : public OutputTransformFnInt8_Group {
  *
  */
 class OT_int8_channelwise : public OutputTransformFnInt8_Channelwise {
- public:
-  class Params : public Serialisable {
-   public:
-    int32_t output_slice_channel_count;
-    int16_t final_shr;
-
-   public:
-    /**
-     * @brief Construct a new Params object
-     *
-     * @param output_slice_channel_count The count of output channels to be
-     * computed by this parameter set.
-     * @param final_shr Overall final shift.
-     */
-    Params(int32_t output_slice_channel_count, int16_t final_shr)
-        : output_slice_channel_count(output_slice_channel_count),
-          final_shr(final_shr) {}
-  };
-
- private:
-  Params *params;
-  int16_t *multipliers_and_biases;
+  private:
+  otfn_int8_channelwise_params_t p;
 
  public:
-  OT_int8_channelwise(Params *params) : params(params){};
-
-  int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
-                              int32_t output_channel_group);
-
-  void setMultipliersAndBiases(int16_t *m) {
-    multipliers_and_biases = m;
-    assert(m != nullptr);
-    assert(is_aligned(multipliers_and_biases, 4));
-  }
+  OT_int8_channelwise(int32_t output_slice_channel_count, int16_t final_shr):
+    p{output_slice_channel_count, final_shr} {}
+  otfn_int8_channelwise_params_t getParams() {return p;};
 };
 
+int8_t *otfn_int8_channelwise(const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
+                                                 int32_t output_channel_group, int16_t *multipliers_and_biases);
+
+
+struct otfn_int8_clamped_params_t{
+    int32_t output_slice_channel_count;
+    int16_t initial_shift;
+    int16_t final_shr;
+};
 
 /**
  * @brief Output Transform class to converting 32 bit accumulators to an 8 bit
@@ -661,46 +613,16 @@ class OT_int8_channelwise : public OutputTransformFnInt8_Channelwise {
  *
  */
 class OT_int8_clamped : public OutputTransformFnInt8_Group {
- public:
-  class Params : public Serialisable {
-   public:
-    int32_t output_slice_channel_count;
-    int16_t initial_shift;
-    int16_t final_shr;
-
-   public:
-    /**
-     * @brief Construct a new Params object
-     *
-     * @param output_slice_channel_count The count of output channels to be
-     * computed by this parameter set.
-     */
-    Params(int32_t output_slice_channel_count, int16_t initial_shift,
-           int16_t final_shr)
-        : output_slice_channel_count(output_slice_channel_count),
-          initial_shift(initial_shift),
-          final_shr(final_shr) {}
-  };
-
  private:
-  /**
-   * @brief This describes the channels over which this class will perform its
-   * operation(OutputTransform) and how each channel will transformed.
-   */
-  Params *params;
-  int16_t *offsets_multipliers_and_biases;
-
+  otfn_int8_clamped_params_t p;
  public:
-  OT_int8_clamped(Params *params) : params(params){};
+  OT_int8_clamped(int32_t output_slice_channel_count, int16_t initial_shift,
+           int16_t final_shr)
+        : p{output_slice_channel_count,
+          initial_shift,
+          final_shr} {}
 
-  int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
-                              int32_t output_channel_group);
-
-  void setOffsetsMultipliersAndBiases(int16_t *m) {
-    offsets_multipliers_and_biases = m;
-    assert(m != nullptr);
-    assert(is_aligned(offsets_multipliers_and_biases, 4));
-  }
+  otfn_int8_clamped_params_t getParams() {return p;};
 
   static MulsAndBias canonicalise_mul_and_bias(
       const std::vector<float> &post_activation_multiplier,
@@ -779,6 +701,9 @@ class OT_int8_clamped : public OutputTransformFnInt8_Group {
   }
 };
 
+int8_t *otfn_int8_clamped(const otfn_int8_clamped_params_t *params, int8_t *Y, VPURingBuffer *A,
+                                             int32_t output_channel_group, int16_t *offsets_multipliers_and_biases);
+
 /**
  * @brief Output Transform class to converting 32 bit accumulators to a 1 bit
  * output space.
@@ -787,14 +712,9 @@ class OT_int8_clamped : public OutputTransformFnInt8_Group {
 
 typedef int16_t threshold_t;
 class OT_binary : public OutputTransformFn {
- private:
-  threshold_t *thresholds;
-
+ 
  public:
   OT_binary(){};
-
-  int8_t *output_transform_fn(int8_t *Y, VPURingBuffer *A,
-                              int32_t output_channel_group);
 
   static std::vector<threshold_t> adjust_thresholds(
       const std::vector<int32_t> &thresholds, int input_channels,
@@ -833,13 +753,10 @@ class OT_binary : public OutputTransformFn {
     }
     return adjusted_thresholds;
   }
-
-  void setThresholds(threshold_t *th) {
-    thresholds = th;
-    assert(th != nullptr);
-    assert(is_aligned(thresholds, 4));
-  }
 };
+
+int8_t *otfn_binary(void *p, int8_t *Y, VPURingBuffer *A,
+                                       int32_t output_channel_group, int16_t *thresholds);
 
 }  // namespace nn
 #endif  // LIB_NN_OUTPUT_TRANSFORM_FN_H_

@@ -88,7 +88,7 @@ Conv2dReorderedWeights MatMulBase::reorder_kernel_weights(
   return reordered_weights;
 }
 
-int MatMulBase ::get_scratch_mem_bytes(int input_bytes) {
+int MatMulBase::get_scratch_mem_bytes(int input_bytes) {
   const int vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
   return ((input_bytes + vpu_bytes - 1) / vpu_bytes) * vpu_bytes;
 }
@@ -131,17 +131,10 @@ int MatMulBase::get_weights_bytes(int bytes_per_output_channel,
   return min_bytes;
 }
 
-MatMulBase::Params::Params(int output_slice_channel_count,
-                           int32_t bytes_per_kernel_channel)
-    : output_slice_channel_count(output_slice_channel_count),
-      bytes_per_kernel_channel(bytes_per_kernel_channel) {
-  // maybe compute k_p_adjust and input_channel_group_count
-}
-
 /*
 This is used for implementing int8 and binary mat mul.
 */
-void mat_mul_generic_impl(MatMulBase::Params *params, VPURingBuffer *A,
+void mat_mul_generic_impl(const mat_mul_generic_params_t *params, VPURingBuffer *A,
                           int8_t *T, int32_t output_channel_group,
                           int8_t *weights,
                           void (*macc_inst)(xs3_vpu *vpu, const void *addr)) {
@@ -206,42 +199,42 @@ void mat_mul_generic_impl(MatMulBase::Params *params, VPURingBuffer *A,
   VSTD(vpu, &A->vD);
 }
 
-void mat_mul_int8_generic_impl(MatMulBase::Params *params, VPURingBuffer *A,
+void mat_mul_generic_int8_impl(const mat_mul_generic_params_t *params, VPURingBuffer *A,
                                int8_t *T, int32_t output_channel_group,
                                int8_t *weights) {
   mat_mul_generic_impl(params, A, T, output_channel_group, weights, VLMACCR);
 }
 
-void mat_mul_binary_generic_impl(MatMulBase::Params *params, VPURingBuffer *A,
+void mat_mul_generic_binary_impl(const mat_mul_generic_params_t *params, VPURingBuffer *A,
                                  int8_t *T, int32_t output_channel_group,
                                  int8_t *weights) {
   mat_mul_generic_impl(params, A, T, output_channel_group, weights, VLMACCR1);
 }
 
-MatMulDirectFn::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
+MatMulDirectFn::MatMulDirectFn(const ImageGeometry &X, const WindowGeometry &K,
                                const int input_ch_per_output) {
   int bytes_per_copy_per_channel =
       (input_ch_per_output * X.element_bits) / CHAR_BIT;
 
-  k_height_loop_counter = K.shape.height - 1;
-  k_width_loop_counter = K.shape.width - 1;
+  p.k_height_loop_counter = K.shape.height - 1;
+  p.k_width_loop_counter = K.shape.width - 1;
 
-  input_channel_loop_counter =
+  p.input_channel_loop_counter =
       (bytes_per_copy_per_channel / XS3_VPU_VREG_WIDTH_BYTES) - 1;
 
-  bytes_per_kernel_channel = K.shape.height * K.shape.width *
+  p.bytes_per_kernel_channel = K.shape.height * K.shape.width *
                              bytes_per_copy_per_channel * VPU_INT16_EPV;
 
   int bytes_per_pixel = X.PixelBytes();
 
   assert(bytes_per_pixel == bytes_per_copy_per_channel);
-  inner_x_h_step =
+  p.inner_x_h_step =
       bytes_per_pixel * K.dilation.col - bytes_per_copy_per_channel;
-  inner_x_v_step = bytes_per_pixel * (int)X.width * (int)K.dilation.row -
+  p.inner_x_v_step = bytes_per_pixel * (int)X.width * (int)K.dilation.row -
                    (int)K.shape.width * bytes_per_pixel * (int)K.dilation.col;
 }
 
-void mat_mul_direct_impl(MatMulDirectFn::Params *params, VPURingBuffer *A,
+void mat_mul_direct_impl(const mat_mul_direct_params_t *params, VPURingBuffer *A,
                          int8_t *X, int32_t output_channel_group,
                          int8_t *weights,
                          void (*macc_inst)(xs3_vpu *vpu, const void *addr)) {
@@ -277,71 +270,71 @@ void mat_mul_direct_impl(MatMulDirectFn::Params *params, VPURingBuffer *A,
   VSTD(vpu, &A->vD);
 }
 
-void mat_mul_int8_direct_impl(MatMulDirectFn::Params *params, VPURingBuffer *A,
+void mat_mul_direct_int8_impl(const mat_mul_direct_params_t *params, VPURingBuffer *A,
                               int8_t *X, int32_t output_channel_group,
                               int8_t *weights) {
   mat_mul_direct_impl(params, A, X, output_channel_group, weights, VLMACCR);
 }
 
-void mat_mul_binary_direct_impl(MatMulDirectFn::Params *params,
+void mat_mul_direct_binary_impl(const mat_mul_direct_params_t *params,
                                 VPURingBuffer *A, int8_t *X,
                                 int32_t output_channel_group, int8_t *weights) {
   mat_mul_direct_impl(params, A, X, output_channel_group, weights, VLMACCR1);
 }
 
-C_API void mat_mul_int8_direct_impl_asm(MatMulDirectFn::Params *params,
+C_API void mat_mul_direct_int8_impl_asm(const mat_mul_direct_params_t *params,
                                         VPURingBuffer *A, int8_t *X,
                                         int32_t output_channel_group,
                                         int8_t *weights);
-C_API void mat_mul_int8_generic_impl_asm(MatMulInt8::Params *params,
+C_API void mat_mul_generic_int8_impl_asm(const mat_mul_generic_params_t *params,
                                          VPURingBuffer *A, int8_t *X,
                                          int32_t output_channel_group,
                                          int8_t *weights);
-C_API void mat_mul_binary_direct_impl_asm(MatMulDirectFn::Params *params,
+C_API void mat_mul_direct_binary_impl_asm(const mat_mul_direct_params_t *params,
                                           VPURingBuffer *A, int8_t *X,
                                           int32_t output_channel_group,
                                           int8_t *weights);
-C_API void mat_mul_binary_generic_impl_asm(MatMulInt8::Params *params,
+C_API void mat_mul_generic_binary_impl_asm(const mat_mul_generic_params_t *params,
                                            VPURingBuffer *A, int8_t *X,
                                            int32_t output_channel_group,
                                            int8_t *weights);
 
-void MatMulDirectFn::aggregate_fn(VPURingBuffer *A, int8_t *T,
-                                  int32_t output_channel_group) {
+void nn::mat_mul_direct_int8(const mat_mul_direct_params_t *params, VPURingBuffer *A, int8_t *T,
+                                  int32_t output_channel_group, int8_t *weights) {
 #ifdef NN_USE_REF
-  mat_mul_int8_direct_impl(this->params, A, T, output_channel_group, weights);
+  mat_mul_direct_int8_impl(params, A, T, output_channel_group, weights);
 #else
-  mat_mul_int8_direct_impl_asm(this->params, A, T, output_channel_group,
+  mat_mul_direct_int8_impl_asm(params, A, T, output_channel_group,
                                weights);
 #endif  // NN_USE_REF
 }
 
-void MatMulBinaryDirectFn::aggregate_fn(VPURingBuffer *A, int8_t *T,
-                                        int32_t output_channel_group) {
+void nn::mat_mul_direct_binary(const mat_mul_direct_params_t *params, VPURingBuffer *A, int8_t *T,
+                                        int32_t output_channel_group, int8_t *weights) {
 #ifdef NN_USE_REF
-  mat_mul_binary_direct_impl(this->params, A, T, output_channel_group, weights);
+  mat_mul_direct_binary_impl(params, A, T, output_channel_group, weights);
 #else
-  mat_mul_binary_direct_impl_asm(this->params, A, T, output_channel_group,
+  mat_mul_direct_binary_impl_asm(params, A, T, output_channel_group,
                                  weights);
 #endif  // NN_USE_REF
 }
 
-void MatMulInt8::aggregate_fn(VPURingBuffer *A, int8_t *T,
-                              int32_t output_channel_group) {
+void nn::mat_mul_generic_int8(const mat_mul_generic_params_t *params, VPURingBuffer *A, int8_t *T,
+                              int32_t output_channel_group, int8_t *weights) {
 #ifdef NN_USE_REF
-  mat_mul_int8_generic_impl(this->params, A, T, output_channel_group, weights);
+  mat_mul_generic_int8_impl(params, A, T, output_channel_group, weights);
 #else
-  mat_mul_int8_generic_impl_asm(this->params, A, T, output_channel_group,
+  mat_mul_generic_int8_impl_asm(params, A, T, output_channel_group,
                                 weights);
 #endif  // NN_USE_REF
 }
-void MatMulBinary::aggregate_fn(VPURingBuffer *A, int8_t *T,
-                                int32_t output_channel_group) {
+void nn::mat_mul_generic_binary(const mat_mul_generic_params_t *params, VPURingBuffer *A, int8_t *T,
+                                int32_t output_channel_group, int8_t *weights) {
 #ifdef NN_USE_REF
-  mat_mul_binary_generic_impl(this->params, A, T, output_channel_group,
+  mat_mul_generic_binary_impl(params, A, T, output_channel_group,
                               weights);
 #else
-  mat_mul_binary_generic_impl_asm(this->params, A, T, output_channel_group,
+  mat_mul_generic_binary_impl_asm(params, A, T, output_channel_group,
                                   weights);
 #endif  // NN_USE_REF
 }

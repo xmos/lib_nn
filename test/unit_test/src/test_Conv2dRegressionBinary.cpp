@@ -5,7 +5,10 @@
 #include <memory>
 #include <vector>
 
-#include "Conv2d.hpp"
+#include "AbstractKernel.hpp"
+#include "AggregateFn.hpp"
+#include "MemCpyFn.hpp"
+#include "OutputTransformFn.hpp"
 #include "Rand.hpp"
 #include "RefOps.hpp"
 #include "geom/Filter2dGeometry.hpp"
@@ -163,10 +166,8 @@ void test_Conv2dValidIndirectBinaryRegression() {
                                 // this is the value that would be inserted if
                                 // we were padding
                                 int im_to_col_pad_val = 0;
-                                ImToColValid::Params im_to_col_params(
+                                ImToColValid memcpy(
                                     X, K, x_channels);
-
-                                ImToColValid memcpy(&im_to_col_params);
                                 const int elements_per_byte = 8;
                                 int input_bytes = geom.window.shape.height *
                                                   geom.window.shape.width *
@@ -191,10 +192,7 @@ void test_Conv2dValidIndirectBinaryRegression() {
                                         (int8_t *)weights.data(), shape, 1,
                                         kernel_pad_val);
 
-                                MatMulBinary::Params p(k_depth, input_bytes);
-                                MatMulBinary aggregator(&p);
-
-                                aggregator.setWeights(rw.weights.data());
+                                MatMulBinary aggregator(k_depth, input_bytes);
 
                                 // adjust the thresholds from xorpopcount space
                                 // to xcore space
@@ -215,23 +213,28 @@ void test_Conv2dValidIndirectBinaryRegression() {
                                     pad_val);
 
                                 OT_binary ot;
-                                ot.setThresholds(adjusted_thresholds.data());
                                 auto ir = ImageRegion(0, 0, 0, Y.height,
                                                       Y.width, Y.depth);
 
-                                Filter2D::Params akp(Y, ir,
+                                AbstractKernel akp(Y, ir,
                                                      VPU_INT8_ACC_PERIOD);
-
-                                BNNConv2dValidIndirectBinary conv2d(
-                                    &memcpy, &aggregator, &ot);
                                 alignas(4)
                                     int32_t output[Y.height * Y.width *
                                                    Y.depth / chans_per_int32];
                                 std::memset(output, 0x55, sizeof(output));
 
-                                nn::execute((int8_t *)&output[0],
-                                            (int8_t *)&input[0], &conv2d, &akp,
-                                            &T[0]);
+                                abstract_kernel_params_t a = akp.getParams();
+                                memcpyfn_imtocol_valid_params_t m = memcpy.getParams();
+                                mat_mul_generic_params_t agg = aggregator.getParams();
+                                conv_params_t params;
+                                params.memcopy_fn = (MemFnType)memcpyfn_imtocol_valid;
+                                params.aggregate_fn = (AggFnType)mat_mul_generic_binary;
+                                params.output_transform_fn = (OtFnType)otfn_binary;
+                                params.mem_p = &m;
+                                params.agg_p = &agg;
+                                //params.ot_p = &o;
+                                nn::execute((int8_t *)&output[0], (int8_t *)&input[0], &params,
+                                            &a, rw.weights.data(), adjusted_thresholds.data(), /*isConv=*/true, &T[0]);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
@@ -337,8 +340,7 @@ void test_Conv2dValidDirectBinaryRegression() {
                                         geom, input.data(), weights.data(),
                                         thresholds.data());
 
-                                DerefInputFn::Params im_to_col_params(X, K);
-                                DerefInputFn memcpy(&im_to_col_params);
+                                DerefInputFn memcpy(X,K);
 
                                 int overread_bytes =
                                     memcpy.get_overread_bytes();
@@ -361,10 +363,8 @@ void test_Conv2dValidDirectBinaryRegression() {
                                         (int8_t *)weights.data(), shape, 1,
                                         kernel_pad_val);
 
-                                MatMulBinaryDirectFn::Params p(X, K,
+                                MatMulBinaryDirectFn aggregator(X, K,
                                                                x_channels);
-                                MatMulBinaryDirectFn aggregator(&p);
-                                aggregator.setWeights(rw.weights.data());
 
                                 // adjust the thresholds from xorpopcount space
                                 // to xcore space
@@ -385,24 +385,29 @@ void test_Conv2dValidDirectBinaryRegression() {
                                     pad_val);
 
                                 OT_binary ot;
-
-                                ot.setThresholds(adjusted_thresholds.data());
                                 auto ir = ImageRegion(0, 0, 0, Y.height,
                                                       Y.width, Y.depth);
 
-                                Filter2D::Params akp(Y, ir,
+                                AbstractKernel akp(Y, ir,
                                                      VPU_INT8_ACC_PERIOD);
-
-                                BNNConv2dValidDirectBinary conv2d(
-                                    &memcpy, &aggregator, &ot);
 
                                 alignas(4)
                                     int32_t output[Y.height * Y.width *
                                                    Y.depth / chans_per_int32];
                                 std::memset(output, 0x55, sizeof(output));
 
-                                nn::execute((int8_t *)&output[0],
-                                            (int8_t *)&input[0], &conv2d, &akp);
+                                abstract_kernel_params_t a = akp.getParams();
+                                memcpyfn_deref_params_t m = memcpy.getParams();
+                                mat_mul_direct_params_t agg = aggregator.getParams();
+                                conv_params_t params;
+                                params.memcopy_fn = (MemFnType)memcpyfn_deref;
+                                params.aggregate_fn = (AggFnType)mat_mul_direct_binary;
+                                params.output_transform_fn = (OtFnType)otfn_binary;
+                                params.mem_p = &m;
+                                params.agg_p = &agg;
+                                //params.ot_p = &o;
+                                nn::execute((int8_t*)&output[0], (int8_t*)&input[0], &params,
+                                            &a, rw.weights.data(), adjusted_thresholds.data(), /*isConv=*/true);
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
                                     for (int yd = 0;
@@ -520,10 +525,9 @@ void test_Conv2dValidIndirectInt8Regression() {
                                 // this is the value that would be inserted if
                                 // we were padding
                                 int im_to_col_pad_val = 0;
-                                ImToColValid::Params im_to_col_params(
+                                ImToColValid memcpy(
                                     X, K, x_channels);
 
-                                ImToColValid memcpy(&im_to_col_params);
                                 const int elements_per_byte = 8;
                                 int input_bytes = geom.window.shape.height *
                                                   geom.window.shape.width *
@@ -548,10 +552,8 @@ void test_Conv2dValidIndirectInt8Regression() {
                                         (int8_t *)weights.data(), shape, 1,
                                         kernel_pad_val);
 
-                                MatMulBinary::Params p(k_depth, input_bytes);
-                                MatMulBinary aggregator(&p);
+                                MatMulBinary aggregator(k_depth, input_bytes);
 
-                                aggregator.setWeights(rw.weights.data());
                                 // adjust the thresholds from xorpopcount space
                                 // to xcore space
 
@@ -589,31 +591,34 @@ void test_Conv2dValidIndirectInt8Regression() {
                                     serialised_offsets_multipliers_and_biases,
                                     VPU_INT16_EPV, pad_val);
 
-                                OT_int8_clamped::Params ot_params(
+                                OT_int8_clamped ot(
                                     (int32_t)k_depth, qp.initial_shr,
                                     qp.final_shr);
-
-                                OT_int8_clamped ot(&ot_params);
                                 assert(serialised_offsets_multipliers_and_biases
                                            .size() > 0);
-                                ot.setOffsetsMultipliersAndBiases(
-                                    serialised_offsets_multipliers_and_biases
-                                        .data());
 
                                 auto ir = ImageRegion(0, 0, 0, Y.height,
                                                       Y.width, Y.depth);
 
-                                Filter2D::Params akp(Y, ir,
+                                AbstractKernel akp(Y, ir,
                                                      VPU_INT8_ACC_PERIOD);
-
-                                BNNConv2dValidIndirectInt8 conv2d(
-                                    &memcpy, &aggregator, &ot);
                                 alignas(4)
                                     int8_t output[Y.height * Y.width * Y.depth];
                                 std::memset(output, 0x55, sizeof(output));
 
-                                nn::execute(output, (int8_t *)&input[0],
-                                            &conv2d, &akp, &T[0]);
+                                abstract_kernel_params_t a = akp.getParams();
+                                memcpyfn_imtocol_valid_params_t m = memcpy.getParams();
+                                mat_mul_generic_params_t agg = aggregator.getParams();
+                                otfn_int8_clamped_params_t o = ot.getParams();
+                                conv_params_t params;
+                                params.memcopy_fn = (MemFnType)memcpyfn_imtocol_valid;
+                                params.aggregate_fn = (AggFnType)mat_mul_generic_binary;
+                                params.output_transform_fn = (OtFnType)otfn_int8_clamped;
+                                params.mem_p = &m;
+                                params.agg_p = &agg;
+                                params.ot_p = &o;
+                                nn::execute(&output[0], (int8_t*)&input[0], &params,
+                                            &a, rw.weights.data(), serialised_offsets_multipliers_and_biases.data(), /*isConv=*/true, &T[0]);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
@@ -721,8 +726,7 @@ void test_Conv2dValidDirectInt8Regression() {
                                         post_activation_bias.data(), clamp_low,
                                         clamp_high);
 
-                                DerefInputFn::Params im_to_col_params(X, K);
-                                DerefInputFn memcpy(&im_to_col_params);
+                                DerefInputFn memcpy(X,K);
 
                                 int overread_bytes =
                                     memcpy.get_overread_bytes();
@@ -745,10 +749,8 @@ void test_Conv2dValidDirectInt8Regression() {
                                         (int8_t *)weights.data(), shape, 1,
                                         kernel_pad_val);
 
-                                MatMulBinaryDirectFn::Params p(X, K,
+                                MatMulBinaryDirectFn aggregator(X, K,
                                                                x_channels);
-                                MatMulBinaryDirectFn aggregator(&p);
-                                aggregator.setWeights(rw.weights.data());
 
                                 int receptive_volume =
                                     k_height * k_width * x_channels;
@@ -784,34 +786,37 @@ void test_Conv2dValidDirectInt8Regression() {
                                     serialised_offsets_multipliers_and_biases,
                                     VPU_INT16_EPV, pad_val);
 
-                                OT_int8_clamped::Params ot_params(
+                                OT_int8_clamped ot(
                                     (int32_t)k_depth, qp.initial_shr,
                                     qp.final_shr);
 
-                                OT_int8_clamped ot(&ot_params);
-
                                 assert(serialised_offsets_multipliers_and_biases
                                            .size() > 0);
-                                ot.setOffsetsMultipliersAndBiases(
-                                    serialised_offsets_multipliers_and_biases
-                                        .data());
 
                                 auto ir = ImageRegion(0, 0, 0, Y.height,
                                                       Y.width, Y.depth);
 
-                                Filter2D::Params akp(Y, ir,
+                                AbstractKernel akp(Y, ir,
                                                      VPU_INT8_ACC_PERIOD);
-
-                                BNNConv2dValidDirectInt8 conv2d(
-                                    &memcpy, &aggregator, &ot);
 
                                 alignas(4)
                                     int8_t output[Y.height * Y.width * Y.depth];
                                 std::memset(output, 0x55, sizeof(output));
 
-                                nn::execute((int8_t *)output,
-                                            (int8_t *)input.data(), &conv2d,
-                                            &akp);
+                                abstract_kernel_params_t a = akp.getParams();
+                                memcpyfn_deref_params_t m = memcpy.getParams();
+                                mat_mul_direct_params_t agg = aggregator.getParams();
+                                otfn_int8_clamped_params_t o = ot.getParams();
+                                conv_params_t params;
+                                params.memcopy_fn = (MemFnType)memcpyfn_deref;
+                                params.aggregate_fn = (AggFnType)mat_mul_direct_binary;
+                                params.output_transform_fn = (OtFnType)otfn_int8_clamped;
+                                params.mem_p = &m;
+                                params.agg_p = &agg;
+                                params.ot_p = &o;
+                                nn::execute((int8_t*)output, (int8_t*)input.data(), &params,
+                                            &a, rw.weights.data(), serialised_offsets_multipliers_and_biases.data(), /*isConv=*/true);
+
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {

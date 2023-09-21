@@ -39,7 +39,7 @@
 extern "C" void mat_mul_impl_asm(void *params, VPURingBuffer *A, int8_t *X, int32_t output_channel_group);
 */
 
-#define FUNCTION_NAME mat_mul_int8_direct_impl_asm
+#define FUNCTION_NAME mat_mul_direct_int8_impl_asm
 
 #ifdef USE_DDR_FIX
 #define OPTIONAL_DDR_SPILL(x) { ldw ddr_spill, x[8]; nop} ;\
