@@ -172,6 +172,22 @@ void pad_3_to_4_prepare(uint32_t * n_3,
 extern void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val);
 extern void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val);
 
+typedef struct nn_mul_params_t {
+    int8_t in1_zero_point;
+    int8_t in2_zero_point;
+    int16_t bias;
+    int16_t scalar; 
+    int16_t vlashr_shr;
+} nn_mul_params_t;
+
+void mul_boggle(nn_mul_params_t * params, 
+    double in1Scale, 
+    double in2Scale, 
+    double outputScale,
+    int8_t in1ZeroPoint,
+    int8_t in2ZeroPoint, 
+    int8_t outputZeroPoint);
+void mul_elementwise(int8_t* in1_data, int8_t* in2_data, int element_count, nn_mul_params_t * params, int8_t * out_data);
 
 // /**
 //  * Describes the parameters needed for an @oper{add_elementwise} operator. @see add_elementwise().
