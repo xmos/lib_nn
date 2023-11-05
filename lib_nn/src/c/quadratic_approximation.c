@@ -146,6 +146,8 @@ quadratic_function_table_t *quadratic_approximation_generator(
     int output_index = 0;
     for(int mid = datapoints/2; mid <= 65536; mid += datapoints) {
         int start = mid - datapoints / 2;
+        int16_t inputs_16bit[datapoints];
+        int16_t outputs_16bit[datapoints];
         for(int i = 0; i < datapoints; i++) {
             int input_val = i - datapoints / 2;
             A[i][0] = 1;
@@ -153,8 +155,9 @@ quadratic_function_table_t *quadratic_approximation_generator(
                 A[i][d] = A[i][d-1] * input_val;
             }
             int real_input_val = i + start - zeropoint;
+            inputs_16bit[i] = real_input_val;
             float f_real_input_val = real_input_val * input_scaler;
-            B[i] = av(B[i] / output_scaler);
+            B[i] = av(f_real_input_val) / output_scaler;
             if( start + i == 0x3fe3) {
 //                printf("Ch %d Tanh %f -> %f\n", chunks, f_real_input_val, B[i]);
             }
@@ -205,7 +208,7 @@ quadratic_function_table_t *quadratic_approximation_generator(
         ATB[0] = round(ATB[0]*i_scale_factor*i_scale_factor)+32768.0;
         ATB[1] = round(ATB[1]*i_scale_factor);
         ATB[2] = round(ATB[2]*i_scale_factor*i_scale_factor);
-        if (ATB[0] >= (1LL<<31)  || ATB[0] < -(1LL<<31)) {
+        if (ATB[0] >= (1LL<<31)+0x8000  || ATB[0] < -(1LL<<31)-0x8000) {
             printf("Warning: Constant constant -2^31 <= %f < 2^31 out of range\n", ATB[0]);
         }
         if (ATB[1] >= (1<<15)  || ATB[1] < -0.1) {
@@ -220,15 +223,11 @@ quadratic_function_table_t *quadratic_approximation_generator(
         output->coefficients[output_index].a = clamp8(ATB[2]);
         output->coefficients[output_index].padding = 0;
 
-        int16_t inputs_16bit[datapoints];
-        int16_t outputs_16bit[datapoints];
-        for(int j = 0 ; j < datapoints; j++) {
-            inputs_16bit[j] = j - datapoints / 2;
-        }
         quadratic_interpolation_128(outputs_16bit, inputs_16bit,
                                     output, datapoints);
         for(int j = 0 ; j < datapoints; j++) {
             int error_i = round(B[j]) - outputs_16bit[j];
+//            printf("XX %04x %04x %f\n", inputs_16bit[j], outputs_16bit[j], round(B[j]));
             if( abs(error_i) > 1 && chunks == 128) {
                 printf("Ch %d start %d val %f %08x %f %d\n", chunks, start, (start + j-32768) * input_scaler, (int)round(B[j]), B[j], error_i);
             }
@@ -239,7 +238,7 @@ quadratic_function_table_t *quadratic_approximation_generator(
         }
         output_index++;
     }
-    *error = avg2error_i;
+    *error = sqrt(avg2error_i / 65536.0);
     *max_error = max_error_i;
     return output;
 }

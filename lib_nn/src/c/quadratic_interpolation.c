@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <assert.h>
 
 #include "quadratic_interpolation.h"
@@ -23,12 +24,12 @@ void quadratic_interpolation_128(int16_t *outputs, int16_t *inputs,
         int64_t input_val = inputs[j];
 
         int table_index = (input_val >> 9) + (1 << 6);
-        input_val = input_val &  ((1<<9) - 1) + (1<<8);
+        input_val = (input_val &  ((1<<9) - 1)) - (1<<8);
         int64_t sum_i;
         uint8_t *element = bytes + table_index * 8;
         int32_t c = *(int32_t*) element;
-        int32_t b = *(int16_t*) (element + 4);
-        int32_t a = *(int8_t*) (element + 7);
+        int32_t b = *(int16_t*) (element + 6);
+        int32_t a = *(int8_t*) (element + 4);
         sum_i  = c;
         sum_i += b * input_val * 256;
         sum_i += a * input_val * input_val;
