@@ -2,7 +2,7 @@
 #define _quadratic_interpolation_h_
 
 #include <stdint.h>
-#include "quadration_approximation.h"
+#include "quadratic_approximation.h"
 
 /** Function that performs a quadratic interpolation on a vector of inputs given a table
  * of coefficients
@@ -14,7 +14,7 @@
  * \param    N             Number of 16-bit elements in the vector
  */
 extern void quadratic_interpolation_128(int16_t *outputs, int16_t *inputs,
-                                        quadratic_function_table_t coeffs[128],
+                                        quadratic_function_table_t *coeffs,
                                         uint32_t N);
 
 #endif

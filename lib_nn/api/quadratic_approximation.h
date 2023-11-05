@@ -21,21 +21,21 @@ typedef float (*float_function_t)(float x);
 /** Function that builds a quadratic approximation table
  * The function passed in must be monotinuous
  * Any number of chunks will work but the assembly implementiaton assumes 128.
- * The function returns the maximum error (an int, ought to be 1), a table
- * (through a pointer), and the sqrt of the sum of squared errors as a goodness metric.
+ * The function returns a table pointer, and through two arguments the max error,
+ * and the sqrt of the sum of squared errors as a goodness metric.
  *
  * \param av            function to be interpolated
  * \param input_scaler  scale that is applied to the input, eg 8.0/32768.0
  * \param outptu_scaler scale that is applied to the output, eg 32768.0
  * \param chunks        number of interpolations. Set to 128.
- * \param [out] output  table with output values
+ * \param max_error     maximum error, ought to be 1
  * \param error         sqrt of sum of squared errors.
  */
-extern int quadratic_approximation_generator(float_function_t av,
+extern quadratic_function_table_t *quadratic_approximation_generator(float_function_t av,
                                              double input_scaler,
                                              double output_scaler,
                                              int chunks,
-                                             quadratic_function_table_t *output,
+                                             int *max_error,
                                              double *error);
 
 /** Function that returns the number of bytes in an approximation table

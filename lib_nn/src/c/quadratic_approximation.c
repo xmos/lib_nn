@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "quadratic_approximation.h"
+#include "quadratic_interpolation.h"
 
 struct quadratic_function_table {
     struct {          // The order matters - this is how the assembly code expects them
@@ -113,21 +114,24 @@ static int clamp32(double x) {
 }
 
 float approximation_function_tanh(float x) {
-    return tanh(f_real_input_val);
+    return tanh(x);
 }
 
 float approximation_function_logistics(float x) {
-    return 1.0 /(1.0 + exp(-f_real_input_val));
+    return 1.0 /(1.0 + exp(-x));
 }
 
 float approximation_function_elu(float x) {
-    return real_input_val >= 0 ? real_input_val : expm1(f_real_input_val);
+    return x >= 0 ? x : expm1(x);
 }
 
-int approximate_activation_function(float_function_t av, double input_scaler,
-                                    double output_scaler, int chunks,
-                                    quadratic_activiation_function_t *output,
-                                    double *error) {
+quadratic_function_table_t *quadratic_approximation_generator(
+    float_function_t av, double input_scaler,
+    double output_scaler, int chunks,
+    int *max_error,
+    double *error) {
+    quadratic_function_table_t *output = calloc(1, sizeof(quadratic_function_table_t));
+
     assert(chunks <= QUADRATIC_APPROXIMATION_MAX_CHUNKS);
     const int datapoints = 65536 / chunks;
     const int degree = 3;
@@ -201,11 +205,12 @@ int approximate_activation_function(float_function_t av, double input_scaler,
         ATB[0] = round(ATB[0]*i_scale_factor*i_scale_factor)+32768.0;
         ATB[1] = round(ATB[1]*i_scale_factor);
         ATB[2] = round(ATB[2]*i_scale_factor*i_scale_factor);
-        if (ATB[0] >= (1LL<<31)  || ATB[0] < (-1LL<<31)) {
+        if (ATB[0] >= (1LL<<31)  || ATB[0] < -(1LL<<31)) {
             printf("Warning: Constant constant -2^31 <= %f < 2^31 out of range\n", ATB[0]);
         }
-        if (ATB[1] >= (1<<15)  || ATB[1] < 0.5) {
+        if (ATB[1] >= (1<<15)  || ATB[1] < -0.1) {
             printf("Warning: Linear constant 0 <= %f < 32768 out of range\n", ATB[1]);
+            if (ATB[1] < 0) ATB[1] = 0;
         }
         if (ATB[2] > 127.5 || ATB[2] < -128.5) {
             printf("Warning: Quadratic constant -127 < %f < 128 out of range\n", ATB[2]);
@@ -216,15 +221,16 @@ int approximate_activation_function(float_function_t av, double input_scaler,
         output->coefficients[output_index].padding = 0;
 
         int16_t inputs_16bit[datapoints];
+        int16_t outputs_16bit[datapoints];
         for(int j = 0 ; j < datapoints; j++) {
-            inputs_16bit = j - datapoints / 2;
+            inputs_16bit[j] = j - datapoints / 2;
         }
         quadratic_interpolation_128(outputs_16bit, inputs_16bit,
-                                    outputs, datapoints);
+                                    output, datapoints);
         for(int j = 0 ; j < datapoints; j++) {
-            int error_i = round(B[j]) - outputs[j];
+            int error_i = round(B[j]) - outputs_16bit[j];
             if( abs(error_i) > 1 && chunks == 128) {
-                printf("Ch %d start %d val %f Sum %016llx %08x %f %d\n", chunks, start, (start + j-32768) * input_scaler, sum_i, (int)round(B[j]), B[j], error_i);
+                printf("Ch %d start %d val %f %08x %f %d\n", chunks, start, (start + j-32768) * input_scaler, (int)round(B[j]), B[j], error_i);
             }
             if (abs(error_i) > max_error_i) {
                 max_error_i = abs(error_i);
@@ -234,7 +240,8 @@ int approximate_activation_function(float_function_t av, double input_scaler,
         output_index++;
     }
     *error = avg2error_i;
-    return max_error_i;
+    *max_error = max_error_i;
+    return output;
 }
 
 uint32_t quadratic_function_table_number_bytes(quadratic_function_table_t *x) {
