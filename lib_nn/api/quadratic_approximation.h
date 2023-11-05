@@ -1,6 +1,12 @@
 #ifndef _quadratic_approximation_h_
 #define _quadratic_approximation_h_
 
+#ifdef __xcore__
+#define ACTIVATION_FUNCTION __attribute__(( fptrgroup("activation_functions") ))
+#else
+#define ACTIVATION_FUNCTION /**/
+#endif
+
 #include <stdint.h>
 
 #define QUADRATIC_APPROXIMATION_MAX_CHUNKS   2048
@@ -31,12 +37,13 @@ typedef float (*float_function_t)(float x);
  * \param max_error     maximum error, ought to be 1
  * \param error         sqrt of sum of squared errors.
  */
-extern quadratic_function_table_t *quadratic_approximation_generator(float_function_t av,
-                                             double input_scaler,
-                                             double output_scaler,
-                                             int chunks,
-                                             int *max_error,
-                                             double *error);
+extern quadratic_function_table_t *quadratic_approximation_generator(
+    ACTIVATION_FUNCTION float_function_t av,
+    double input_scaler,
+    double output_scaler,
+    int chunks,
+    int *max_error,
+    double *error);
 
 /** Function that returns the number of bytes in an approximation table
  *

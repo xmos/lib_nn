@@ -76,10 +76,10 @@ tail_end:                                            // Almost done <= 15 elemen
     ldc    r3, 16
     bu     vector_loop_last
 done:   
-    ldd   r9, r10, sp[0]
+    ldd   r9, r10, sp[3]
     ldd   r4, r5, sp[1] 
     ldd   r6, r7, sp[2] 
-    ldw   r8, sp[6] 
+    ldw   r8, sp[8] 
     { retsp NSTACKWORDS           ; nop }
 
 zero_offset_7_bit: 

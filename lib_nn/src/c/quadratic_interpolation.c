@@ -15,11 +15,7 @@ static int clamp(int64_t x) {
 }
 
 void quadratic_interpolation_128(int16_t *outputs, int16_t *inputs,
-                                 quadratic_function_table_t *c, uint32_t N) {
-    int number_bytes = quadratic_function_table_number_bytes(c);
-    assert(number_bytes = 128 * 8);
-    uint8_t *bytes = quadratic_function_table_bytes(c);
-    
+                                 uint8_t *bytes, uint32_t N) {
     for(int j = 0 ; j < N; j++) {
         int64_t input_val = inputs[j];
 

@@ -113,24 +113,29 @@ static int clamp32(double x) {
     return x;
 }
 
+ACTIVATION_FUNCTION
 float approximation_function_tanh(float x) {
     return tanh(x);
 }
 
+ACTIVATION_FUNCTION
 float approximation_function_logistics(float x) {
     return 1.0 /(1.0 + exp(-x));
 }
 
+ACTIVATION_FUNCTION
 float approximation_function_elu(float x) {
     return x >= 0 ? x : expm1(x);
 }
 
 quadratic_function_table_t *quadratic_approximation_generator(
-    float_function_t av, double input_scaler,
+    ACTIVATION_FUNCTION float_function_t av,
+    double input_scaler,
     double output_scaler, int chunks,
     int *max_error,
     double *error) {
-    quadratic_function_table_t *output = calloc(1, sizeof(quadratic_function_table_t));
+    quadratic_function_table_t *output = malloc(sizeof(quadratic_function_table_t) + 8);
+    output = (quadratic_function_table_t *) (((uint64_t) output) & ~7);
 
     assert(chunks <= QUADRATIC_APPROXIMATION_MAX_CHUNKS);
     const int datapoints = 65536 / chunks;
@@ -158,9 +163,6 @@ quadratic_function_table_t *quadratic_approximation_generator(
             inputs_16bit[i] = real_input_val;
             float f_real_input_val = real_input_val * input_scaler;
             B[i] = av(f_real_input_val) / output_scaler;
-            if( start + i == 0x3fe3) {
-//                printf("Ch %d Tanh %f -> %f\n", chunks, f_real_input_val, B[i]);
-            }
         }
         for(int i=0 ; i<degree ; i++ ) {
             for(int j=0 ; j<degree ; j++ ) {
@@ -224,7 +226,8 @@ quadratic_function_table_t *quadratic_approximation_generator(
         output->coefficients[output_index].padding = 0;
 
         quadratic_interpolation_128(outputs_16bit, inputs_16bit,
-                                    output, datapoints);
+                                    quadratic_function_table_bytes(output),
+                                    datapoints);
         for(int j = 0 ; j < datapoints; j++) {
             int error_i = round(B[j]) - outputs_16bit[j];
 //            printf("XX %04x %04x %f\n", inputs_16bit[j], outputs_16bit[j], round(B[j]));
