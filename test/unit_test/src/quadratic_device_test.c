@@ -18,18 +18,19 @@ int main(void) {
                               8.0/32768,
                               2.0/32768};
     for(int f = 0; f < 3; f++) {
-        quadratic_function_table_t *table = 
-            quadratic_approximation_generator(test_functions[f],
-                                              input_scalers[f],
-                                              output_scalers[f], chunks, &max_error,
-                                              &square_error);
-        printf("Max error %d sqerror %f\n", max_error, square_error);
         int16_t inputs[655];
         int16_t outputs[655];
+        __attribute__((aligned(8))) quadratic_function_table_t table;
+        uint8_t *bytes = quadratic_function_table_bytes(&table);
+        quadratic_approximation_generator(&table,
+                                          test_functions[f],
+                                          input_scalers[f],
+                                          output_scalers[f], chunks, &max_error,
+                                          &square_error);
+        printf("Max error %d sqerror %f\n", max_error, square_error);
         for(int i = 0; i < 655; i++) {
             inputs[i] = i*100-32768;
         }
-        uint8_t *bytes = quadratic_function_table_bytes(table);
         quadratic_interpolation_128(outputs, inputs, bytes, 655);
         for(int i = 0; i < 655; i++) {
             float expected = (test_functions[f])(inputs[i] * input_scalers[f]) / output_scalers[f];
@@ -38,7 +39,6 @@ int main(void) {
                 printf("ERROR\n");
             }
         }
-        free(table);
     }
 }
 

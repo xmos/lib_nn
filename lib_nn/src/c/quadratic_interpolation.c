@@ -6,7 +6,10 @@
 /** 
  * Host version of quadratic_interpolation.
  * Used for testing and verification of built tables.
+ * The __xcore__ version will be picked up from quadratic_interpolation.S
  */
+
+#ifndef __xcore__
 
 static int clamp(int64_t x) {
     if (x > 32767) return 32767;
@@ -32,3 +35,5 @@ void quadratic_interpolation_128(int16_t *outputs, int16_t *inputs,
         outputs[j] = clamp(sum_i >> 16);
     }
 }
+
+#endif 

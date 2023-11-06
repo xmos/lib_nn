@@ -6,16 +6,6 @@
 #include "quadratic_approximation.h"
 #include "quadratic_interpolation.h"
 
-struct quadratic_function_table {
-    struct {          // The order matters - this is how the assembly code expects them
-        int32_t c;
-        int8_t a;
-        int8_t padding;
-        int16_t b;
-    } coefficients[QUADRATIC_APPROXIMATION_MAX_CHUNKS];
-    int data_bytes;
-};
-
 /*
  * Algorithm for interpolation of activation functions
  * 
@@ -128,15 +118,13 @@ float approximation_function_elu(float x) {
     return x >= 0 ? x : expm1(x);
 }
 
-quadratic_function_table_t *quadratic_approximation_generator(
+void quadratic_approximation_generator(
+    quadratic_function_table_t *output,
     ACTIVATION_FUNCTION float_function_t av,
     double input_scaler,
     double output_scaler, int chunks,
     int *max_error,
     double *error) {
-    quadratic_function_table_t *output = malloc(sizeof(quadratic_function_table_t) + 8);
-    output = (quadratic_function_table_t *) (((uint64_t) output) & ~7);
-
     assert(chunks <= QUADRATIC_APPROXIMATION_MAX_CHUNKS);
     const int datapoints = 65536 / chunks;
     const int degree = 3;
@@ -243,7 +231,6 @@ quadratic_function_table_t *quadratic_approximation_generator(
     }
     *error = sqrt(avg2error_i / 65536.0);
     *max_error = max_error_i;
-    return output;
 }
 
 uint32_t quadratic_function_table_number_bytes(quadratic_function_table_t *x) {
