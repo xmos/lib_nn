@@ -83,6 +83,11 @@ int swap12(int i) {
     return i;
 }
 
+double myround(double x) {
+    if (x > 0) return (int) (x+0.5);
+    if (x <= 0) return -(int) (-x+0.5);
+}
+
 int test_output_transform_fn_int16_kernel_transform(void) {
     otfn_int16_params_t otfn_params = {16};
     int errors = 0;
@@ -91,7 +96,7 @@ int test_output_transform_fn_int16_kernel_transform(void) {
         channel_bias_terms_in[i] = 6*i-45;
         vDvR[swap12(i)   ] = i >= 8 ? -1 : 0;
         vDvR[swap12(i)+16] = i >= 8 ? (-103*i) : (101*i);
-        expected_output[i] = round(vDvR[swap12(i)+16] * channel_multipliers_in[i]) + channel_bias_terms_in[i];
+        expected_output[i] = myround(vDvR[swap12(i)+16] * channel_multipliers_in[i]) + channel_bias_terms_in[i];
     }
     output_transform_fn_int16_kernel_transform(
         kernel_weights_in,
