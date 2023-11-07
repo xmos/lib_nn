@@ -1,4 +1,4 @@
-#ifdef _expand_8_to_16_h_
+#ifndef _expand_8_to_16_h_
 #define _expand_8_to_16_h_
 
 #include <stdint.h>

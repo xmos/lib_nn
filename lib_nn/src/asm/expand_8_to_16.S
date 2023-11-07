@@ -21,20 +21,20 @@
 FUNCTION_NAME:
     { dualentsp NSTACKWORDS     ; ldap r11, ones   }
     { vldc    r11[0]            ; ldc  r11, 0x20   }
-    { shl     r11, r11, 3       ; nop              }
+    { shl     r11, r11, 4       ; nop              }
     { vsetc   r11               ; nop              }
     { zext    r2, 4             ; shr r11, r2, 4   }
     { bf      r11, tail         ; ldc r3, 16       }
 
 loop:   
-    { vlcrdr                    ; sub r11, r11, 1  }
+    { vclrdr                    ; sub r11, r11, 1  }
     { vlmacc  r1[0]             ; add r1, r1, r3   }
     { vstr    r0[0]             ; add r0, r0, r3   }
     { bt      r11, loop         ; add r0, r0, r3   }
 
 tail:
     { bf      r2, done          ; nop              }
-    { vlcrdr                    ; shl r2, r2, 1    }
+    { vclrdr                    ; shl r2, r2, 1    }
     { vlmacc  r1[0]             ; mkmsk r2, r2     }
     vstrpv    r0[0], r2
     
