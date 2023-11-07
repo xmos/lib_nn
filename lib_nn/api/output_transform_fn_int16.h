@@ -3,6 +3,11 @@
 
 #include <stdint.h>
 
+typedef struct {
+    int32_t output_slice_channel_count;
+} otfn_int16_params_t;
+
+
 /** Function that transform a ring buffer accumulator
  * into a vector of 16 bit numbers after multiplying and scaling.
  * In the name of efficiency the inputs shoudl be provided in the following
@@ -40,9 +45,10 @@
  *
  * \param  N       Number of vector elements to process; N <= 16.
  */
-extern void output_transform_fn_int16_impl_asm(int16_t *vDvR,
-                                               int32_t *mul_add,
-                                               int16_t *output,
-                                               uint32_t N);
+extern int16_t *output_transform_fn_int16(otfn_int16_params_t *params,
+                                          int16_t *output,
+                                          int16_t *vDvR,
+                                          int32_t output_channel_group,
+                                          int32_t *mul_add);
 
 #endif

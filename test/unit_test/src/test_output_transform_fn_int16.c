@@ -33,6 +33,7 @@ int16_t output[40];
 
 
 int test_output_transform_fn_int16(void) {
+    otfn_int16_params_t otfn_params = {16};
     int errors = 0;
     for(int j = 1; j <= 16; j+=1) {
         memset(vDvR,    0,             j*4);
@@ -46,7 +47,7 @@ int test_output_transform_fn_int16(void) {
         for(int i = 0; i < 40; i+=1) {
             output[i] = i*i+13;
         }
-        output_transform_fn_int16_impl_asm(vDvR, mul_add, output+4, j);
+        output_transform_fn_int16(&otfn_params, output+4, vDvR, 0, mul_add);
         for(int i = 0; i < 40; i+=1) {
             if (output[i] != i*i+13 && (i < 4 || i >= 4+j)) {
                 errors++;
@@ -83,6 +84,7 @@ int swap12(int i) {
 }
 
 int test_output_transform_fn_int16_kernel_transform(void) {
+    otfn_int16_params_t otfn_params = {16};
     int errors = 0;
     for(int i = 0; i < 16; i++) {
         channel_multipliers_in[i] = (i+16)/32.0;
@@ -90,16 +92,13 @@ int test_output_transform_fn_int16_kernel_transform(void) {
         vDvR[swap12(i)   ] = i >= 8 ? -1 : 0;
         vDvR[swap12(i)+16] = i >= 8 ? (-103*i) : (101*i);
         expected_output[i] = round(vDvR[swap12(i)+16] * channel_multipliers_in[i]) + channel_bias_terms_in[i];
-        if (i != -1) {
-            printf("%f\n", vDvR[swap12(i)+16] * channel_multipliers_in[i]);
-        }
     }
     output_transform_fn_int16_kernel_transform(
         kernel_weights_in,
         channel_multipliers_in, channel_bias_terms_in,
         kernel_weights_out, mul_add_out,
         8, 16);
-    output_transform_fn_int16_impl_asm(vDvR, mul_add_out, vDvRoutput, 16);
+    output_transform_fn_int16(&otfn_params, vDvRoutput, vDvR, 0, mul_add_out);
 
     for(int i = 0; i < 16; i++) {
         printf("%08x %08lx\n", vDvRoutput[i], expected_output[i]);
