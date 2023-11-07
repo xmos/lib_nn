@@ -98,10 +98,23 @@ int test_output_transform_fn_int16_kernel_transform(void) {
         channel_multipliers_in, channel_bias_terms_in,
         kernel_weights_out, mul_add_out,
         8, 16);
+    int t0, t1;
+    asm volatile("gettime %0" : "=r" (t0));
     output_transform_fn_int16(&otfn_params, vDvRoutput, vDvR, 0, mul_add_out);
-
+    asm volatile("gettime %0" : "=r" (t1));
+    printf("%d ticks for 16 using "
+#ifdef NN_USE_REF
+           "C reference\n"
+#else
+           "Assembly\n"
+#endif
+           , t1-t0
+        );
     for(int i = 0; i < 16; i++) {
-        printf("%08x %08lx\n", vDvRoutput[i], expected_output[i]);
+        if (vDvRoutput[i] != expected_output[i]) {
+            errors++;
+            printf("%d: %08x %08lx\n", i, vDvRoutput[i], expected_output[i]);
+        }
     }
     
     return errors;
