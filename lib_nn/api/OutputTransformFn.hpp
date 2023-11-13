@@ -11,7 +11,7 @@
 #include "geom/WindowGeometry.hpp"
 #include "vpu.hpp"
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 #include <intrin.h>
 #define __builtin_popcount __popcnt
 #endif
