@@ -180,7 +180,7 @@ MatMulDirectFn_DW::MatMulDirectFn_DW(const ImageGeometry &X,
   p.k_width_loop_counter = K.shape.width - 1;
 
   p.bytes_per_kernel_channel_group =
-      K.shape.height * K.shape.width * VPU_INT16_VLMACC_ELMS;
+      K.shape.height * K.shape.width * VPU_INT16_VLMACC_ELMS * X.element_bits / CHAR_BIT;
 
   int bytes_per_pixel = X.PixelBytes();
 

@@ -35,8 +35,13 @@ int test_expand_8_to_16() {
     return errors;
 }
 
+#ifdef LOCAL_MAIN
+
 int main(void) {
     int errors = 0;
     errors += test_expand_8_to_16();
+    if (errors != 0) printf("FAIL\n"); else printf("PASS\n");
     return errors;
 }
+
+#endif

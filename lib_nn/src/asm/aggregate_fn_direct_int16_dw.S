@@ -24,7 +24,7 @@
 #define kw                   r4
 #define ddr_spill            r5
 
-#define sixteen              r6
+#define thirtytwo            r6
 #define inner_x_h_step       r7
 
 #define inner_x_v_step       r8
@@ -71,7 +71,7 @@ FUNCTION_NAME:
     mul output_channel_group, kw, output_channel_group
     {ldw K_p, sp[NSTACKWORDS+1]; nop}
     {ldw inner_x_v_step, params_p[PARAMS_inner_x_v_step]; add K_p, output_channel_group, K_p}
-    {ldc sixteen, 16; ldw inner_x_h_step, params_p[PARAMS_inner_x_h_step]}
+    {ldc thirtytwo, 32; ldw inner_x_h_step, params_p[PARAMS_inner_x_h_step]}
     {ldw kh, params_p[PARAMS_k_height_loop_counter];nop}
     {ldw kw_init, params_p[PARAMS_k_width_loop_counter]; sub X_p, X_p, inner_x_v_step}
 
@@ -80,12 +80,11 @@ FUNCTION_NAME:
         kw_loop_asm:
             {vldc X_p[0]; add X_p, X_p, inner_x_h_step}
             OPTIONAL_DDR_SPILL(K_p)
-            {vlmacc K_p[0]; add K_p, K_p, sixteen}
+            {vlmacc K_p[0]; add K_p, K_p, thirtytwo}
         {bt kw, kw_loop_asm; sub kw, kw, 1}
     {bt kh, kh_loop_asm; sub kh, kh, 1}
 
-    {shl sixteen, sixteen, 1; nop}
-    {vstr A_p[0]; add A_p, A_p, sixteen}
+    {vstr A_p[0]; add A_p, A_p, thirtytwo}
     {vstd A_p[0]; nop}
 
     ldd r4, r5, sp[0]

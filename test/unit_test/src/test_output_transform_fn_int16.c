@@ -33,9 +33,9 @@ int16_t output[40];
 
 
 int test_output_transform_fn_int16(void) {
-    otfn_int16_params_t otfn_params = {16};
     int errors = 0;
     for(int j = 1; j <= 16; j+=1) {
+        otfn_int16_params_t otfn_params = {j};
         memset(vDvR,    0,             j*4);
         memcpy(vDvR,    vDvR_input,    ((j+3)&~3)*2);
         memcpy(vDvR+16, vDvR_input+16, ((j+3)&~3)*2);
@@ -120,8 +120,14 @@ int test_output_transform_fn_int16_kernel_transform(void) {
     return errors;
 }
 
+#ifdef LOCAL_MAIN
+
 int main(void) {
     int errors = 0;
+    errors += test_output_transform_fn_int16();
     errors += test_output_transform_fn_int16_kernel_transform();
+    if (errors != 0) printf("FAIL\n"); else printf("PASS\n");
     return errors;
 }
+
+#endif

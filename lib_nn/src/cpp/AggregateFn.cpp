@@ -111,6 +111,13 @@ Conv2dReorderedWeights16 MatMulBase::reorder_kernel_weights_int16(
   int kernel_size =
       get_weights_bytes(bytes_per_output_channel, output_channel_count);
 
+  // This is necessary because whne adding an element at a time
+  // It keeps reallocating and freeing, and because it just desn't fit it keeps
+  // moving up in memory until it runs out
+
+  reordered_weights.weights.resize(shape[0] * shape[1] * shape[2] * shape[3]);
+  reordered_weights.weights.resize(0);
+
   assert(bytes_per_output_channel * output_channel_count <=
          kernel_size + vpu_ring_buffer_length * vpu_bytes_per_word);
 
