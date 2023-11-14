@@ -452,16 +452,16 @@ void mat_mul_direct16_impl(const mat_mul_direct_params_t *params, VPURingBuffer 
       for (int ic = params->input_channel_loop_counter; ic >= 0; ic--) {
         VLDC(vpu, X_cur_p);
 
-        X_cur_p += XS3_VPU_VREG_WIDTH_BYTES;
+        X_cur_p += XS3_VPU_VREG_WIDTH_BYTES/2;
 
         for (unsigned l = 0; l < VPU_INT16_EPV; l++) {
           macc_inst(vpu, K_p);
-          K_p += XS3_VPU_VREG_WIDTH_BYTES;
+          K_p += XS3_VPU_VREG_WIDTH_BYTES/2;
         }
       }
-      X_cur_p += params->inner_x_h_step;
+      X_cur_p += params->inner_x_h_step/2;
     }
-    X_cur_p += params->inner_x_v_step;
+    X_cur_p += params->inner_x_v_step/2;
   }
 
   // save off the accumulator
