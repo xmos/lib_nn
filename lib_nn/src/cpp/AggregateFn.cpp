@@ -446,7 +446,8 @@ void mat_mul_direct16_impl(const mat_mul_direct_params_t *params, VPURingBuffer 
   int16_t *X_cur_p = X;
 
   int16_t *K_p = (int16_t *)weights +
-                params->bytes_per_kernel_channel * output_channel_group;
+                params->bytes_per_kernel_channel * output_channel_group/2;
+
   for (int kh = params->k_height_loop_counter; kh >= 0; kh--) {
     for (int kw = params->k_width_loop_counter; kw >= 0; kw--) {
       for (int ic = params->input_channel_loop_counter; ic >= 0; ic--) {

@@ -250,7 +250,7 @@ void mat_mul_dw_direct_int16_impl(const mat_mul_dw_direct_params_t *params, VPUR
     for (int kw = params->k_width_loop_counter; kw >= 0; kw--) {
       VLDC(vpu, X_cur_p);
       VLMACC(vpu, K_p);
-      K_p += VPU_INT16_VLMACC_ELMS / 2;
+      K_p += VPU_INT16_VLMACC_ELMS;
       X_cur_p += params->inner_x_h_step / 2;
     }
     X_cur_p += params->inner_x_v_step / 2;
