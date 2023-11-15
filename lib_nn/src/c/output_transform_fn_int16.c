@@ -21,8 +21,8 @@ int16_t *output_transform_fn_int16_impl(int16_t *vDvR,
     for(int i = 0; i < N; i++) {
         int32_t multiplier = mul_add[ot_int16_mul_index_used_for_output[i]];
         int32_t adder      = mul_add[ot_int16_add_index_used_for_output[i]];
-        int32_t accu_high  = vDvR[ot_int16_input_channel_used_for_output[i]];
-        int32_t accu_low   = vDvR[ot_int16_input_channel_used_for_output[i]+16];
+        int32_t accu_high  = vDvR[i];
+        int32_t accu_low   = vDvR[i+16];
         int32_t accu       = (accu_low & 0xffff) | (accu_high << 16);
         int64_t answer     = multiplier * (int64_t) accu;
         answer             = (answer + (1<<29)) >> 30;

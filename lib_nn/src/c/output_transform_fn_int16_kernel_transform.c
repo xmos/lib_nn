@@ -11,7 +11,7 @@ int output_transform_fn_int16_kernel_transform(
     for(int ochannel = 0; ochannel < output_channels; ochannel++) {
         int ochannel_group = ochannel & ~0xf;
         int ochannel_member = ochannel & 0xf;
-        int model_ochannel = (ot_int16_input_channel_used_for_output[ochannel_member] +
+        int model_ochannel = (ochannel_member +
                               ochannel_group);
         int mul_add_major_index = ochannel_group * 2;
         int mul_index = 0;

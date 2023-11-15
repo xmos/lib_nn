@@ -1,11 +1,5 @@
 #include "output_transform_fn_int16_mappings.h"
 
-// This defines the mapping of the output transform vDvR from output channels
-// Ie, in order to calculate OT[2] you need to use vDvR[1]
-int ot_int16_input_channel_used_for_output[16] = {
-    0, 2, 1, 3, 4, 6, 5, 7, 8, 10, 9, 11, 12, 14, 13, 15
-};
-
 // This defines the mapping of the output transform multipliers from output channels
 // Ie, in order to calculate OT[3] you need to use mul_add[17]
 int ot_int16_mul_index_used_for_output[16] = {

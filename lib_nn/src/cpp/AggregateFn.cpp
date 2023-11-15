@@ -150,13 +150,8 @@ Conv2dReorderedWeights16 MatMulBase::reorder_kernel_weights_int16(
             std::min(bytes_per_output_channel - icg * vpu_bytes_per_word,
                      vpu_bytes_per_word);
 
-        // flip 1 and 2; for 16-bit output transform
-        int flipped_out_ch = out_ch;
-        if ((out_ch & 3) == 1 || (out_ch & 3) == 2) {
-          flipped_out_ch ^= 6;
-        }
         // reverse order of output channels - for VLMACCR
-        int reversed_out_ch = output_channels_per_ocg - 1 - flipped_out_ch;
+        int reversed_out_ch = output_channels_per_ocg - 1 - out_ch;
         int16_t *src =
             deref2d(raw_weights, bytes_per_output_channel/2,
                     ocg_offset + reversed_out_ch, vpu_bytes_per_word/2 * icg);

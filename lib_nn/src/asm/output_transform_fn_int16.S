@@ -33,8 +33,8 @@ output_transform_16_unzip_loop:
     ldd   r7, r9, r11[4]          // vR first two words
     unzip r6, r7, 4
     unzip r8, r9, 4             // r6, r7, r8, r9 first four words
-    std   r6, r7, r11[4]
-    std   r8, r9, r11[0]
+    std   r6, r8, r11[4]
+    std   r7, r9, r11[0]
     { add   r11, r11, 8      ; sub r0, r0, 1 }
     bt    r0, output_transform_16_unzip_loop
 
@@ -54,7 +54,8 @@ output_transform_16_unzip_loop:
     { vstr   r11[0]        ; and r5, r10, r3 }  // make 0x3333
     vlashr r11[0], r7                           // Move to lower half of word
     vstrpv r2[0], r5
-    
+
+    ldw   r10, sp[1]
     ldd   r4, r5, sp[1]
     ldd   r6, r7, sp[2]
     ldd   r8, r9, sp[3]
