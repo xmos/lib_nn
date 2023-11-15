@@ -6,16 +6,34 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void assert_word_aligned(const void *address) {
-  assert(((uintptr_t)address & 0x3) == 0);
-}
+#ifndef __cplusplus
+#include <stdbool.h>
+#endif
+
+#ifdef _MSC_VER
+#include <intrin.h>
+#define __builtin_popcount __popcnt
+#endif
 
 /**
- * vpu_saturate to the relevent bounds.
+ * vpu_saturate to the relevant bounds.
  */
 int64_t vpu_saturate(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
   const int64_t min_val = -max_val;
+
+  return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
+}
+
+/**
+ * vpu_saturate to the relevant bounds. Fixed 8-bit saturation.
+ */
+int64_t vpu_saturate_fixed(const int64_t input, const unsigned bits) {
+  const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
+  int64_t min_val = -max_val;
+  if(bits == 8){
+    min_val = INT8_MIN;
+  }
 
   return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
 }
@@ -199,6 +217,30 @@ void VLMACCR(xs3_vpu *vpu, const void *addr) {
   }
 }
 
+void VPOS(xs3_vpu *vpu) {
+  if (vpu->mode == MODE_S8) {
+    for (int i = 0; i < VPU_INT8_ACC_PERIOD; i++) {
+      int8_t acc = (int8_t)GetAccumulator(vpu, i);
+      if (acc < 0) acc = 0;
+      vpu->vR.s8[i] = acc;
+    }
+  } else if (vpu->mode == MODE_S16) {
+    for (int i = 0; i < VPU_INT16_ACC_PERIOD; i++) {
+      int16_t acc = (int16_t)GetAccumulator(vpu, i);
+      if (acc < 0) acc = 0;
+      vpu->vR.s16[i] = acc;
+    }
+  } else if (vpu->mode == MODE_S32) {
+    for (int i = 0; i < VPU_INT32_ACC_PERIOD; i++) {
+      int32_t acc = (int32_t)GetAccumulator(vpu, i);
+      if (acc < 0) acc = 0;
+      vpu->vR.s32[i] = acc;
+    }
+  } else {
+    assert(0);  // How'd this happen?
+  }
+}
+
 void VLMACCR1(xs3_vpu *vpu, const void *addr) {
   assert_word_aligned(addr);
   const int32_t *addr32 = (const int32_t *)addr;
@@ -214,7 +256,7 @@ void VLMACCR1(xs3_vpu *vpu, const void *addr) {
   SetAccumulator(vpu, 0, acc);
 }
 
-void VLSAT(xs3_vpu *vpu, const void *addr) {
+void _VLSAT_IMPL(xs3_vpu *vpu, const void *addr, bool fixed_saturation) {
   assert_word_aligned(addr);
   if (vpu->mode == MODE_S8) {
     const uint16_t *addr16 = (const uint16_t *)addr;
@@ -224,7 +266,12 @@ void VLSAT(xs3_vpu *vpu, const void *addr) {
 
       if (addr16[i] != 0) acc = acc + (1 << (addr16[i] - 1));  // Round
       acc = acc >> addr16[i];                                  // Shift
-      int8_t val = vpu_saturate(acc, 8);                       // vpu_saturate
+      int8_t val;
+      if(fixed_saturation){
+        val = vpu_saturate_fixed(acc, 8);                 // vpu_saturate
+      } else {
+        val = vpu_saturate(acc, 8);                       // vpu_saturate
+      }
 
       vpu->vR.s8[i] = val;
     }
@@ -261,6 +308,14 @@ void VLSAT(xs3_vpu *vpu, const void *addr) {
   }
 }
 
+void VLSAT(xs3_vpu *vpu, const void *addr) {
+  _VLSAT_IMPL(vpu, addr, /*fixed_saturation=*/false);
+}
+
+void VLSAT_FIXED(xs3_vpu *vpu, const void *addr) {
+  _VLSAT_IMPL(vpu, addr, /*fixed_saturation=*/true);
+}
+
 void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
   assert_word_aligned(addr);
   if (vpu->mode == MODE_S8) {
@@ -271,8 +326,8 @@ void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
 
       if (shr >= 7)
         val = (val < 0) ? -1 : 0;
-      else if (shr >= 0)
-        val = val >> shr;
+      else if (shr > 0)
+        val = (val + (1<<(shr-1))) >> shr;
       else
         val = (unsigned)val << (-shr);
 
@@ -285,8 +340,8 @@ void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
       int32_t val = addr16[i];
       if (shr >= 15)
         val = (val < 0) ? -1 : 0;
-      else if (shr >= 0)
-        val = val >> shr;
+      else if (shr > 0)
+        val = (val + (1<<(shr-1))) >> shr;
       else
         val = (int32_t)((uint64_t)(uint32_t)val << (-shr));
       vpu->vR.s16[i] = vpu_saturate(val, 16);
@@ -298,8 +353,8 @@ void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
       int64_t val = addr32[i];
       if (shr >= 31)
         val = (val < 0) ? -1 : 0;
-      else if (shr >= 0)
-        val = val >> shr;
+      else if (shr > 0)
+        val = (val + (1<<(shr-1))) >> shr;
       else
         val = (unsigned)val << (-shr);
       vpu->vR.s32[i] = vpu_saturate(val, 32);
@@ -368,7 +423,7 @@ void VLMUL(xs3_vpu *vpu, const void *addr) {
     const int8_t *addr8 = (const int8_t *)addr;
     for (int i = 0; i < VPU_INT8_EPV; i++) {
       int32_t val = addr8[i];
-      int32_t res = ((int32_t)vpu->vR.s8[i] * val) >> 6;  // TODO use macros
+      int32_t res = ((int32_t)vpu->vR.s8[i] * val + (1<<5)) >> 6;  // TODO use macros
       vpu->vR.s8[i] = vpu_saturate(res, 8);
     }
   } else if (vpu->mode == MODE_S16) {
@@ -377,7 +432,7 @@ void VLMUL(xs3_vpu *vpu, const void *addr) {
     for (int i = 0; i < VPU_INT16_EPV; i++) {
       int64_t val = addr16[i];
       int64_t res =
-          ((int64_t)vpu->vR.s16[i] * (int64_t)val) >> 14;  // TODO use macros
+          ((int64_t)vpu->vR.s16[i] * (int64_t)val + (1LL<<13)) >> 14; // TODO use macros
       vpu->vR.s16[i] = vpu_saturate(res, 16);
     }
   } else if (vpu->mode == MODE_S32) {
@@ -385,7 +440,7 @@ void VLMUL(xs3_vpu *vpu, const void *addr) {
 
     for (int i = 0; i < VPU_INT32_EPV; i++) {
       int64_t val = addr32[i];
-      int64_t res = (vpu->vR.s32[i] * val) >> 30;  // TODO use macros
+      int64_t res = (vpu->vR.s32[i] * val + (1<<29)) >> 30;  // TODO use macros
       vpu->vR.s32[i] = vpu_saturate(res, 32);
     }
   } else {
@@ -489,6 +544,29 @@ void vpu_sim_mem_print(void *address, vector_mode mode) {
 
   printf("\n");
 }
+
+void vpu_accu_print(xs3_vpu *vpu) {
+  printf("Accumulators - Mode:%d\n", vpu->mode);
+  if (vpu->mode == MODE_S8) {
+    for (int i = 0; i < VPU_INT8_ACC_PERIOD; i++) {
+      int32_t acc = GetAccumulator(vpu, i);
+      printf("%d %d\n", i, acc);
+    }
+  } else if (vpu->mode == MODE_S16) {
+    for (int i = 0; i < VPU_INT16_ACC_PERIOD; i++) {
+      int32_t acc = GetAccumulator(vpu, i);
+      printf("%d %d\n", i, acc);
+    }
+  } else if (vpu->mode == MODE_S32) {
+    for (int i = 0; i < VPU_INT32_ACC_PERIOD; i++) {
+      int64_t acc = GetAccumulator(vpu, i);
+      printf("%d %lld\n", i, acc);
+    }
+  } else {
+    assert(0);  // How'd this happen?
+  }
+}
+
 void vpu_sim_print(xs3_vpu *vpu) {
   int8_t *vC8 = vpu->vC.s8;
   int8_t *vR8 = vpu->vR.s8;

@@ -35,12 +35,12 @@
 
 
 /*
-void mat_mul_direct_dw_impl_asm(MatMulDirectFn_DW::Params *params,
+void mat_mul_dw_direct_impl_asm(MatMulDirectFn_DW::Params *params,
                                       VPURingBuffer *A, int8_t *X,
                                       int32_t output_channel_group);
 */
 
-#define FUNCTION_NAME mat_mul_direct_dw_impl_asm
+#define FUNCTION_NAME mat_mul_dw_direct_impl_asm
 
 #ifdef USE_DDR_FIX
 #define OPTIONAL_DDR_SPILL(x) { ldw ddr_spill, x[8]; nop} ;\
@@ -53,7 +53,8 @@ void mat_mul_direct_dw_impl_asm(MatMulDirectFn_DW::Params *params,
 .text
 .issue_mode  dual
 .globl FUNCTION_NAME
-.align 2
+.align 16                   // This aligns the kh_loop and fully
+.skip  12                   // contains the inner loop
 .type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 

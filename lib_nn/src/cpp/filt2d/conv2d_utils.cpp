@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 #include <vector>
 
 #include "xs3_vpu.h"
@@ -66,11 +67,8 @@ static Conv2dChannelParams computeConv2dChannelParams(
 
   if (offset_scale != 0) offset = int16_t(roundf(raw_offset / offset_scale));
 
-  return Conv2dChannelParams{.shift1 = shift_pre,
-                             .scale = scale,
-                             .offset_scale = offset_scale,
-                             .offset = offset,
-                             .shift2 = shift_post};
+  return Conv2dChannelParams{shift_pre, scale, offset_scale, offset,
+                             shift_post};
 }
 
 static int64_t sumConv2dWeights_Deep(const Filter2dGeometry &filter,

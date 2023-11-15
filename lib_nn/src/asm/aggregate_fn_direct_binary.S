@@ -39,7 +39,7 @@
 extern "C" void mat_mul_impl_asm(void *params, VPURingBuffer *A, int8_t *X, int32_t output_channel_group);
 */
 
-#define FUNCTION_NAME mat_mul_direct_int8_impl_asm
+#define FUNCTION_NAME mat_mul_direct_binary_impl_asm
 
 #ifdef USE_DDR_FIX
 #define OPTIONAL_DDR_SPILL(x) { ldw ddr_spill, x[8]; nop} ;\
@@ -53,8 +53,8 @@ extern "C" void mat_mul_impl_asm(void *params, VPURingBuffer *A, int8_t *X, int3
 .text
 .issue_mode  dual
 .globl FUNCTION_NAME
-.align 16
-.skip   0                               // This aligns the ic_loop
+.align 16                           // This aligns ic_loop
+.skip   0
 .type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
@@ -86,37 +86,37 @@ FUNCTION_NAME:
             ic_loop_asm:
                 {vldc X_p[0]; add X_p, X_p, thirty_two}
                 OPTIONAL_DDR_SPILL(K_p)
-                {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+                {vlmaccr1 K_p[0]; add K_p, K_p, thirty_two}
                 OPTIONAL_DDR_SPILL(K_p)
-                {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+                {vlmaccr1 K_p[0]; add K_p, K_p, thirty_two}
                 OPTIONAL_DDR_SPILL(K_p)
-                {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+                {vlmaccr1 K_p[0]; add K_p, K_p, thirty_two}
                 OPTIONAL_DDR_SPILL(K_p)
-                {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+                {vlmaccr1 K_p[0]; add K_p, K_p, thirty_two}
                 OPTIONAL_DDR_SPILL(K_p)
-                {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+                {vlmaccr1 K_p[0]; add K_p, K_p, thirty_two}
                 OPTIONAL_DDR_SPILL(K_p)
-                {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+                {vlmaccr1 K_p[0]; add K_p, K_p, thirty_two}
                 OPTIONAL_DDR_SPILL(K_p)
-                {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+                {vlmaccr1 K_p[0]; add K_p, K_p, thirty_two}
                 OPTIONAL_DDR_SPILL(K_p)
-                {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+                {vlmaccr1 K_p[0]; add K_p, K_p, thirty_two}
                 OPTIONAL_DDR_SPILL(K_p)
-                {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+                {vlmaccr1 K_p[0]; add K_p, K_p, thirty_two}
                 OPTIONAL_DDR_SPILL(K_p)
-                {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+                {vlmaccr1 K_p[0]; add K_p, K_p, thirty_two}
                 OPTIONAL_DDR_SPILL(K_p)
-                {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+                {vlmaccr1 K_p[0]; add K_p, K_p, thirty_two}
                 OPTIONAL_DDR_SPILL(K_p)
-                {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+                {vlmaccr1 K_p[0]; add K_p, K_p, thirty_two}
                 OPTIONAL_DDR_SPILL(K_p)
-                {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+                {vlmaccr1 K_p[0]; add K_p, K_p, thirty_two}
                 OPTIONAL_DDR_SPILL(K_p)
-                {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+                {vlmaccr1 K_p[0]; add K_p, K_p, thirty_two}
                 OPTIONAL_DDR_SPILL(K_p)
-                {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+                {vlmaccr1 K_p[0]; add K_p, K_p, thirty_two}
                 OPTIONAL_DDR_SPILL(K_p)
-                {vlmaccr K_p[0]; add K_p, K_p, thirty_two}
+                {vlmaccr1 K_p[0]; add K_p, K_p, thirty_two}
             {bt ic, ic_loop_asm; sub ic, ic, 1}
         {bt kw, kw_loop_asm; sub kw, kw, 1}
     {bt kh, kh_loop_asm; sub kh, kh, 1}

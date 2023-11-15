@@ -2,274 +2,9 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #ifndef LAYERS_H_
 #define LAYERS_H_
+#include "nn_api.h"
+#include "nn_bin_types.h"
 #include "nn_image.h"
-#include "nn_types.h"
-
-/**
- * Describes the parameters needed for an @oper{add_elementwise} operator. @see
- * add_elementwise().
- */
-typedef struct {
-  /**
-   * The parameters that are applied to each input element. Those in `input[0]`
-   * are applied to elements of
-   * @tensor{x_0}, and `input[1]` are applied to elements of @tensor{x_1}.
-   */
-  struct {
-    /**
-     * `input[k].shr` is the arithmetic _right_-shift @math{s_k} applied to
-     * elements of @tensor{x_k}. This will usually be a negative value.
-     */
-    int16_t shr;
-
-    /**
-     * `input[k].multiplier` is the scale factor @math{m_k} applied to elements
-     * of @tensor{x_k}. This and @math{s_k} are usually derived from the scale
-     * factor of the quantized vector @tensor{x_k}.
-     */
-    int16_t multiplier;
-  } input[2];
-
-  struct {
-    /**
-     * `output.bias` is the 32-bit bias @math{b} to which the scaled inputs are
-     * added.
-     */
-    int32_t bias;
-
-    /**
-     * `output.shr` is output the shift @math{s_{out}}, which is the number of
-     * bits the 32-bit accumulator is right-shifted by to obtain a final result
-     * for each element.
-     */
-    uint8_t shr;
-  } output;
-} nn_add_params_t;
-
-/**
- * @brief Invoke an @oper{add_elementwise} job.
- *
- * The @oper{add_elementwise} operator adds together two quantized 8-bit input
- * vectors, @tensor{x_0} and @tensor{x_1} element-by-element to produce the
- * output vector @tensor{y}. This function assumes that the input vectors and
- * the output vector each require different quantization parameters.
- *
- * In order to add together two quantized vectors, their quantization parameters
- * must match. The contents of `params` indicate how to do this.
- *
- * @par Operation Performed
- *
- * @f[
- *
- *      v_i[k] \leftarrow m_i \cdot sat_{16}\!\left( floor\!\left( x_i[k]
- *                         \cdot 2^{-s_i} \right) \right) \\
- *
- *      y[k] \leftarrow   sat_{8}\!\left( round\!\left(sat_{32}\!\left(b +
- * v_0[k] + v_1[k]\right) \cdot 2^{-s_{out}} \right) \right)
- *
- * @f]
- *
- * where
- *
- * @par
- * each @tensor{v_i} is an intermediate 32-bit vector representing the scaled
- * contents of @tensor{x_i},
- *
- * @par
- * @math{k} is the output index,
- *
- * @par
- * @math{sat_{8}\!\left(\cdot\right)}, @math{sat_{16}\!\left(\cdot\right)}, and
- * @math{sat_{32}\!\left(\cdot\right)} saturate their arguments to @math{8}-,
- * @math{16}- and @math{32}-bit bounds respectively, and
- *
- * @par
- * the remaining parameters are as described below.
- *
- * @par Parameter Details
- *
- * `Y` points to the output vector @tensor{y} with shape @tensor_shape{N}.
- *
- * `X0` and `X1` respectively point to the first and second input vectors
- * @tensor{x_0} and @tensor{x_1}, each with shape
- * @tensor_shape{N}.
- *
- * `params` describes the parameters @math{s_i}, @math{m_i}, @math{b} and
- * @math{s_{out}} which are applied for each output element.
- *
- * `elm_start` and `elm_count` together specify which output elements
- * @math{y[k]} should be calculated by this invocation. Specifically, this
- * invocation will calculate @math{y[k]} for which `elm_start` @math{\le k \lt}
- * `(elm_start + elm_count)`.
- *
- * @param[out]  Y           The output vector @tensor{y}
- * @param[in]   X0          The first input vector @tensor{x_0}
- * @param[in]   X1          The second input vector @tensor{x_1}
- * @param[in]   params      The scaling and bias parameters
- * @param[in]   elm_start   Index of first output element to be computed
- * @param[in]   elm_count   Number of output elements to be computed
- */
-void add_elementwise(int8_t Y[], const int8_t X0[], const int8_t X1[],
-                     const nn_add_params_t* params, const unsigned elm_start,
-                     const unsigned elm_count);
-
-/**
- * @brief Invoke an @oper{argmax_16} job.
- *
- * The @oper{argmax_16} operator invokes an argument maximization
- * (@math{argmax_k\\{x[k]\\}}) function, which outputs the index @math{k} of the
- * maximum element of the vector @tensor{x}. The function is applied to a 16-bit
- * input vector
- * @tensor{x}.
- *
- * @par Operation Performed
- *
- * @f[
- *    y \leftarrow argmax_{k}\{ x\left[k\right] \} \text{ for } 0 \leq k \lt N
- * @f]
- *
- * @par Hyperparameters
- *
- * <table>
- * <tr><th>Symbol(s)        <th>From        <th>Description
- * <tr><td>@tensor_shape{N} <td>`N`         <td>The length of the input vector
- * (in elements).
- * </table>
- *
- * @par Data Parameters
- *
- * <table>
- * <tr><th colspan="2">Symbol <th>Direction <th>Shape <th>From <th>Description
- *
- * <tr><td colspan="2">@math{y}   <td>out <td><i>scalar</i> <td>`Y`
- *      <td>The output index.
- * <tr><td colspan="2">@tensor{x} <td>in  <td>@math{(N)}    <td>`X`
- *      <td>The input vector.
- * </table>
- *
- * @param[out]  Y   The output index @math{y}
- * @param[in]   X   The input vector @tensor{x}
- * @param[in]   N   The number of elements @math{N} of the input vector
- * @tensor{x}
- */
-void argmax_16(int32_t* Y, const int16_t* X, const int32_t N);
-
-/**
- * @brief Invoke a @oper{lookup8} job.
- *
- * The @oper_ref{lookup8} operator transforms a vector of 8-bit inputs by
- * interpreting each element as an index into the LUT.
- *
- * @par Operation Performed
- *
- * @f[
- *    y\left[k\right] = T\left[x\left[k\right]\right] \text{for } 0 \leq k \lt N
- * @f]
- *
- * @par Hyperparameters
- *
- * <table>
- * <tr><th>Symbol(s)        <th>From        <th>Description
- * <tr><td>@tensor_shape{N} <td>`N`         <td>The length of the input vector
- * (in elements).
- * </table>
- *
- * @par Data Parameters
- *
- * <table>
- * <tr><th colspan="2">Symbol <th>Direction <th>Shape <th>From <th>Description
- *
- * <tr><td colspan="2">@math{y}     <td>out <td><i>scalar</i> <td>`Y`
- *      <td>The output vector.
- * <tr><td colspan="2">@tensor{x}   <td>in  <td>@math{(N)}    <td>`X`
- *      <td>The input vector.
- * <tr><td colspan="2">@tensor{T}   <td>in  <td>@tensor_shape{256}  <td>`lut`
- *      <td>The look-up table.
- * </table>
- *
- * @par Other Parameters
- *
- * `elm_start` is the index of the first output element to be computed by this
- * invocation.
- *
- * `elm_count` is the number of output elements to be computed by this
- * invocation.
- *
- * @par Splitting the Workload
- *
- * @todo Include information about how to split the work into multiple
- * invocations (e.g. for parallelization), particularly any counter-intuitive
- * aspects.
- *
- * @param[out]  Y           The output vector @tensor{y}
- * @param[in]   X           The input vector @tensor{x}
- * @param[in]   lut         Look-up table @tensor{T}
- * @param[in]   elm_start   Index of first output element to be computed.
- * @param[in]   elm_count   Number of output elements to be computed.
- */
-void lookup8(uint8_t* Y, const uint8_t* X, const uint8_t* lut,
-             const unsigned elm_start, const unsigned elm_count);
-
-/**
- * @brief Invoke a @oper{requantize_16_to_8} job.
- *
- * The @oper_ref{requantize_16_to_8} operator reduces a vector of 16-bit values
- * down to a vector of 8-bit values.
- *
- * @par Operation Performed
- *
- * @f[
- *    y\left[k\right] \overset{8-bit}{\longleftarrow} x\left[k\right] \text{for
- * } 0 \leq k \lt N
- * @f]
- *
- * @par Hyperparameters
- *
- * <table>
- * <tr><th>Symbol(s)        <th>From        <th>Description
- * <tr><td>@tensor_shape{N} <td>`N`         <td>The length of the input vector
- * (in elements).
- * </table>
- *
- * @par Data Parameters
- *
- * <table>
- * <tr><th colspan="2">Symbol <th>Direction <th>Shape <th>From <th>Description
- *
- * <tr><td colspan="2">@math{y}     <td>out <td><i>scalar</i> <td>`Y`
- *      <td>The output vector.
- * <tr><td colspan="2">@tensor{x}   <td>in  <td>@math{(N)}    <td>`X`
- *      <td>The input vector.
- * </table>
- *
- * @par Other Parameters
- *
- * `elm_start` is the index of the first output element to be computed by this
- * invocation.
- *
- * `elm_count` is the number of output elements to be computed by this
- * invocation.
- *
- * @par Parameter Constraints
- *
- * The arguments `Y` and `X` must each point to a word-aligned address.
- *
- * Due to memory alignment requirements, `elm_start` must be a multiple of
- * @math{2}.
- *
- * @par Splitting the Workload
- *
- * @todo Include information about how to split the work into multiple
- * invocations (e.g. for parallelization), particularly any counter-intuitive
- * aspects.
- *
- * @param[out]  Y           The output vector @tensor{y}
- * @param[in]   X           The input vector @tensor{x}
- * @param[in]   elm_start   Index of first output element to be computed.
- * @param[in]   elm_count   Number of output elements to be computed.
- */
-void requantize_16_to_8(int8_t* Y, const int16_t* X, const unsigned elm_start,
-                        const unsigned elm_count);
 
 /**
  * Struct represents the parameters needed by each `bsign_8()` job.
@@ -389,7 +124,7 @@ typedef struct padding_sizes_t {
  * @param x                [in]   Look-up table @tensor{T}
  * @param bytes_per_pixel  [in]   Length @math{N} of input and output vectors
  */
-void pad_prepare(nn_pad_plan_t* plan, const padding_sizes_t* p,
+C_API void pad_prepare(nn_pad_plan_t* plan, const padding_sizes_t* p,
                  const nn_image_params_t* x, const unsigned bytes_per_pixel);
 
 /**
@@ -410,10 +145,154 @@ void pad_prepare(nn_pad_plan_t* plan, const padding_sizes_t* p,
  * @param x   [in]     The input vector @tensor{x}
  * @param plan [in]    The prameters describing how to pad.
  */
-void pad_run(void* y, void* x, const nn_pad_plan_t* p, uint32_t pad_value);
+void pad_run(char* y, char* x, const nn_pad_plan_t* p, uint32_t pad_value);
 
-void pad_ref(void* y, void* x, const padding_sizes_t* p,
+void pad_ref(char* y, char* x, const padding_sizes_t* p,
              const nn_image_params_t* xp, const unsigned bytes_per_pixel,
              uint32_t pad_value);
+
+
+/**
+ * Func to calculate n_3
+*/
+void pad_3_to_4_prepare(uint32_t * n_3, 
+    const unsigned height, 
+    const unsigned width);
+
+/** Function that pads an image with 3-byte values with a 0.
+ * The output image must be word aligned. This function solves the general
+ * case and calls an optimised assembly version for the bulk copy.
+ *
+ * @param    outputs    output values, every word contains 3 bytes and a zero
+ * @param    inputs     input values, RGBRGBRGBRGB...
+ * @param    N_3        number of blocks of 3 bytes to copy
+ *
+ * @returns  The inner product
+ */
+extern void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val);
+extern void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val);
+
+typedef struct nn_mul_params_t {
+    int8_t in1_zero_point;
+    int8_t in2_zero_point;
+    int16_t bias;
+    int16_t scalar; 
+    int16_t vlashr_shr;
+} nn_mul_params_t;
+
+void mul_boggle(nn_mul_params_t * params, 
+    double in1Scale, 
+    double in2Scale, 
+    double outputScale,
+    int8_t in1ZeroPoint,
+    int8_t in2ZeroPoint, 
+    int8_t outputZeroPoint);
+void mul_elementwise(int8_t* in1_data, int8_t* in2_data, int element_count, nn_mul_params_t * params, int8_t * out_data);
+
+// /**
+//  * Describes the parameters needed for an @oper{add_elementwise} operator. @see add_elementwise().
+//  */
+// typedef struct {
+//     /**
+//      * The parameters that are applied to each input element.
+//      */
+//
+//     /**
+//     * `m1` and `m2` are the multiplers for the inputs.
+//     */
+//     int16_t m1[16];
+//     int16_t m2[16];
+
+//     /**
+//     * `shift` is the number of bits the 32-bit accumulator is
+//     * right-shifted by to obtain a final result for each element.
+//     */
+//     int16_t shift[16];
+
+//     /**
+//     * `bias_hi` and `bias_lo` are together, the 32-bit bias to
+//     * which the scaled inputs are added.
+//     */
+//     int16_t bias_lo[16];
+//     int16_t bias_hi[16];
+
+// } nn_add_params_t;
+
+typedef struct {
+        int16_t m1[16];
+        int16_t m2[16];
+        int16_t shift[16];
+        int16_t bias_hi[16];
+        int16_t bias_lo[16];
+} nn_add_params_t;
+
+/**
+ * @brief Invoke an @oper{add_elementwise} job.
+ *
+ * The @oper{add_elementwise} operator adds together two quantized 8-bit input vectors, @tensor{x_0} and @tensor{x_1}
+ * element-by-element to produce the output vector @tensor{y}. This function assumes that the input vectors and the 
+ * output vector each require different quantization parameters.
+ *
+ * In order to add together two quantized vectors, their quantization parameters must match. The contents of `params`
+ * indicate how to do this.
+ *
+ * @par Parameter Details
+ *
+ * `Y` points to the output vector @tensor{y} with shape @tensor_shape{N}.
+ *
+ * `X0` and `X1` respectively point to the first and second input vectors @tensor{x_0} and @tensor{x_1}, each with shape
+ * @tensor_shape{N}.
+ *
+ * `params` describes the parameters @math{s_i}, @math{m_i}, @math{b} and @math{s_{out}} which are applied for each
+ * output element.
+ *
+ * `elm_start` and `elm_count` together specify which output elements @math{y[k]} should be calculated by this
+ * invocation. Specifically, this invocation will calculate @math{y[k]} for which `elm_start` @math{\le k \lt}
+ * `(elm_start + elm_count)`.
+ *
+ * @param[out]  Y           The output vector @tensor{y}
+ * @param[in]   X0          The first input vector @tensor{x_0}
+ * @param[in]   X1          The second input vector @tensor{x_1}
+ * @param[in]   params      The scaling and bias parameters
+ * @param[in]   elm_start   Index of first output element to be computed
+ * @param[in]   elm_count   Number of output elements to be computed
+ */
+void add_elementwise(
+    int8_t Y[],
+    const int8_t X1[],
+    const int8_t X2[],
+    nn_add_params_t *p,
+    const int elm_start,
+    const int elm_count);
+
+/** 
+ * @brief Execute @oper{lookup8} job.
+ * 
+ * See @oper_ref{lookup8} for more details about the @oper{lookup8} operator.
+ * 
+ * Unlike other operators, instances of @oper{lookup8} do not require plans or jobs and no initialization is
+ * necessary.
+ * 
+ * `Y` points to the output vector @tensor{y} with length @math{N}.
+ * 
+ * `X` points to the input vector @tensor{x} with length @math{N}. 
+ * 
+ * `lut` points to the look-up table @math{T} with shape @tensor_shape{256}.
+ * 
+ * `N` is the length @math{N} of the input vector @tensor{x}.
+ * 
+ * @requires_word_alignment{Y,X}
+ *
+ * @param Y      [out]  The output vector @tensor{y}
+ * @param X      [in]   The input vector @tensor{x}
+ * @param lut    [in]   Look-up table @tensor{T}
+ * @param N      [in]   Length @math{N} of input and output vectors
+ */
+void lookup8(
+    uint8_t* Y,
+    const uint8_t* X,
+    const uint8_t* lut,
+    const unsigned elm_start,
+    const unsigned elm_count);
 
 #endif  // LAYERS_H_

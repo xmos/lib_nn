@@ -38,7 +38,7 @@ TEST(WindowGeometry_Test, Constructor) {
     ASSERT_EQ(window.shape.height, height);
     ASSERT_EQ(window.shape.width, width);
     ASSERT_EQ(window.shape.depth, depth);
-    ASSERT_EQ(window.shape.channel_depth, cbytes);
+    ASSERT_EQ(window.shape.element_bits, cbytes * CHAR_BIT);
 
     ASSERT_EQ(window.start.row, start_row);
     ASSERT_EQ(window.start.col, start_col);

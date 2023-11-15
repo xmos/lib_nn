@@ -10,22 +10,15 @@ using namespace nn;
 #define CHAR_BIT (sizeof(char) * 8)
 #endif
 
-DerefInputFn::Params::Params(const int32_t bytes_per_h_line,
-                             const int32_t bytes_per_pixel)
-    : bytes_per_h_line(bytes_per_h_line), bytes_per_pixel(bytes_per_pixel) {}
-
-DerefInputFn::Params::Params(const ImageGeometry &input,
-                             const WindowGeometry &window)
-    : bytes_per_h_line(input.GetStride(window.stride.row, 0, 0)),
-      bytes_per_pixel(input.GetStride(0, window.stride.col, 0)) {}
-
-DerefInputFn::Params::Params(const Filter2dGeometry &filter)
-    : Params(filter.input, filter.window) {}
-
 int DerefInputFn::get_scratch_bytes() { return 0; }
 int DerefInputFn::get_overread_bytes() { return 0; }
 
-int8_t *DerefInputFn::memcopy_fn(int8_t *T, int8_t *X, int32_t output_v_coord,
+DerefInputFn::DerefInputFn(const ImageGeometry &input,
+                             const WindowGeometry &window)
+    : p{input.GetStride(window.stride.row, 0, 0), input.GetStride(0, window.stride.col, 0)} {}
+
+
+int8_t *nn::memcpyfn_deref(const memcpyfn_deref_params_t *params, int8_t *T, int8_t *X, int32_t output_v_coord,
                                  int32_t output_h_coord,
                                  int32_t output_c_coord) {
   return X + (int)(output_v_coord * params->bytes_per_h_line +
@@ -33,8 +26,8 @@ int8_t *DerefInputFn::memcopy_fn(int8_t *T, int8_t *X, int32_t output_v_coord,
 }
 
 int ImToColPadded::get_scratch_bytes() {
-  return params->kernel_height * params->kernel_width *
-             params->bytes_per_copy_per_channel +
+  return p.kernel_height * p.kernel_width *
+             p.bytes_per_copy_per_channel +
          XS3_VPU_VREG_WIDTH_BYTES;
 }
 
@@ -43,67 +36,67 @@ int ImToColPadded::get_overread_bytes() {
                                     // implementation of memcpy
 }
 
-ImToColPadded::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
+ImToColPadded::ImToColPadded(const ImageGeometry &X, const WindowGeometry &K,
                               const padding_t &padding,
                               const int input_ch_per_output,
                               const int8_t pad_val) {
-  kernel_height = K.shape.height;
-  kernel_width = K.shape.width;
+  p.kernel_height = K.shape.height;
+  p.kernel_width = K.shape.width;
 
-  vertical_stride = K.stride.row;
-  horizontal_stride = K.stride.col;
-  vertical_dilation = K.dilation.row;
-  horizontal_dilation = K.dilation.col;
+  p.vertical_stride = K.stride.row;
+  p.horizontal_stride = K.stride.col;
+  p.vertical_dilation = K.dilation.row;
+  p.horizontal_dilation = K.dilation.col;
 
-  input_v_length = X.height;
-  input_h_length = X.width;
+  p.input_v_length = X.height;
+  p.input_h_length = X.width;
 
-  padding_val = pad_val;
+  p.padding_val = pad_val;
 
-  bytes_per_pixel = X.PixelBytes();
-  bytes_per_h_line = X.RowBytes();
+  p.bytes_per_pixel = X.PixelBytes();
+  p.bytes_per_h_line = X.RowBytes();
 
-  padding_top = padding.top;
-  padding_left = padding.left;
+  p.padding_top = padding.top;
+  p.padding_left = padding.left;
 
-  bytes_per_copy_per_channel = (input_ch_per_output * CHAR_BIT) / CHAR_BIT;
+  p.bytes_per_copy_per_channel = (input_ch_per_output * CHAR_BIT) / CHAR_BIT;
 
-  x_h_mem_stride = bytes_per_pixel * horizontal_dilation;
-  x_v_mem_stride = vertical_dilation * bytes_per_h_line -
-                   bytes_per_pixel * horizontal_dilation * kernel_width;
+  p.x_h_mem_stride = p.bytes_per_pixel * p.horizontal_dilation;
+  p.x_v_mem_stride = p.vertical_dilation * p.bytes_per_h_line -
+                   p.bytes_per_pixel * p.horizontal_dilation * p.kernel_width;
 }
 
-ImToColPadded::Params::Params(const Filter2dGeometry &filter,
+ImToColPadded::ImToColPadded(const Filter2dGeometry &filter,
                               const int8_t pad_val,
                               const int channels_per_output_group) {
   // This constructor is only intended to be used with a depthwise filter.
   // See the note below.
   assert(filter.window.shape.depth == 1);
 
-  kernel_height = filter.window.shape.height;
-  kernel_width = filter.window.shape.width;
+  p.kernel_height = filter.window.shape.height;
+  p.kernel_width = filter.window.shape.width;
 
-  vertical_stride = filter.window.stride.row;
-  horizontal_stride = filter.window.stride.col;
-  vertical_dilation = filter.window.dilation.row;
-  horizontal_dilation = filter.window.dilation.col;
+  p.vertical_stride = filter.window.stride.row;
+  p.horizontal_stride = filter.window.stride.col;
+  p.vertical_dilation = filter.window.dilation.row;
+  p.horizontal_dilation = filter.window.dilation.col;
 
-  padding_top = filter.Padding().top;
-  padding_left = filter.Padding().left;
+  p.padding_top = filter.Padding().top;
+  p.padding_left = filter.Padding().left;
 
-  input_v_length = filter.input.height;
-  input_h_length = filter.input.width;
+  p.input_v_length = filter.input.height;
+  p.input_h_length = filter.input.width;
 
-  padding_val = pad_val;
+  p.padding_val = pad_val;
 
-  bytes_per_pixel = filter.input.PixelBytes();
-  bytes_per_h_line = filter.input.RowBytes();
+  p.bytes_per_pixel = filter.input.PixelBytes();
+  p.bytes_per_h_line = filter.input.RowBytes();
 
   // horizontal_mem_stride = filter.input.RowBytes();
 
-  x_h_mem_stride = bytes_per_pixel * horizontal_dilation;
-  x_v_mem_stride = vertical_dilation * bytes_per_h_line -
-                   bytes_per_pixel * horizontal_dilation * kernel_width;
+  p.x_h_mem_stride = p.bytes_per_pixel * p.horizontal_dilation;
+  p.x_v_mem_stride = p.vertical_dilation * p.bytes_per_h_line -
+                   p.bytes_per_pixel * p.horizontal_dilation * p.kernel_width;
 
   /// NOTE: In a dense (non-depthwise) filter, the entirety of each input pixel
   /// goes into the
@@ -122,12 +115,13 @@ ImToColPadded::Params::Params(const Filter2dGeometry &filter,
   ///       many input channels are needed to compute an output. It is UNRELATED
   ///       to the number of channels we compute in parallel. So we need to
   ///       multiply by the degree of parallelism of the operator.
-  bytes_per_copy_per_channel = channels_per_output_group *
-                               filter.window.shape.depth *
-                               filter.window.shape.channel_depth;
+  p.bytes_per_copy_per_channel =
+      (channels_per_output_group * filter.window.shape.depth *
+       filter.window.shape.element_bits) /
+      CHAR_BIT;
 }
 
-int8_t *ImToColPadded::memcopy_fn_impl(int8_t *T, int8_t *X,
+int8_t *memcpyfn_imtocol_padded_impl(const memcpyfn_imtocol_padded_params_t *params, int8_t *T, int8_t *X,
                                        int32_t output_v_coord,
                                        int32_t output_h_coord,
                                        int32_t output_c_coord) {
@@ -179,53 +173,58 @@ int8_t *ImToColPadded::memcopy_fn_impl(int8_t *T, int8_t *X,
 /*
 This constructor is used for testing
 */
-ImToColValid::Params::Params(const ImageGeometry &X, const WindowGeometry &K,
-                             const int input_ch_per_output) {
-  // TODO
-  // int bytes_per_copy_per_channel = (input_ch_per_output * X.bits_per_element)
-  // / CHAR_BIT;
-  int bytes_per_copy_per_channel = (input_ch_per_output * CHAR_BIT) / CHAR_BIT;
+ImToColValid::ImToColValid(const ImageGeometry &X, const WindowGeometry &K,
+                             const int input_ch_per_output, const bool dontzero) {
+  int bytes_per_copy_per_channel =
+      (input_ch_per_output * X.element_bits) / CHAR_BIT;
 
-  bytes_per_pixel = X.PixelBytes();
-  bytes_per_h_line = X.RowBytes();
+  p.bytes_per_pixel = X.PixelBytes();
+  p.bytes_per_h_line = X.RowBytes();
 
-  assert(X.RowBytes() == X.width * bytes_per_pixel);
+  assert(X.RowBytes() == X.width * p.bytes_per_pixel);
 
   // This is the amount to copy in vpu words (round up)
-  input_channel_groups =
+  p.input_channel_groups =
       (bytes_per_copy_per_channel + XS3_VPU_VREG_WIDTH_BYTES - 1) /
       XS3_VPU_VREG_WIDTH_BYTES;
-  input_channel_groups -= 1;
+
+  p.input_channel_groups -= 1;
 
   int bytes_actually_copied =
-      (input_channel_groups + 1) * XS3_VPU_VREG_WIDTH_BYTES;
-  T_rewind = bytes_actually_copied - bytes_per_copy_per_channel;
+      (p.input_channel_groups + 1) * XS3_VPU_VREG_WIDTH_BYTES;
+  p.T_rewind = bytes_actually_copied - bytes_per_copy_per_channel - 32;
+  uint32_t bitsleft = bytes_per_copy_per_channel & (XS3_VPU_VREG_WIDTH_BYTES - 1);
+  if (bitsleft != 0) {
+    p.T_vstrpv_mask = (1ULL << bitsleft) -1;
+  } else {
+    p.T_vstrpv_mask = (1ULL << XS3_VPU_VREG_WIDTH_BYTES) -1;
+  }
+  p.T_dontzero = dontzero;
+  p.input_height = K.shape.height;
+  p.input_height -= 1;
+  p.input_width = K.shape.width;
+  p.input_width -= 1;
 
-  input_height = K.shape.height;
-  input_height -= 1;
-  input_width = K.shape.width;
-  input_width -= 1;
-
-  horizontal_mem_stride =
-      bytes_per_pixel * K.dilation.col - bytes_actually_copied;
-  vertical_mem_stride = bytes_per_h_line * K.dilation.row -
-                        (input_width + 1) * bytes_per_pixel * K.dilation.col;
+  p.horizontal_mem_stride =
+      p.bytes_per_pixel * K.dilation.col - bytes_actually_copied;
+  p.vertical_mem_stride = p.bytes_per_h_line * K.dilation.row -
+                        (p.input_width + 1) * p.bytes_per_pixel * K.dilation.col;
 
   // TODO rename these to account for the multiplication of strides
-  bytes_per_h_line *= K.stride.row;
-  bytes_per_pixel *= K.stride.col;
+  p.bytes_per_h_line *= K.stride.row;
+  p.bytes_per_pixel *= K.stride.col;
 }
 
 int ImToColValid::get_scratch_bytes() {
-  return (params->input_height + 1) * (params->input_width + 1) *
-             ((params->input_channel_groups + 1) * XS3_VPU_VREG_WIDTH_BYTES -
-              params->T_rewind) +
+  return (p.input_height + 1) * (p.input_width + 1) *
+             ((p.input_channel_groups + 1) * XS3_VPU_VREG_WIDTH_BYTES -
+              (p.T_rewind + 32)) +
          XS3_VPU_VREG_WIDTH_BYTES;
 }
 
-int ImToColValid::get_overread_bytes() { return params->T_rewind; }
+int ImToColValid::get_overread_bytes() { return p.T_rewind + 32; }
 
-int8_t *ImToColValid::memcopy_fn_impl(int8_t *T, int8_t *X,
+int8_t *memcpyfn_imtocol_valid_impl(const memcpyfn_imtocol_valid_params_t *params, int8_t *T, int8_t *X,
                                       int32_t output_v_coord,
                                       int32_t output_h_coord,
                                       int32_t output_c_coord) {
@@ -237,11 +236,11 @@ int8_t *ImToColValid::memcopy_fn_impl(int8_t *T, int8_t *X,
                 output_h_coord * params->bytes_per_pixel + output_c_coord);
 
   int8_t *T_in = T;
-
+  uint32_t mask = params->T_vstrpv_mask;
   for (int32_t i_height = params->input_height; i_height >= 0; i_height--) {
     for (int32_t i_width = params->input_width; i_width >= 0; i_width--) {
       // This loop copies a whole pixel
-      for (int32_t i_ch_group = params->input_channel_groups; i_ch_group >= 0;
+      for (int32_t i_ch_group = params->input_channel_groups; i_ch_group > 0;
            i_ch_group--) {
         VLDD(vpu, X_cur_p);
         X_cur_p += XS3_VPU_VREG_WIDTH_BYTES;
@@ -249,6 +248,10 @@ int8_t *ImToColValid::memcopy_fn_impl(int8_t *T, int8_t *X,
         VSTD(vpu, T);
         T += XS3_VPU_VREG_WIDTH_BYTES;
       }
+      VLDR(vpu, X_cur_p);
+      X_cur_p += XS3_VPU_VREG_WIDTH_BYTES;
+
+      VSTRPV(vpu, T, mask);
 
       T -= params->T_rewind;
 
@@ -260,30 +263,31 @@ int8_t *ImToColValid::memcopy_fn_impl(int8_t *T, int8_t *X,
     X_cur_p += params->vertical_mem_stride;
   }
 
-  // Write padding to the tail, zeros is fastest
-  VCLRDR(vpu);
-  VSTD(vpu, T);
+  if (!params->T_dontzero) {
+    VCLRDR(vpu);  // Write padding to the tail, zeros is fastest
+    VSTD(vpu, T);
+  }
 
   return T_in;
 }
 
-extern "C" int8_t *im_to_col_valid_impl_asm(void *params, int8_t *T, int8_t *X,
+extern "C" int8_t *im_to_col_valid_impl_asm(const memcpyfn_imtocol_valid_params_t *params, int8_t *T, int8_t *X,
                                             int32_t output_v_coord,
                                             int32_t output_h_coord,
                                             int32_t output_c_coord);
-int8_t *ImToColValid::memcopy_fn(int8_t *T, int8_t *X, int32_t output_v_coord,
+int8_t *nn::memcpyfn_imtocol_valid(const memcpyfn_imtocol_valid_params_t *params, int8_t *T, int8_t *X, int32_t output_v_coord,
                                  int32_t output_h_coord,
                                  int32_t output_c_coord) {
 #ifdef NN_USE_REF
-  return memcopy_fn_impl(T, X, output_v_coord, output_h_coord, output_c_coord);
+  return memcpyfn_imtocol_valid_impl(params, T, X, output_v_coord, output_h_coord, output_c_coord);
 #else
-  return im_to_col_valid_impl_asm(this->params, T, X, output_v_coord,
+  return im_to_col_valid_impl_asm(params, T, X, output_v_coord,
                                   output_h_coord, output_c_coord);
 #endif  // NN_USE_REF
 }
 
-int8_t *ImToColPadded::memcopy_fn(int8_t *T, int8_t *X, int32_t output_v_coord,
+int8_t *nn::memcpyfn_imtocol_padded(const memcpyfn_imtocol_padded_params_t *params, int8_t *T, int8_t *X, int32_t output_v_coord,
                                   int32_t output_h_coord,
                                   int32_t output_c_coord) {
-  return memcopy_fn_impl(T, X, output_v_coord, output_h_coord, output_c_coord);
+  return memcpyfn_imtocol_padded_impl(params, T, X, output_v_coord, output_h_coord, output_c_coord);
 }

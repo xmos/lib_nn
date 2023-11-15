@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <cstdint>
 #include <functional>
 #include <iostream>
 
@@ -8,6 +9,12 @@
 #include "util.hpp"
 
 namespace nn {
+
+// TODO: [astew] CHAR_BIT not defined if I build with Cygwin or gcc+Ubuntu+WSL.
+// Not in <limits> either.
+#ifndef CHAR_BIT
+#define CHAR_BIT (sizeof(char) * 8)
+#endif
 
 /**
  * Represents the geometry of a 2D multi-channel image.
@@ -20,52 +27,52 @@ class ImageGeometry {
   int width;
   /// Depth of image in channels
   int depth;
-  /// Number of bytes per image element
-  int channel_depth;  // asj:this might be better in bits
+  /// Number of bits per image element
+  int element_bits;
 
   /**
    * Default Constructor
    *
    * Dimensions are initialized to 0, with 1 byte per pixel.
    */
-  constexpr ImageGeometry() : height(0), width(0), depth(0), channel_depth(1) {}
+  constexpr ImageGeometry()
+      : height(0), width(0), depth(0), element_bits(CHAR_BIT) {}
 
   /**
-   * Construct an ImageGeometry with the specified dimensions.
+   * Construct an ImageGeometry with the specified dimensions. Defaults to 8
+   * bits per element.
    */
   constexpr ImageGeometry(int const rows, int const cols, int const chans,
-                          int const channel_depth_bytes = 1) noexcept
-      : height(rows),
-        width(cols),
-        depth(chans),
-        channel_depth(channel_depth_bytes) {}
+                          int const element_bits = CHAR_BIT) noexcept
+      : height(rows), width(cols), depth(chans), element_bits(element_bits) {}
 
   /**
-   * The total number of pixels in the image
+   * The total number of pixels in the image, i.e. height x width
    */
   int inline const PixelCount() const { return this->height * this->width; }
 
   /**
-   * The number of image elements per pixel
+   * The number of image elements per pixel, i.e. channels
    */
   int inline const PixelElements() const { return this->depth; }
 
   /**
-   * The number of image elements per row of the image
+   * The number of image elements per row of the image, i.e. width x channels
    */
   int inline const RowElements() const {
     return this->width * this->PixelElements();
   }
 
   /**
-   * The number of image elements per column of the image
+   * The number of image elements per column of the image, i.e. height x
+   * channels
    */
   int inline const ColElements() const {
     return this->height * this->PixelElements();
   }
 
   /**
-   * The total number of image elements
+   * The total number of image elements, i.e. width x height x channels
    */
   int inline const ElementCount() const {
     return this->height * this->RowElements();
@@ -82,23 +89,29 @@ class ImageGeometry {
    * The number of bytes per image pixel
    */
   int inline const PixelBytes() const {
-    return PixelElements() * channel_depth;
+    return PixelElements() * element_bits / CHAR_BIT;
   }
 
   /**
    * The number of bytes per row of the image
    */
-  int inline const RowBytes() const { return RowElements() * channel_depth; }
+  int inline const RowBytes() const {
+    return RowElements() * element_bits / CHAR_BIT;
+  }
 
   /**
    * The number of bytes per column of the image
    */
-  int inline const ColBytes() const { return ColElements() * channel_depth; }
+  int inline const ColBytes() const {
+    return ColElements() * element_bits / CHAR_BIT;
+  }
 
   /**
    * The total number of bytes of the image
    */
-  int inline const ImageBytes() const { return ElementCount() * channel_depth; }
+  int inline const ImageBytes() const {
+    return ElementCount() * element_bits / CHAR_BIT;
+  }
 
   /**
    * Get the flattened index of the specified image element.
@@ -231,7 +244,7 @@ void ImageGeometry::ApplyOperation(
 inline std::ostream &operator<<(std::ostream &stream,
                                 const ImageGeometry &image) {
   return stream << image.height << "," << image.width << "," << image.depth
-                << "," << image.channel_depth;
+                << "," << image.element_bits / CHAR_BIT;
 }
 
 }  // namespace nn

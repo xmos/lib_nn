@@ -1,11 +1,9 @@
-// Copyright 2020-2021 XMOS LIMITED.
-// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 #if defined(__XS3A__)
 
 
 /*
-void lookup8(
+void lookup8_asm(
     uint8_t* Y,
     const uint8_t* X,
     const uint8_t* lut,
@@ -13,11 +11,7 @@ void lookup8(
     const unsigned elm_count);
 */
 
-#ifndef NN_USE_REF
-  #define FUNCTION_NAME lookup8
-#else
-  #define FUNCTION_NAME lookup8_asm
-#endif //NN_USE_REF
+#define FUNCTION_NAME lookup8_asm
 
 #define NSTACKWORDS  4
     

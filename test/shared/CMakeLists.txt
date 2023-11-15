@@ -32,6 +32,9 @@ target_include_directories(
   PRIVATE ${LIB_NN_INCLUDE_DIR}
   PRIVATE ${LIB_NN_ALT_INCLUDE_DIR}
   PRIVATE ${TENSORFLOW_INCLUDE_DIR}
+  PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../deps/compute-engine
+  PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../deps/flatbuffers/include
+  PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../deps/ruy
   PRIVATE ${GEMMLOWP_INCLUDE_DIR})
 
 target_link_libraries(${LIB_NAME} lib_nn)
