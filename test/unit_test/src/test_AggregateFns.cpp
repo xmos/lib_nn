@@ -995,12 +995,8 @@ void Test_MatMulDirectFn_int16() {
 
                           for (int output_chan = 0; output_chan < chs_in_group;
                                ++output_chan) {
-                            int flipped_output_chan = output_chan;
-                            if ((output_chan & 3) == 1 || (output_chan & 3) == 2) {
-                              flipped_output_chan ^= 6;
-                            }
                             int actual_output_channel =
-                                flipped_output_chan + ocg * vpu_ring_buffer_length;
+                                output_chan + ocg * vpu_ring_buffer_length;
 
                             int expected_sum = 0;
 
