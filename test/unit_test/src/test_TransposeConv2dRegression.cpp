@@ -71,8 +71,8 @@ KernelStimulus create_simple_stimulus2(Filter2dGeometry &geom) {
   ks.output_zero_point = 0; //rng.rand<int8_t>() % 32;
 
   for (int ch = 0; ch < geom.output.depth; ch++) {
-    ks.eff_mult[ch] = 1.0;//rng.rand<float>(1.0 / (256 * 256), 1.0 / 256);
-    ks.bias[ch] = 0.0;//rng.rand<int8_t>() % 512;
+    ks.eff_mult[ch] = rng.rand<float>(1.0 / (256 * 256), 1.0 / 256);
+    ks.bias[ch] = rng.rand<int8_t>() % 512;
   }
   float eff_mult_scalar =0.0025;
   for (int ch = 0; ch < geom.output.depth; ch++) {
