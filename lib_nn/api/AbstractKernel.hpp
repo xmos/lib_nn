@@ -81,6 +81,22 @@ class AbstractKernel {
           output_image.GetStride(1, -output_region.shape.width, 0),
           output_image.GetStride(0, 1, 0)} {};
   
+AbstractKernel(const ImageGeometry &output_image, const ImageRegion &output_region,
+           const int channels_per_output_group, 
+           const int sub_h, const int sub_w, 
+           const int stride_h, const int stride_w,
+           const int sub_kernel_height, const int sub_kernel_width //this is the amount of unused padding we need to skip over
+           ) :
+          p{(output_region.start.row  - sub_h )/ stride_h ,
+          (output_region.EndVect().row - sub_h + stride_h - 1) /stride_h ,
+          (output_region.start.col - sub_w )/ stride_w,
+          (output_region.EndVect().col - sub_w + stride_w-1) / stride_w ,
+            (output_region.shape.depth + channels_per_output_group - 1) /
+            channels_per_output_group,
+          output_region.start.channel + output_image.GetStride(sub_h, sub_w, 0), 
+          output_image.GetStride(stride_h, -((output_region.shape.width - sub_w + stride_w - 1) / stride_w)*stride_w, 0),
+          output_image.GetStride(0, stride_w, 0)} {};
+
   abstract_kernel_params_t getParams() {return p;};
 
 };

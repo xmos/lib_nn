@@ -742,6 +742,7 @@ int8_t *output_transform_fn_impl(const otfn_int8_params_t *params, int8_t *Y,
   VDEPTH8_FIXED(vpu);
 
   int mask = (1 << output_count) - 1;
+
   VSTRPV(vpu, Y, mask);
   Y += output_count;
 
