@@ -162,27 +162,25 @@ void test_TransposeConv2dPaddedIndirectRegression() {
                                     horizontal_padding = std::max(horizontal_padding, sub_kernel_shape[2]-1);
                                 }
 
-                                printf("----------------------%d -----------------------\n", tid++);
-                                std::cout << " x_height:" << x_height
-                                        << " x_width:" << x_width
-                                        << " x_channels:" << x_channels
-                                        << " k_height:" << k_height
-                                        << " k_width:" << k_width
-                                        << " k_depth:" << k_depth
-                                        // << " k_h_dilation:" << k_h_dilation
-                                        // << " k_v_dilation:" << k_v_dilation
-                                        << " k_h_stride:" << k_h_stride
-                                        << " k_v_stride:" << k_v_stride
-                                        // << " top_pad:" << top_pad
-                                        // << " left_pad:" << left_pad
-                                        // << " right_pad:" << right_pad
-                                        // << " bottom_pad:" << bottom_pad
-                                        << " output_height:" << output_height
-                                        << " output_width:" << output_width
-                                        << " vertical_padding:" << vertical_padding
-                                        << " horizontal_padding:" << horizontal_padding
-                                        << " conv count:" << convParams.size()
-                                        << std::endl;
+                                // printf("----------------------%d -----------------------\n", tid++);
+                                // std::cout << " x_height:" << x_height
+                                //         << " x_width:" << x_width
+                                //         << " x_channels:" << x_channels
+                                //         << " k_height:" << k_height
+                                //         << " k_width:" << k_width
+                                //         << " k_depth:" << k_depth
+                                //         << " k_h_stride:" << k_h_stride
+                                //         << " k_v_stride:" << k_v_stride
+                                //         // << " top_pad:" << top_pad
+                                //         // << " left_pad:" << left_pad
+                                //         // << " right_pad:" << right_pad
+                                //         // << " bottom_pad:" << bottom_pad
+                                //         << " output_height:" << output_height
+                                //         << " output_width:" << output_width
+                                //         << " vertical_padding:" << vertical_padding
+                                //         << " horizontal_padding:" << horizontal_padding
+                                //         << " conv count:" << convParams.size()
+                                //         << std::endl;
 
                                 int8_t padded_input[x_height + 2*vertical_padding][x_width+2*horizontal_padding][x_channels];
                                 std::memset(padded_input, 0, sizeof(padded_input));
@@ -272,7 +270,6 @@ void test_TransposeConv2dPaddedIndirectRegression() {
                                     int this_kernels_vertical_padding = sub_kernel_shape[1] - 1;
                                     int this_kernels_horizontal_padding = sub_kernel_shape[2] - 1;
 
-                                    //TODO this needs to have a stride
                                     auto ir = ImageRegion(0, 0, 0, Y.height,
                                                           Y.width, Y.depth);
                                     AbstractKernel akp(Y, ir,
@@ -293,11 +290,11 @@ void test_TransposeConv2dPaddedIndirectRegression() {
                                       X_padded, K_boggled, padding, x_channels,
                                       ks.input_zero_point);
 
-                                    // printf("output_channel_slice_offset:%d\n", a.output_channel_slice_offset);
                                     memcpyfn_imtocol_padded_params_t m = memcpy.getParams();
                                     mat_mul_generic_params_t agg = aggregator.getParams();
                                     otfn_int8_params_t o = ot.getParams();
                                     conv_params_t params;
+
                                     params.memcopy_fn = (MemFnType)memcpyfn_imtocol_padded;
                                     params.aggregate_fn = (AggFnType)mat_mul_generic_int8;
                                     params.output_transform_fn = (OtFnType)otfn_int8;
@@ -326,61 +323,15 @@ void test_TransposeConv2dPaddedIndirectRegression() {
                                     }
                                     all_correct &= pixel_correct;
 
-                                   // printf("coord(%d %d) = %d\n", yw, yh, pixel_correct);
                                     for (int yd = 0; yd < Y.depth; yd++) {
                                       int idx = yh * (Y.width * Y.depth) +
                                                 yw * Y.depth + yd;
-                                        // printf("at %p expected: %d got:%d\n", output + idx, (int)expected[idx], (int)output[idx]);
-                                      // TEST_ASSERT_INT32_WITHIN(
-                                      //     1, (int)expected[idx],
-                                      //     (int)output[idx]);
+                                      TEST_ASSERT_INT32_WITHIN(
+                                          1, (int)expected[idx],
+                                          (int)output[idx]);
                                     }
                                   }
-                                }
-                                if (!all_correct) {
-                                  printf("not all good\n");
-
-                                  for (int yh = 0; yh < Y.height; yh++) {
-                                    for (int yw = 0; yw < Y.width; yw++) {
-                                      int pixel_correct = 1;
-                                      for (int yd = 0; yd < Y.depth; yd++) {
-                                        int idx = yh * (Y.width * Y.depth) +
-                                                  yw * Y.depth + yd;
-                                          int diff =  (int)expected[idx] - (int)output[idx];
-                                          if(diff < 0) diff = -diff;
-                                          pixel_correct &= diff <= 1;
-                                      }
-                                      all_correct &= pixel_correct;
-
-                                    printf("coord(%d %d) = %d\n", yw, yh, pixel_correct);
-                                      for (int yd = 0; yd < Y.depth; yd++) {
-                                        int idx = yh * (Y.width * Y.depth) +
-                                                  yw * Y.depth + yd;
-                                          printf("at %p expected: %d got:%d\n", output + idx, (int)expected[idx], (int)output[idx]);
-                                      }
-                                    }
-                                  }
-                                  exit(1);
                                 } 
-                                // if(!all_correct){
-
-                                //     printf("NO  size: %d height: %d width: %d %d\n ", expected.size(), output_height, output_width);
-                                //     std::cout << " x_height:" << x_height
-                                //         << " x_width:" << x_width
-                                //         << " x_channels:" << x_channels
-                                //         << " k_height:" << k_height
-                                //         << " k_width:" << k_width
-                                //         << " k_h_dilation:" << k_h_dilation
-                                //         << " k_v_dilation:" << k_v_dilation
-                                //         << " k_h_stride:" << k_h_stride
-                                //         << " k_v_stride:" << k_v_stride
-                                //         << " top_pad:" << top_pad
-                                //         << " left_pad:" << left_pad
-                                //         << " right_pad:" << right_pad
-                                //         << " bottom_pad:" << bottom_pad
-                                //         << std::endl;
-                                // }
-                                // TEST_ASSERT_EQUAL_INT32(all_correct, 1);
                               }
                             }
                           }
