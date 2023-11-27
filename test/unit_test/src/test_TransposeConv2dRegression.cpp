@@ -84,7 +84,7 @@ KernelStimulus create_simple_stimulus2(Filter2dGeometry &geom) {
 void test_TransposeConv2dPaddedIndirectRegression() {
 
   int tid = 0;
-  for (int x_height = 1; x_height <= 4; ++x_height) {
+  for (int x_height = 1; x_height <= 6; ++x_height) {
     for (int x_width = 1; x_width <= 6; ++x_width) {
       for (int x_channels = 4; x_channels <= 16; x_channels += 4) {
 
@@ -119,6 +119,8 @@ void test_TransposeConv2dPaddedIndirectRegression() {
                                 if (output_height <= 0 || output_width <= 0)
                                   continue;
 
+                                tid++;  //this just count the number of tests
+
                                 int test_seed = rng.getSeed();
 
                                 // here output_height + width muct match the
@@ -151,18 +153,14 @@ void test_TransposeConv2dPaddedIndirectRegression() {
                                 std::vector<ConvParams> convParams =  transpose_conv_reorder_kernel_weights(
                                      (int8_t *)weights.data(), original_kernel_shape, k_v_stride, k_h_stride);
 
-                                //pad the input tensor with the max padding required
+                                //this works out the amount of padding that an operator will need to insert before the convs begin.
                                 int vertical_padding = 0;
                                 int horizontal_padding = 0;
-                                // printf("There are %d convs\n", convParams.size());
                                 for(ConvParams c : convParams) {
                                     std::array<int, 4>  sub_kernel_shape = c.kernelShape;
-                                    // printf("Conv subH: %d subW:%d of shape (%d, %d, %d, %d)\n", c.subH, c.subW, sub_kernel_shape[0], sub_kernel_shape[1], sub_kernel_shape[2], sub_kernel_shape[3]);
                                     vertical_padding = std::max(vertical_padding, sub_kernel_shape[1]-1);
                                     horizontal_padding = std::max(horizontal_padding, sub_kernel_shape[2]-1);
                                 }
-
-                                // printf("----------------------%d -----------------------\n", tid++);
                                 // std::cout << " x_height:" << x_height
                                 //         << " x_width:" << x_width
                                 //         << " x_channels:" << x_channels
@@ -206,7 +204,7 @@ void test_TransposeConv2dPaddedIndirectRegression() {
 
                                 //Allocate and zero the output tensor
                                 alignas(4) int8_t output[Y.height* Y.width* Y.depth];
-                                std:memset(output, 0, sizeof(output));
+                                std::memset(output, 0, sizeof(output));
 
                                 for(ConvParams c : convParams) {
                                     //apply each convolution, writing the result to the correct location in the output
@@ -310,7 +308,6 @@ void test_TransposeConv2dPaddedIndirectRegression() {
 
                                 }
 
-                                int all_correct = 1;
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
                                     int pixel_correct = 1;
@@ -321,7 +318,6 @@ void test_TransposeConv2dPaddedIndirectRegression() {
                                         if(diff < 0) diff = -diff;
                                         pixel_correct &= diff <= 1;
                                     }
-                                    all_correct &= pixel_correct;
 
                                     for (int yd = 0; yd < Y.depth; yd++) {
                                       int idx = yh * (Y.width * Y.depth) +
@@ -347,6 +343,7 @@ void test_TransposeConv2dPaddedIndirectRegression() {
       }
     }
   }
+  printf("done %d\n", tid);
 }
 
 extern "C" void test_transposeconv2d_regression();

@@ -15,6 +15,7 @@ int main(void) {
   UNITY_BEGIN();
 
   CALL(test_conv2d_binary_regression);
+  CALL(test_transposeconv2d_regression);
 
   CALL(test_conv2d_regression);
   CALL(test_output_transforms);
