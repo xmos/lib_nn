@@ -28,6 +28,7 @@ int main(void) {
   CALL(test_bsign_8);
   CALL(test_pad);
   CALL(test_3_to_4);
+  CALL(test_maxpool);
   CALL(test_add_elementwise);
   CALL(test_mul_elementwise);
   return UNITY_END();

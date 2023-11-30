@@ -139,6 +139,40 @@ MatMulDirectFn_DW::MatMulDirectFn_DW(const WindowGeometry &K) {
   p.inner_x_v_step = 0;
 }
 
+void maxpool_direct_impl(const mat_mul_dw_direct_params_t *params, VPURingBuffer *A,
+                         int8_t *X) {
+  int8_t *X_cur_p = X;
+
+  int8_t *max = ((int8_t *)&A->vR);
+  for(int i = 0; i < 16; i++) {
+      max[i] = -128;
+  }
+  for (int kh = params->k_height_loop_counter; kh >= 0; kh--) {
+    for (int kw = params->k_width_loop_counter; kw >= 0; kw--) {
+      for(int i = 0; i < 16; i++) {
+        int8_t val = X_cur_p[i];
+        if (max[i] < val) {
+          max[i] = val;
+        }
+      }
+      X_cur_p += params->inner_x_h_step;
+    }
+    X_cur_p += params->inner_x_v_step;
+  }
+}
+
+C_API void maxpool_direct_impl_asm(const mat_mul_dw_direct_params_t *params,
+                                   VPURingBuffer *A, int8_t *X);
+
+void nn::maxpool_direct(const mat_mul_dw_direct_params_t *params,
+                        VPURingBuffer *A, int8_t *T) {
+#ifdef NN_USE_REF
+  maxpool_direct_impl(params, A, T);
+#else
+  maxpool_direct_impl_asm(params, A, T);
+#endif  // NN_USE_REF
+}
+
 void mat_mul_dw_direct_impl(const mat_mul_dw_direct_params_t *params, VPURingBuffer *A,
                             int8_t *X, int32_t output_channel_group,
                             int8_t *weights) {
