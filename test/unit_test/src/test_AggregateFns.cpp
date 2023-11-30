@@ -6,7 +6,14 @@
 
 extern "C" {
 #include "tst_common.h"
+#ifdef LOCAL_MAIN
+    #undef UNITY_SET_FILE
+#define UNITY_SET_FILE()
+#define RUN_TEST(x) x()
+#define TEST_ASSERT_EQUAL(a, b)   if ((a) != (b)) printf("Expected %08x saw %08x\n", (int) a, (int) b);
+#else
 #include "unity.h"
+#endif
 }
 using namespace nn;
 using namespace nn::test;
@@ -1154,3 +1161,11 @@ void test_aggregate_fns() {
   RUN_TEST(Test_MatMulDirectFn_DW);
   RUN_TEST(Test_Kernel_Reordering_DW);
 }
+
+#ifdef LOCAL_MAIN
+extern "C" int main();
+int main() {
+    Test_MatMulDirectFn_int16_DW();
+    Test_MatMulDirectFn_int16();
+}
+#endif

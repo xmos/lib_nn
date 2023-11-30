@@ -30,5 +30,8 @@ int main(void) {
   CALL(test_3_to_4);
   CALL(test_add_elementwise);
   CALL(test_mul_elementwise);
+
+  CALL(test_expand_8_to_16);
+  CALL(test_output_transform_16);
   return UNITY_END();
 }
