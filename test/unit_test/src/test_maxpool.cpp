@@ -2,6 +2,7 @@
 #include <tuple>
 
 #include "AggregateFn.hpp"
+#include "OutputTransformFn.hpp"
 
 extern "C" {
 #include "tst_common.h"
@@ -20,7 +21,7 @@ using namespace nn;
 /*
   Simple test to verify maxpool
 */
-int Test_Simple_MatMulDirectFn_DW() {
+int Test_Max_Pool_aggr() {
   const int vpu_ring_buffer_length = 16;
   int errors = 0;
 
@@ -88,17 +89,44 @@ int Test_Simple_MatMulDirectFn_DW() {
   return errors;
 }
 
+int Test_Max_Pool_ot() {
+    int8_t outp[24];
+    alignas(4) VPURingBuffer A;
+    for(int i = 0; i <= 16; i++) {
+        ((int8_t *)&A)[i] = i+8;
+    }
+    int errors = 0;
+
+    for(int len_count = 1; len_count < 16; len_count++) {
+        struct otfn_int8_channelwise_params_t st = {len_count, 0};
+        memset(outp, 0xff, sizeof(outp));
+        int8_t *f = otfn_int8_maxpool(&st, outp+4, &A, 0, NULL);
+        TEST_ASSERT_EQUAL(outp + 4 + len_count, f);
+        for(int k = 0; k < len_count; k++) {
+            TEST_ASSERT_EQUAL(k+8, outp[4+k]);
+        }
+        for(int k = 0; k < sizeof(outp); k++) {
+            if (k < 4 || k >= 4 + len_count) {
+                TEST_ASSERT_EQUAL(-1, outp[k]);
+            }
+        }
+    }
+    return errors;
+}
+
 extern "C" void test_maxpool();
 void test_maxpool() {
   UNITY_SET_FILE();
-  RUN_TEST(Test_Simple_MatMulDirectFn_DW);
+  RUN_TEST(Test_Max_Pool_aggr);
+  RUN_TEST(Test_Max_Pool_ot);
 }
 
 #ifdef LOCAL_MAIN
 
 int main(void) {
     int errors = 0;
-    errors += Test_Simple_MatMulDirectFn_DW();
+    errors += Test_Max_Pool_aggr();
+    errors += Test_Max_Pool_ot();
     if (errors != 0) printf("FAIL\n"); else printf("PASS\n");
     return errors;
 }

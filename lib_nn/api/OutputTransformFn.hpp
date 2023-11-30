@@ -599,6 +599,8 @@ class OT_int8_channelwise : public OutputTransformFnInt8_Channelwise {
 
 int8_t *otfn_int8_channelwise(const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
                                                  int32_t output_channel_group, int16_t *multipliers_and_biases);
+int8_t *otfn_int8_maxpool(const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
+                                                 int32_t output_channel_group, int16_t *multipliers_and_biases);
 
 
 struct otfn_int8_clamped_params_t{

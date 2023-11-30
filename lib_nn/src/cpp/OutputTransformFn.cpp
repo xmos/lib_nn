@@ -843,6 +843,52 @@ int8_t *nn::otfn_int8_channelwise(const otfn_int8_channelwise_params_t *params, 
 }
 //-----------------------
 
+// INT8 MAXPOOL
+extern "C" int8_t *output_transform_maxpool_impl_asm(
+    const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
+    int16_t *multipliers_and_biases, int output_count);
+
+#ifndef NN_USE_REF
+int8_t *output_transform_fn_int_maxpool_impl_asm_stub(
+    const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
+    int32_t output_channel_group, int16_t *multipliers_and_biases) {
+  int output_count = std::min(
+      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
+      (int32_t)VPU_INT16_EPV);
+  return output_transform_maxpool_impl_asm(
+      params, Y, A, multipliers_and_biases, output_count);
+}
+#endif
+
+int8_t *output_transform_fn_int_maxpool_impl(
+    const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
+    int32_t output_channel_group, int16_t *multipliers_and_biases) {
+  xs3_vpu vpu_mem;
+  xs3_vpu *vpu = &vpu_mem;
+
+  // we need to know how many we are processing
+  int output_count = std::min(
+      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
+      (int32_t)VPU_INT16_EPV);
+
+  for(int i = 0; i < output_count; i++) {
+      ((int8_t *)Y)[i] = ((int8_t *)&A->vR)[i];
+  }
+  return Y + output_count;
+}
+
+int8_t *nn::otfn_int8_maxpool(const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
+                                                 int32_t output_channel_group, int16_t *multipliers_and_biases) {
+#ifdef NN_USE_REF
+  return output_transform_fn_int_maxpool_impl(
+      params, Y, A, output_channel_group, multipliers_and_biases);
+#else
+  return output_transform_fn_int_maxpool_impl_asm_stub(
+      params, Y, A, output_channel_group, multipliers_and_biases);
+#endif  // NN_USE_REF
+}
+//-----------------------
+
 // INT8 CLAMPED
 int8_t *output_transform_fn_int_clamped_impl(
     const otfn_int8_clamped_params_t *params, int8_t *Y, VPURingBuffer *A,
