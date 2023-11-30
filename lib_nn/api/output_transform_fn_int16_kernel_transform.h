@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-extern int output_transform_fn_int16_kernel_transform(
+extern void output_transform_fn_int16_kernel_transform(
     int8_t *kernel_weights_in,
     float *channel_multipliers_in, int *channel_bias_terms_in,
     int8_t *kernel_weights_out, int32_t *mul_add_out,

@@ -4,16 +4,13 @@
 #include "output_transform_fn_int16_kernel_transform.h"
 #include "output_transform_fn_int16_mappings.h"
 
-int output_transform_fn_int16_kernel_transform(
+void output_transform_fn_int16_kernel_transform(
     int8_t *kernel_weights_in, float *channel_multipliers_in, int *channel_bias_terms_in,
     int8_t *kernel_weights_out, int32_t *mul_add_out,
     int input_channels, int output_channels) {
     for(int ochannel = 0; ochannel < output_channels; ochannel++) {
         int ochannel_group = ochannel & ~0xf;
         int ochannel_member = ochannel & 0xf;
-        int model_ochannel = (ochannel_member +
-                              ochannel_group);
-        int mul_add_major_index = ochannel_group * 2;
         int mul_index = 0;
         if (ochannel_member & 1) {
             mul_index += 0;
@@ -25,8 +22,6 @@ int output_transform_fn_int16_kernel_transform(
         mul_add_out[mul_index] = round(0x40000000 * channel_multipliers_in[ochannel]);
         mul_add_out[add_index] = channel_bias_terms_in[ochannel];
         for(int ichannel = 0; ichannel < input_channels; ichannel++) {
-            int ichannel_group = ichannel & ~0xf;
-            int ichannel_member = ichannel & 0xf;
             int in_index  = ochannel + ichannel * output_channels;
             int mapped_ochannel = ochannel_group + aggr_ot_int16_input_channel_used_for_output[ochannel_member];
             int out_index = mapped_ochannel + ichannel * output_channels;
