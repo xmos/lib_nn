@@ -76,3 +76,8 @@ option(BUILD_GTESTS "Builds the googletests test suite" OFF)
 if(BUILD_GTESTS)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test/gtests)
 endif()
+
+if(EXISTS "${CMAKE_BINARY_DIR}/compile_commands.json")
+  file(COPY "${CMAKE_BINARY_DIR}/compile_commands.json"
+       DESTINATION "${CMAKE_SOURCE_DIR}")
+endif()
