@@ -16,6 +16,8 @@ _build
 **/venv/*
 *.o
 lib_nn/lib
+.cache
+compile_commands.json
 
 # macOS cruft
 .DS_Store
