@@ -6,7 +6,14 @@
 
 extern "C" {
 #include "tst_common.h"
+#ifdef LOCAL_MAIN
+    #undef UNITY_SET_FILE
+#define UNITY_SET_FILE()
+#define RUN_TEST(x) x()
+#define TEST_ASSERT_EQUAL(a, b)   if ((a) != (b)) printf("Expected %08x saw %08x\n", (int) a, (int) b);
+#else
 #include "unity.h"
+#endif
 }
 using namespace nn;
 using namespace nn::test;
@@ -925,9 +932,222 @@ void Test_Kernel_Reordering_DW() {
   }
 }
 
+void Test_MatMulDirectFn_int16() {
+  const int vpu_ring_buffer_length = 16;
+  int max_width = 3;
+
+  for (int x_height = 1; x_height <= max_width; ++x_height) {
+    for (int x_width = 1; x_width <= max_width; ++x_width) {
+      for (int x_channels = 32; x_channels <= 32 * 3; x_channels += 32) {
+        for (int k_height = 1; k_height <= x_height; ++k_height) {
+          for (int k_width = 1; k_width <= x_width; ++k_width) {
+            for (int k_h_dilation = 1; k_h_dilation <= max_width; ++k_h_dilation) {
+              for (int k_v_dilation = 1; k_v_dilation <= max_width; ++k_v_dilation) {
+                for (int k_h_stride = 1; k_h_stride <= max_width; ++k_h_stride) {
+                  for (int k_v_stride = 1; k_v_stride <= max_width; ++k_v_stride) {
+                    for (int output_channels = 16; output_channels <= 16 * 3;
+                         output_channels += 16) {
+                      for (int input_ch_per_output = x_channels;
+                           input_ch_per_output <= x_channels;
+                           input_ch_per_output += 32) {
+                        int output_height = CONV2D_OUTPUT_LENGTH(
+                            x_height, k_height, k_v_dilation, k_v_stride);
+                        int output_width = CONV2D_OUTPUT_LENGTH(
+                            x_width, k_width, k_h_dilation, k_h_stride);
+
+                        if (output_height <= 0 || output_width <= 0) continue;
+
+                        ImageGeometry X(x_height, x_width, x_channels, 16);
+                        WindowGeometry K(k_height, k_width, 0, 0, 0, k_v_stride,
+                                         k_h_stride, 0, k_v_dilation,
+                                         k_h_dilation);
+
+                        std::array<int, 4> shape = {
+                            {output_channels, k_height, k_width, x_channels}};
+                        alignas(4) int16_t raw_weights[output_channels][k_height]
+                                                     [k_width][x_channels];
+                        for (int j = 0; j < sizeof(raw_weights)/2; ++j)
+                            ((int16_t *)raw_weights)[j] = rng.rand<int8_t>();
+
+                        alignas(4) int16_t X_mem[x_height][x_width][x_channels];
+
+                        for (int j = 0; j < sizeof(X_mem)/2; ++j)
+                          ((int16_t *)X_mem)[j] = rng.rand<int16_t>();
+
+                        int8_t pad_val =
+                            rng.rand<int8_t>();  // this should be unused in
+                                                 // this case
+
+                        Conv2dReorderedWeights16 rw =
+                            MatMulInt8::reorder_kernel_weights_int16(
+                                (int16_t *)raw_weights, shape, pad_val);
+
+                        MatMulDirectFn mmd(X, K, input_ch_per_output
+                                                 //,
+                                                 //  rw.weights.data(),
+                                                 //  rw.weights.size()
+                        );
+                        mat_mul_direct_params_t p = mmd.getParams();
+                        int ocg_count =
+                            (output_channels + vpu_ring_buffer_length - 1) /
+                            vpu_ring_buffer_length;
+
+                        for (int ocg = 0; ocg < ocg_count; ++ocg) {
+                          alignas(4) VPURingBuffer A;
+                          mat_mul_direct_int16(&p, &A, (int16_t *)X_mem, ocg, rw.weights.data());
+
+                          int chs_in_group = std::min(
+                              output_channels - vpu_ring_buffer_length * ocg,
+                              vpu_ring_buffer_length);
+
+                          for (int output_chan = 0; output_chan < chs_in_group;
+                               ++output_chan) {
+                            int actual_output_channel =
+                                output_chan + ocg * vpu_ring_buffer_length;
+
+                            int expected_sum = 0;
+
+                            for (int h = 0; h < k_height; ++h) {
+                              for (int w = 0; w < k_width; ++w) {
+                                for (int c = 0; c < input_ch_per_output; ++c) {
+                                  int x = (int)X_mem[k_v_dilation * h]
+                                                    [k_h_dilation * w][c];
+                                  int t = raw_weights[actual_output_channel][h]
+                                                     [w][c];
+                                  expected_sum += x * t;
+                                }
+                              }
+                            }
+
+                            int32_t v;
+                            ((int16_t *)&v)[0] = A.vR[output_chan];
+                            ((int16_t *)&v)[1] = A.vD[output_chan];
+                            TEST_ASSERT_EQUAL(expected_sum, v);
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/*
+  Simple test to verify memory accesses.
+*/
+void Test_MatMulDirectFn_int16_DW() {
+  const int vpu_ring_buffer_length = 16;
+  int max_width = 3;
+
+  for (int x_height = 1; x_height <= 4; ++x_height) {
+    for (int x_width = 1; x_width <= 4; ++x_width) {
+      for (int x_channels = 4; x_channels <= 32 + 4; x_channels += 4) {
+        for (int k_height = 1; k_height <= x_height; ++k_height) {
+          for (int k_width = 1; k_width <= x_width; ++k_width) {
+            for (int k_h_dilation = 1; k_h_dilation <= max_width; ++k_h_dilation) {
+              for (int k_v_dilation = 1; k_v_dilation <= max_width; ++k_v_dilation) {
+                for (int k_h_stride = 1; k_h_stride <= max_width; ++k_h_stride) {
+                  for (int k_v_stride = 1; k_v_stride <= max_width; ++k_v_stride) {
+                    int output_height = CONV2D_OUTPUT_LENGTH(
+                        x_height, k_height, k_v_dilation, k_v_stride);
+                    int output_width = CONV2D_OUTPUT_LENGTH(
+                        x_width, k_width, k_h_dilation, k_h_stride);
+
+                    if (output_height <= 0 || output_width <= 0) continue;
+
+                    ImageGeometry X(x_height, x_width, x_channels, 16);
+                    WindowGeometry K(k_height, k_width, 0, 0, 0, k_v_stride,
+                                     k_h_stride, 0, k_v_dilation, k_h_dilation);
+
+                    std::array<int, 4> shape = {
+                        {1, k_height, k_width, x_channels}};
+
+                    int input_tensor_overread = 32;
+                    alignas(4)
+                        int16_t raw_weights[k_height][k_width][x_channels];
+
+                    for (int j = 0; j < sizeof(raw_weights)/2; ++j)
+                        ((int16_t *)raw_weights)[j] = rng.rand<int8_t>();
+
+                    alignas(4) int16_t X_mem[x_height * x_width * x_channels +
+                                            input_tensor_overread];
+
+                    for (int j = 0; j < sizeof(X_mem)/2; ++j)
+                      ((int16_t *)X_mem)[j] = rng.rand<int16_t>();
+
+                    int16_t pad_val = rng.rand<int16_t>();  // this should be
+                                                          // unused in this case
+
+                    Conv2dReorderedWeights16 rw =
+                        MatMulDirectFn_DW::reorder_kernel_weights_int16(
+                            (int16_t *)raw_weights, shape, pad_val);
+
+                    MatMulDirectFn_DW mmd(X, K);
+                    mat_mul_dw_direct_params_t p = mmd.getParams();
+
+                    int ocg_count = (x_channels + vpu_ring_buffer_length - 1) /
+                                    vpu_ring_buffer_length;
+
+                    for (int ocg = 0; ocg < ocg_count; ++ocg) {
+                      alignas(4) VPURingBuffer A;
+
+                      // We need to dereference the pointer here so as to test
+                      // the correct ocg
+                      int16_t *X_mem_ch_grp = X_mem + ocg * 16;
+                      mat_mul_dw_direct_int16(&p, &A, (int16_t *)X_mem_ch_grp, ocg, rw.weights.data());
+
+                      int chs_in_group =
+                          std::min(x_channels - vpu_ring_buffer_length * ocg,
+                                   vpu_ring_buffer_length);
+
+                      for (int output_chan = 0; output_chan < chs_in_group;
+                           ++output_chan) {
+                        int actual_output_channel =
+                            output_chan + ocg * vpu_ring_buffer_length;
+
+                        int expected_sum = 0;
+
+                        for (int h = 0; h < k_height; ++h) {
+                          for (int w = 0; w < k_width; ++w) {
+                            int x =
+                                *(X_mem + actual_output_channel +
+                                  (k_h_dilation * w * x_channels) +
+                                  (k_v_dilation * h * x_channels * x_width));
+
+                            int t =
+                                (int)raw_weights[h][w][actual_output_channel];
+                            expected_sum += x * t;
+                          }
+                        }
+
+                        int32_t v;
+                        ((int16_t *)&v)[0] = A.vR[output_chan];
+                        ((int16_t *)&v)[1] = A.vD[output_chan];
+                        TEST_ASSERT_EQUAL(expected_sum, v);
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 extern "C" void test_aggregate_fns();
 void test_aggregate_fns() {
   UNITY_SET_FILE();
+  RUN_TEST(Test_MatMulDirectFn_int16_DW);
+  RUN_TEST(Test_MatMulDirectFn_int16);
   RUN_TEST(Test_SimpleMatMulInt8);
   RUN_TEST(Test_SimpleMatMulBinary);
   RUN_TEST(Test_MatMulInt8);
@@ -941,3 +1161,11 @@ void test_aggregate_fns() {
   RUN_TEST(Test_MatMulDirectFn_DW);
   RUN_TEST(Test_Kernel_Reordering_DW);
 }
+
+#ifdef LOCAL_MAIN
+extern "C" int main();
+int main() {
+    Test_MatMulDirectFn_int16_DW();
+    Test_MatMulDirectFn_int16();
+}
+#endif
