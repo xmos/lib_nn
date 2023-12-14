@@ -118,6 +118,9 @@ float approximation_function_elu(float x) {
     return x >= 0 ? x : expm1(x);
 }
 
+#define DATAPOINTS 65536
+#define DEGREE 3
+
 void quadratic_approximation_generator(
     quadratic_function_table_t *output,
     ACTIVATION_FUNCTION float_function_t av,
@@ -128,10 +131,10 @@ void quadratic_approximation_generator(
     assert(chunks <= QUADRATIC_APPROXIMATION_MAX_CHUNKS);
     const int datapoints = 65536 / chunks;
     const int degree = 3;
-    double A[datapoints][degree] ;
-    double B[datapoints] ;
-    double ATA[degree][degree] ;
-    double ATB[degree] ;
+    double A[DATAPOINTS][DEGREE] ;
+    double B[DATAPOINTS] ;
+    double ATA[DEGREE][DEGREE] ;
+    double ATB[DEGREE] ;
     int zeropoint = 32768;
     int avg2error_i = 0;
     int max_error_i = 0;
@@ -139,8 +142,8 @@ void quadratic_approximation_generator(
     int output_index = 0;
     for(int mid = datapoints/2; mid <= 65536; mid += datapoints) {
         int start = mid - datapoints / 2;
-        int16_t inputs_16bit[datapoints];
-        int16_t outputs_16bit[datapoints];
+        int16_t inputs_16bit[DATAPOINTS];
+        int16_t outputs_16bit[DATAPOINTS];
         for(int i = 0; i < datapoints; i++) {
             int input_val = i - datapoints / 2;
             A[i][0] = 1;
