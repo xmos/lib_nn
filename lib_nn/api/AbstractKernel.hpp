@@ -55,6 +55,12 @@ struct abstract_kernel_params_t {
      * to the adjecent pixel to the right.
      */
     int32_t output_w_mem_stride;
+
+    /**
+     * This is the number of bytes added to the input pointer when we chain
+     * convolutions.
+     */
+    int32_t input_offset;
 };
 
 /**
@@ -79,14 +85,13 @@ class AbstractKernel {
             channels_per_output_group,
           output_region.start.channel,
           output_image.GetStride(1, -output_region.shape.width, 0),
-          output_image.GetStride(0, 1, 0)} {};
+          output_image.GetStride(0, 1, 0),
+          0} {};
   
 AbstractKernel(const ImageGeometry &output_image, const ImageRegion &output_region,
            const int channels_per_output_group, 
            const int sub_h, const int sub_w, 
-           const int stride_h, const int stride_w,
-           const int sub_kernel_height, const int sub_kernel_width //this is the amount of unused padding we need to skip over
-           ) :
+           const int stride_h, const int stride_w, const int input_offset) :
           p{(output_region.start.row  - sub_h )/ stride_h ,
           (output_region.EndVect().row - sub_h + stride_h - 1) /stride_h ,
           (output_region.start.col - sub_w )/ stride_w,
@@ -95,7 +100,8 @@ AbstractKernel(const ImageGeometry &output_image, const ImageRegion &output_regi
             channels_per_output_group,
           output_region.start.channel + output_image.GetStride(sub_h, sub_w, 0), 
           output_image.GetStride(stride_h, -((output_region.shape.width - sub_w + stride_w - 1) / stride_w)*stride_w, 0),
-          output_image.GetStride(0, stride_w, 0)} {};
+          output_image.GetStride(0, stride_w, 0),
+          input_offset} {};
 
   abstract_kernel_params_t getParams() {return p;};
 
