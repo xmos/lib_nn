@@ -270,12 +270,14 @@ void test_TransposeConv2dPaddedIndirectRegression() {
 
                                     auto ir = ImageRegion(0, 0, 0, Y.height,
                                                           Y.width, Y.depth);
+                                    int input_offset = x_channels*(horizontal_padding - this_kernels_horizontal_padding) + 
+                                                              (x_channels*(vertical_padding - this_kernels_vertical_padding) *  (x_width+2*horizontal_padding));
+
                                     AbstractKernel akp(Y, ir,
                                                      VPU_INT8_ACC_PERIOD ,
                                                      subH, subW,
                                                      k_v_stride, k_h_stride,
-                                                     sub_kernel_shape[1],
-                                                     sub_kernel_shape[2]);
+                                                     input_offset);
                                     
                                     abstract_kernel_params_t a = akp.getParams();
                                     
@@ -300,10 +302,7 @@ void test_TransposeConv2dPaddedIndirectRegression() {
                                     params.agg_p = &agg;
                                     params.ot_p = &o;
 
-                                    int8_t * input_start_addr = &input[0]+x_channels*(horizontal_padding - this_kernels_horizontal_padding) + 
-                                                              (x_channels*(vertical_padding - this_kernels_vertical_padding) *  (x_width+2*horizontal_padding));
-
-                                    nn::execute(&output[0], input_start_addr, &params,
+                                    nn::execute(&output[0], &input[0]+a.input_offset, &params,
                                                 &a, rw.weights.data(), serialised_offsets_multipliers_and_biases.data(), /*isConv=*/true, &T[0]);
 
                                 }
