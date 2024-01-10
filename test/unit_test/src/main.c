@@ -5,15 +5,16 @@
 
 #include "unity.h"
 
-#define CALL(F) \
-  do {          \
-    void F();   \
-    F();        \
+#define CALL(F)                                                                \
+  do {                                                                         \
+    void F();                                                                  \
+    F();                                                                       \
   } while (0)
 
 int main(void) {
   UNITY_BEGIN();
 
+  CALL(test_softmax);
   CALL(test_conv2d_binary_regression);
   CALL(test_transposeconv2d_regression);
 
