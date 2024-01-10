@@ -3,6 +3,14 @@
 #include "nn_op_helper.h"
 #include "math.h"
 
+void generateExpLUT(float zero_point, float scale, float *lut) {
+  for (int i = 0; i < 256; i++) {
+    int8_t quantized_val = i;
+    float real_val = (quantized_val - zero_point) * scale;
+    lut[i] = expf(real_val);
+  }
+}
+
 void exp_sum(float *Y, const int8_t X[], const float *lut,
              const unsigned elm_start, const unsigned elm_count) {
   float sum = 0;

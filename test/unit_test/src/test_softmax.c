@@ -8,36 +8,6 @@
 
 #define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
-void generateExpLUT(float zero_point, float scale, float *lut) {
-  for (int i = 0; i < 256; i++) {
-    int8_t quantized_val = i;
-    float real_val = (quantized_val - zero_point) * scale;
-    lut[i] = expf(real_val);
-  }
-}
-
-// Reference implementation: as accurate as possible
-// Round to int before casting
-// Minus max float value to avoid numerical instability:
-// exp(arr) / sum(exp(arr)) = exp(arr + C) / sum(exp(arr + C))
-void softmax_ref(int8_t *Y, const int8_t *X, const float zero_point,
-                 const float scale, const int length) {
-  int8_t max_val = X[0];
-  for (int i = 1; i < length; i++) {
-    max_val = X[i] > max_val ? X[i] : max_val;
-  }
-  const float max_val_f = ((float)max_val - zero_point) * scale;
-  float sum = 0;
-  for (int i = 0; i < length; i++) {
-    sum += expf(((float)X[i] - zero_point) * scale - max_val_f);
-  }
-  for (int i = 0; i < length; i++) {
-    const float real_val =
-        (expf(((float)X[i] - zero_point) * scale - max_val_f) / sum);
-    Y[i] = (int8_t)(roundf(real_val * 255.0 - 128.0));
-  }
-}
-
 #define LENGTH (16)
 
 static void test_softmax_case0() {

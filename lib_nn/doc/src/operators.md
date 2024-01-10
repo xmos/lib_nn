@@ -104,6 +104,8 @@ The following table enumerates the custom operators provided by this library.
 
 <tr><td>@oper_ref{lookup8}              <td>lookup8()
 
+<tr><td>@oper_ref{softmax}              <td>softmax()
+
 
 
 </table>
