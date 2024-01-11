@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -31,4 +32,10 @@ static void test_softmax_case0() {
   const float inv_sum = 1.0f / sum;
   exp_div(Y, X, lut, inv_sum, 0, LENGTH);
   TEST_ASSERT_EQUAL_INT8_ARRAY(Y_expected, Y, LENGTH);
+}
+
+void test_softmax() {
+  srand(563456);
+  UNITY_SET_FILE();
+  RUN_TEST(test_softmax_case0);
 }
