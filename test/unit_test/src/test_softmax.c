@@ -5,6 +5,7 @@
 
 #include "nn_operator.h"
 #include "tst_common.h"
+#include "unity.h"
 
 #define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
