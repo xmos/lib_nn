@@ -129,7 +129,7 @@ void softmax_ref(int8_t *Y, const int8_t *X, const float zero_point,
   for (int i = 0; i < length; i++) {
     const float real_val =
         (expf(((float)X[i] - zero_point) * scale - max_val_f) / sum);
-    Y[i] = (int8_t)(roundf(real_val * 255.0 - 128.0));
+    Y[i] = (int8_t)(real_val * 256 - 128);
   }
 }
 
