@@ -295,7 +295,7 @@ void exp_sum(float *Y, const int8_t *X, const float *lut,
 void exp_div(int8_t *Y, const int8_t *X, const float *lut, const float inv_sum,
              const unsigned elm_start, const unsigned elm_count);
 
-void generateExpLUT(float zero_point, float scale, float *lut);
+void generateExpLUT(int zero_point, float scale, float *lut);
 
 void softmax_ref(int8_t *Y, const int8_t *X, const float zero_point,
                  const float scale, const int length);
