@@ -12,17 +12,23 @@ void generateExpLUT(int zero_point, float scale, float *lut) {
 
 void exp_sum(float *Y, const int8_t X[], const float *lut,
              const unsigned elm_start, const unsigned elm_count) {
-  float sum = 0;
+  float sum = 0.0f;
   for (int i = elm_start; i < elm_start + elm_count; i++) {
-    sum += lut[X[i]];
+    sum += lut[X[i] + 128];
   }
   *Y = sum;
 }
 
+void calculate_inv_sum(float *inv_sum, const float sums[]) {
+  *inv_sum = 1.0f / (sums[0] + sums[1] + sums[2] + sums[3] + sums[4]) * 256.0f;
+}
+
+// Assumes overflows can't occur because of quantization: check this in
+// compiler!!
 void exp_div(int8_t Y[], const int8_t X[], const float *lut,
              const float inv_sum, const unsigned elm_start,
              const unsigned elm_count) {
   for (int i = elm_start; i < elm_start + elm_count; i++) {
-    Y[i] = (int8_t)(lut[X[i]] * inv_sum * 256 - 128);
+    Y[i] = (int8_t)(lut[X[i] + 128] * inv_sum - 128.5f);
   }
 }
