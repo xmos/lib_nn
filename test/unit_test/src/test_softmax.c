@@ -27,10 +27,10 @@ static void test_softmax_case0() {
   const float scale = 0.00390625;
   softmax_ref(Y_expected, X, zero_point, scale, LENGTH);
   generateExpLUT(zero_point, scale, lut);
-  float sum;
-  exp_sum(&sum, X, lut, 0, LENGTH);
-  const float inv_sum = 1.0f / sum;
-  exp_div(Y, X, lut, inv_sum, 0, LENGTH);
+  float sums[5] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+  exp_sum(&sums[0], X, lut, 0, LENGTH);
+  float inv_sum;
+  calculate_inv_sum(&inv_sum, sums) exp_div(Y, X, lut, inv_sum, 0, LENGTH);
   TEST_ASSERT_EQUAL_INT8_ARRAY(Y_expected, Y, LENGTH);
 }
 
