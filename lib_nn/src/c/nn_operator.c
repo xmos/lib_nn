@@ -133,13 +133,3 @@ void softmax_ref(int8_t *Y, const int8_t *X, const float zero_point,
     Y[i] = (int8_t)(real_val * 256 - 128);
   }
 }
-
-void softmax(int8_t *Y, const int8_t *X, const float zero_point,
-             const float scale, const int length) {
-#ifdef NN_USE_REF
-  softmax_ref(Y, X, zero_point, scale, length);
-#else
-  // softmax_asm(Y, X, zero_point, scale, length);
-  softmax_ref(Y, X, zero_point, scale, length);
-#endif // NN_USE_REF
-}
