@@ -30,7 +30,8 @@ static void test_softmax_case0() {
   float sums[5] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
   exp_sum(&sums[0], X, lut, 0, LENGTH);
   float inv_sum;
-  calculate_inv_sum(&inv_sum, sums) exp_div(Y, X, lut, inv_sum, 0, LENGTH);
+  calculate_inv_sum(&inv_sum, sums);
+  exp_div(Y, X, lut, inv_sum, 0, LENGTH);
   TEST_ASSERT_EQUAL_INT8_ARRAY(Y_expected, Y, LENGTH);
 }
 
