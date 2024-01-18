@@ -23,7 +23,7 @@ FUNCTION_NAME:
     vsetc r11
     std   r4, r5, sp[1]
     std   r6, r7, sp[2]
-    std   r8, r9, sp[3]
+    std   r8, r9, sp[3]             // TODO: trim down saved regs and optimise dual issue
     stw   r10, sp[0]
 
     shr   r5, r3, 4                 // Number of iterations
@@ -31,6 +31,7 @@ FUNCTION_NAME:
     shl   r3, r3, 1
     mkmsk r3, r3
     ldc   r4, 32
+    { ldw   r6, r2[0]             ; add r2, r2, 4 }
     bu    multiply_16_loop_entry 
 multiply_16_loop:
     { vstr     r0[0]              ; add r0, r0, r4 }
@@ -38,7 +39,7 @@ multiply_16_loop_entry:
     vclrdr
     { vldc     r1[0]              ; add r1, r1, r4 }
     { vlmacc   r2[0]              ; add r2, r2, r4 }
-    { vlsat    r2[0]              ; add r2, r2, r4 }
+    { vlsat    r2[0]              ; add r2, r2, r6 }
     
     { bt    r5, multiply_16_loop ; sub   r5, r5, 1 }
     vstrpv   r0[0], r3

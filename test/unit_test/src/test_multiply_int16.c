@@ -27,7 +27,6 @@ int test_multiply_transform_int16(void) {
     int16_t output[N+1];
     int16_t ref_output[N];
     int errors = 0;
-    printf("SIZE %d\n" ,MULTIPLY_INT16_BYTES(N));
     for(int i = 0; i < N; i++) {
         input1[i] = 20000 - 2513 * i;
         input2[i] = 417 * i + 82;
@@ -59,7 +58,6 @@ int test_multiply_transform_int16(void) {
     TEST_ASSERT_EQUAL(output[N], 0x5555);
 
     for(int i = 0; i < N; i++) {
-        printf("%d: %d %d\n", i, output[i], ref_output[i]);
         TEST_ASSERT_INT_WITHIN(1, ref_output[i], output[i]);
     }
 
@@ -68,11 +66,10 @@ int test_multiply_transform_int16(void) {
 
 int test_requantise_transform_int16(void) {
     int16_t input1[N];
-    int8_t requantise_blob[REQUANTISE_INT16_BYTES(N)];
+    int8_t requantise_blob[REQUANTISE_INT16_BYTES()];
     int16_t output[N+1];
     int16_t req_output[N];
     int errors = 0;
-    printf("SIZE %d\n" ,REQUANTISE_INT16_BYTES(N));
     for(int i = 0; i < N; i++) {
         input1[i] = 20000 - 2513 * i;
     }
@@ -90,7 +87,6 @@ int test_requantise_transform_int16(void) {
     }
 
     requantise_int16_transform(requantise_blob,
-                               N,
                                scaler1,
                                scalero);
     output[N] = 0x5555;
@@ -98,7 +94,6 @@ int test_requantise_transform_int16(void) {
     TEST_ASSERT_EQUAL(output[N], 0x5555);
 
     for(int i = 0; i < N; i++) {
-        printf("%d: %d %d\n", i, output[i], req_output[i]);
         TEST_ASSERT_INT_WITHIN(1, req_output[i], output[i]);
     }
     return errors;

@@ -37,7 +37,7 @@ void multiply_int16_transform(void *output,
  * Macro that calculates the number of int16_t that should be allocated to
  * store the output of multiply_int16_transform
  */
-#define MULTIPLY_INT16_BYTES(tensor_length)  (((2 * tensor_length + 16) & ~15) * sizeof(int16_t))
+#define MULTIPLY_INT16_BYTES(tensor_length)  (((2 * tensor_length + 16) & ~15) * sizeof(int16_t) + sizeof(int32_t))
 
 /**
  * Function that performs the compile time transformation of an int16 to int16
@@ -51,22 +51,19 @@ void multiply_int16_transform(void *output,
  *                          REQUANTISE_INT16_BYTES(tensor_length) bytes.
  *                          Must be word-aligned.
  *
- * @param tensor_length     Number of elements in the input tensor
- *
  * @param input1_scaler     Quantisation scaler for input
  *
  * @param output_scaler     Quantisation scaler for output
  *
  */
 void requantise_int16_transform(void *output,
-                                int tensor_length,
                                 float input_scaler,
                                 float output_scaler);
 /**
  * Macro that calculates the number of int16_t that should be allocated to
  * store the output of requantise_int16_transform
  */
-#define REQUANTISE_INT16_BYTES(tensor_length)  (((2 * tensor_length + 16) & ~15) * sizeof(int16_t))
+#define REQUANTISE_INT16_BYTES()  (32 * sizeof(int16_t) + sizeof(int32_t))
 
 
 #endif
