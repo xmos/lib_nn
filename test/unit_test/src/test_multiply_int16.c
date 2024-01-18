@@ -57,6 +57,7 @@ int test_multiply_transform_int16(void) {
     TEST_ASSERT_EQUAL(output[N], 0x5555);
 
     for(int i = 0; i < N; i++) {
+        printf("%d: %d %d\n", i, output[i], ref_output[i]);
         TEST_ASSERT_EQUAL((abs(output[i] - ref_output[i]) <= 1), 1);
     }
 
@@ -94,6 +95,7 @@ int test_requantise_transform_int16(void) {
     TEST_ASSERT_EQUAL(output[N], 0x5555);
 
     for(int i = 0; i < N; i++) {
+        printf("%d: %d %d\n", i, output[i], req_output[i]);
         TEST_ASSERT_EQUAL((abs(output[i] - req_output[i]) <= 1), 1);
     }
     return errors;
