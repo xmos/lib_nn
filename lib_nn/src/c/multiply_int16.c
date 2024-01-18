@@ -7,16 +7,15 @@
 
 extern void multiply_int16_elementwise_constant_asm(int16_t *output, int16_t *input1, void *blob, int tensor_length);
 
-static void multiply_int16_elementwise_constant_ref(int16_t *output, int16_t *input1, void *blob, int tensor_length) {
+void multiply_int16_elementwise_constant_ref(int16_t *output, int16_t *input1, void *blob, int tensor_length) {
     int16_t *transformed_input2 = blob;
     for(int i = 0; i < tensor_length; i++) {
         int lower_i = i & 0xf;
         int higher_i = i & ~0xf;
         int transformed_index = higher_i << 1 | lower_i;
         int shift_index = higher_i << 1 | lower_i | 16;
-        int16_t *shift = transformed_input2 + tensor_length;
         int mult = input1[i] * transformed_input2[transformed_index];
-        mult = (mult + (1<<(shift[i]-1))) >> transformed_input2[shift_index];
+        mult = (mult + (1<<(transformed_input2[shift_index]-1))) >> transformed_input2[shift_index];
         if (mult > 32767) mult = 32767;
         if (mult < -32768) mult = -32768;
         output[i] = mult;
