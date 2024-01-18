@@ -4,10 +4,6 @@
 
 We have implemented a library (lib_nn) of efficient neural network functions developed to maximize the performance and minimize the memory footprint of neural network inference on XMOS xcore.ai.
 
-## Required tools and libraries
-
-* xTIMEcomposer Tools Version 15.0.0 or later
-
 ## Required hardware
 
 Only XS3 based microcontrollers are supported with this library. The previous generation XS1 and XS2 based microcontrollers are not supported.

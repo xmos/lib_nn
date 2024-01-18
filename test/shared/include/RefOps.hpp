@@ -20,6 +20,12 @@ std::vector<int8_t> Conv2dBNNIntOutReference(
     const float* post_activation_bias, const int32_t clamp_min,
     const int32_t clamp_max);
 
+std::vector<int8_t> TransposeConv2dDenseReference(
+    const Filter2dGeometry& filter_geometry, const int8_t input_img[],
+    const int8_t kernel_weights[], const int32_t biases[],
+    const float effective_output_multiplier[], const int8_t input_zero_point,
+    const int8_t output_zero_point);
+
 std::vector<int8_t> Conv2dDenseReference(
     const nn::Filter2dGeometry& filter_geometry, const int8_t input_img[],
     const int8_t kernel_weights[], const int32_t biases[],

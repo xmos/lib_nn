@@ -258,6 +258,13 @@ class MatMulDirectFn_DW {
 
 void mat_mul_dw_direct(const mat_mul_dw_direct_params_t *params, VPURingBuffer *A, int8_t *T,
                                      int32_t output_channel_group, int8_t *weights);
+/** Function that calculates a maxpool on an image. This operation works just like
+ * the depthwise mat_mul_direct; in particular, it takes the same params_t descriptor
+ * that contains the kernel size. There is no need for an output transform after this
+ * instead the ringbuffer contains 16 answers. Note that 16 bytes will be overwritten,
+ * requiring a memcpy if there is precious data stored in the higher elements.
+ */
+void maxpool_direct(const mat_mul_dw_direct_params_t *params, VPURingBuffer *A, int8_t *T);
 
 void mat_mul_dw_direct_int16(const mat_mul_dw_direct_params_t *params, VPURingBuffer *A, int16_t *T,
                                      int32_t output_channel_group, int16_t *weights);

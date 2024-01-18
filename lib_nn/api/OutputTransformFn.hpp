@@ -11,7 +11,7 @@
 #include "geom/WindowGeometry.hpp"
 #include "vpu.hpp"
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 #include <intrin.h>
 #define __builtin_popcount __popcnt
 #endif
@@ -598,6 +598,8 @@ class OT_int8_channelwise : public OutputTransformFnInt8_Channelwise {
 };
 
 int8_t *otfn_int8_channelwise(const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
+                                                 int32_t output_channel_group, int16_t *multipliers_and_biases);
+int8_t *otfn_int8_maxpool(const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
                                                  int32_t output_channel_group, int16_t *multipliers_and_biases);
 
 
