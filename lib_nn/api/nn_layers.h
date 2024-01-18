@@ -51,7 +51,7 @@ typedef struct {
  * channels)
  * @param job_count [in]    The number of jobs to be initialized.
  */
-void bsign_8_prepare(nn_bsign_8_job_t* jobs, int8_t* zero_point_vect,
+void bsign_8_prepare(nn_bsign_8_job_t *jobs, int8_t *zero_point_vect,
                      const uint32_t N, const int8_t zero_point,
                      const int32_t job_count);
 
@@ -82,8 +82,8 @@ void bsign_8_prepare(nn_bsign_8_job_t* jobs, int8_t* zero_point_vect,
  * @param plan [in]    The @oper{bsign_8} plan to be processed
  * @param job [in]     The @oper{bsign_8} job to be processed
  */
-void bsign_8(bnn_b32_t* Y, const int8_t* X, const int8_t* zero_point_vect,
-             const nn_bsign_8_job_t* job);
+void bsign_8(bnn_b32_t *Y, const int8_t *X, const int8_t *zero_point_vect,
+             const nn_bsign_8_job_t *job);
 
 /**
  * Struct represents the parameters needed by each `pad_run()` job.
@@ -124,8 +124,9 @@ typedef struct padding_sizes_t {
  * @param x                [in]   Look-up table @tensor{T}
  * @param bytes_per_pixel  [in]   Length @math{N} of input and output vectors
  */
-C_API void pad_prepare(nn_pad_plan_t* plan, const padding_sizes_t* p,
-                 const nn_image_params_t* x, const unsigned bytes_per_pixel);
+C_API void pad_prepare(nn_pad_plan_t *plan, const padding_sizes_t *p,
+                       const nn_image_params_t *x,
+                       const unsigned bytes_per_pixel);
 
 /**
  * @brief Execute @oper{pad_run} job.
@@ -145,19 +146,17 @@ C_API void pad_prepare(nn_pad_plan_t* plan, const padding_sizes_t* p,
  * @param x   [in]     The input vector @tensor{x}
  * @param plan [in]    The prameters describing how to pad.
  */
-void pad_run(char* y, char* x, const nn_pad_plan_t* p, uint32_t pad_value);
+void pad_run(char *y, char *x, const nn_pad_plan_t *p, uint32_t pad_value);
 
-void pad_ref(char* y, char* x, const padding_sizes_t* p,
-             const nn_image_params_t* xp, const unsigned bytes_per_pixel,
+void pad_ref(char *y, char *x, const padding_sizes_t *p,
+             const nn_image_params_t *xp, const unsigned bytes_per_pixel,
              uint32_t pad_value);
-
 
 /**
  * Func to calculate n_3
-*/
-void pad_3_to_4_prepare(uint32_t * n_3, 
-    const unsigned height, 
-    const unsigned width);
+ */
+void pad_3_to_4_prepare(uint32_t *n_3, const unsigned height,
+                        const unsigned width);
 
 /** Function that pads an image with 3-byte values with a 0.
  * The output image must be word aligned. This function solves the general
@@ -169,28 +168,28 @@ void pad_3_to_4_prepare(uint32_t * n_3,
  *
  * @returns  The inner product
  */
-extern void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val);
-extern void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val);
+extern void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3,
+                           uint32_t pad_val);
+extern void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3,
+                           uint32_t pad_val);
 
 typedef struct nn_mul_params_t {
-    int8_t in1_zero_point;
-    int8_t in2_zero_point;
-    int16_t bias;
-    int16_t scalar; 
-    int16_t vlashr_shr;
+  int8_t in1_zero_point;
+  int8_t in2_zero_point;
+  int16_t bias;
+  int16_t scalar;
+  int16_t vlashr_shr;
 } nn_mul_params_t;
 
-void mul_boggle(nn_mul_params_t * params, 
-    double in1Scale, 
-    double in2Scale, 
-    double outputScale,
-    int8_t in1ZeroPoint,
-    int8_t in2ZeroPoint, 
-    int8_t outputZeroPoint);
-void mul_elementwise(int8_t* in1_data, int8_t* in2_data, int element_count, nn_mul_params_t * params, int8_t * out_data);
+void mul_boggle(nn_mul_params_t *params, double in1Scale, double in2Scale,
+                double outputScale, int8_t in1ZeroPoint, int8_t in2ZeroPoint,
+                int8_t outputZeroPoint);
+void mul_elementwise(int8_t *in1_data, int8_t *in2_data, int element_count,
+                     nn_mul_params_t *params, int8_t *out_data);
 
 // /**
-//  * Describes the parameters needed for an @oper{add_elementwise} operator. @see add_elementwise().
+//  * Describes the parameters needed for an @oper{add_elementwise} operator.
+//  @see add_elementwise().
 //  */
 // typedef struct {
 //     /**
@@ -219,35 +218,38 @@ void mul_elementwise(int8_t* in1_data, int8_t* in2_data, int element_count, nn_m
 // } nn_add_params_t;
 
 typedef struct {
-        int16_t m1[16];
-        int16_t m2[16];
-        int16_t shift[16];
-        int16_t bias_hi[16];
-        int16_t bias_lo[16];
+  int16_t m1[16];
+  int16_t m2[16];
+  int16_t shift[16];
+  int16_t bias_hi[16];
+  int16_t bias_lo[16];
 } nn_add_params_t;
 
 /**
  * @brief Invoke an @oper{add_elementwise} job.
  *
- * The @oper{add_elementwise} operator adds together two quantized 8-bit input vectors, @tensor{x_0} and @tensor{x_1}
- * element-by-element to produce the output vector @tensor{y}. This function assumes that the input vectors and the 
- * output vector each require different quantization parameters.
+ * The @oper{add_elementwise} operator adds together two quantized 8-bit input
+ * vectors, @tensor{x_0} and @tensor{x_1} element-by-element to produce the
+ * output vector @tensor{y}. This function assumes that the input vectors and
+ * the output vector each require different quantization parameters.
  *
- * In order to add together two quantized vectors, their quantization parameters must match. The contents of `params`
- * indicate how to do this.
+ * In order to add together two quantized vectors, their quantization parameters
+ * must match. The contents of `params` indicate how to do this.
  *
  * @par Parameter Details
  *
  * `Y` points to the output vector @tensor{y} with shape @tensor_shape{N}.
  *
- * `X0` and `X1` respectively point to the first and second input vectors @tensor{x_0} and @tensor{x_1}, each with shape
+ * `X0` and `X1` respectively point to the first and second input vectors
+ * @tensor{x_0} and @tensor{x_1}, each with shape
  * @tensor_shape{N}.
  *
- * `params` describes the parameters @math{s_i}, @math{m_i}, @math{b} and @math{s_{out}} which are applied for each
- * output element.
+ * `params` describes the parameters @math{s_i}, @math{m_i}, @math{b} and
+ * @math{s_{out}} which are applied for each output element.
  *
- * `elm_start` and `elm_count` together specify which output elements @math{y[k]} should be calculated by this
- * invocation. Specifically, this invocation will calculate @math{y[k]} for which `elm_start` @math{\le k \lt}
+ * `elm_start` and `elm_count` together specify which output elements
+ * @math{y[k]} should be calculated by this invocation. Specifically, this
+ * invocation will calculate @math{y[k]} for which `elm_start` @math{\le k \lt}
  * `(elm_start + elm_count)`.
  *
  * @param[out]  Y           The output vector @tensor{y}
@@ -257,30 +259,26 @@ typedef struct {
  * @param[in]   elm_start   Index of first output element to be computed
  * @param[in]   elm_count   Number of output elements to be computed
  */
-void add_elementwise(
-    int8_t Y[],
-    const int8_t X1[],
-    const int8_t X2[],
-    nn_add_params_t *p,
-    const int elm_start,
-    const int elm_count);
+void add_elementwise(int8_t Y[], const int8_t X1[], const int8_t X2[],
+                     nn_add_params_t *p, const int elm_start,
+                     const int elm_count);
 
-/** 
+/**
  * @brief Execute @oper{lookup8} job.
- * 
+ *
  * See @oper_ref{lookup8} for more details about the @oper{lookup8} operator.
- * 
- * Unlike other operators, instances of @oper{lookup8} do not require plans or jobs and no initialization is
- * necessary.
- * 
+ *
+ * Unlike other operators, instances of @oper{lookup8} do not require plans or
+ * jobs and no initialization is necessary.
+ *
  * `Y` points to the output vector @tensor{y} with length @math{N}.
- * 
- * `X` points to the input vector @tensor{x} with length @math{N}. 
- * 
+ *
+ * `X` points to the input vector @tensor{x} with length @math{N}.
+ *
  * `lut` points to the look-up table @math{T} with shape @tensor_shape{256}.
- * 
+ *
  * `N` is the length @math{N} of the input vector @tensor{x}.
- * 
+ *
  * @requires_word_alignment{Y,X}
  *
  * @param Y      [out]  The output vector @tensor{y}
@@ -288,11 +286,20 @@ void add_elementwise(
  * @param lut    [in]   Look-up table @tensor{T}
  * @param N      [in]   Length @math{N} of input and output vectors
  */
-void lookup8(
-    uint8_t* Y,
-    const uint8_t* X,
-    const uint8_t* lut,
-    const unsigned elm_start,
-    const unsigned elm_count);
+void lookup8(uint8_t *Y, const uint8_t *X, const uint8_t *lut,
+             const unsigned elm_start, const unsigned elm_count);
 
-#endif  // LAYERS_H_
+void softmax_exp_sum(float *Y, const int8_t *X, const float *lut,
+                     const unsigned elm_start, const unsigned elm_count);
+
+void softmax_exp_div(int8_t *Y, const int8_t *X, const float *lut,
+                     const float inv_sum, const unsigned elm_start,
+                     const unsigned elm_count);
+
+void softmax_calculate_inv_sum(float *inv_sum, const float sums[]);
+
+void softmax_generate_exp_lut(int zero_point, float scale, float *lut);
+
+void softmax_ref(int8_t *Y, const int8_t *X, const float zero_point,
+                 const float scale, const int length);
+#endif // LAYERS_H_
