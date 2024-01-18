@@ -289,15 +289,16 @@ void add_elementwise(int8_t Y[], const int8_t X1[], const int8_t X2[],
 void lookup8(uint8_t *Y, const uint8_t *X, const uint8_t *lut,
              const unsigned elm_start, const unsigned elm_count);
 
-void exp_sum(float *Y, const int8_t *X, const float *lut,
-             const unsigned elm_start, const unsigned elm_count);
+void softmax_exp_sum(float *Y, const int8_t *X, const float *lut,
+                     const unsigned elm_start, const unsigned elm_count);
 
-void exp_div(int8_t *Y, const int8_t *X, const float *lut, const float inv_sum,
-             const unsigned elm_start, const unsigned elm_count);
+void softmax_exp_div(int8_t *Y, const int8_t *X, const float *lut,
+                     const float inv_sum, const unsigned elm_start,
+                     const unsigned elm_count);
 
-void calculate_inv_sum(float *inv_sum, const float sums[]);
+void softmax_calculate_inv_sum(float *inv_sum, const float sums[]);
 
-void generateExpLUT(int zero_point, float scale, float *lut);
+void softmax_generate_exp_lut(int zero_point, float scale, float *lut);
 
 void softmax_ref(int8_t *Y, const int8_t *X, const float zero_point,
                  const float scale, const int length);
