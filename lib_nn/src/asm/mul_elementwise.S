@@ -172,6 +172,7 @@ FUNCTION_NAME:
 		{vldr temp[0]                     ; ldaw temp, sp[S_TEMP] } 
 
 		{mkmsk temp2, element_count       ; ldw temp3, sp[S_MASK] }
+		{zext temp2, 16 ; nop}
 		vstrpv out_data[0], temp2         //store the int8_mins to output Y
 
 		{vldr temp[0]                     ; ldc temp, 16}
