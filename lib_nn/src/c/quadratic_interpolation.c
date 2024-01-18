@@ -19,7 +19,6 @@ static int clamp(int64_t x) {
 
 void quadratic_interpolation_128(int16_t *outputs, int16_t *inputs,
                                  uint8_t *bytes, uint32_t N) {
-    assert(((int)inputs & 0x3) == 0);
     for(int j = 0 ; j < N; j++) {
         int64_t input_val = inputs[j];
 
