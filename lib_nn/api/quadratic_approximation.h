@@ -7,6 +7,7 @@
 #define ACTIVATION_FUNCTION /**/
 #endif
 
+#include "nn_api.h"
 #include <stdint.h>
 
 #define QUADRATIC_APPROXIMATION_MAX_CHUNKS   2048
@@ -47,7 +48,7 @@ typedef float (*float_function_t)(float x);
  * \param max_error     maximum error, ought to be 1
  * \param error         sqrt of sum of squared errors.
  */
-extern void quadratic_approximation_generator(
+C_API void quadratic_approximation_generator(
     quadratic_function_table_t *table,
     ACTIVATION_FUNCTION float_function_t av,
     double input_scaler,
@@ -61,7 +62,7 @@ extern void quadratic_approximation_generator(
  * \param x   the table
  * \returns   The number of bytes in the table
  */
-extern uint32_t quadratic_function_table_number_bytes(quadratic_function_table_t *x);
+C_API uint32_t quadratic_function_table_number_bytes(quadratic_function_table_t *x);
 
 
 /** Function that returns a pointer to the bytes in an approximation table
@@ -69,12 +70,12 @@ extern uint32_t quadratic_function_table_number_bytes(quadratic_function_table_t
  * \param x   the table
  * \returns   Pointer to the bytes in the table
  */
-extern uint8_t *quadratic_function_table_bytes(quadratic_function_table_t *x);
+C_API uint8_t *quadratic_function_table_bytes(quadratic_function_table_t *x);
 
 /** Example functions that can be passed in 
  */
-extern float approximation_function_tanh(float x);
-extern float approximation_function_logistics(float x);
-extern float approximation_function_elu(float x);
+C_API float approximation_function_tanh(float x);
+C_API float approximation_function_logistics(float x);
+C_API float approximation_function_elu(float x);
 
 #endif
