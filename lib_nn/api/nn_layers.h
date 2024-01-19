@@ -184,7 +184,7 @@ typedef struct nn_mul_params_t {
 void mul_boggle(nn_mul_params_t *params, double in1Scale, double in2Scale,
                 double outputScale, int8_t in1ZeroPoint, int8_t in2ZeroPoint,
                 int8_t outputZeroPoint);
-void mul_elementwise(int8_t *in1_data, int8_t *in2_data, int element_count,
+void mul_elementwise(const int8_t *in1_data, const int8_t *in2_data, int element_count,
                      nn_mul_params_t *params, int8_t *out_data);
 
 // /**

@@ -16,7 +16,7 @@ static int32_t clamp(int32_t v, int32_t lo, int32_t hi){
     return v;
 }
 
-void mul_elementwise_asm(int8_t* in1_data, int8_t* in2_data, int element_count, nn_mul_params_t * params, int8_t * out_data);
+void mul_elementwise_asm(const int8_t* in1_data, const int8_t* in2_data, int element_count, nn_mul_params_t * params, int8_t * out_data);
 
 static const unsigned vlsat_shr = 1;
 static const unsigned vlmul_shr = 14;
@@ -75,7 +75,7 @@ void mul_boggle(nn_mul_params_t * params,
     }
 }
 
-void mul_elementwise_ref(int8_t* in1_data, int8_t* in2_data, int element_count, nn_mul_params_t * params, int8_t * out_data)
+void mul_elementwise_ref(const int8_t* in1_data, const int8_t* in2_data, int element_count, nn_mul_params_t * params, int8_t * out_data)
 {
   for (int i = 0; i < element_count; i++) {
 
@@ -108,7 +108,7 @@ void mul_elementwise_ref(int8_t* in1_data, int8_t* in2_data, int element_count, 
   }
 }
 
-void mul_elementwise(int8_t* in1_data, int8_t* in2_data, int element_count, nn_mul_params_t * params, int8_t * out_data){
+void mul_elementwise(const int8_t* in1_data, const int8_t* in2_data, int element_count, nn_mul_params_t * params, int8_t * out_data){
 #ifdef NN_USE_REF
    mul_elementwise_ref(in1_data, in2_data, element_count, params, out_data);
 #else
