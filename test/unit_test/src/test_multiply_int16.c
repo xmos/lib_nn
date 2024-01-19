@@ -20,10 +20,58 @@
 
 #define N 25
 
+int test_multiply_tensor_int16(void) {
+    int16_t input1[N];
+    int16_t input2[N];
+    int8_t blob[MULTIPLY_INT16_TENSOR_BYTES()];
+    int16_t output[N+1];
+    int16_t ref_output[N];
+    int errors = 0;
+    for(int i = 0; i < N; i++) {
+        input1[i] = 20000 - 2513 * i;
+        input2[i] = 417 * i + 82;
+    }
+    input2[3] = 2;
+    input2[4] = 1;
+    input2[5] = -1;
+    input1[3] = 22767;
+    input1[4] = 21726;
+    input1[5] = -21998;
+    float scaler1 = 0.00003051757812;
+    float scaler2 = 0.00006123190654;
+    float scalero = 0.00006013;
+    for(int i = 0; i < N; i++) {
+        float oo = input1[i] * input2[i] * scaler1 * scaler2 / scalero;
+        float o = round(oo);
+        if (o >  32767) o =  32767;
+        if (o < -32768) o = -32768;
+        ref_output[i] = o;
+    }
+    int success = multiply_int16_tensor_blob(blob,
+                                             scaler1,
+                                             scaler2,
+                                             scalero);
+    
+    TEST_ASSERT_EQUAL(1, success);
+   
+    output[N] = 0x5555;
+    multiply_int16_tensor(output, input1, input2, N, blob);
+    TEST_ASSERT_EQUAL(output[N], 0x5555);
+
+    for(int i = 0; i < N; i++) {
+        TEST_ASSERT_INT_WITHIN(1, ref_output[i], output[i]);
+    }
+
+    return errors;
+}
+
+#if 0
+DEPRECATED
+
 int test_multiply_transform_int16(void) {
     int16_t input1[N];
     int16_t input2[N];
-    int8_t transformed_input2[MULTIPLY_INT16_BYTES(N)];
+    int8_t transformed_input2[MULTIPLY_INT16_CONSTANT_BYTES(N)];
     int16_t output[N+1];
     int16_t ref_output[N];
     int errors = 0;
@@ -47,14 +95,16 @@ int test_multiply_transform_int16(void) {
         if (o < -32768) o = -32768;
         ref_output[i] = o;
     }
-    multiply_int16_transform(transformed_input2,
-                             input2,
-                             N,
-                             scaler1,
-                             scaler2,
-                             scalero);
+    int success = multiply_int16_constant_blob(transformed_input2,
+                                               input2,
+                                               N,
+                                               scaler1,
+                                               scaler2,
+                                               scalero);
+    TEST_ASSERT_EQUAL(1, success);
+    
     output[N] = 0x5555;
-    multiply_int16_elementwise_constant(output, input1, transformed_input2, N);
+    multiply_int16_constant(output, input1, transformed_input2, N);
     TEST_ASSERT_EQUAL(output[N], 0x5555);
 
     for(int i = 0; i < N; i++) {
@@ -63,10 +113,11 @@ int test_multiply_transform_int16(void) {
 
     return errors;
 }
+#endif
 
-int test_requantise_transform_int16(void) {
+int test_quantise_transform_int16(void) {
     int16_t input1[N];
-    int8_t requantise_blob[REQUANTISE_INT16_BYTES()];
+    int8_t quantise_blob[QUANTISE_INT16_BYTES()];
     int16_t output[N+1];
     int16_t req_output[N];
     int errors = 0;
@@ -76,8 +127,8 @@ int test_requantise_transform_int16(void) {
     input1[3] = 22767;
     input1[4] = 21726;
     input1[5] = -21998;
-    float scaler1 = 0.00413321;
-    float scalero = 0.00318776123;
+    float scaler1 = 0.00049187316;
+    float scalero = 0.00057833752;
     for(int i = 0; i < N; i++) {
         float oo = input1[i] * scaler1 / scalero;
         float o = round(oo);
@@ -86,11 +137,13 @@ int test_requantise_transform_int16(void) {
         req_output[i] = o;
     }
 
-    requantise_int16_transform(requantise_blob,
-                               scaler1,
-                               scalero);
+    int success = quantise_int16_blob(quantise_blob,
+                                        scaler1,
+                                        scalero);
+    TEST_ASSERT_EQUAL(1, success);
+    
     output[N] = 0x5555;
-    multiply_int16_elementwise_constant(output, input1, requantise_blob, N);
+    quantise_int16_tensor(output, input1, quantise_blob, N);
     TEST_ASSERT_EQUAL(output[N], 0x5555);
 
     for(int i = 0; i < N; i++) {
@@ -102,16 +155,16 @@ int test_requantise_transform_int16(void) {
 
 void test_multiply_int16() {
   UNITY_SET_FILE();
-  RUN_TEST(test_multiply_transform_int16);
-  RUN_TEST(test_requantise_transform_int16);
+  RUN_TEST(test_multiply_tensor_int16);
+  RUN_TEST(test_quantise_transform_int16);
 }
 
 #ifdef LOCAL_MAIN
 
 int main(void) {
     int errors = 0;
-    errors += test_multiply_transform_int16();
-    errors += test_requantise_transform_int16();
+    errors += test_multiply_tensor_int16();
+    errors += test_quantise_transform_int16();
     if (errors != 0) printf("FAIL\n"); else printf("PASS\n");
     return errors;
 }
