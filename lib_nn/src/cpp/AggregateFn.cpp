@@ -21,9 +21,13 @@ static int16_t *deref2d(int16_t *p, int p_w, int h, int w) {
 
 Conv2dReorderedWeights MatMulBase::reorder_kernel_weights(
     int8_t *raw_weights, std::array<int, 4> &shape, int bits_per_element,
-    int8_t pad_value) {
+    int8_t pad_value, bool isI16Conv) {
   const int vpu_ring_buffer_length = VPU_INT16_EPV;
-  const int vpu_bytes_per_word = XS3_VPU_VREG_WIDTH_BYTES;
+  int vpu_bytes_per_word = XS3_VPU_VREG_WIDTH_BYTES;
+
+  if (isI16Conv) {
+    vpu_bytes_per_word = vpu_bytes_per_word/2;
+  }
 
   int output_channel_count = shape[0];
 
@@ -76,88 +80,6 @@ Conv2dReorderedWeights MatMulBase::reorder_kernel_weights(
 
         reordered_weights.weights.insert(reordered_weights.weights.end(), src,
                                          src + bytes_in_this_vpu_copy);
-
-        if (icg == input_channel_groups - 1)
-          reordered_weights
-              .final_vpu_load_addresses[ocg_offset + reversed_out_ch] =
-              dst_offset;
-
-        dst_offset += bytes_in_this_vpu_copy;
-      }
-    }
-  }
-  assert(dst_offset <= kernel_size);
-
-  reordered_weights.weights.resize(kernel_size, pad_value);
-  return reordered_weights;
-}
-
-
-Conv2dReorderedWeights16 MatMulBase::reorder_kernel_weights_int16(
-    int16_t *raw_weights, std::array<int, 4> &shape,
-    int16_t pad_value) {
-  const int vpu_ring_buffer_length = VPU_INT16_EPV;
-  const int vpu_bytes_per_word = XS3_VPU_VREG_WIDTH_BYTES;
-  const  int bits_per_element = 16;
-
-  int output_channel_count = shape[0];
-
-  Conv2dReorderedWeights16 reordered_weights(output_channel_count);
-
-  // The number of bytes in the kernel for each output channel
-  int bytes_per_output_channel =
-      (shape[1] * shape[2] * shape[3] * bits_per_element) / CHAR_BIT;
-
-  int kernel_size =
-      get_weights_bytes(bytes_per_output_channel, output_channel_count);
-
-  // This is necessary because whne adding an element at a time
-  // It keeps reallocating and freeing, and because it just desn't fit it keeps
-  // moving up in memory until it runs out
-
-  reordered_weights.weights.resize(shape[0] * shape[1] * shape[2] * shape[3]);
-  reordered_weights.weights.resize(0);
-
-  assert(bytes_per_output_channel * output_channel_count <=
-         kernel_size + vpu_ring_buffer_length * vpu_bytes_per_word);
-
-  // For each output channel keep a record of the final vpu load
-  // so the overlap betweek the desired channel and the next can
-  // be accounted for.
-
-  // The numberof output channel groups needed to compute the whole conv.
-  // This is rounded up.
-  int output_channel_groups =
-      (output_channel_count + vpu_ring_buffer_length - 1) /
-      vpu_ring_buffer_length;
-
-  int dst_offset = 0;
-
-  for (int ocg = 0; ocg < output_channel_groups; ++ocg) {
-    int output_channels_per_ocg =
-        std::min(output_channel_count - ocg * vpu_ring_buffer_length,
-                 vpu_ring_buffer_length);
-
-    int input_channel_groups =
-        (bytes_per_output_channel + vpu_bytes_per_word - 1) /
-        vpu_bytes_per_word;
-
-    for (int icg = 0; icg < input_channel_groups; ++icg) {
-      int ocg_offset = ocg * vpu_ring_buffer_length;
-
-      for (int out_ch = 0; out_ch < output_channels_per_ocg; ++out_ch) {
-        int bytes_in_this_vpu_copy =
-            std::min(bytes_per_output_channel - icg * vpu_bytes_per_word,
-                     vpu_bytes_per_word);
-
-        // reverse order of output channels - for VLMACCR
-        int reversed_out_ch = output_channels_per_ocg - 1 - out_ch;
-        int16_t *src =
-            deref2d(raw_weights, bytes_per_output_channel/2,
-                    ocg_offset + reversed_out_ch, vpu_bytes_per_word/2 * icg);
-
-        reordered_weights.weights.insert(reordered_weights.weights.end(), src,
-                                         src + bytes_in_this_vpu_copy/2);
 
         if (icg == input_channel_groups - 1)
           reordered_weights

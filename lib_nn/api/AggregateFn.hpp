@@ -36,33 +36,6 @@ struct Conv2dReorderedWeights {
       : weights(), final_vpu_load_addresses(channels, 0) {}
 };
 
-
-struct Conv2dReorderedWeights16 {
-  /**
-   * @brief Byte vector of the weights in the order that the VPU can most
-   * efficiently execute.
-   *
-   */
-  std::vector<int16_t> weights;
-
-  /**
-   * @brief vector of offsets into the weights. Each of the offsets represents
-   * the location that the VPU will load from in during the final load. The
-   * purpose of this vector is to allow the computation of an accumulator
-   * adjustment where nessessary. For example the final load might look like: |
-   * N bytes of weights | 32 - N bytes of unwanted weights | where N is between
-   * 1 and 32. Knowing the 32 - N bytes of unwanted weights coupled with the
-   * scratch memory padding value allows the computation of a statically
-   * knowable accumulator offset. This offset can then be included into the
-   * bias. This allows dense packing of weights.
-   */
-  std::vector<int> final_vpu_load_addresses;
-
-  Conv2dReorderedWeights16(int channels)
-      : weights(), final_vpu_load_addresses(channels, 0) {}
-};
-
-
 struct mat_mul_generic_params_t{
   int32_t output_slice_channel_count;
   int32_t bytes_per_kernel_channel;
@@ -93,11 +66,7 @@ class MatMulBase {
    */
   static Conv2dReorderedWeights reorder_kernel_weights(
       int8_t *raw_weights, std::array<int, 4> &shape, int bits_per_element,
-      int8_t pad_value);
-
-  static Conv2dReorderedWeights16 reorder_kernel_weights_int16(
-      int16_t *raw_weights, std::array<int, 4> &shape,
-      int16_t pad_value);
+      int8_t pad_value, bool isI16Conv = false);
 
   /**
    * @brief Get the required size of the weights array. This is a non-trivial
@@ -227,9 +196,6 @@ class MatMulDirectFn_DW {
    */
   static Conv2dReorderedWeights reorder_kernel_weights(
       int8_t *raw_weights, std::array<int, 4> &shape, int8_t pad_value);
-
-  static Conv2dReorderedWeights16 reorder_kernel_weights_int16(
-      int16_t *raw_weights, std::array<int, 4> &shape, int16_t pad_value);
 
   /**
    * @brief Get the required size of the weights array. This is a non-trivial
