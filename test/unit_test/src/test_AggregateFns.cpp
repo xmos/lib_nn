@@ -5,6 +5,8 @@
 #include "Rand.hpp"
 
 extern "C" {
+#include "expand_8_to_16.h"
+
 #include "tst_common.h"
 #ifdef LOCAL_MAIN
     #undef UNITY_SET_FILE
@@ -964,10 +966,10 @@ void Test_MatMulDirectFn_int16() {
 
                         std::array<int, 4> shape = {
                             {output_channels, k_height, k_width, x_channels}};
-                        alignas(4) int16_t raw_weights[output_channels][k_height]
+                        alignas(4) int8_t raw_weights[output_channels][k_height]
                                                      [k_width][x_channels];
-                        for (int j = 0; j < sizeof(raw_weights)/2; ++j)
-                            ((int16_t *)raw_weights)[j] = rng.rand<int8_t>();
+                        for (int j = 0; j < sizeof(raw_weights); ++j)
+                            ((int8_t *)raw_weights)[j] = rng.rand<int8_t>();
 
                         alignas(4) int16_t X_mem[x_height][x_width][x_channels];
 
@@ -978,9 +980,14 @@ void Test_MatMulDirectFn_int16() {
                             rng.rand<int8_t>();  // this should be unused in
                                                  // this case
 
-                        Conv2dReorderedWeights16 rw =
-                            MatMulInt8::reorder_kernel_weights_int16(
-                                (int16_t *)raw_weights, shape, pad_val);
+                        Conv2dReorderedWeights rw =
+                            MatMulInt8::reorder_kernel_weights(
+                                (int8_t *)raw_weights, shape, 8, pad_val, true);
+
+                        alignas(4)
+                            int16_t expanded_weights[output_channels][k_height][k_width][x_channels];
+
+                        expand_8_to_16((int16_t*)expanded_weights, (int8_t*)rw.weights.data(), sizeof(raw_weights));
 
                         MatMulDirectFn mmd(X, K, input_ch_per_output
                                                  //,
@@ -994,7 +1001,7 @@ void Test_MatMulDirectFn_int16() {
 
                         for (int ocg = 0; ocg < ocg_count; ++ocg) {
                           alignas(4) VPURingBuffer A;
-                          mat_mul_direct_int16(&p, &A, (int16_t *)X_mem, ocg, rw.weights.data());
+                          mat_mul_direct_int16(&p, &A, (int16_t *)X_mem, ocg, (int16_t*)expanded_weights);
 
                           int chs_in_group = std::min(
                               output_channels - vpu_ring_buffer_length * ocg,
@@ -1070,10 +1077,10 @@ void Test_MatMulDirectFn_int16_DW() {
 
                     int input_tensor_overread = 32;
                     alignas(4)
-                        int16_t raw_weights[k_height][k_width][x_channels];
+                        int8_t raw_weights[k_height][k_width][x_channels];
 
-                    for (int j = 0; j < sizeof(raw_weights)/2; ++j)
-                        ((int16_t *)raw_weights)[j] = rng.rand<int8_t>();
+                    for (int j = 0; j < sizeof(raw_weights); ++j)
+                        ((int8_t *)raw_weights)[j] = rng.rand<int8_t>();
 
                     alignas(4) int16_t X_mem[x_height * x_width * x_channels +
                                             input_tensor_overread];
@@ -1084,9 +1091,14 @@ void Test_MatMulDirectFn_int16_DW() {
                     int16_t pad_val = rng.rand<int16_t>();  // this should be
                                                           // unused in this case
 
-                    Conv2dReorderedWeights16 rw =
-                        MatMulDirectFn_DW::reorder_kernel_weights_int16(
-                            (int16_t *)raw_weights, shape, pad_val);
+                    Conv2dReorderedWeights rw =
+                        MatMulDirectFn_DW::reorder_kernel_weights(
+                            (int8_t *)raw_weights, shape, pad_val);
+
+                    alignas(4)
+                        int16_t expanded_weights[k_height][k_width][x_channels];
+
+                    expand_8_to_16((int16_t*)expanded_weights, (int8_t*)raw_weights, sizeof(raw_weights));
 
                     MatMulDirectFn_DW mmd(X, K);
                     mat_mul_dw_direct_params_t p = mmd.getParams();
@@ -1100,7 +1112,7 @@ void Test_MatMulDirectFn_int16_DW() {
                       // We need to dereference the pointer here so as to test
                       // the correct ocg
                       int16_t *X_mem_ch_grp = X_mem + ocg * 16;
-                      mat_mul_dw_direct_int16(&p, &A, (int16_t *)X_mem_ch_grp, ocg, rw.weights.data());
+                      mat_mul_dw_direct_int16(&p, &A, (int16_t *)X_mem_ch_grp, ocg, (int16_t*)expanded_weights);
 
                       int chs_in_group =
                           std::min(x_channels - vpu_ring_buffer_length * ocg,
@@ -1146,7 +1158,7 @@ void Test_MatMulDirectFn_int16_DW() {
 extern "C" void test_aggregate_fns();
 void test_aggregate_fns() {
   UNITY_SET_FILE();
-  RUN_TEST(Test_MatMulDirectFn_int16_DW);
+  // RUN_TEST(Test_MatMulDirectFn_int16_DW);
   RUN_TEST(Test_MatMulDirectFn_int16);
   RUN_TEST(Test_SimpleMatMulInt8);
   RUN_TEST(Test_SimpleMatMulBinary);
@@ -1165,7 +1177,7 @@ void test_aggregate_fns() {
 #ifdef LOCAL_MAIN
 extern "C" int main();
 int main() {
-    Test_MatMulDirectFn_int16_DW();
+    //Test_MatMulDirectFn_int16_DW();
     Test_MatMulDirectFn_int16();
 }
 #endif

@@ -18,15 +18,15 @@
 
 int8_t inputs[64];
 int16_t outputs[72];
-    
+
 int Test_expand_8_to_16() {
     int errors = 0;
     for(int i = 0; i < 64; i++) {
-        inputs[i] = i*i;
+        inputs[i] = (int8_t)(i*i);
     }
     for(int j = 0; j < 64; j++) {
         for(int i = 0; i < 72; i++) {
-            outputs[i] = i^0xFFFF;
+            outputs[i] = (int16_t)(i^0xFFFF);
         }
         expand_8_to_16(outputs+4, inputs, j);
         for(int i = 0; i < 72; i++) {
