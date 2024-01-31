@@ -59,7 +59,7 @@ int test_int_tensor_int16(void) {
     TEST_ASSERT_EQUAL(output[N], 0x5555);
 
     for(int i = 0; i < N; i++) {
-        TEST_ASSERT_INT_WITHIN(1, ref_output[i], output[i]);
+        TEST_ASSERT_INT_WITHIN(0, ref_output[i], output[i]);
     }
 
     return errors;
