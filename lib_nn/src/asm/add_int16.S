@@ -27,7 +27,8 @@ minintmults:
     // r0: output
     // r1: input1
     // r2: input2
-    // r3: number of elements, then mask of number of final elements
+    // r3: number of elements
+    //     then mask of number of final elements
     // r4: blob, 16 multipliers
     // r5: number of elements / 16
     // r6: temp vector
@@ -39,7 +40,6 @@ minintmults:
     //    Add 0x2000 0000 and any negative value indicates overflow
     //    0x2000 0000 is 0x4000 x 0x4000
     .align 16
-    .skip 12
 FUNCTION_NAME:
     { dualentsp NSTACKWORDS     ; ldc r11, 32    }
     std   r4, r5, sp[0]
@@ -51,14 +51,10 @@ FUNCTION_NAME:
     { ldaw  r6, sp[8]            ; shl   r3, r3, 1 }
     { ldw   r4, sp[ARGUMENT4]    ; shl   r11, r11, 3 }     // Make 0x100
     { mkmsk r3, r3               ; vsetc r11       }
-
-    ldap  r11, shifts
-    add   r8, r11, 0
-    ldap  r11, minintmults
-    add   r9, r11, 0
-    ldap  r11, minintmults
-    add   r10, r11, 0
-    ldc   r7, 32               
+    { ldap  r11, shifts          ; ldc   r7, 32     }
+    { ldap  r11, minintmults     ; add   r8, r11, 0 }
+    { stw   r3, sp[7]            ; add   r9, r11, 0 }
+    { bf    r5, zero_iterations  ; mkmsk r3, 32 }
 add_tensor_16_loop:
     vclrdr
     // First calculate m0 * i0[] + m1 * i1[]
@@ -72,7 +68,7 @@ add_tensor_16_loop:
     // Now shift down by 14 bits to get the anwer - 0x8001 as underflow
     { vlsat    r8[0]              ; nop            }
     // Save this as the answer
-    { vstr     r0[0]              ; nop            }
+    vstrpv     r0[0], r3
     // Restore teh accumulator with the full precision product
     { vldr     r11[0]             ; nop            }
     { vldd     r6[0]              ; nop            }
@@ -89,14 +85,17 @@ add_tensor_16_loop:
     ldw        r10, r6[0]
     { vldr     r11[0]             ; add        r11, r10, 0 }
     zip        r11, r10, 0
+    and        r10, r10, r3
     // Overwrite minints
     vstrpv     r0[0], r10
     { bt    r5, add_tensor_16_loop ; add r0, r0, r7 }
+    ldw     r3, sp[7]
+    stw     r5, sp[7] // stop next iteration
+zero_iterations:    
+    { bf    r3, done               ; nop }
+    { bu add_tensor_16_loop       ; ldc r5, 1 }
 
-
-
-
-    
+done:   
     ldd   r4, r5, sp[0]
     ldd   r6, r7, sp[1]
     ldd   r8, r9, sp[2]
