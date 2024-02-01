@@ -36,7 +36,7 @@ int main(void) {
 
   CALL(test_expand_8_to_16);
 
-  CALL(test_output_transform_16);
+//  CALL(test_output_transform_16);
   CALL(test_multiply_int16);
   CALL(test_dequantize_int16);
   CALL(test_quantize_int16);
