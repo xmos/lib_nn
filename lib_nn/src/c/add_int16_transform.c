@@ -6,6 +6,10 @@
 
 #define SHIFT  14
 
+// Calculate the ratio with which each input should be scaled
+// Shift those up by 14 bits, the amount by which the run time code shifts it back
+// Fail if it doesn't fit in 16 bits
+// Pass and broadcast it to two vectors (one for each input) if it does fit.
 int add_int16_tensor_blob(void *output,
                                float input1_scaler,
                                float input2_scaler,

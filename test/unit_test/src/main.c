@@ -38,6 +38,7 @@ int main(void) {
   CALL(test_multiply_int16);
   CALL(test_dequantize_int16);
   CALL(test_quantize_int16);
+  CALL(test_multiply_add16);
 
   return UNITY_END();
 }

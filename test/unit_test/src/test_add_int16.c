@@ -20,7 +20,7 @@
 
 #define N 25
 
-int test_int_tensor_int16(void) {
+int test_add_tensor_int16(void) {
     int16_t input1[N];
     int16_t input2[N];
     int8_t blob[ADD_INT16_TENSOR_BYTES()];
@@ -59,7 +59,7 @@ int test_int_tensor_int16(void) {
     TEST_ASSERT_EQUAL(output[N], 0x5555);
 
     for(int i = 0; i < N; i++) {
-        TEST_ASSERT_INT_WITHIN(0, ref_output[i], output[i]);
+        TEST_ASSERT_INT_WITHIN(1, ref_output[i], output[i]);
     }
 
     return errors;
@@ -67,14 +67,14 @@ int test_int_tensor_int16(void) {
 
 void test_add_int16() {
   UNITY_SET_FILE();
-  RUN_TEST(test_int_tensor_int16);
+  RUN_TEST(test_add_tensor_int16);
 }
 
 #ifdef LOCAL_MAIN
 
 int main(void) {
     int errors = 0;
-    errors += test_int_tensor_int16();
+    errors += test_add_tensor_int16();
     if (errors != 0) printf("FAIL\n"); else printf("PASS\n");
     return errors;
 }

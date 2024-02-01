@@ -3,7 +3,7 @@
 
 /**
  * Function that implements dequantization of a 16-bit tensor to a 32-bit tensor.
- * The blob must have been created by a call to ``dequantize_int16_blob()``
+ * The blob must have been created by a call to ``dequantize_int16_tensor_blob()``
  *
  * @param output         Output tensor
  *                       Must be word-aligned

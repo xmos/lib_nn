@@ -51,7 +51,6 @@ int test_dequantize_tensor_int16(void) {
     TEST_ASSERT_EQUAL(output[N], 0x5555);
 
     for(int i = 0; i < N; i++) {
-        printf("%d: ", i);
         TEST_ASSERT_EQUAL_FLOAT(ref_output[i], output[i]);
     }
 

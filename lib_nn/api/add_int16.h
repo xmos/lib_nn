@@ -2,9 +2,9 @@
 #define _add_int16_h_
 
 /**
- * Function that implements a addition of two 16-bit tensors where
- * both tensors are variable. The blob must have been created by a call to 
- * ``add_int16_blob()``
+ * Function that implements a addition of two 16-bit tensors.
+ * The blob must have been created by a call to 
+ * ``add_int16_tensor_blob()``
  *
  * @param output         Output tensor
  *                       Must be word-aligned

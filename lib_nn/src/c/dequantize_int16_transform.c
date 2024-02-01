@@ -13,7 +13,6 @@ int dequantize_int16_tensor_blob(void *output,
     if (isinf(blob[0])) {
         return 0;
     }
-    printf("%08x\n", ((int *)blob)[0]);
     blob[1] = input_scaler * -0x8000;
     return 1;
 }
