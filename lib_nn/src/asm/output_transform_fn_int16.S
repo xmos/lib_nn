@@ -18,7 +18,8 @@
     .align 16
     .skip 4
 FUNCTION_NAME:
-    { dualentsp NSTACKWORDS     ; add r11, r0, 0 }
+    { dualentsp NSTACKWORDS     ; ldc r11, 0}
+    { vsetc r11                 ; add r11, r0, 0}
     std   r4, r5, sp[1]
     { stw   r10, sp[1]          ; shl r10, r3, 1 }
     std   r6, r7, sp[2]
@@ -29,8 +30,8 @@ FUNCTION_NAME:
     { ldc r0, 4                 ; mkmsk r10, r10 }
     
 output_transform_16_unzip_loop:   
-    ldd   r6, r8, r11[0]          // vD first two words
-    ldd   r7, r9, r11[4]          // vR first two words
+    ldd   r6, r8, r11[4]          // vD first two words
+    ldd   r7, r9, r11[0]          // vR first two words
     unzip r6, r7, 4
     unzip r8, r9, 4             // r6, r7, r8, r9 first four words
     std   r6, r8, r11[4]
@@ -40,15 +41,15 @@ output_transform_16_unzip_loop:
 
     { ldc    r9, 32        ; ldc r8, 16      }  // Make -16 in r8
     { vldr   r11[0]        ; neg r8, r8      }
-    { vlmul  r1[0]         ; add r1, r1, r9  }
     { vladd  r1[0]         ; add r1, r1, r9  }
+    { vlmul  r1[0]         ; add r1, r1, r9  }
     { vstr   r11[0]        ; and r5, r10, r3 }  
     vlashr r11[0], r8                           // Saturate to 0x800000001 / 0x7fffffff
     vstrpv r2[0], r5
     { sub    r11, r11, r9  ; shr r3, r3, 2   }
     { vldr   r11[0]        ; sub r0, r0, 1   }
-    { vlmul  r1[0]         ; add r1, r1, r9  }
     { vladd  r1[0]         ; add r1, r1, r9  }
+    { vlmul  r1[0]         ; add r1, r1, r9  }
     { vstr   r11[0]        ; neg r7, r8      }  // Make +16 in r7
     vlashr r11[0], r8                           // Saturate to 0x800000001 / 0x7fffffff
     { vstr   r11[0]        ; and r5, r10, r3 }  // make 0x3333

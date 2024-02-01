@@ -5,15 +5,16 @@
 
 #include "unity.h"
 
-#define CALL(F) \
-  do {          \
-    void F();   \
-    F();        \
+#define CALL(F)                                                                \
+  do {                                                                         \
+    void F();                                                                  \
+    F();                                                                       \
   } while (0)
 
 int main(void) {
   UNITY_BEGIN();
 
+  CALL(test_softmax);
   CALL(test_conv2d_binary_regression);
   CALL(test_transposeconv2d_regression);
 
@@ -34,6 +35,7 @@ int main(void) {
   CALL(test_mul_elementwise);
 
   CALL(test_expand_8_to_16);
+
   CALL(test_output_transform_16);
   CALL(test_multiply_int16);
   CALL(test_dequantize_int16);
