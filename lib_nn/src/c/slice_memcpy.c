@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stddef.h>
 
 void slice_memcpy(int8_t *dst, int8_t *src, int32_t *in_offsets,
                   int32_t *out_offsets, int32_t *begin, int32_t *end,
