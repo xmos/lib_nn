@@ -131,8 +131,8 @@ void quadratic_approximation_generator(
     assert(chunks <= QUADRATIC_APPROXIMATION_MAX_CHUNKS);
     const int datapoints = 65536 / chunks;
     const int degree = 3;
-    double A[DATAPOINTS][DEGREE] ;
-    double B[DATAPOINTS] ;
+    double (*A)[DEGREE] = malloc(sizeof(*A) * DATAPOINTS);
+    double *B = malloc(sizeof(*B) * DATAPOINTS);
     double ATA[DEGREE][DEGREE] ;
     double ATB[DEGREE] ;
     int zeropoint = 32768;
@@ -234,6 +234,8 @@ void quadratic_approximation_generator(
     }
     *error = sqrt(avg2error_i / 65536.0);
     *max_error = max_error_i;
+    free(A);
+    free(B);
 }
 
 uint32_t quadratic_function_table_number_bytes(quadratic_function_table_t *x) {
