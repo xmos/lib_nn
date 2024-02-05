@@ -184,8 +184,9 @@ typedef struct nn_mul_params_t {
 void mul_boggle(nn_mul_params_t *params, double in1Scale, double in2Scale,
                 double outputScale, int8_t in1ZeroPoint, int8_t in2ZeroPoint,
                 int8_t outputZeroPoint);
-void mul_elementwise(const int8_t *in1_data, const int8_t *in2_data, int element_count,
-                     nn_mul_params_t *params, int8_t *out_data);
+void mul_elementwise(const int8_t *in1_data, const int8_t *in2_data,
+                     int element_count, nn_mul_params_t *params,
+                     int8_t *out_data);
 
 // /**
 //  * Describes the parameters needed for an @oper{add_elementwise} operator.
@@ -302,4 +303,8 @@ void softmax_generate_exp_lut(int zero_point, float scale, float *lut);
 
 void softmax_ref(int8_t *Y, const int8_t *X, const float zero_point,
                  const float scale, const int length);
+
+void slice_memcpy(int8_t *dst, int8_t *src, int32_t *in_offsets,
+                  int32_t *out_offsets, int32_t *begin, int32_t *end,
+                  void (*memcpy_func)(void *, const void *, unsigned long));
 #endif // LAYERS_H_
