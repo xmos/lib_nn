@@ -5,6 +5,7 @@
 #include "nn_api.h"
 #include "nn_bin_types.h"
 #include "nn_image.h"
+#include <string.h>
 
 /**
  * Struct represents the parameters needed by each `bsign_8()` job.
@@ -306,5 +307,5 @@ void softmax_ref(int8_t *Y, const int8_t *X, const float zero_point,
 
 void slice_memcpy(int8_t *dst, int8_t *src, int32_t *in_offsets,
                   int32_t *out_offsets, int32_t *begin, int32_t *end,
-                  void (*memcpy_func)(void *, const void *, unsigned long));
+                  void (*memcpy_func)(void *, const void *, size_t));
 #endif // LAYERS_H_
