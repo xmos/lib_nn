@@ -39,12 +39,12 @@ int test_quantize_tensor_int16(void) {
     float scaler1 = 0.00004051757812;
     input1[6] = -32768.5 * scaler1;
     input1[7] = -32768.0 * scaler1;
-    input1[8] = -32767.49 * scaler1;
+    input1[8] = -32767.5 * scaler1;
     input1[9] = 32765.5 * scaler1;
     input1[10] = 32767.0 * scaler1;
     input1[11] = 32766.5 * scaler1;
     for(int i = 0; i < N; i++) {
-        float o = round(input1[i]/scaler1);
+        float o = floor(input1[i]/scaler1 + 0.5);  // Do not round - tie goes to even
         if (o >  32767) o = 32767;
         if (o < -32768) o = -32768;
         ref_output[i] = o;
