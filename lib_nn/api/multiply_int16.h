@@ -31,12 +31,12 @@ void multiply_int16_tensor(int16_t *output, int16_t *input1, int16_t *input2,
  * @param input          Non constant input tensor
  *                       Must be word-aligned
  *
- * @param blob           Transformed constant input tensor
- *                       Must be word-aligned
- *
  * @param tensor_length  Number of elements in the tensor (product of all dimensions)
  *                       There are no constraints on this number.
+ *
+ * @param blob           Transformed constant input tensor
+ *                       Must be word-aligned
  */
-void requantise_int16_tensor(int16_t *output, int16_t *input1, void *blob, int tensor_length);
+void requantize_int16_tensor(int16_t *output, int16_t *input1, int tensor_length, void *blob);
 
 #endif

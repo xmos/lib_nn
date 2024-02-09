@@ -25,10 +25,10 @@ void add_int16_tensor_ref(int16_t *output, int16_t *input1, int16_t *input2, int
 }
 
 void add_int16_tensor(int16_t *output, int16_t *input1, int16_t *input2, int tensor_length, void *blob) {
-#ifdef NN_USE_REF
+//#ifdef NN_USE_REF
     add_int16_tensor_ref(output, input1, input2, tensor_length, blob);
-#else
-    add_int16_tensor_asm(output, input1, input2, tensor_length, blob);
-#endif
+// #else
+//     add_int16_tensor_asm(output, input1, input2, tensor_length, blob);
+// #endif
 }
 
