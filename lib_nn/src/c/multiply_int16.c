@@ -61,7 +61,7 @@ extern void requantize_int16_tensor_asm(int16_t *output, int16_t *input1, int te
 void requantize_int16_tensor_ref(int16_t *output, int16_t *input1, int tensor_length, void *blob) {
     int16_t *multipliers = (int16_t *) blob;
     for(int i = 0; i < tensor_length; i++) {
-        int64_t mult = (((int)input1[i]) << 16) + input1[i] * (int) multipliers[i & 15] * 2;
+        int64_t mult = (((int)input1[i]) << 16) + input1[i] * (int64_t) multipliers[i & 15] * 2;
         mult = mult + (1 << 15);
         mult = mult >> 16;
 
