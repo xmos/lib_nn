@@ -103,7 +103,6 @@ int test_requantize_transform_int16(void) {
         TEST_ASSERT_INT_WITHIN(1, req_output[i], output[i]);
     }
     TEST_ASSERT_INT_WITHIN(2, 0, sqerr);
-    printf("Sq err %d\n", sqerr);
     return errors;
 }
 
