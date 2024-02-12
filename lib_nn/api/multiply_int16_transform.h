@@ -1,6 +1,7 @@
 #ifndef _multiply_int16_transform_h_
 #define _multiply_int16_transform_h_
 
+#include "nn_api.h"
 #include <stdint.h>
 
 
@@ -22,14 +23,14 @@
  *
  * @returns 1 on success, 0 on fail (fallback required)
  */
-int requantise_int16_tensor_blob(void *output,
+C_API int requantize_int16_tensor_blob(void *output,
                                  float input_scaler,
                                  float output_scaler);
 /**
  * Macro that calculates the number of int16_t that should be allocated to
  * store the output of ``quantise_int16_tensor_blob()``
  */
-#define REQUANTISE_INT16_BYTES()  (16 * sizeof(int16_t))
+#define REQUANTIZE_INT16_TENSOR_BYTES()  (16 * sizeof(int16_t))
 
 
 /**
@@ -52,7 +53,7 @@ int requantise_int16_tensor_blob(void *output,
  *
  * @returns 1 on success, 0 on fail (fallback required)
  */
-int multiply_int16_tensor_blob(void *output,
+C_API int multiply_int16_tensor_blob(void *output,
                                float input1_scaler,
                                float input2_scaler,
                                float output_scaler);
@@ -61,7 +62,7 @@ int multiply_int16_tensor_blob(void *output,
  * Macro that calculates the number of int16_t that should be allocated to
  * store the output of ``multiply_int16_tensor_blob()``
  */
-#define MULTIPLY_INT16_TENSOR_BYTES()  (16 * sizeof(int16_t))
+#define MULTIPLY_INT16_TENSOR_BYTES()  (17 * sizeof(int16_t))
 
 
 #endif

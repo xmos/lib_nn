@@ -1,6 +1,7 @@
 #ifndef _quantize_int16_transform_h_
 #define _quantize_int16_transform_h_
 
+#include "nn_api.h"
 #include <stdint.h>
 
 /**
@@ -15,12 +16,12 @@
  *                          ``QUANTIZE_INT16_TENSOR_BYTES()`` bytes.
  *                          Must be word-aligned.
  *
- * @param input_scaler      Quantisation scaler for the input
+ * @param output_scaler      Quantisation scaler for the output
  *
  * @returns 1 on success, 0 on fail (fallback required)
  */
-int quantize_int16_tensor_blob(void *output,
-                                 float input_scaler);
+C_API int quantize_int16_tensor_blob(void *output,
+                                 float output_scaler);
 
 /**
  * Macro that calculates the number of int16_t that should be allocated to

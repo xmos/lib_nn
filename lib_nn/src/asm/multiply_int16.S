@@ -88,9 +88,9 @@ multiply_tensor_16_loop_entry:
 
 
     
-// requantise_int16_tensor_asm(int16_t *output, int16_t *input, char *blob, int elements);
+// requantize_int16_tensor_asm(int16_t *output, int16_t *input, int elements, char *blob);
 
-#define FUNCTION_NAME requantise_int16_tensor_asm
+#define FUNCTION_NAME requantize_int16_tensor_asm
 
 	.cc_top FUNCTION_NAME.function,FUNCTION_NAME
     .text
@@ -101,8 +101,8 @@ multiply_tensor_16_loop_entry:
     .globl FUNCTION_NAME
     // r0: output
     // r1: input1
-    // r2: blob, 16 multipliers
-    // r3: number of elements, then mask of number of final elements
+    // r2: number of elements, then mask of number of final elements
+    // r3: blob, 16 multipliers
     // r5: number of elements / 16
     // r6: temp vector
     // r7: 32
@@ -114,9 +114,9 @@ FUNCTION_NAME:
     std   r4, r5, sp[0]
     std   r6, r7, sp[1]
 
-    { shr   r5, r3, 4            ; zext  r3, 4     }       // Number of iterations/modulo
-    { ldaw  r6, sp[4]            ; shl   r3, r3, 1 }
-    { mkmsk r3, r3               ; shl   r11, r11, 3 }     // Make 0x100
+    { shr   r5, r2, 4            ; zext  r2, 4     }       // Number of iterations/modulo
+    { ldaw  r6, sp[4]            ; shl   r2, r2, 1 }
+    { mkmsk r2, r2               ; shl   r11, r11, 3 }     // Make 0x100
     { ldc   r7, 32               ; vsetc r11       }
 
     ldaw r11, cp[eight_thousand]
@@ -127,13 +127,13 @@ requantise_tensor_16_loop_entry:
     { vldd     r1[0]              ; nop }
     { vldr     r11[0]             ; nop }
     { vldc     r1[0]              ; add r1, r1, r7 }
-    { vlmacc   r2[0]              ; nop            }
-    { vlmacc   r2[0]              ; nop            }
+    { vlmacc   r3[0]              ; nop            }
+    { vlmacc   r3[0]              ; nop            }
     
     { bt       r5, requantise_tensor_16_loop ; sub   r5, r5, 1 }
     { vstd     r6[0]              ; add r11, r6, 0 }
     { vldr     r11[0]             ; nop }
-    vstrpv   r0[0], r3
+    vstrpv   r0[0], r2
 
     ldd   r4, r5, sp[0]
     ldd   r6, r7, sp[1]
