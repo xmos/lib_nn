@@ -15,7 +15,7 @@ void quantize_int16_tensor_ref(int16_t *output, float *input, int tensor_length,
     for(int i = 0; i < tensor_length; i++) {
         float a = input[i] * ((float *) blob)[0];
         a = ldexp(a, 23);
-        a = round(a);
+        a = floor(a+0.5);           // Do not use ROUND as that rounds tie to even
         if (a >  32767) a =  32767;
         if (a < -32768) a = -32768;
         output[i] = a;

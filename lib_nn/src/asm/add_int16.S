@@ -54,9 +54,10 @@ FUNCTION_NAME:
     { ldap  r11, shifts          ; ldc   r7, 32     }
     { ldap  r11, minintmults     ; add   r8, r11, 0 }
     { stw   r3, sp[7]            ; add   r9, r11, 0 }
-    { bf    r5, zero_iterations  ; mkmsk r3, 32 }
+    { bf    r5, zero_iterations  ; nop }
+    mkmsk r3, 32
 add_tensor_16_loop:
-    vclrdr
+    { vclrdr                      ; nop }
     // First calculate m0 * i0[] + m1 * i1[]
     { vldc     r4[0]              ; add r4, r4, r7 }
     { vlmacc   r1[0]              ; add r1, r1, r7 }

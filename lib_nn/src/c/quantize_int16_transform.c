@@ -7,9 +7,9 @@
 #define SHIFT  14
 
 int quantize_int16_tensor_blob(void *output,
-                                 float input_scaler) {
+                                 float output_scaler) {
     float *blob = (float *)output;
-    input_scaler = ldexp(input_scaler, 23);
-    blob[0] = 1/input_scaler;
+    output_scaler = ldexp(output_scaler, 23);
+    blob[0] = 1/output_scaler;
     return 1;
 }

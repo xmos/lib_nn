@@ -1,6 +1,7 @@
 #ifndef _add_int16_transform_h_
 #define _add_int16_transform_h_
 
+#include "nn_api.h"
 #include <stdint.h>
 
 /**
@@ -23,7 +24,7 @@
  *
  * @returns 1 on success, 0 on fail (fallback required)
  */
-int add_int16_tensor_blob(void *output,
+C_API int add_int16_tensor_blob(void *output,
                           float input1_scaler,
                           float input2_scaler,
                           float output_scaler);

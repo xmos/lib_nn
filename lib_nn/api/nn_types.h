@@ -67,4 +67,17 @@ typedef int32_t mem_stride_t;
  */
 typedef uint32_t channel_count_t;
 
+/**
+ *
+ * Function pointer to unary op kernel functions for int16
+ */
+typedef void (*UnaryI16FnType)(void *output, void *input, int tensor_length, void *blob);
+
+
+/**
+ *
+ * Function pointer to binary op kernel functions for int16
+ */
+typedef void (*BinaryI16FnType)(void *output, void *input1, void *input2, int tensor_length, void *blob);
+
 #endif  // NN_TYPES_H_

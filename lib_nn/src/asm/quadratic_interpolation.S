@@ -34,7 +34,7 @@ quadratic_interpolation_128:
     std   r9, r10, sp[3]
     { stw   r8, sp[8]           ; nop }
     { vsetc   r11               ; ldaw r4, sp[10] }
-    { shl   r5, r3, 4           ; nop }
+    { shr   r5, r3, 4           ; nop }
     { bf    r5, tail_end        ; nop }              // <= 15 elements, possibly 0
 vector_loop:
     { mkmsk r5, 32              ; ldc r6, 15 }       // Default store mask and loop start
