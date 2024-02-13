@@ -10,9 +10,9 @@ void slice_memcpy_get_params(int *begin_dst, int *end_dst, int *in_offsets,
   // TFLite supports up to 5 dimensions, if the input is less we pad
   const int numPad = 5 - rank;
   for (int i = 0; i < 5; i++) {
-    begin_dst[i] = i > numPad ? begin[i - numPad] : 0;
-    end_dst[i] = i > numPad ? begin_dst[i] + size[i - numPad] : 1;
-    shape_dst[i] = i > numPad ? shape[i - numPad] : 1;
+    begin_dst[i] = i >= numPad ? begin[i - numPad] : 0;
+    end_dst[i] = i >= numPad ? begin_dst[i] + size[i - numPad] : 1;
+    shape_dst[i] = i >= numPad ? shape[i - numPad] : 1;
   }
 
   // Calculate number of input and output elements
