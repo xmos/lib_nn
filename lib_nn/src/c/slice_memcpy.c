@@ -1,5 +1,58 @@
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
+
+void slice_memcpy_get_params(int *begin_dst, int *end_dst, int *in_offsets,
+                             int *out_offsets, int *shape_dst, const int *begin,
+                             const int *size, const int *shape,
+                             const int dtype_size, const int rank) {
+
+  // TFLite supports up to 5 dimensions, if the input is less we pad
+  const int numPad = 5 - rank;
+  for (int i = 0; i < 5; i++) {
+    begin_dst[i] = i > numPad ? begin[i - numPad] : 0;
+    end_dst[i] = i > numPad ? begin_dst[i] + size[i - numPad] : 1;
+    shape_dst[i] = i > numPad ? shape[i - numPad] : 1;
+  }
+
+  // Calculate number of input and output elements
+  int num_elements_in = 1;
+  int num_elements_out = 1;
+  for (int i = 0; i < 5; i++) {
+    num_elements_in *= shape_dst[i];
+    num_elements_out *= end_dst[i] - begin_dst[i];
+  }
+
+  // Merge axes where possible in the end
+  while (begin_dst[4] == 0 && end_dst[4] == shape_dst[4]) {
+    int32_t last_begin = begin_dst[3] * shape_dst[4];
+    int32_t last_end = end_dst[3] * shape_dst[4];
+    int32_t last_dim = shape_dst[3] * shape_dst[4];
+    memmove(begin_dst + 1, begin_dst, 3 * sizeof(int32_t));
+    memmove(end_dst + 1, end_dst, 3 * sizeof(int32_t));
+    memmove(shape_dst + 1, shape_dst, 3 * sizeof(int32_t));
+    begin_dst[0] = 0;
+    end_dst[0] = 1;
+    shape_dst[0] = 1;
+    begin_dst[4] = last_begin;
+    end_dst[4] = last_end;
+    shape_dst[4] = last_dim;
+  }
+
+  // Treat dtype as an extra axis that we merge with the last axis, to use
+  // vpu_memcpy if possible
+  shape_dst[4] *= dtype_size;
+  begin_dst[4] *= dtype_size;
+  end_dst[4] *= dtype_size;
+
+  // Calculate offsets
+  in_offsets[0] = num_elements_in / shape_dst[0] * dtype_size;
+  out_offsets[0] = num_elements_out / (end_dst[0] - begin_dst[0]) * dtype_size;
+  for (int i = 1; i < 4; i++) {
+    in_offsets[i] = in_offsets[i - 1] / shape_dst[i];
+    out_offsets[i] = out_offsets[i - 1] / (end_dst[i] - begin_dst[i]);
+  }
+}
 
 void slice_memcpy(int8_t *dst, int8_t *src, int32_t *in_offsets,
                   int32_t *out_offsets, int32_t *begin, int32_t *end,
