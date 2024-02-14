@@ -13,10 +13,10 @@ extern void multiply_int16_tensor_asm(int16_t *output, int16_t *input1, int16_t 
 
 void multiply_int16_tensor_ref(int16_t *output, int16_t *input1, int16_t *input2, int tensor_length, void *blob) {
     int16_t *multipliers = (int16_t *) blob;
-    int16_t shift = multipliers[16];
+    int shift = multipliers[1];
     for(int i = 0; i < tensor_length; i++) {
-        int64_t mult = input1[i] * (int64_t) input2[i] * multipliers[i & 15];
-        mult = mult >> shift;
+        int64_t mult = input1[i] * (int64_t) input2[i] * multipliers[0];
+        mult = (mult + (1 << (shift-1))) >> shift;
 
         if (mult > 32767) mult = 32767;
         if (mult < -32768) mult = -32768;
@@ -25,11 +25,11 @@ void multiply_int16_tensor_ref(int16_t *output, int16_t *input1, int16_t *input2
 }
 
 void multiply_int16_tensor(int16_t *output, int16_t *input1, int16_t *input2, int tensor_length, void *blob) {
-//#ifdef NN_USE_REF
+#ifdef NN_USE_REF
     multiply_int16_tensor_ref(output, input1, input2, tensor_length, blob);
-// #else
-//     multiply_int16_tensor_asm(output, input1, input2, tensor_length, blob);
-// #endif
+#else
+    multiply_int16_tensor_asm(output, input1, input2, tensor_length, blob);
+#endif
 }
 
 
