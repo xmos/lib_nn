@@ -20,8 +20,8 @@ minints:
     .word 0x80008000, 0x80008000, 0x80008000, 0x80008000
     .word 0x80008000, 0x80008000, 0x80008000, 0x80008000
 minintmults:    
-    .word 0x40004000, 0x40004000, 0x40004000, 0x40004000
-    .word 0x40004000, 0x40004000, 0x40004000, 0x40004000
+    .word 0xC000C000, 0xC000C000, 0xC000C000, 0xC000C000
+    .word 0xC000C000, 0xC000C000, 0xC000C000, 0xC000C000
 
     .globl FUNCTION_NAME
     // r0: output
@@ -73,15 +73,16 @@ add_tensor_16_loop:
     // Restore teh accumulator with the full precision product
     { vldr     r11[0]             ; nop            }
     { vldd     r6[0]              ; nop            }
-    // Now add 0x4000 x 0x4000 to the accumulator
-    // This makes all values positive except < 0x8000.0000
-    { vldc     r9[0]              ; nop            }
-    { vlmacc   r9[0]              ; nop            }
+    // Minint is reached on 0x8000 << 14 = 0xE000 0000
+    // Now add 0xC000 x 0x8000 to the accumulator
+    // This makes all values positive except < 0x8000
+    { vldc     r9[0]              ; ldap r11, minints            }
+    { vlmacc   r11[0]              ; nop            }
     // Shift down, and keep sign bits
     { vlsat    r8[0]              ; sub   r5, r5, 1 }
     vsign
     vdepth1
-    { vstr     r6[0]              ; ldap r11, minints}
+    { vstr     r6[0]              ; nop }
     // Grab the sign bits, and zip them together once to create two bits for each wrong 16-bit
     ldw        r10, r6[0]
     { vldr     r11[0]             ; add        r11, r10, 0 }
