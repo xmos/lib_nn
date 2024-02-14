@@ -8,6 +8,10 @@
 
 #include "xs3_vpu.h"
 
+inline void memcpy_wrapper(void *dst, const void *src, size_t byte_count) {
+  memcpy(dst, src, byte_count);
+}
+
 #ifdef __XC__
 extern "C" {
 #endif
@@ -22,8 +26,8 @@ extern "C" {
  * \param DELTA_COLS    (signed int) Number of columns
  * \param DELTA_CHANS   (signed int) Number of channels
  */
-#define IMG_ADDRESS_VECT(IMG, DELTA_ROWS, DELTA_COLS, DELTA_CHANS) \
-  (((DELTA_ROWS) * (IMG)->width * (IMG)->channels) +               \
+#define IMG_ADDRESS_VECT(IMG, DELTA_ROWS, DELTA_COLS, DELTA_CHANS)             \
+  (((DELTA_ROWS) * (IMG)->width * (IMG)->channels) +                           \
    ((DELTA_COLS) * (IMG)->channels) + (DELTA_CHANS))
 
 /** Get the number of output channel groups given the number of output channels.
@@ -33,14 +37,14 @@ extern "C" {
  *
  * \param CHANNELS  Number of channels
  */
-#define OUT_CHANNEL_GROUPS(CHANNELS) \
+#define OUT_CHANNEL_GROUPS(CHANNELS)                                           \
   (((CHANNELS) + (VPU_INT8_ACC_PERIOD - 1)) >> VPU_INT8_ACC_PERIOD_LOG2)
 
 #ifdef NN_USE_REF
 #define USING_C_REFERENCE (1)
 #else
 #define USING_C_REFERENCE (0)
-#endif  // NN_USE_REF
+#endif // NN_USE_REF
 
 #define MEMCPY_VECT_EXT_BYTES (128)
 #define MEMCPY_VECT_INT_BYTES (32)
@@ -56,7 +60,7 @@ extern "C" {
  * @param src  [in]     Source address
  * @param byte_count [in]     Number of bytes to be copied
  */
-void vpu_memcpy(void* dst, const void* src, size_t byte_count);
+void vpu_memcpy(void *dst, const void *src, size_t byte_count);
 
 /**
  * @brief Copy `size` bytes from `src` to `dst`.
@@ -70,7 +74,7 @@ void vpu_memcpy(void* dst, const void* src, size_t byte_count);
  * @param src  [in]     Source address
  * @param byte_count [in]     Number of bytes to be copied
  */
-void vpu_memcpy_int(void* dst, const void* src, size_t byte_count);
+void vpu_memcpy_int(void *dst, const void *src, size_t byte_count);
 
 /**
  * @brief Copy `size` bytes from `src` to `dst`.
@@ -84,7 +88,7 @@ void vpu_memcpy_int(void* dst, const void* src, size_t byte_count);
  * @param src  [in]     Source address
  * @param byte_count [in]     Number of bytes to be copied
  */
-void vpu_memcpy_ext(void* dst, const void* src, size_t byte_count);
+void vpu_memcpy_ext(void *dst, const void *src, size_t byte_count);
 
 /**
  * @brief Copy `vector_count` multiples of MEMCPY_VECT_EXT_BYTES bytes
@@ -100,7 +104,7 @@ void vpu_memcpy_ext(void* dst, const void* src, size_t byte_count);
  * @param vector_count [in]     Number of MEMCPY_VECT_EXT_BYTES bytes copies to
  * be bytes to be performed
  */
-void vpu_memcpy_vector_ext(void* dst, const void* src, int vector_count);
+void vpu_memcpy_vector_ext(void *dst, const void *src, int vector_count);
 
 /**
  * @brief Copy `vector_count` multiples of MEMCPY_VECT_INT_BYTES bytes
@@ -116,7 +120,7 @@ void vpu_memcpy_vector_ext(void* dst, const void* src, int vector_count);
  * @param vector_count [in]     Number of MEMCPY_VECT_INT_BYTES bytes copies to
  * be bytes to be performed
  */
-void vpu_memcpy_vector_int(void* dst, const void* src, int vector_count);
+void vpu_memcpy_vector_int(void *dst, const void *src, int vector_count);
 
 /**
  * @brief set `word_count` words from `value` to `dst`.
@@ -127,7 +131,7 @@ void vpu_memcpy_vector_int(void* dst, const void* src, int vector_count);
  * @param value  [in]   Source value.
  * @param size [in]     Number of 32 bit words to be copied
  */
-void vpu_memset_32(void* dst, const int32_t value, const int word_count);
+void vpu_memset_32(void *dst, const int32_t value, const int word_count);
 
 #define VPU_MEMSET_VECTOR_WORDS XS3_VPU_VREG_WIDTH_WORDS
 
@@ -141,10 +145,10 @@ void vpu_memset_32(void* dst, const int32_t value, const int word_count);
  * @param vector_count [in]     Number of VPU_MEMSET_VECTOR_WORDS words vectors
  * to be copied.
  */
-void vpu_memset_vector(void* dst, const int32_t value, const int vector_count);
+void vpu_memset_vector(void *dst, const int32_t value, const int vector_count);
 
 #ifdef __XC__
-}  // extern "C"
+} // extern "C"
 #endif
 
-#endif  // NN_OP_UTILS_H_
+#endif // NN_OP_UTILS_H_

@@ -110,50 +110,6 @@ typedef struct padding_sizes_t {
 } padding_sizes_t;
 
 /**
- * @brief Execute @oper{pad_prepare} function.
- *
- * `plan` points to the output vector @tensor{y} with length @math{N}.
- *
- * `p` struct describing the padding to be applied to the input tensor.
- *
- * `x` parameters describing the input tensor to be padded.
- *
- * `bytes_per_pixel` the bytes per pixel for tensor x.
- *
- * @param plan             [out]  The output vector @tensor{y}
- * @param p                [in]   The input vector @tensor{x}
- * @param x                [in]   Look-up table @tensor{T}
- * @param bytes_per_pixel  [in]   Length @math{N} of input and output vectors
- */
-C_API void pad_prepare(nn_pad_plan_t *plan, const padding_sizes_t *p,
-                       const nn_image_params_t *x,
-                       const unsigned bytes_per_pixel);
-
-/**
- * @brief Execute @oper{pad_run} job.
- *
- * See @oper_ref{pad_run} for more details about the @oper{requantize_16_to_8}
- * operator.
- *
- * `Y` points to the output vector @tensor{y}.
- *
- * `X` points to the input vector @tensor{x}.
- *
- * `plan` points to the (initialized) plan.
- *
- * @requires_word_alignment{Y,X}
- *
- * @param y   [out]    The output vector @tensor{y}
- * @param x   [in]     The input vector @tensor{x}
- * @param plan [in]    The prameters describing how to pad.
- */
-void pad_run(char *y, char *x, const nn_pad_plan_t *p, uint32_t pad_value);
-
-void pad_ref(char *y, char *x, const padding_sizes_t *p,
-             const nn_image_params_t *xp, const unsigned bytes_per_pixel,
-             uint32_t pad_value);
-
-/**
  * Func to calculate n_3
  */
 void pad_3_to_4_prepare(uint32_t *n_3, const unsigned height,
@@ -277,7 +233,8 @@ void add_elementwise(int8_t Y[], const int8_t X1[], const int8_t X2[],
  *
  * `X` points to the input vector @tensor{x} with length @math{N}.
  *
- * `lut` points to the look-up table @math{T} with shape @tensor_shape{256}.
+ * `lut` points to the look-up table @math{T} with shape @tensor_shape{256} and
+ * dtype `int8`.
  *
  * `N` is the length @math{N} of the input vector @tensor{x}.
  *
@@ -291,9 +248,39 @@ void add_elementwise(int8_t Y[], const int8_t X1[], const int8_t X2[],
 void lookup8(uint8_t *Y, const uint8_t *X, const uint8_t *lut,
              const unsigned elm_start, const unsigned elm_count);
 
+/**
+ * @brief Execute @oper{softmax_exp_sum} job.
+ *
+ * `Y` points to the output scalar.
+ *
+ * `X` points to the input vector @tensor{x} with length @math{N}.
+ *
+ * `lut` points to the look-up table @math{T} with shape @tensor_shape{256} and
+ * dtype `float32`.
+ *
+ * `N` is the length @math{N} of the input vector @tensor{x}.
+ *
+ * `elm_start` and `elm_count` together specify which output elements should be
+ * summed into the output scalar.
+ */
 void softmax_exp_sum(float *Y, const int8_t *X, const float *lut,
                      const unsigned elm_start, const unsigned elm_count);
 
+/**
+ * @brief Execute @oper{softmax_exp_div} job.
+ *
+ * `Y` points to the output vector @tensor{y} with length @math{N}.
+ *
+ * `X` points to the input vector @tensor{x} with length @math{N}.
+ *
+ * `lut` points to the look-up table @math{T} with shape @tensor_shape{256} and
+ * dtype `float32`.
+ *
+ * `inv_sum` is the reciprocal of the sum of the exponentials of the inputs.
+ *
+ * `elm_start` and `elm_count` together specify which output elements should be
+ * calculated by this invocation.
+ */
 void softmax_exp_div(int8_t *Y, const int8_t *X, const float *lut,
                      const float inv_sum, const unsigned elm_start,
                      const unsigned elm_count);
