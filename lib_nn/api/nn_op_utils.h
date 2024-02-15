@@ -8,7 +8,7 @@
 
 #include "xs3_vpu.h"
 
-inline void memcpy_wrapper(void *dst, const void *src, size_t byte_count) {
+inline void memcpy_wrapper(void *dst, void *src, size_t byte_count) {
   memcpy(dst, src, byte_count);
 }
 
@@ -61,6 +61,10 @@ extern "C" {
  * @param byte_count [in]     Number of bytes to be copied
  */
 void vpu_memcpy(void *dst, const void *src, size_t byte_count);
+
+inline void vpu_memcpy_wrapper(void *dst, void *src, size_t byte_count) {
+  vpu_memcpy(dst, src, byte_count);
+}
 
 /**
  * @brief Copy `size` bytes from `src` to `dst`.

@@ -56,7 +56,7 @@ void slice_memcpy_get_params(int *begin_dst, int *end_dst, int *in_offsets,
 
 void slice_memcpy(int8_t *dst, int8_t *src, int32_t *in_offsets,
                   int32_t *out_offsets, int32_t *begin, int32_t *end,
-                  void (*memcpy_func)(void *, const void *, size_t)) {
+                  void (*memcpy_func)(void *, void *, size_t)) {
   const int memcpy_size = end[4] - begin[4];
   const int8_t *src_addr = (int8_t *)src + begin[4];
   for (int i0 = begin[0]; i0 < end[0]; i0++) {
