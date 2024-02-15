@@ -46,7 +46,7 @@ unsigned mkmsk(int num){
   return mask;
 }
 
-extern add_elementwise_asm (int8_t y[], const int8_t x1[], const int8_t x2[],
+extern void add_elementwise_asm (int8_t y[], const int8_t x1[], const int8_t x2[],
                          nn_add_params_t *params, const int output_start,
                          const int output_count);
 
