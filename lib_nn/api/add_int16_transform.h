@@ -17,8 +17,10 @@
  *                          Must be word-aligned.
  *
  * @param input1_scaler     Quantisation scaler for input1
+ *                          Negate this to make add compute -A+B
  *
  * @param input2_scaler     Quantisation scaler for input2
+ *                          Negate this to make add compute A-B
  *
  * @param output_scaler     Quantisation scaler for output
  *
