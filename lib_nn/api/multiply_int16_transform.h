@@ -61,8 +61,9 @@ C_API int multiply_int16_tensor_blob(void *output,
 /**
  * Macro that calculates the number of int16_t that should be allocated to
  * store the output of ``multiply_int16_tensor_blob()``
+ * TODO: this could be zero and stored in the pointer...
  */
-#define MULTIPLY_INT16_TENSOR_BYTES()  (17 * sizeof(int16_t))
+#define MULTIPLY_INT16_TENSOR_BYTES()  (2 * sizeof(int16_t))
 
 
 #endif

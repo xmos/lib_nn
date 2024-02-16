@@ -37,9 +37,12 @@ int test_multiply_tensor_int16(void) {
     input1[3] = 22767;
     input1[4] = 21726;
     input1[5] = -21998;
-    float scaler1 = 0.00003051757812;
-    float scaler2 = 0.00006123190654;
-    float scalero = 0.00006013;
+//    float scaler1 = 0.00003051757812;
+ //   float scaler2 = 0.00006123190654;
+ //   float scalero = 0.00006013;
+    float scaler1 = 0.000578337523621;
+    float scaler2 = 0.000020991212295;
+    float scalero = 0.000093780785392;
     for(int i = 0; i < N; i++) {
         float oo = input1[i] * input2[i] * scaler1 * scaler2 / scalero;
         float o = round(oo);

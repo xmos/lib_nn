@@ -3,9 +3,6 @@
 
 #include <assert.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include "nn_op_helper.h"
 #include "nn_operator.h"
