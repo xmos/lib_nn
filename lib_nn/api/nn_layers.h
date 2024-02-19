@@ -277,7 +277,8 @@ void add_elementwise(int8_t Y[], const int8_t X1[], const int8_t X2[],
  *
  * `X` points to the input vector @tensor{x} with length @math{N}.
  *
- * `lut` points to the look-up table @math{T} with shape @tensor_shape{256}.
+ * `lut` points to the look-up table @math{T} with shape @tensor_shape{256} and
+ * dtype `int8`.
  *
  * `N` is the length @math{N} of the input vector @tensor{x}.
  *
@@ -291,9 +292,39 @@ void add_elementwise(int8_t Y[], const int8_t X1[], const int8_t X2[],
 void lookup8(uint8_t *Y, const uint8_t *X, const uint8_t *lut,
              const unsigned elm_start, const unsigned elm_count);
 
+/**
+ * @brief Execute @oper{softmax_exp_sum} job.
+ *
+ * `Y` points to the output scalar.
+ *
+ * `X` points to the input vector @tensor{x} with length @math{N}.
+ *
+ * `lut` points to the look-up table @math{T} with shape @tensor_shape{256} and
+ * dtype `float32`.
+ *
+ * `N` is the length @math{N} of the input vector @tensor{x}.
+ *
+ * `elm_start` and `elm_count` together specify which output elements should be
+ * summed into the output scalar.
+ */
 void softmax_exp_sum(float *Y, const int8_t *X, const float *lut,
                      const unsigned elm_start, const unsigned elm_count);
 
+/**
+ * @brief Execute @oper{softmax_exp_div} job.
+ *
+ * `Y` points to the output vector @tensor{y} with length @math{N}.
+ *
+ * `X` points to the input vector @tensor{x} with length @math{N}.
+ *
+ * `lut` points to the look-up table @math{T} with shape @tensor_shape{256} and
+ * dtype `float32`.
+ *
+ * `inv_sum` is the reciprocal of the sum of the exponentials of the inputs.
+ *
+ * `elm_start` and `elm_count` together specify which output elements should be
+ * calculated by this invocation.
+ */
 void softmax_exp_div(int8_t *Y, const int8_t *X, const float *lut,
                      const float inv_sum, const unsigned elm_start,
                      const unsigned elm_count);
@@ -307,5 +338,10 @@ void softmax_ref(int8_t *Y, const int8_t *X, const float zero_point,
 
 void slice_memcpy(int8_t *dst, int8_t *src, int32_t *in_offsets,
                   int32_t *out_offsets, int32_t *begin, int32_t *end,
-                  void (*memcpy_func)(void *, const void *, size_t));
+                  void (*memcpy_func)(void *, void *, size_t));
+
+void slice_memcpy_get_params(int *begin_dst, int *end_dst, int *in_offsets,
+                             int *out_offsets, int *shape_dst, const int *begin,
+                             const int *size, const int *shape,
+                             const int dtype_size, const int rank);
 #endif // LAYERS_H_

@@ -6,8 +6,8 @@
 #include "nn_op_utils.h"
 #include "nn_operator.h"
 
-void pad_prepare(nn_pad_plan_t* plan, const padding_sizes_t* p,
-                 const nn_image_params_t* x, const unsigned bytes_per_pixel) {
+void pad_prepare(nn_pad_plan_t *plan, const padding_sizes_t *p,
+                 const nn_image_params_t *x, const unsigned bytes_per_pixel) {
   assert(bytes_per_pixel % 4 == 0);
 
   unsigned padded_row_bytes = bytes_per_pixel * (p->left + x->width + p->right);
@@ -20,7 +20,7 @@ void pad_prepare(nn_pad_plan_t* plan, const padding_sizes_t* p,
   plan->right_pad_bytes = bytes_per_pixel * p->right;
 }
 
-void pad_run(char* y, char* x, const nn_pad_plan_t* p, uint32_t pad_value) {
+void pad_run(char *y, char *x, const nn_pad_plan_t *p, uint32_t pad_value) {
   vpu_memset_32(y, pad_value, p->top_pad_bytes / 4);
   y += p->top_pad_bytes;
   for (unsigned i = 0; i < p->mid_loop_count; i++) {
@@ -37,8 +37,8 @@ void pad_run(char* y, char* x, const nn_pad_plan_t* p, uint32_t pad_value) {
   vpu_memset_32(y, pad_value, p->bottom_pad_bytes / 4);
 }
 
-void pad_ref(char* y, char* x, const padding_sizes_t* p,
-             const nn_image_params_t* xp, const unsigned bytes_per_pixel,
+void pad_ref(char *y, char *x, const padding_sizes_t *p,
+             const nn_image_params_t *xp, const unsigned bytes_per_pixel,
              uint32_t pad_value) {
   unsigned top_pad = p->top;
   unsigned left_pad = p->left;
@@ -55,9 +55,9 @@ void pad_ref(char* y, char* x, const padding_sizes_t* p,
 
   for (unsigned h = 0; h < xp->height; h++) {
     for (unsigned w = 0; w < xp->width; w++) {
-      char* yt =
+      char *yt =
           y + (h + top_pad) * y_height * y_width + (w + left_pad) * y_width;
-      char* xt = x + h * x_height * x_width + w * x_width;
+      char *xt = x + h * x_height * x_width + w * x_width;
       memcpy(yt, xt, bytes_per_pixel);
     }
   }
