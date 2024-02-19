@@ -18,11 +18,9 @@ int add_int16_tensor_blob(void *output,
     int16_t *output_tensor = (int16_t *) output;
     float combined_scaler1 = input1_scaler / output_scaler;
     float combined_scaler2 = input2_scaler / output_scaler;
-    assert(combined_scaler1 > 0);
-    assert(combined_scaler2 > 0);
     int mult1 = round(combined_scaler1 * (1 << SHIFT));
     int mult2 = round(combined_scaler2 * (1 << SHIFT));
-    if (mult1 > 32767 || mult2 > 32767) {
+    if (mult1 > 32767 || mult2 > 32767 || mult1 < -32768 || mult2 < -32768) {
         return 0;
     }
     for(int i = 0; i < tensor_length; i++) {
