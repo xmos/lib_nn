@@ -53,9 +53,9 @@ FUNCTION_NAME:
     { mkmsk r3, r3               ; vsetc r11       }
     { ldap  r11, shifts          ; ldc   r7, 32     }
     { ldap  r11, minintmults     ; add   r8, r11, 0 }
-    { stw   r3, sp[7]            ; add   r9, r11, 0 }
+    { stw   r5, sp[7]            ; add   r9, r11, 0 }
     { bf    r5, zero_iterations  ; nop }
-    mkmsk r3, 32
+    { stw   r3, sp[7]            ; mkmsk r3, 32}
 add_tensor_16_loop:
     { vclrdr                      ; nop }
     // First calculate m0 * i0[] + m1 * i1[]
