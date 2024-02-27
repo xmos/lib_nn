@@ -77,5 +77,6 @@ C_API uint8_t *quadratic_function_table_bytes(quadratic_function_table_t *x);
 C_API float approximation_function_tanh(float x);
 C_API float approximation_function_logistics(float x);
 C_API float approximation_function_elu(float x);
+C_API float approximation_function_relu(float x);
 
 #endif
