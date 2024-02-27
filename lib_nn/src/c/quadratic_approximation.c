@@ -118,6 +118,11 @@ float approximation_function_elu(float x) {
     return x >= 0 ? x : expm1(x);
 }
 
+ACTIVATION_FUNCTION
+float approximation_function_relu(float x) {
+    return x >= 0 ? x : 0;
+}
+
 #define DATAPOINTS 65536
 #define DEGREE 3
 
@@ -201,16 +206,16 @@ void quadratic_approximation_generator(
         ATB[0] = round(ATB[0]*i_scale_factor*i_scale_factor)+32768.0;
         ATB[1] = round(ATB[1]*i_scale_factor);
         ATB[2] = round(ATB[2]*i_scale_factor*i_scale_factor);
-        if (ATB[0] >= (1LL<<31)+0x8000  || ATB[0] < -(1LL<<31)-0x8000) {
-            printf("Warning: Constant constant -2^31 <= %f < 2^31 out of range\n", ATB[0]);
-        }
-        if (ATB[1] >= (1<<15)  || ATB[1] < -0.1) {
-            printf("Warning: Linear constant 0 <= %f < 32768 out of range\n", ATB[1]);
-            if (ATB[1] < 0) ATB[1] = 0;
-        }
-        if (ATB[2] > 127.5 || ATB[2] < -128.5) {
-            printf("Warning: Quadratic constant -127 < %f < 128 out of range\n", ATB[2]);
-        }
+        // if (ATB[0] >= (1LL<<31)+0x8000  || ATB[0] < -(1LL<<31)-0x8000) {
+        //     printf("Warning: Constant constant -2^31 <= %f < 2^31 out of range\n", ATB[0]);
+        // }
+        // if (ATB[1] >= (1<<15)  || ATB[1] < -0.1) {
+        //     printf("Warning: Linear constant 0 <= %f < 32768 out of range\n", ATB[1]);
+        //     if (ATB[1] < 0) ATB[1] = 0;
+        // }
+        // if (ATB[2] > 127.5 || ATB[2] < -128.5) {
+        //     printf("Warning: Quadratic constant -127 < %f < 128 out of range\n", ATB[2]);
+        // }
         output->coefficients[output_index].c = clamp32(ATB[0]);
         output->coefficients[output_index].b = clamp(ATB[1]);
         output->coefficients[output_index].a = clamp8(ATB[2]);
@@ -222,9 +227,6 @@ void quadratic_approximation_generator(
         for(int j = 0 ; j < datapoints; j++) {
             int error_i = round(B[j]) - outputs_16bit[j];
 //            printf("XX %04x %04x %f\n", inputs_16bit[j], outputs_16bit[j], round(B[j]));
-            if( abs(error_i) > 1 && chunks == 128) {
-                printf("Ch %d start %d val %f %08x %f %d\n", chunks, start, (start + j-32768) * input_scaler, (int)round(B[j]), B[j], error_i);
-            }
             if (abs(error_i) > max_error_i) {
                 max_error_i = abs(error_i);
             }
