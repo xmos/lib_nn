@@ -25,7 +25,8 @@
  */
 C_API int requantize_int16_tensor_blob(void *output,
                                  float input_scaler,
-                                 float output_scaler);
+                                 float output_scaler,
+                                 char *err_msg);
 /**
  * Macro that calculates the number of int16_t that should be allocated to
  * store the output of ``quantise_int16_tensor_blob()``
@@ -56,7 +57,8 @@ C_API int requantize_int16_tensor_blob(void *output,
 C_API int multiply_int16_tensor_blob(void *output,
                                float input1_scaler,
                                float input2_scaler,
-                               float output_scaler);
+                               float output_scaler,
+                               char *err_msg);
 
 /**
  * Macro that calculates the number of int16_t that should be allocated to
