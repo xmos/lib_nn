@@ -29,7 +29,8 @@
 C_API int add_int16_tensor_blob(void *output,
                           float input1_scaler,
                           float input2_scaler,
-                          float output_scaler);
+                          float output_scaler,
+                          char *err_msg);
 
 /**
  * Macro that calculates the number of int16_t that should be allocated to

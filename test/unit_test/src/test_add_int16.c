@@ -48,10 +48,12 @@ int test_add_tensor_int16(void) {
         if (o < -32768) o = -32768;
         ref_output[i] = o;
     }
+    char err_msg[ERR_MSG_DESCRIPTOR_FAIL_BYTES()];
     int success = add_int16_tensor_blob(blob,
                                         scaler1,
                                         scaler2,
-                                        scalero);
+                                        scalero,
+                                        err_msg);
     
     TEST_ASSERT_EQUAL(1, success);
    

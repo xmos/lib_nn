@@ -13,7 +13,8 @@
 int add_int16_tensor_blob(void *output,
                                float input1_scaler,
                                float input2_scaler,
-                               float output_scaler) {
+                               float output_scaler,
+                               char *err_msg) {
     int tensor_length = 16;
     int16_t *output_tensor = (int16_t *) output;
     float combined_scaler1 = input1_scaler / output_scaler;
@@ -21,6 +22,9 @@ int add_int16_tensor_blob(void *output,
     int mult1 = round(combined_scaler1 * (1 << SHIFT));
     int mult2 = round(combined_scaler2 * (1 << SHIFT));
     if (mult1 > 32767 || mult2 > 32767 || mult1 < -32768 || mult2 < -32768) {
+        snprintf(err_msg, ERR_MSG_DESCRIPTOR_FAIL_BYTES(),
+                "Add FAIL! Input1 scaler is %g, input2 scaler is %g, and output scaler is %g",
+                input1_scaler, input2_scaler, output_scaler);
         return 0;
     }
     for(int i = 0; i < tensor_length; i++) {

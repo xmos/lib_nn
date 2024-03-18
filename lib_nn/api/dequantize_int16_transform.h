@@ -21,7 +21,8 @@
  * @returns 1 on success, 0 on fail (fallback required)
  */
 C_API int dequantize_int16_tensor_blob(void *output,
-                                 float input_scaler);
+                                 float input_scaler,
+                                 char *err_msg);
 
 /**
  * Macro that calculates the number of int16_t that should be allocated to
