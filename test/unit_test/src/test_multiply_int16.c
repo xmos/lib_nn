@@ -50,10 +50,12 @@ int test_multiply_tensor_int16(void) {
         if (o < -32768) o = -32768;
         ref_output[i] = o;
     }
+    char err_msg[ERR_MSG_DESCRIPTOR_FAIL_BYTES()];
     int success = multiply_int16_tensor_blob(blob,
                                              scaler1,
                                              scaler2,
-                                             scalero);
+                                             scalero,
+                                             err_msg);
     
     TEST_ASSERT_EQUAL(1, success);
    
@@ -91,9 +93,11 @@ int test_requantize_transform_int16(void) {
             req_output[i] = o;
         }
 
+        char err_msg[ERR_MSG_DESCRIPTOR_FAIL_BYTES()];
         int success = requantize_int16_tensor_blob(requantize_blob,
                                                    scaler1,
-                                                   scalero);
+                                                   scalero,
+                                                   err_msg);
         TEST_ASSERT_EQUAL(1, success);
     
         output[j] = 0x5555;

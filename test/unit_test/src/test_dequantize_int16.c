@@ -41,8 +41,10 @@ int test_dequantize_tensor_int16(void) {
         float o = input1[i] * scaler1;
         ref_output[i] = o;
     }
+    char err_msg[ERR_MSG_DESCRIPTOR_FAIL_BYTES()];
     int success = dequantize_int16_tensor_blob(blob,
-                                               scaler1);
+                                               scaler1,
+                                               err_msg);
     
     TEST_ASSERT_EQUAL(1, success);
    
