@@ -1,5 +1,5 @@
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 
 void slice_memcpy_get_params(int *begin_dst, int *end_dst, int *in_offsets,
@@ -37,6 +37,30 @@ void slice_memcpy_get_params(int *begin_dst, int *end_dst, int *in_offsets,
     begin_dst[4] = last_begin;
     end_dst[4] = last_end;
     shape_dst[4] = last_dim;
+  }
+
+  // Merge axes where possible in the beginning
+  int first_axis = 0;
+  for (int i = 0; i < 4; i++)
+    if (begin_dst[i] == 0 && end_dst[i] == shape_dst[i])
+      first_axis += 1;
+    else
+      break;
+
+  int first_dim = 1, first_begin = 1, first_end = 1;
+  for (int i = 0; i < first_axis; i++) {
+    first_dim *= shape_dst[i];
+    first_begin *= begin_dst[i];
+    first_end *= end_dst[i];
+    shape_dst[i] = 1;
+    begin_dst[i] = 0;
+    end_dst[i] = 1;
+  }
+
+  if (first_axis > 0) {
+    shape_dst[first_axis - 1] = first_dim;
+    begin_dst[first_axis - 1] = first_begin;
+    end_dst[first_axis - 1] = first_end;
   }
 
   // Treat dtype as an extra axis that we merge with the last axis, to use

@@ -336,8 +336,9 @@ void softmax_generate_exp_lut(int zero_point, float scale, float *lut);
 void softmax_ref(int8_t *Y, const int8_t *X, const float zero_point,
                  const float scale, const int length);
 
-void slice_memcpy(int8_t *dst, int8_t *src, int32_t *in_offsets,
-                  int32_t *out_offsets, int32_t *begin, int32_t *end,
+void slice_memcpy(int8_t *dst, int8_t *src, const int32_t *in_offsets,
+                  const int32_t *out_offsets, const int32_t *begin,
+                  const int32_t *end,
                   void (*memcpy_func)(void *, void *, size_t));
 
 void slice_memcpy_get_params(int *begin_dst, int *end_dst, int *in_offsets,
