@@ -343,8 +343,8 @@ void slice_memcpy(int8_t *dst, int8_t *src, const int32_t *in_offsets,
                   const int32_t *end,
                   void (*memcpy_func)(void *, void *, size_t));
 
-void slice_memcpy_1d(int8_t *dst, int8_t *src, size_t size, int32_t offset,
-                     int32_t num_copies,
+void slice_memcpy_1d(int8_t *dst, int8_t *src, const size_t size,
+                     const int32_t offset, const int32_t num_copies,
                      void (*memcpy_func)(void *, void *, size_t));
 
 void slice_memcpy_get_params(int *begin_dst, int *end_dst, int *in_offsets,

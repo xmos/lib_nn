@@ -86,8 +86,8 @@ void slice_memcpy_1d(int8_t *dst, int8_t *src, size_t size, int32_t offset,
                      void (*memcpy_func)(void *, void *, size_t)) {
 
   for (int i = 0; i < num_copies; i++) {
-    const int32_t in_idx0 = i * offset;
-    const int32_t out_idx0 = i * size;
+    const int32_t in_idx0 = i * size;
+    const int32_t out_idx0 = i * offset;
     memcpy_func((int8_t *)dst + out_idx0, (int8_t *)src + in_idx0, size);
   }
 }
@@ -106,16 +106,12 @@ void slice_memcpy(int8_t *dst, int8_t *src, int32_t *in_offsets,
       for (int i2 = begin[2]; i2 < end[2]; i2++) {
         const int32_t in_idx2 = in_idx1 + i2 * in_offsets[2];
         const int32_t out_idx2 = out_idx1 + (i2 - begin[2]) * out_offsets[2];
-        slice_memcpy_1d((int8_t *)dst + out_idx2, (int8_t *)src_addr + in_idx2,
-                        memcpy_size, in_offsets[3], end[3] - begin[3],
-                        memcpy_func);
-        // for (int i3 = begin[3]; i3 < end[3]; i3++) {
-        //   const int32_t in_idx3 = in_idx2 + i3 * in_offsets[3];
-        //   const int32_t out_idx3 = out_idx2 + (i3 - begin[3]) *
-        //   out_offsets[3]; memcpy_func((int8_t *)dst + out_idx3, src_addr +
-        //   in_idx3,
-        //               memcpy_size);
-        // }
+        for (int i3 = begin[3]; i3 < end[3]; i3++) {
+          const int32_t in_idx3 = in_idx2 + i3 * in_offsets[3];
+          const int32_t out_idx3 = out_idx2 + (i3 - begin[3]) * out_offsets[3];
+          memcpy_func((int8_t *)dst + out_idx3, src_addr + in_idx3,
+                      memcpy_size);
+        }
       }
     }
   }
