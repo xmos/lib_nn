@@ -42,5 +42,6 @@ int main(void) {
   CALL(test_quantize_int16);
   CALL(test_add_int16);
 
+  CALL(test_vpu_memmove_aligned);
   return UNITY_END();
 }
