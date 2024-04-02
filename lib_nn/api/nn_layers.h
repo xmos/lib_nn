@@ -338,9 +338,8 @@ void softmax_ref(int8_t *Y, const int8_t *X, const float zero_point,
 
 void slice_reshape_params(int *shape, int *begin, int *end, size_t dtype_size);
 
-void slice_memcpy(int8_t *dst, int8_t *src, const int32_t *in_offsets,
-                  const int32_t *out_offsets, const int32_t *begin,
-                  const int32_t *end,
+void slice_memcpy(int8_t *dst, int8_t *src, int32_t *in_offsets,
+                  int32_t *out_offsets, int32_t *begin, int32_t *end,
                   void (*memcpy_func)(void *, void *, size_t));
 
 void slice_memcpy_1d(int8_t *dst, int8_t *src, const size_t size,
