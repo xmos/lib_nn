@@ -11,3 +11,16 @@ void vpu_memset_256(void * dst, const void * src, unsigned byte_count) {
     }
 }
 #endif
+
+void broadcast_32_to_256(uint64_t *dst, uint32_t from) {
+#ifdef NN_USE_REF
+    for(int i = 0; i < 8; i++) {
+        ((uint32_t *)dst)[i] = from;
+    }
+#else
+    asm("std %0, %1, %2[0]" :: "r" (from), "r" (from), "r" (dst));
+    asm("std %0, %1, %2[1]" :: "r" (from), "r" (from), "r" (dst));
+    asm("std %0, %1, %2[2]" :: "r" (from), "r" (from), "r" (dst));
+    asm("std %0, %1, %2[3]" :: "r" (from), "r" (from), "r" (dst));
+#endif
+}

@@ -25,7 +25,8 @@ int intbits(float f) {
 
 int test_vpu_memset256(void) {
     int mem1[32];
-    int from[4][8] =
+    uint64_t from[4][4];
+    int from_ref[4][8] =
         {
             {0x80706050, 0x80706050, 0x80706050, 0x80706050,
              0x80706050, 0x80706050, 0x80706050, 0x80706050}, // int32
@@ -36,10 +37,13 @@ int test_vpu_memset256(void) {
             {0x80808080, 0x80808080, 0x80808080, 0x80808080,
              0x80808080, 0x80808080, 0x80808080, 0x80808080}, // int8
         };
+    broadcast_32_to_256(from[0], ((uint32_t*)from_ref[0])[0]);
+    broadcast_32_to_256(from[1], BROADCAST_8_TO_32(((uint32_t*)from_ref[1])[0]));
+    broadcast_32_to_256(from[2], BROADCAST_16_TO_32(((uint32_t*)from_ref[2])[0]));
+    broadcast_32_to_256(from[3], BROADCAST_8_TO_32(((uint32_t*)from_ref[3])[0]));
     int dst_vals[] = {1, 2, 3, 4, 5};
     int len_vals[] = {0, 1, 2, 3, 4, 5, 16, 30, 31, 32, 33, 34, 35, 36, 37, 38, 59, 60, 61, 62, 63};
     int errors = 0;
-    int time = 0;
     for(int len_index = 0; len_index < sizeof(len_vals)/sizeof(int); len_index++) {
         int len = len_vals[len_index];
         for(int dst_index = 0; dst_index < sizeof(dst_vals)/sizeof(int); dst_index++) {
@@ -49,11 +53,10 @@ int test_vpu_memset256(void) {
                 mem1[k] = 0;
             }
             vpu_memset_256(((uint8_t*)mem1)+dst, ((uint8_t*)(from[dst&3])), len);
-            time += t1-t0;
             TEST_ASSERT_EQUAL(((uint8_t *)mem1)[dst-1], 0);
             int cnt = dst;
             for(int k = 0; k < len; k++) {
-                TEST_ASSERT_EQUAL(((uint8_t *)mem1)[dst+k], ((uint8_t*)(from[dst&3]))[cnt]);
+                TEST_ASSERT_EQUAL(((uint8_t *)mem1)[dst+k], ((uint8_t*)(from_ref[dst&3]))[cnt]);
                 cnt = (cnt + 1) & 31;
             }
             TEST_ASSERT_EQUAL(((uint8_t *)mem1)[dst+len], 0);
