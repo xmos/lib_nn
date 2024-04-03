@@ -43,15 +43,12 @@ int test_vpu_memset256(void) {
     for(int len_index = 0; len_index < sizeof(len_vals)/sizeof(int); len_index++) {
         int len = len_vals[len_index];
         for(int dst_index = 0; dst_index < sizeof(dst_vals)/sizeof(int); dst_index++) {
-            unsigned t0, t1;
             int dst = dst_vals[dst_index];
 //            printf("Dst %d  len %d  \n", dst, len);
             for(int k = 0; k < 32; k++) {
                 mem1[k] = 0;
             }
-            asm volatile("gettime %0" : "=r" (t0));
             vpu_memset_256(((uint8_t*)mem1)+dst, ((uint8_t*)(from[dst&3])), len);
-            asm volatile("gettime %0" : "=r" (t1));
             time += t1-t0;
             TEST_ASSERT_EQUAL(((uint8_t *)mem1)[dst-1], 0);
             int cnt = dst;
@@ -62,7 +59,6 @@ int test_vpu_memset256(void) {
             TEST_ASSERT_EQUAL(((uint8_t *)mem1)[dst+len], 0);
         }
     }
-//    printf("%d ticks\n", time);
     return errors;
 }
 

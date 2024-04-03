@@ -43,5 +43,6 @@ int main(void) {
   CALL(test_add_int16);
 
   CALL(test_vpu_memmove_aligned);
+  CALL(test_vpu_memset_256);
   return UNITY_END();
 }
