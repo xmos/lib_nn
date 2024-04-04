@@ -25,12 +25,13 @@ void vpu_memset_256(void * dst, const void * src, unsigned int byte_count);
  * Function that replicates an int over a vector. The vector must be
  * aligned on an 8-byte boundary. In order to replicate a byte or short over
  * a vector, combine this with a call to BROADCAST_8_TO_32() or
- * BROADCAST_16_TO_32()
+ * BROADCAST_16_TO_32(). Declare the vector as a uint64_t x[] in order to
+ * guarantee 8-byte alignement.
  *
- * @param     dst         Destination address
+ * @param     dst         Destination address, must be 8-byte aligned
  * @param     from        Value to be replicated
  */
-void broadcast_32_to_256(uint64_t *dst, uint32_t from);
+void broadcast_32_to_256(void *dst, uint32_t from);
 
 /**
  * Macro that replicates a byte over an int.
