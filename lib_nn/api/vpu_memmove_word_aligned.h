@@ -4,7 +4,7 @@
 /**
  * Function that copies a block of memory. Both source and destination
  * address must be word aligned. Any number of bytes can be copied. There
- * should not be an overlap between the destination and source.
+ * may be an overlap between the destination and source.
  *
  * @param     dst         Destination address, must be word aligned.
  * @param     src         Source address, must be word aligned.
