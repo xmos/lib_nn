@@ -292,4 +292,7 @@ void softmax_generate_exp_lut(int zero_point, float scale, float *lut);
 void softmax_ref(int8_t *Y, const int8_t *X, const float zero_point,
                  const float scale, const int length);
 
+void softmax_single(int8_t *Y, const int8_t *X, const float *lut,
+                    const int offset);
+
 #endif // LAYERS_H_
