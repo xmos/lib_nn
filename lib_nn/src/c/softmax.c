@@ -1,7 +1,7 @@
-#include <stdint.h>
-#include "nn_operator.h"
-#include "nn_op_helper.h"
 #include "math.h"
+#include "nn_op_helper.h"
+#include "nn_operator.h"
+#include <stdint.h>
 
 void softmax_generate_exp_lut(int zero_point, float scale, float *lut) {
   for (int i = 0; i < 256; i++) {
@@ -29,6 +29,18 @@ void softmax_exp_div(int8_t Y[], const int8_t X[], const float *lut,
                      const float inv_sum, const unsigned elm_start,
                      const unsigned elm_count) {
   for (int i = elm_start; i < elm_start + elm_count; i++) {
-    Y[i] = (int8_t)(lut[X[i] + 128] * inv_sum - 128.5f);
+    Y[i] = (int8_t)(roundf(lut[X[i] + 128] * inv_sum) - 128);
+  }
+}
+
+void softmax_single(int8_t Y[], const int8_t X[], const float *lut,
+                    const int offset) {
+  float sum = 0.0f;
+  for (int i = 0; i < offset; i++) {
+    sum += lut[X[i] + 128];
+  }
+  const float inv_sum = 1.0f / sum * 256.0f;
+  for (int i = 0; i < offset; i++) {
+    Y[i] = (int8_t)(roundf(lut[X[i] + 128] * inv_sum) - 128);
   }
 }
