@@ -11,20 +11,18 @@ void mean_int8(const int8_t *input, int8_t *output, const int start_dim_size,
                const float in_zero_point, const float out_zero_point,
                const float scale_mul) {
 
-  const float val_multiplier = 1.0f / mean_dim_size;
+  const int32_t start = -in_zero_point * mean_dim_size;
   for (int i = 0; i < start_dim_size; ++i) {
     const int i_mul = i * mean_dim_size * end_dim_size;
     for (int k = 0; k < end_dim_size; ++k) {
-      int32_t accumulator = 0;
+      int32_t accumulator = start;
       for (int j = 0; j < mean_dim_size; ++j) {
         const int index = i_mul + j * end_dim_size + k;
         accumulator += input[index];
       }
 
       // Calculate the mean and apply quantization
-      const float mean_value = (float)accumulator * val_multiplier;
-      float quantized_value =
-          (mean_value - in_zero_point) * scale_mul + out_zero_point;
+      float quantized_value = (float)accumulator * scale_mul + out_zero_point;
 
       // Clamp the quantized value to int8 range
       if (quantized_value > 127.0f)
