@@ -295,4 +295,9 @@ void softmax_ref(int8_t *Y, const int8_t *X, const float zero_point,
 void softmax_single(int8_t *Y, const int8_t *X, const float *lut,
                     const int offset);
 
+void mean_int8(const int8_t *input, int8_t *output, const int start_dim_size,
+               const int mean_dim_size, const int end_dim_size,
+               const float in_zero_point, const float out_zero_point,
+               const float scale_mul);
+
 #endif // LAYERS_H_
