@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 #ifndef _vpu_memset_256_h_
 #define _vpu_memset_256_h_
 
