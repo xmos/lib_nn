@@ -110,6 +110,7 @@ FUNCTION_NAME:
 	ldap temp, HALF_TO_WORD
 	{ldw temp2, temp[0]; ldc temp, 1}
 	{ld16s temp3, r3[temp]; ldc temp, 2}
+        zext temp3, 16
 	mul temp3, temp3, temp2 	//broadcast the short to a word
 	ldaw bias, sp[S_BIAS]
 	std temp3, temp3, bias[0]
