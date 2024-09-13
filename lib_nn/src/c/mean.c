@@ -16,6 +16,10 @@ void mean_int8(const int8_t *input, int8_t *output, const int start_dim_size,
     const int i_mul = i * mean_dim_size * end_dim_size;
     for (int k = 0; k < end_dim_size; ++k) {
       int32_t accumulator = start;
+      // This is to avoid the for loop being badly misaligned
+      #ifdef __xcore__
+        asm volatile (".align 16");
+      #endif
       for (int j = 0; j < mean_dim_size; ++j) {
         const int index = i_mul + j * end_dim_size + k;
         accumulator += input[index];
