@@ -303,7 +303,7 @@ void test_TransposeConv2dPaddedIndirectRegression() {
                                     params.ot_p = &o;
 
                                     nn::execute(&output[0], &input[0]+a.input_offset, &params,
-                                                &a, rw.weights.data(), serialised_offsets_multipliers_and_biases.data(), /*isConv=*/true, &T[0]);
+                                                &a, rw.weights.data(), serialised_offsets_multipliers_and_biases.data(), conv_type::CONV, &T[0]);
 
                                 }
 

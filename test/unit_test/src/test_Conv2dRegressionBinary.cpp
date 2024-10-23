@@ -234,7 +234,7 @@ void test_Conv2dValidIndirectBinaryRegression() {
                                 params.agg_p = &agg;
                                 //params.ot_p = &o;
                                 nn::execute((int8_t *)&output[0], (int8_t *)&input[0], &params,
-                                            &a, rw.weights.data(), adjusted_thresholds.data(), /*isConv=*/true, &T[0]);
+                                            &a, rw.weights.data(), adjusted_thresholds.data(), conv_type::CONV, &T[0]);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
@@ -407,7 +407,7 @@ void test_Conv2dValidDirectBinaryRegression() {
                                 params.agg_p = &agg;
                                 //params.ot_p = &o;
                                 nn::execute((int8_t*)&output[0], (int8_t*)&input[0], &params,
-                                            &a, rw.weights.data(), adjusted_thresholds.data(), /*isConv=*/true);
+                                            &a, rw.weights.data(), adjusted_thresholds.data(), conv_type::CONV);
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
                                     for (int yd = 0;
@@ -618,7 +618,7 @@ void test_Conv2dValidIndirectInt8Regression() {
                                 params.agg_p = &agg;
                                 params.ot_p = &o;
                                 nn::execute(&output[0], (int8_t*)&input[0], &params,
-                                            &a, rw.weights.data(), serialised_offsets_multipliers_and_biases.data(), /*isConv=*/true, &T[0]);
+                                            &a, rw.weights.data(), serialised_offsets_multipliers_and_biases.data(), conv_type::CONV, &T[0]);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
@@ -815,7 +815,7 @@ void test_Conv2dValidDirectInt8Regression() {
                                 params.agg_p = &agg;
                                 params.ot_p = &o;
                                 nn::execute((int8_t*)output, (int8_t*)input.data(), &params,
-                                            &a, rw.weights.data(), serialised_offsets_multipliers_and_biases.data(), /*isConv=*/true);
+                                            &a, rw.weights.data(), serialised_offsets_multipliers_and_biases.data(), conv_type::CONV);
 
 
                                 for (int yh = 0; yh < Y.height; yh++) {
