@@ -22,17 +22,23 @@ struct abstract_kernel_params_t {
     const int32_t w_begin, w_end;
 
     /**
-     * The number of output channel groups that will be processed when this
+     * The first of output channel groups that will be processed when this
      * filter is executed.
      */
-    int32_t output_channel_group_count;
+    int32_t output_channel_group_begin;
+
+    /**
+     * The last of output channel groups that will be processed when this
+     * filter is executed.
+     */
+    int32_t output_channel_group_end;
 
     /**
      * The first output channel to be processed when this filter is executed.
      *
      * This filter will process output channels in the range:
      *  [`output_channel_slice_offset`, `output_channel_slice_offset` +
-     * `output_channel_group_count` * `channels_per_output_group`)
+     * (`output_channel_group_end` - `output_channel_group_begin`) * `channels_per_output_group`)
      *
      * Used for setting the first channels slice, i.e. rather than writing to
      * slice 0-31 by offsetting it we can address slice 32 - 63, etc.
@@ -88,8 +94,9 @@ class AbstractKernel {
           (output_region.EndVect().row - sub_h + stride_h - 1) /stride_h ,
           (output_region.start.col - sub_w )/ stride_w,
           (output_region.EndVect().col - sub_w + stride_w-1) / stride_w ,
-            (output_region.shape.depth + channels_per_output_group - 1) /
-            channels_per_output_group,
+          (output_region.start.channel / channels_per_output_group),
+          (output_region.start.channel / channels_per_output_group) + ((output_region.shape.depth + channels_per_output_group - 1) /
+          channels_per_output_group),
           output_region.start.channel + output_image.GetStride(sub_h, sub_w, 0), 
           output_image.GetStride(stride_h, -((output_region.shape.width - sub_w + stride_w - 1) / stride_w)*stride_w, 0),
           output_image.GetStride(0, stride_w, 0),
@@ -102,6 +109,10 @@ class AbstractKernel {
 typedef int8_t* (*MemFnType)(const void*, int8_t*, int8_t*, int32_t, int32_t, int32_t);
 typedef void (*AggFnType)(const void *, VPURingBuffer*, int8_t*, int32_t, int8_t*);
 typedef int8_t* (*OtFnType)(const void*, int8_t *, VPURingBuffer*, int32_t, int16_t*);
+
+enum conv_type {
+  CONV, DCONV, I16CONV
+};
 
 struct conv_params_t{
     void *mem_p;
@@ -135,7 +146,7 @@ struct conv_params_t{
  * @param [in] scratch Pointer to scratch memory
  */
 void execute(int8_t *Y, int8_t *X, conv_params_t *ak,
-             abstract_kernel_params_t *kparams, int8_t* weights, int16_t* muls_and_biases, bool isConv, int8_t *scratch = nullptr);
+             abstract_kernel_params_t *kparams, int8_t* weights, int16_t* muls_and_biases, conv_type c_type, int8_t *scratch = nullptr);
 
 
 }  // namespace nn

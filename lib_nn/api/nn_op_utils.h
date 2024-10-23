@@ -8,6 +8,9 @@
 
 #include "xs3_vpu.h"
 
+C_API int calculateAlignedThreadSplit(int tc, int split_size, int split_start[], int split_end[]);
+C_API int calculateThreadSplit(int tc, int split_size, int split_start[], int split_end[], int alignment);
+
 #ifdef __XC__
 extern "C" {
 #endif
