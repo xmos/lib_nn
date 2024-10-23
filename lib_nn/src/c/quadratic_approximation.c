@@ -123,6 +123,11 @@ float approximation_function_relu(float x) {
     return x >= 0 ? x : 0;
 }
 
+ACTIVATION_FUNCTION
+float approximation_function_relu6(float x) {
+    return x >= 6 ? 6 : x <= 0 ? 0 : x;
+}
+
 #define DATAPOINTS 65536
 #define DEGREE 3
 
