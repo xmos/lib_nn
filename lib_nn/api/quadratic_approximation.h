@@ -78,5 +78,6 @@ C_API float approximation_function_tanh(float x);
 C_API float approximation_function_logistics(float x);
 C_API float approximation_function_elu(float x);
 C_API float approximation_function_relu(float x);
+C_API float approximation_function_relu6(float x);
 
 #endif

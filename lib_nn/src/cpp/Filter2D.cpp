@@ -9,13 +9,10 @@ void dconv_calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h,
   // We could move this parameter out if we want to configure it
   const int output_channels_per_group = VPU_INT8_ACC_PERIOD;
   
-  const auto output_groups = kparams->output_channel_group_count;
-
-  for (int32_t chan_group = 0; chan_group < output_groups; chan_group++) {
+  for (int32_t chan_group = kparams->output_channel_group_begin; chan_group < kparams->output_channel_group_end; chan_group++) {
     VPURingBuffer A;
 
-    int c = kparams->output_channel_slice_offset +
-            chan_group * output_channels_per_group;
+    int c = chan_group * output_channels_per_group;
 
     // This will know how many channels it is copying
     int8_t *input_img =
@@ -36,8 +33,8 @@ void conv_calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h,
                                        abstract_kernel_params_t *kparams, conv_params_t *p, int8_t* weights, int16_t* muls_and_biases) {
   int8_t *input_img = p->memcopy_fn(p->mem_p,
       scratch_mem, X, h, w, 0);  // copy all input channels, channel start is implicitly 0.
-  for (int32_t output_chan_group = 0;
-       output_chan_group < kparams->output_channel_group_count;
+
+  for (int32_t output_chan_group = kparams->output_channel_group_begin; output_chan_group < kparams->output_channel_group_end;
        ++output_chan_group) {
     VPURingBuffer A;
     p->aggregate_fn(p->agg_p, &A, input_img, output_chan_group, weights);
@@ -47,7 +44,7 @@ void conv_calc_output_pixel_slice(int8_t *Y, int8_t *X, int32_t h,
 }
 
 void nn::execute(int8_t *Y, int8_t *X, conv_params_t *ak,
-             abstract_kernel_params_t *kparams, int8_t* weights, int16_t* muls_and_biases, bool isConv, int8_t *scratch) {
+             abstract_kernel_params_t *kparams, int8_t* weights, int16_t* muls_and_biases, conv_type c_type, int8_t *scratch) {
   int bytes_per_row =
       kparams->output_h_mem_stride +
       (kparams->w_end - kparams->w_begin) * kparams->output_w_mem_stride;
@@ -55,11 +52,18 @@ void nn::execute(int8_t *Y, int8_t *X, conv_params_t *ak,
   Y += kparams->h_begin * bytes_per_row +
        kparams->w_begin * kparams->output_w_mem_stride;
 
+  // Used for adjusting for transpose convolutions
   Y += kparams->output_channel_slice_offset;
-  if(isConv){
+
+  // Used for adjusting offset when multithreading int16 conv channel wise
+  if (c_type == conv_type::I16CONV) {
+    Y += kparams->output_channel_group_begin * VPU_INT8_ACC_PERIOD;
+  }
+
+  if (c_type == conv_type::DCONV) {
     for (int32_t h = kparams->h_begin; h < kparams->h_end; h++) {
       for (int32_t w = kparams->w_begin; w < kparams->w_end; w++) {
-        conv_calc_output_pixel_slice(Y, X, h, w, scratch, kparams, ak, weights, muls_and_biases);
+        dconv_calc_output_pixel_slice(Y, X, h, w, scratch, kparams, ak, weights, muls_and_biases);
         Y += kparams->output_w_mem_stride;
       }
       Y += kparams->output_h_mem_stride;
@@ -67,7 +71,7 @@ void nn::execute(int8_t *Y, int8_t *X, conv_params_t *ak,
   } else {
     for (int32_t h = kparams->h_begin; h < kparams->h_end; h++) {
       for (int32_t w = kparams->w_begin; w < kparams->w_end; w++) {
-        dconv_calc_output_pixel_slice(Y, X, h, w, scratch, kparams, ak, weights, muls_and_biases);
+        conv_calc_output_pixel_slice(Y, X, h, w, scratch, kparams, ak, weights, muls_and_biases);
         Y += kparams->output_w_mem_stride;
       }
       Y += kparams->output_h_mem_stride;

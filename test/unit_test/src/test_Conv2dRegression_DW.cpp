@@ -218,7 +218,7 @@ void test_Conv2dValidDirectDWRegression() {
                             params.ot_p = &o;
                             nn::execute(&output[0], &input[0], &params,
                                             &a, rw.weights.data(), serialised_multipliers_and_biases
-                                        .data(), /*isConv=*/false);
+                                        .data(), conv_type::DCONV);
 
                             for (int yh = 0; yh < Y.height; yh++) {
                               for (int yw = 0; yw < Y.width; yw++) {
@@ -392,7 +392,7 @@ void test_Conv2dValidDirectDWRegression_channelwise() {
                             params.mem_p = &m;
                             params.agg_p = &agg;
                             params.ot_p = &o;
-                            nn::execute(&output[0], &input[0], &params, &a, rw.weights.data(), serialised_multipliers_and_biases.data(), /*isConv=*/false);
+                            nn::execute(&output[0], &input[0], &params, &a, rw.weights.data(), serialised_multipliers_and_biases.data(), conv_type::DCONV);
                             for (int yh = 0; yh < Y.height; yh++) {
                               for (int yw = 0; yw < Y.width; yw++) {
                                 for (int yd = 0; yd < Y.depth; yd++) {
@@ -573,7 +573,7 @@ void test_Conv2dPaddedIndirectDWRegression() {
                             params.agg_p = &agg;
                             params.ot_p = &o;
                             nn::execute(&output[0], &input[0], &params, &a,
-                                        rw.weights.data(), serialised_multipliers_and_biases.data(), /*isConv=*/false, &T[0]);
+                                        rw.weights.data(), serialised_multipliers_and_biases.data(), conv_type::DCONV, &T[0]);
 
                             for (int yh = 0; yh < Y.height; yh++) {
                               for (int yw = 0; yw < Y.width; yw++) {
@@ -760,7 +760,7 @@ void test_Conv2dPaddedIndirectDWRegression_channelwise() {
                             params.agg_p = &agg;
                             params.ot_p = &o;
                             nn::execute(&output[0], &input[0], &params, &a,
-                                        rw.weights.data(), serialised_multipliers_and_biases.data(), /*isConv=*/false, &T[0]);
+                                        rw.weights.data(), serialised_multipliers_and_biases.data(), conv_type::DCONV, &T[0]);
 
                             for (int yh = 0; yh < Y.height; yh++) {
                               for (int yw = 0; yw < Y.width; yw++) {

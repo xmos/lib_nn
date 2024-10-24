@@ -215,7 +215,7 @@ void test_Conv2dPaddedIndirectRegression() {
                                 params.agg_p = &agg;
                                 params.ot_p = &o;
                                 nn::execute(&output[0], &input[0], &params,
-                                            &a, rw.weights.data(), serialised_offsets_multipliers_and_biases.data(), /*isConv=*/true, &T[0]);
+                                            &a, rw.weights.data(), serialised_offsets_multipliers_and_biases.data(), conv_type::CONV, &T[0]);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
@@ -394,7 +394,7 @@ void test_Conv2dPaddedIndirectRegression_channelwise() {
                                 params.agg_p = &agg;
                                 params.ot_p = &o;
                                 nn::execute(&output[0], &input[0], &params,
-                                            &a, rw.weights.data(), serialised_multipliers_and_biases.data(), /*isConv=*/true, &T[0]);
+                                            &a, rw.weights.data(), serialised_multipliers_and_biases.data(), conv_type::CONV, &T[0]);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
@@ -568,7 +568,7 @@ void test_Conv2dValidIndirectRegression() {
                                 params.agg_p = &agg;
                                 params.ot_p = &o;
                                 nn::execute(&output[0], &input[0], &params,
-                                            &a, rw.weights.data(), serialised_offsets_multipliers_and_biases.data(), /*isConv=*/true, &T[0]);
+                                            &a, rw.weights.data(), serialised_offsets_multipliers_and_biases.data(), conv_type::CONV, &T[0]);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
@@ -746,7 +746,7 @@ void test_Conv2dValidIndirectRegression_channelwise() {
                                 params.agg_p = &agg;
                                 params.ot_p = &o;
                                 nn::execute(&output[0], &input[0], &params,
-                                            &a, rw.weights.data(), serialised_offsets_multipliers_and_biases.data(), /*isConv=*/true, &T[0]);
+                                            &a, rw.weights.data(), serialised_offsets_multipliers_and_biases.data(), conv_type::CONV, &T[0]);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
@@ -916,7 +916,7 @@ void test_Conv2dValidDirectRegression() {
 
                                 nn::execute(&output[0], &input[0], &params,
                                             &a, rw.weights.data(), serialised_offsets_multipliers_and_biases
-                                        .data(), /*isConv=*/true);
+                                        .data(), conv_type::CONV);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
@@ -1085,7 +1085,7 @@ void test_Conv2dValidDirectRegression_channelwise() {
                                 params.agg_p = &agg;
                                 params.ot_p = &o;
                                 nn::execute(&output[0], &input[0], &params,
-                                            &a, rw.weights.data(), serialised_offsets_multipliers_and_biases.data(), /*isConv=*/true);
+                                            &a, rw.weights.data(), serialised_offsets_multipliers_and_biases.data(), conv_type::CONV);
 
                                 for (int yh = 0; yh < Y.height; yh++) {
                                   for (int yw = 0; yw < Y.width; yw++) {
