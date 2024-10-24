@@ -22,7 +22,7 @@ int calculateThreadSplit(int tc, int split_size, int split_start[],
   tc = tc > threads_needed ? threads_needed : tc;
 
   for (int i = 0; i < tc; i++) {
-    auto split = (split_size + (tc - i) - 1) / (tc - i);
+    int split = (split_size + (tc - i) - 1) / (tc - i);
     split_size -= split;
     if (split > 0) {
       split_end[i] = split_start[i] + split;
