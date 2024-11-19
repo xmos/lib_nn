@@ -16,10 +16,10 @@ void mean_int8(const int8_t *input, int8_t *output, const int start_dim_size,
     const int i_mul = i * mean_dim_size * end_dim_size;
     for (int k = 0; k < end_dim_size; ++k) {
       int32_t accumulator = start;
-      // This is to avoid the for loop being badly misaligned
-      #ifdef __xcore__
-        asm volatile (".align 16");
-      #endif
+// This is to avoid the for loop being badly misaligned
+#ifdef __xcore__
+      asm volatile(".align 16");
+#endif
       for (int j = 0; j < mean_dim_size; ++j) {
         const int index = i_mul + j * end_dim_size + k;
         accumulator += input[index];
@@ -36,6 +36,38 @@ void mean_int8(const int8_t *input, int8_t *output, const int start_dim_size,
 
       int out_index = i * end_dim_size + k;
       output[out_index] = (int8_t)(roundf(quantized_value));
+    }
+  }
+}
+
+void mean_int16(const int16_t *input, int16_t *output, const int start_dim_size,
+                const int mean_dim_size, const int end_dim_size,
+                const float scale_mul) {
+
+  for (int i = 0; i < start_dim_size; ++i) {
+    const int i_mul = i * mean_dim_size * end_dim_size;
+    for (int k = 0; k < end_dim_size; ++k) {
+      int32_t accumulator = 0;
+// This is to avoid the for loop being badly misaligned
+#ifdef __xcore__
+      asm volatile(".align 16");
+#endif
+      for (int j = 0; j < mean_dim_size; ++j) {
+        const int index = i_mul + j * end_dim_size + k;
+        accumulator += input[index];
+      }
+
+      // Calculate the mean and apply quantization
+      float quantized_value = (float)accumulator * scale_mul;
+
+      // Clamp the quantized value to int16 range
+      if (quantized_value > 32767.0f)
+        quantized_value = 32767.0f;
+      else if (quantized_value < -32768.0f)
+        quantized_value = -32768.0f;
+
+      int out_index = i * end_dim_size + k;
+      output[out_index] = (int16_t)(roundf(quantized_value));
     }
   }
 }
