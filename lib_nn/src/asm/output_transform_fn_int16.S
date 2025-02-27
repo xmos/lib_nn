@@ -1,3 +1,4 @@
+#if defined(__XS3A__)
 #include <xs1.h>
 
 // output_transform_fn_int16_impl_asm(int32_t *vDvR, int32_t *mul_add, int32_t *output, int elements);
@@ -76,3 +77,4 @@ output_transform_16_unzip_loop:
     .size FUNCTION_NAME, .Ltmp0-FUNCTION_NAME
     .issue_mode  single
 
+#endif

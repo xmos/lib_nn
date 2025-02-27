@@ -1,6 +1,6 @@
 #include <xs1.h>
+#if defined(__XS3A__)
 
-    
 // quantize_int16_tensor_asm(int16_t *output, int16_t *input, int elements, char *blob);
 
 #define FUNCTION_NAME quantize_int16_tensor_asm
@@ -81,5 +81,5 @@ minint:
     .globl FUNCTION_NAME.maxchanends
 .Ltmp1:
     .size FUNCTION_NAME, .Ltmp1-FUNCTION_NAME
-
+#endif
     

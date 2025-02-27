@@ -1,5 +1,5 @@
 #include <xs1.h>
-
+#if defined(__XS3A__)
     
 // add_int16_tensor_asm(int16_t *output, int16_t *input, int16_t *input2, int elements, char *blob);
 
@@ -117,5 +117,5 @@ done:
 .Ltmp1:
     .size FUNCTION_NAME, .Ltmp1-FUNCTION_NAME
 
-
+#endif
 
