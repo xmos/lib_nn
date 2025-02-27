@@ -1,5 +1,5 @@
 #include <xs1.h>
-
+#if defined(__XS3A__)
     
 // dequantize_int16_tensor_asm(int16_t *output, int16_t *input, int elements, char *blob);
 
@@ -56,3 +56,4 @@ magic_constant:
     .size FUNCTION_NAME, .Ltmp1-FUNCTION_NAME
 
     
+#endif
