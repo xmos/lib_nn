@@ -70,7 +70,7 @@ pipeline {
                       cmake .. && make"""
                 sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
                       . activate ./lib_nn_venv && mkdir -p build_xcore && cd build_xcore && 
-                      cmake -DCMAKE_TOOLCHAIN_FILE=../etc/xmos_toolchain.cmake .. && make"""
+                      cmake -DCMAKE_TOOLCHAIN_FILE=../etc/xs3a.cmake .. && make"""
                 sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
                       . activate ./lib_nn_venv &&
                       cd test/gtests && ./build.sh && make all PLATFORM=x86"""

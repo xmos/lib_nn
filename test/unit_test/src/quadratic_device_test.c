@@ -4,7 +4,7 @@
 #include "quadratic_approximation.h"
 #include "quadratic_interpolation.h"
 
-int quadratic_device_test_main(void) {
+void quadratic_device_test_main(void) {
     double square_error;
     int max_error;
     int chunks = 128;
