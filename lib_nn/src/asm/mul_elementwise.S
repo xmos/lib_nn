@@ -1,3 +1,8 @@
+	
+// Copyright 2020-2025 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
+#if defined(__XS3A__)
+
 	.text
 
 	#define FUNCTION_NAME mul_elementwise_asm
@@ -197,3 +202,4 @@ FUNCTION_NAME:
 	.set	FUNCTION_NAME.maxchanends,0
 .Ltmp2:
 	.size	FUNCTION_NAME, .Ltmp2-FUNCTION_NAME
+#endif

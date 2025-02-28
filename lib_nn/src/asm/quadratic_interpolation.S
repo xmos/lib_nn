@@ -1,3 +1,7 @@
+// Copyright 2020-2025 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
+#if defined(__XS3A__)
+
 /*
     Code for calculating a quadratic interpolation.
     This function is at present hard coded for 128 chunks of 512 elements each.
@@ -90,3 +94,4 @@ zero_offset_9_bit:
     .word   0xFF00FF00, 0xFF00FF00, 0xFF00FF00, 0xFF00FF00
     
     .cc_bottom quadratic_interpolation_128.function
+#endif
