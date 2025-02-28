@@ -1,5 +1,8 @@
 	
-	#if defined(__XS3A__)
+// Copyright 2020-2025 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
+#if defined(__XS3A__)
+
 	.text
 
 	#define FUNCTION_NAME mul_elementwise_asm

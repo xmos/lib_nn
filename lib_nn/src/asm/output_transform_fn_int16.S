@@ -1,4 +1,7 @@
+// Copyright 2020-2025 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if defined(__XS3A__)
+
 #include <xs1.h>
 
 // output_transform_fn_int16_impl_asm(int32_t *vDvR, int32_t *mul_add, int32_t *output, int elements);

@@ -18,7 +18,7 @@ void broadcast_32_to_256(void *dst, uint32_t from) {
         ((uint32_t *)dst)[i] = from;
     }
 #else
-    #ifdef __XS3A__
+    #if defined(__XS3A__)
     asm("std %0, %1, %2[0]" :: "r" (from), "r" (from), "r" (dst));
     asm("std %0, %1, %2[1]" :: "r" (from), "r" (from), "r" (dst));
     asm("std %0, %1, %2[2]" :: "r" (from), "r" (from), "r" (dst));

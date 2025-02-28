@@ -1,6 +1,7 @@
-// Copyright 2020-2021 XMOS LIMITED.
+// Copyright 2020-2025 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
-#ifndef NN_USE_REF
+#if defined(__XS3A__)
+
 #include <xs1.h>
 
 // void vpu_memmove_word_aligned(void * dst, const void * src, unsigned byte_count);

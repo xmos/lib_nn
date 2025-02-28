@@ -1,5 +1,8 @@
-#include <xs1.h>
+// Copyright 2020-2025 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if defined(__XS3A__)
+
+#include <xs1.h>
 
 // quantize_int16_tensor_asm(int16_t *output, int16_t *input, int elements, char *blob);
 
