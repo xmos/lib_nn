@@ -130,6 +130,10 @@ extern void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3,
 extern void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3,
                            uint32_t pad_val);
 
+
+extern void pad_1_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N,
+                          uint32_t pad_val);
+
 typedef struct nn_mul_params_t {
   int8_t in1_zero_point;
   int8_t in2_zero_point;
