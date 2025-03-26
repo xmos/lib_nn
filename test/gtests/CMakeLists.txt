@@ -38,6 +38,12 @@ list(APPEND LINKER_FLAGS_XS3A "-report")
 list(APPEND LINKER_FLAGS_XS3A "-fcmdline-buffer-bytes=1024")
 list(APPEND LINKER_FLAGS_XS3A "${XSCOPE_CONFIG}")
 
+unset(LINKER_FLAGS_VX4A)
+list(APPEND LINKER_FLAGS_VX4A "-target=${XCORE_TARGET}")
+list(APPEND LINKER_FLAGS_VX4A "-report")
+list(APPEND LINKER_FLAGS_VX4A "-fcmdline-buffer-bytes=1024")
+list(APPEND LINKER_FLAGS_VX4A "${XSCOPE_CONFIG}")
+
 list(APPEND LINKER_FLAGS ${LINKER_FLAGS_${CMAKE_SYSTEM_NAME}})
 
 #
@@ -65,7 +71,12 @@ target_compile_options(${APP_NAME} PRIVATE ${COMPILE_FLAGS})
 string(REPLACE ";" " " LINKER_FLAGS_STR "${LINKER_FLAGS}")
 set_target_properties(${APP_NAME} PROPERTIES LINK_FLAGS "${LINKER_FLAGS_STR}")
 
-if(XCORE)
+if(XS3A)
+  set_target_properties(${APP_NAME} PROPERTIES SUFFIX ".xe" LINK_DEPENDS
+                                                            ${XSCOPE_CONFIG})
+endif()
+
+if(VX4A)
   set_target_properties(${APP_NAME} PROPERTIES SUFFIX ".xe" LINK_DEPENDS
                                                             ${XSCOPE_CONFIG})
 endif()

@@ -15,19 +15,15 @@ XS3 based microcontrollers, like xcore.ai, have a vector unit with 256 bit wide 
 This document assumes familiarity with the XMOS xCORE architecture, the XMOS tool chain, the 'C' programming language, and neural network concepts.
 
 ## Building
-For an XCore build:
+For an XS3A XCore build:
 
-    mkdir -p build_xcore
-    cd build_xcore
-    cmake -DCMAKE_TOOLCHAIN_FILE=../etc/xmos_toolchain.cmake ..
-    make
+    cmake -B build_xs3a -DCMAKE_TOOLCHAIN_FILE=etc/xs3a.cmake ..
+    make -C build_xs3a
 
 For an x86 build:
 
-    mkdir -p build_x86
-    cd build_x86
-    cmake ..
-    make
+    cmake -B build_x86 
+    make -C build_x86
 
 ## API
 

@@ -60,3 +60,59 @@ FUNCTION_NAME:
     .size FUNCTION_NAME, .Ltmp1-FUNCTION_NAME
     
 #endif
+
+
+
+
+#if defined(__VX4A__)
+// void vpu_memset_256(void * dst, const void * src, unsigned byte_count);
+
+#define FUNCTION_NAME vpu_memset_256
+
+#define NSTACKWORDS 4
+#define ROUND_UP(X, Y) (((X+Y-1)/Y)*Y)
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+
+    {xm.entsp ROUND_UP(NSTACKWORDS*4, 16); xm.addi x28, x11, 0}
+
+    { xm.vldr   x28                        ; xm.addi x11, x10, 0 }
+    { xm.zexti  x11, 2                     ; xm.shri x13, x12, 5 }  // x13: vectors
+    { xm.brff  x11, vpu_memset_256_aligned ; xm.mkmsk x28, x12 }
+
+    
+    { xm.shl   x28, x28, x11               ; xm.subi   x12, x12, 4 }
+    { xm.sub   x10, x10, x11               ; xm.add   x12, x12, x11}
+
+    xm.vstrpv x10, x28
+    addi   x10, x10, 4
+
+    srai  x13, x12, 31
+    { xm.bt    x13, vpu_memset_256_done    ; xm.shri   x13, x12, 5 }
+
+vpu_memset_256_aligned:
+    { xm.brff  x13, vpu_memset_256_done_whole_vectors ; xm.shli x28, x13, 5 }
+    { xm.ldcu x28, 32                      ; xm.sub x12, x12, x28}
+
+vpu_memset_256_loop:
+    { xm.vstr x10                          ; xm.subi x13, x13, 1}
+    { xm.bt x13, vpu_memset_256_loop       ; xm.add x10, x10, x28}
+
+vpu_memset_256_done_whole_vectors:
+    { xm.mkmsk x12, x12                    ; xm.nop }
+    xm.vstrpv x10, x12
+vpu_memset_256_done:
+
+	{xm.retsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
+
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes", ROUND_UP(NSTACKWORDS*4, 16)
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
+
+#endif

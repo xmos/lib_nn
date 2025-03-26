@@ -74,3 +74,117 @@ done:
 	retsp 0
 
 #endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#if defined(__VX4A__)
+
+#define FUNCTION_NAME vpu_memcpy_vector_ext_asm
+
+#define NSTACKWORDS (6)
+#define ROUND_UP(X, Y) (((X+Y-1)/Y)*Y)
+
+//    void vpu_memcpy_vector_ext_asm(
+//        void* dst, 
+//        const void* src, 
+//        size_t byte_count);
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+
+    {xm.entsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
+
+    {xm.ldcu x13, 32; xm.brff x12, early_exit } // number of bytes address increments between vec accesses 
+    xm.stdsp x18, x19, 0*8
+    xm.stdsp x20, x21, 1*8
+
+    xm.ldcu  x18, 64       // number of bytes address increments, i.e. 2 lines, between 2 stages of loop 
+    xm.ldcu  x19, 68       // 2 lines + 1word offset to do misaligned prefetch of 2 lines, 2 lines ahead 
+    xm.ldcu  x20, 128      // 4 lines, the number of bytes to increment addresses per loop
+
+    add x28, x11, 4        // get the first 2 lines, for 1st iteration
+    { xm.prefetch x28       ; xm.add  x28, x11, x19  }
+
+vpu_memcpy_vector_ext_asm_OMC_cpy_loop:
+    { xm.prefetch x28       ; xm.add  x28, x28, x18 }   // prefetch 2 lines for second half of loop
+    addi  x28, x11, 0
+    
+    { xm.vldc x28           ; xm.add  x28, x28, x13 }
+    { xm.vldd x28           ; xm.addi x28, x10, 0   }
+    { xm.vstc x28           ; xm.add  x28, x28, x13 }
+    { xm.vstd x28           ; xm.add  x28, x11, x19 }
+    
+    add x28, x28, x18
+    { xm.prefetch x28    ; xm.add  x28, x11, x18 }
+    { xm.vldc x28        ; xm.add  x28, x28, x13 }
+    { xm.vldd x28        ; xm.add  x28, x10, x18 }
+    { xm.vstc x28        ; xm.add  x28, x28, x13 }
+    { xm.vstd x28        ; xm.subi x12, x12, 1   }
+
+    { xm.add  x11, x11, x20     ; xm.add x10, x10, x20  } 
+    {xm.bt x12, vpu_memcpy_vector_ext_asm_OMC_cpy_loop; xm.add x28, x11, x19  }
+
+    xm.lddsp x18, x19, 0*8
+    xm.lddsp x20, x21, 1*8
+
+early_exit: 
+    {xm.retsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
+
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes", ROUND_UP(NSTACKWORDS*4, 16)
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
+
+#undef FUNCTION_NAME
+#undef NSTACKWORDS
+
+#define FUNCTION_NAME vpu_memcpy_vector_int_asm
+#define NSTACKWORDS (8)
+
+//    void vpu_memcpy_vector_int_asm(
+//        void* dst, 
+//        const void* src, 
+//        size_t byte_count);
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+
+    {xm.subi x12, x12, 1; xm.brff x12, dvpu_memcpy_vector_int_asm_done}
+    {xm.ldcu x28, 32;xm.nop}
+
+vpu_memcpy_vector_int_asm_loop:
+    {xm.vldd x11; xm.add x11, x11, x28}
+    {xm.vstd x10; xm.add x10, x10, x28}
+    {xm.bt x12, vpu_memcpy_vector_int_asm_loop; xm.subi x12, x12, 1}
+dvpu_memcpy_vector_int_asm_done:
+	ret
+
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes", ROUND_UP(NSTACKWORDS*4, 16)
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
+
+
+#endif

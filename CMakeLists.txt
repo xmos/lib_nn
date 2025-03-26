@@ -21,8 +21,8 @@ list(APPEND BUILD_FLAGS_Darwin "-fsanitize=implicit-conversion" )
 list(APPEND BUILD_FLAGS_Darwin "-fsanitize-recover=address" )
 list(APPEND BUILD_FLAGS_Darwin "-fsanitize=address" )
 
-
 set(BUILD_FLAGS_XS3A "-march=xs3a")
+set(BUILD_FLAGS_VX4A "-march=vx4a")
 if(BUILD_DDR_FIX)
   list(APPEND BUILD_FLAGS_XS3A "-DUSE_DDR_FIX")
 endif(BUILD_DDR_FIX)
@@ -42,6 +42,7 @@ list(APPEND   CMAKE_C_FLAGS ${CMAKE_C_FLAGS_${CMAKE_SYSTEM_NAME}} )
 list(JOIN CMAKE_CXX_FLAGS " " CMAKE_CXX_FLAGS)
 list(JOIN CMAKE_C_FLAGS " " CMAKE_C_FLAGS)
 list(APPEND   COMPILE_FLAGS_XS3A  -march=xs3a   )
+list(APPEND   COMPILE_FLAGS_VX4A  -march=vx4a   )
 list(APPEND   COMPILE_FLAGS ${COMPILE_FLAGS_${CMAKE_SYSTEM_NAME}} )
 
 
