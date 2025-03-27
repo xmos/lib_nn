@@ -3,6 +3,12 @@
 #include "nn_operator.h"
 #include <stdint.h>
 
+static int clamp8(double x) {
+    if (x > 127) return 127;
+    if (x < -128) return -128;
+    return x;
+}
+
 void softmax_generate_exp_lut(int zero_point, float scale, float *lut) {
   for (int i = 0; i < 256; i++) {
     float real_val = (float)(i - zero_point) * scale;
@@ -29,7 +35,7 @@ void softmax_exp_div(int8_t Y[], const int8_t X[], const float *lut,
                      const float inv_sum, const unsigned elm_start,
                      const unsigned elm_count) {
   for (int i = elm_start; i < elm_start + elm_count; i++) {
-    Y[i] = (int8_t)(roundf(lut[X[i] + 128] * inv_sum) - 128);
+    Y[i] = (int8_t)clamp8(roundf(lut[X[i] + 128] * inv_sum) - 128);
   }
 }
 
@@ -41,6 +47,6 @@ void softmax_single(int8_t Y[], const int8_t X[], const float *lut,
   }
   const float inv_sum = 1.0f / sum * 256.0f;
   for (int i = 0; i < offset; i++) {
-    Y[i] = (int8_t)(roundf(lut[X[i] + 128] * inv_sum) - 128);
+    Y[i] = (int8_t)clamp8(roundf(lut[X[i] + 128] * inv_sum) - 128);
   }
 }
