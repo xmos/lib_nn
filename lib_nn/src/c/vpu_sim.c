@@ -42,7 +42,7 @@ int64_t vpu_saturate_fixed(const int64_t input, const unsigned bits) {
  * Get the accumulator for the VPU's current mode
  */
 static int64_t GetAccumulator(const xs3_vpu *vpu, unsigned index) {
-  if (vpu->mode == MODE_S8 || vpu->mode == MODE_S16) {
+  if (vpu->mode == MODE_S8 || vpu->mode == MODE_S16 || vpu->mode == MODE_S16x8) {
     union {
       int16_t s16[2];
       int32_t s32;
@@ -60,7 +60,7 @@ static int64_t GetAccumulator(const xs3_vpu *vpu, unsigned index) {
  * Set the accumulator for the VPU's current mode
  */
 static void SetAccumulator(xs3_vpu *vpu, unsigned index, int64_t acc) {
-  if (vpu->mode == MODE_S8 || vpu->mode == MODE_S16) {
+  if (vpu->mode == MODE_S8 || vpu->mode == MODE_S16 || vpu->mode == MODE_S16x8) {
     unsigned mask = (1 << VPU_INT8_ACC_VR_BITS) - 1;
     vpu->vR.s16[index] = (int16_t)((unsigned)acc & mask);
     mask = mask << VPU_INT8_ACC_VR_BITS;
@@ -75,7 +75,7 @@ static void SetAccumulator(xs3_vpu *vpu, unsigned index, int64_t acc) {
  * Rotate the accumulators following a VLMACCR
  */
 static void rotate_accumulators(xs3_vpu *vpu) {
-  if (vpu->mode == MODE_S8 || vpu->mode == MODE_S16) {
+  if (vpu->mode == MODE_S8 || vpu->mode == MODE_S16 || vpu->mode == MODE_S16x8) {
     data16_t tmpD = vpu->vD.u16[VPU_INT8_ACC_PERIOD - 1];
     data16_t tmpR = vpu->vR.u16[VPU_INT8_ACC_PERIOD - 1];
     for (int i = VPU_INT8_ACC_PERIOD - 1; i > 0; i--) {
@@ -106,37 +106,51 @@ void VCLRDR(xs3_vpu *vpu) {
 }
 
 void VLDR(xs3_vpu *vpu, const void *addr) {
+  #ifdef __XS3A__
   assert_word_aligned(addr);
+  #endif
   memcpy(&vpu->vR.u8[0], addr, XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VLDD(xs3_vpu *vpu, const void *addr) {
+  #ifdef __XS3A__
   assert_word_aligned(addr);
+  #endif
   memcpy(&vpu->vD.u8[0], addr, XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VLDC(xs3_vpu *vpu, const void *addr) {
+  #ifdef __XS3A__
   assert_word_aligned(addr);
+  #endif
   memcpy(&vpu->vC.u8[0], addr, XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VSTR(const xs3_vpu *vpu, void *addr) {
+  #ifdef __XS3A__
   assert_word_aligned(addr);
+  #endif
   memcpy(addr, &vpu->vR.u8[0], XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VSTD(const xs3_vpu *vpu, void *addr) {
+  #ifdef __XS3A__
   assert_word_aligned(addr);
+  #endif
   memcpy(addr, &vpu->vD.u8[0], XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VSTC(const xs3_vpu *vpu, void *addr) {
+  #ifdef __XS3A__
   assert_word_aligned(addr);
+  #endif
   memcpy(addr, &vpu->vC.u8[0], XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VSTRPV(const xs3_vpu *vpu, void *addr, unsigned mask) {
+  #ifdef __XS3A__
   assert_word_aligned(addr);
+  #endif
   int8_t *addr8 = (int8_t *)addr;
 
   for (int i = 0; i < 32; i++) {
@@ -147,7 +161,9 @@ void VSTRPV(const xs3_vpu *vpu, void *addr, unsigned mask) {
 }
 
 void VLMACC(xs3_vpu *vpu, const void *addr) {
+  #ifdef __XS3A__
   assert_word_aligned(addr);
+  #endif
   if (vpu->mode == MODE_S8) {
     const int8_t *addr8 = (const int8_t *)addr;
 
@@ -166,6 +182,15 @@ void VLMACC(xs3_vpu *vpu, const void *addr) {
 
       SetAccumulator(vpu, i, vpu_saturate(acc, 32));
     }
+  } else if (vpu->mode == MODE_S16x8) {
+    const int8_t *addr8 = (const int8_t *)addr;
+
+    for (int i = 0; i < VPU_INT16_VLMACC_ELMS; i++) {
+      int64_t acc = GetAccumulator(vpu, i);
+      acc = acc + (((int32_t)vpu->vC.s16[i]) * (int16_t)(addr8[2*i]));
+
+      SetAccumulator(vpu, i, vpu_saturate(acc, 32));
+    }
   } else if (vpu->mode == MODE_S32) {
     const int32_t *addr32 = (const int32_t *)addr;
 
@@ -181,7 +206,9 @@ void VLMACC(xs3_vpu *vpu, const void *addr) {
 }
 
 void VLMACCR(xs3_vpu *vpu, const void *addr) {
+  #ifdef __XS3A__
   assert_word_aligned(addr);
+  #endif
   if (vpu->mode == MODE_S8) {
     const int8_t *addr8 = (const int8_t *)addr;
     int64_t acc = GetAccumulator(vpu, VPU_INT8_ACC_PERIOD - 1);
@@ -198,6 +225,16 @@ void VLMACCR(xs3_vpu *vpu, const void *addr) {
 
     for (int i = 0; i < VPU_INT16_EPV; i++)
       acc = acc + (((int32_t)vpu->vC.s16[i]) * addr16[i]);
+
+    acc = vpu_saturate(acc, 32);
+    rotate_accumulators(vpu);
+    SetAccumulator(vpu, 0, acc);
+  } else if (vpu->mode == MODE_S16x8) {
+    const int8_t *addr8 = (const int8_t *)addr;
+    int64_t acc = GetAccumulator(vpu, VPU_INT16_ACC_PERIOD - 1);
+
+    for (int i = 0; i < VPU_INT16_EPV; i++)
+      acc = acc + (((int32_t)vpu->vC.s16[i]) * (int16_t)(addr8[2*i]));
 
     acc = vpu_saturate(acc, 32);
     rotate_accumulators(vpu);
@@ -242,7 +279,9 @@ void VPOS(xs3_vpu *vpu) {
 }
 
 void VLMACCR1(xs3_vpu *vpu, const void *addr) {
+  #ifdef __XS3A__
   assert_word_aligned(addr);
+  #endif
   const int32_t *addr32 = (const int32_t *)addr;
   int64_t acc = GetAccumulator(vpu, VPU_BIN_ACC_PERIOD - 1);
 
@@ -257,7 +296,9 @@ void VLMACCR1(xs3_vpu *vpu, const void *addr) {
 }
 
 void _VLSAT_IMPL(xs3_vpu *vpu, const void *addr, bool fixed_saturation) {
+  #ifdef __XS3A__
   assert_word_aligned(addr);
+  #endif
   if (vpu->mode == MODE_S8) {
     const uint16_t *addr16 = (const uint16_t *)addr;
 
@@ -317,7 +358,9 @@ void VLSAT_FIXED(xs3_vpu *vpu, const void *addr) {
 }
 
 void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
+  #ifdef __XS3A__
   assert_word_aligned(addr);
+  #endif
   if (vpu->mode == MODE_S8) {
     const int8_t *addr8 = (const int8_t *)addr;
 
@@ -365,7 +408,9 @@ void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
 }
 
 void VLADD(xs3_vpu *vpu, const void *addr) {
+  #ifdef __XS3A__
   assert_word_aligned(addr);
+  #endif
   if (vpu->mode == MODE_S8) {
     const int8_t *addr8 = (const int8_t *)addr;
     for (int i = 0; i < VPU_INT8_EPV; i++) {
@@ -392,7 +437,9 @@ void VLADD(xs3_vpu *vpu, const void *addr) {
 }
 
 void VLSUB(xs3_vpu *vpu, const void *addr) {
+  #ifdef __XS3A__
   assert_word_aligned(addr);
+  #endif
   if (vpu->mode == MODE_S8) {
     const int8_t *addr8 = (const int8_t *)addr;
     for (int i = 0; i < VPU_INT8_EPV; i++) {
@@ -418,7 +465,9 @@ void VLSUB(xs3_vpu *vpu, const void *addr) {
   }
 }
 void VLMUL(xs3_vpu *vpu, const void *addr) {
+  #ifdef __XS3A__
   assert_word_aligned(addr);
+  #endif
   if (vpu->mode == MODE_S8) {
     const int8_t *addr8 = (const int8_t *)addr;
     for (int i = 0; i < VPU_INT8_EPV; i++) {
@@ -521,13 +570,21 @@ void vpu_sim_mem_print(void *address, vector_mode mode) {
       }
       break;
 
-    case MODE_S16:
-      printf("16-bit:\n");
-      for (int i = 0; i < VPU_INT16_EPV; i++) {
-        printf("%d\t%c0x%0.4X(%d)\n", i, signof(vC16[i]), abs(vC16[i]),
-               (int)vC16[i]);
-      }
-      break;
+      case MODE_S16:
+        printf("16-bit:\n");
+        for (int i = 0; i < VPU_INT16_EPV; i++) {
+          printf("%d\t%c0x%0.4X(%d)\n", i, signof(vC16[i]), abs(vC16[i]),
+                  (int)vC16[i]);
+        }
+        break;
+
+        case MODE_S16x8:
+          printf("16x8-bit:\n");
+          for (int i = 0; i < VPU_INT16_EPV; i++) {
+            printf("%d\t%c0x%0.4X(%d)\n", i, signof(vC8[2*i]), abs(vC8[2*i]),
+                   (int)vC8[2*i]);
+          }
+          break;
 
     case MODE_S32:
       printf("32-bit:\n");
@@ -552,7 +609,7 @@ void vpu_accu_print(xs3_vpu *vpu) {
       int32_t acc = GetAccumulator(vpu, i);
       printf("%d %d\n", i, acc);
     }
-  } else if (vpu->mode == MODE_S16) {
+  } else if ((vpu->mode == MODE_S16)|| (vpu->mode == MODE_S16x8)) {
     for (int i = 0; i < VPU_INT16_ACC_PERIOD; i++) {
       int32_t acc = GetAccumulator(vpu, i);
       printf("%d %d\n", i, acc);
