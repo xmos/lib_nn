@@ -176,32 +176,13 @@ vlsat_done:
 #define NSTACKWORDS (8+2)
 #define ROUND_UP(X, Y) (((X+Y-1)/Y)*Y)
 
-VECT_SHIFT_TABLE:
-	.word    0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000
-	.word    0x010001, 0x010001, 0x010001, 0x010001, 0x010001, 0x010001, 0x010001, 0x010001
-	.word    0x020002, 0x020002, 0x020002, 0x020002, 0x020002, 0x020002, 0x020002, 0x020002
-	.word    0x030003, 0x030003, 0x030003, 0x030003, 0x030003, 0x030003, 0x030003, 0x030003
-	.word    0x040004, 0x040004, 0x040004, 0x040004, 0x040004, 0x040004, 0x040004, 0x040004
-	.word    0x050005, 0x050005, 0x050005, 0x050005, 0x050005, 0x050005, 0x050005, 0x050005
-	.word    0x060006, 0x060006, 0x060006, 0x060006, 0x060006, 0x060006, 0x060006, 0x060006
-	.word    0x070007, 0x070007, 0x070007, 0x070007, 0x070007, 0x070007, 0x070007, 0x070007
-	.word    0x080008, 0x080008, 0x080008, 0x080008, 0x080008, 0x080008, 0x080008, 0x080008
-	.word    0x090009, 0x090009, 0x090009, 0x090009, 0x090009, 0x090009, 0x090009, 0x090009
-	.word    0x0A000A, 0x0A000A, 0x0A000A, 0x0A000A, 0x0A000A, 0x0A000A, 0x0A000A, 0x0A000A
-	.word    0x0B000B, 0x0B000B, 0x0B000B, 0x0B000B, 0x0B000B, 0x0B000B, 0x0B000B, 0x0B000B
-	.word    0x0C000C, 0x0C000C, 0x0C000C, 0x0C000C, 0x0C000C, 0x0C000C, 0x0C000C, 0x0C000C
-	.word    0x0D000D, 0x0D000D, 0x0D000D, 0x0D000D, 0x0D000D, 0x0D000D, 0x0D000D, 0x0D000D
-	.word    0x0E000E, 0x0E000E, 0x0E000E, 0x0E000E, 0x0E000E, 0x0E000E, 0x0E000E, 0x0E000E
-	.word    0x0F000F, 0x0F000F, 0x0F000F, 0x0F000F, 0x0F000F, 0x0F000F, 0x0F000F, 0x0F000F
-	.word    0x100010, 0x100010, 0x100010, 0x100010, 0x100010, 0x100010, 0x100010, 0x100010
+//int8_t *OT_int8::output_transform_fn( OT_int8::Params *params,         x10
+//                                      int8_t *Y,                       x11
+//                                      VPURingBuffer *A                 x12
+//                                      int16_t *multipliers_and_biases  x13
+//                                      int32_t output_count             x14)
 
-    //int8_t *OT_int8::output_transform_fn( OT_int8::Params *params,         x10
-    //                                      int8_t *Y,                       x11
-    //                                      VPURingBuffer *A                 x12
-    //                                      int16_t *multipliers_and_biases  x13
-    //                                      int32_t output_count             x14)
-
-    #define S_TEMP_VECTOR 2
+#define S_TEMP_VECTOR 2
 
 #define PARAMS_output_slice_channel_count 0
 #define PARAMS_initial_shift              2       // int16
@@ -219,28 +200,40 @@ FUNCTION_NAME:
     {xm.ldcu x12, 32 ; xm.addi x28, x12, 0}
     {xm.vldr x28     ; xm.add x28, x12, x28}
     {xm.vldd x28     ; xm.shli x28, x12, 3}
-    xm.vsetc x28    
+    {xm.vsetc x28     ;  xm.ldcu x19, 0}
     xm.ldcu x18, PARAMS_initial_shift
-    xm.ld16s x18, x18(x10) 
-    xm.ldap x28, VECT_SHIFT_TABLE
-    //xm.ldawb x28, x18(x28)
-    xm.vlsat x28
-    slli x28, x14, 1
+    xm.ld16s x12, x18(x10) 
 
+    //fill x28 with the initial_shift
+    xm.ldawsp x28, 4*S_TEMP_VECTOR
+    xm.st16 x12, x19(x28)
+    addi x19, x19, 1
+    xm.st16 x12, x19(x28)
+    xm.ldwi x12, 0(x28)
+    xm.stdi x12, x12, 8*0(x28)
+    xm.stdi x12, x12, 8*1(x28)
+    xm.stdi x12, x12, 8*2(x28)
+    xm.stdi x12, x12, 8*3(x28)
+    xm.vlsat x28
+
+    slli x12, x14, 1
     xm.vlmul0 x13
     xm.vlmul1 x13                      
-    {xm.nop ; xm.add x13, x13, x28 }
-    { xm.vladd x13                       ; xm.ldawsp x28, 4*S_TEMP_VECTOR}
+    {xm.nop ; xm.add x13, x13, x12 }
+    { xm.vladd x13 ; xm.nop }
 
+    xm.vstr x28
 
-    li x14, PARAMS_final_shr
-    xm.ld16s x14, x14(x10)
-    xm.vlashr x28, x14
-   // xm.mkmsk x28, x14   
+    li x12, PARAMS_final_shr
+    xm.ld16s x12, x12(x10)
+    xm.vlashr x28, x12
+    xm.vdepth8
+    addi x12, x14, 0
+    xm.mkmsk x28, x12  
     xm.vstrpv x11, x28
-
+    //slli x12, x12, 1
     xm.lddsp x18, x19, 0*8
-    {xm.retsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
+    {xm.retsp ROUND_UP(NSTACKWORDS*4, 16); xm.add x10, x11, x12 }
 
 .size FUNCTION_NAME, . -FUNCTION_NAME
 .resource_const FUNCTION_NAME, "stack_frame_bytes", ROUND_UP(NSTACKWORDS*4, 16)

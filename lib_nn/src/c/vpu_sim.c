@@ -464,6 +464,19 @@ void VLSUB(xs3_vpu *vpu, const void *addr) {
     assert(0);  // How'd this happen?
   }
 }
+#if defined(NN_USE_REF)
+const int VLMUL_SHR = 14;
+#else
+
+  #if defined(__XS3A__)
+  const int VLMUL_SHR = 14;
+  #endif
+
+  #if defined(__VX4A__)
+    const int VLMUL_SHR = 15;
+  #endif
+#endif
+
 void VLMUL(xs3_vpu *vpu, const void *addr) {
   #ifdef __XS3A__
   assert_word_aligned(addr);
@@ -481,7 +494,7 @@ void VLMUL(xs3_vpu *vpu, const void *addr) {
     for (int i = 0; i < VPU_INT16_EPV; i++) {
       int64_t val = addr16[i];
       int64_t res =
-          ((int64_t)vpu->vR.s16[i] * (int64_t)val + (1LL<<13)) >> 14; // TODO use macros
+          ((int64_t)vpu->vR.s16[i] * (int64_t)val + (1LL<<13)) >> VLMUL_SHR; // TODO use macros
       vpu->vR.s16[i] = vpu_saturate(res, 16);
     }
   } else if (vpu->mode == MODE_S32) {
@@ -647,7 +660,7 @@ void vpu_sim_print(xs3_vpu *vpu) {
       }
       break;
 
-    case MODE_S16:
+      case MODE_S16:
       printf("16-bit:  vC     \t    vR      \t    vD\n");
       for (int i = 0; i < VPU_INT16_EPV; i++) {
 #if 0
