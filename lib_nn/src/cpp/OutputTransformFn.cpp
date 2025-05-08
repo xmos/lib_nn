@@ -14,19 +14,6 @@ extern "C" {
 
 using namespace nn;
 
-#if defined(NN_USE_REF)
-const int VLMUL_SHR = 14;
-#else
-
-  #if defined(__XS3A__)
-  const int VLMUL_SHR = 14;
-  #endif
-
-  #if defined(__VX4A__)
-    const int VLMUL_SHR = 15;
-  #endif
-#endif
-
 static int64_t saturate_non_sym(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
   const int64_t min_val = -max_val - 1;
@@ -594,7 +581,7 @@ void nn::OutputTransformFn::ActivationParams::
 
 OutputTransformFnInt8_Group::QuantisationParams
 OutputTransformFnInt8_Group::Quantizer::quantise_activation(
-    MulsAndBias &activationParams, bool verbose) {
+    MulsAndBias &activationParams, nn_vlmul_shr_t vlmul_shr , bool verbose) {
   if (activationParams.size() == 0) {
     QuantisationParams q;
     q.initial_shr = 0;
@@ -608,8 +595,8 @@ OutputTransformFnInt8_Group::Quantizer::quantise_activation(
 
   int A, M;
 
-  std::tie(A, M) = solve_for_constraints(activationParams, VLMUL_SHR, verbose);
-  int B = A + M - VLMUL_SHR;
+  std::tie(A, M) = solve_for_constraints(activationParams, vlmul_shr, verbose);
+  int B = A + M - vlmul_shr;
 
   QuantisationParams q;
 
@@ -639,7 +626,7 @@ OutputTransformFnInt8_Group::Quantizer::quantise_activation(
 
 OutputTransformFnInt8_Channelwise::QuantisationParams
 OutputTransformFnInt8_Channelwise::Quantizer::quantise_activation(
-    MulsAndBias &activationParams, bool verbose) {
+    MulsAndBias &activationParams, nn_vlmul_shr_t vlmul_shr, bool verbose) {
   if (activationParams.size() == 0) {
     QuantisationParams q;
     q.initial_shr = 0;
@@ -647,8 +634,8 @@ OutputTransformFnInt8_Channelwise::Quantizer::quantise_activation(
     return q;
   }
   std::vector<int> As, Ms;
-  std::tie(As, Ms) = solve_for_constraints(activationParams, VLMUL_SHR, false);
-  int B = As[0] + Ms[0] - VLMUL_SHR;
+  std::tie(As, Ms) = solve_for_constraints(activationParams, vlmul_shr, false);
+  int B = As[0] + Ms[0] - vlmul_shr;
   // Ensure the order is correct
   for (auto &activationParam : activationParams)
     recitfy_min_max(activationParam.accu_min_val, activationParam.accu_max_val);
@@ -661,7 +648,7 @@ OutputTransformFnInt8_Channelwise::Quantizer::quantise_activation(
     int A = As[ch];
     int M = Ms[ch];
 
-    assert(B == A + M - VLMUL_SHR);
+    assert(B == A + M - vlmul_shr);
     q.initial_shifts.push_back(-A);
 
     int16_t m = float_to_int16(activationParams[ch].multiplier, M);
@@ -823,7 +810,7 @@ int8_t *output_transform_fn_int_channelwise_impl(
     int32_t output_channel_group, int16_t *multipliers_and_biases) {
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
-  bool verbose = true;
+  bool verbose = false;
 
   // we need to know how many we are processing
   int output_count = std::min(

@@ -1,5 +1,3 @@
-#include <xs1.h>
-
 #if defined(__VX4A__)
 #include "nn_operator.h"
 #include "../src/asm/asm_constants.h"

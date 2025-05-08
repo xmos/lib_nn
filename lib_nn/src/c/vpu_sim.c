@@ -1,6 +1,7 @@
 // Copyright 2020-2021 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
+#include "nn_arch.h"
 #include "vpu_sim.h"
 
 #include <stdio.h>
@@ -464,23 +465,21 @@ void VLSUB(xs3_vpu *vpu, const void *addr) {
     assert(0);  // How'd this happen?
   }
 }
-#if defined(NN_USE_REF)
-const int VLMUL_SHR = 14;
-#else
-
-  #if defined(__XS3A__)
-  const int VLMUL_SHR = 14;
-  #endif
-
-  #if defined(__VX4A__)
-    const int VLMUL_SHR = 15;
-  #endif
-#endif
 
 void VLMUL(xs3_vpu *vpu, const void *addr) {
   #ifdef __XS3A__
   assert_word_aligned(addr);
   #endif
+
+  int VLMUL_SHR_S16;
+  if(NN_ARCH == TARGET_ARCH_XS3A){
+    VLMUL_SHR_S16 = VLMUL_SHR_XS3A;
+  } else if (NN_ARCH == TARGET_ARCH_VX4A){
+    VLMUL_SHR_S16 = VLMUL_SHR_VX4A;
+  } else {
+    assert(false);
+  }
+
   if (vpu->mode == MODE_S8) {
     const int8_t *addr8 = (const int8_t *)addr;
     for (int i = 0; i < VPU_INT8_EPV; i++) {
@@ -494,7 +493,7 @@ void VLMUL(xs3_vpu *vpu, const void *addr) {
     for (int i = 0; i < VPU_INT16_EPV; i++) {
       int64_t val = addr16[i];
       int64_t res =
-          ((int64_t)vpu->vR.s16[i] * (int64_t)val + (1LL<<13)) >> VLMUL_SHR; // TODO use macros
+          ((int64_t)vpu->vR.s16[i] * (int64_t)val + (1LL<<(VLMUL_SHR_S16 - 1))) >> VLMUL_SHR_S16; // TODO use macros
       vpu->vR.s16[i] = vpu_saturate(res, 16);
     }
   } else if (vpu->mode == MODE_S32) {

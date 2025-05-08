@@ -148,7 +148,7 @@ void requantize_16_to_8(int8_t *y, const int16_t *x, const unsigned elm_start,
 
 void lookup8(uint8_t *Y, const uint8_t *X, const uint8_t *lut,
              const unsigned elm_start, const unsigned elm_count) {
-#ifdef defined(NN_USE_REF)
+#if defined(NN_USE_REF)
   lookup8_ref(Y, X, lut, elm_start, elm_count);
 #elif defined(__XS3A__)
   lookup8_asm(Y, X, lut, elm_start, elm_count);
