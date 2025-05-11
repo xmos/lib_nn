@@ -171,7 +171,7 @@ void test_Conv2dPaddedIndirectRegression() {
                                     OutputTransformFnInt8_Group::Quantizer();
                                 OutputTransformFnInt8_Group::QuantisationParams
                                     qp = quantizer.quantise_activation(
-                                        mul_and_biases, false);
+                                        mul_and_biases, nn_vlmul_shr_t::VLMUL_SHR_XS3A, false);
 
                                 assert(qp.multipliers.size() > 0);
                                 assert(qp.biases.size() > 0);
@@ -349,7 +349,7 @@ void test_Conv2dPaddedIndirectRegression_channelwise() {
                                 OutputTransformFnInt8_Channelwise::
                                     QuantisationParams qp =
                                         quantizer.quantise_activation(
-                                            mul_and_biases, false);
+                                            mul_and_biases, nn_vlmul_shr_t::VLMUL_SHR_XS3A, false);
 
                                 assert(qp.initial_shifts.size() > 0);
                                 assert(qp.multipliers.size() > 0);
@@ -528,7 +528,7 @@ void test_Conv2dValidIndirectRegression() {
                                     OutputTransformFnInt8_Group::Quantizer();
                                 OutputTransformFnInt8_Group::QuantisationParams
                                     qp = quantizer.quantise_activation(
-                                        mul_and_biases, false);
+                                        mul_and_biases, nn_vlmul_shr_t::VLMUL_SHR_XS3A, false);
 
                                 auto serialised_offsets_multipliers_and_biases =
                                     OutputTransformFn::serialise_memory(
@@ -707,7 +707,7 @@ void test_Conv2dValidIndirectRegression_channelwise() {
                                 OutputTransformFnInt8_Channelwise::
                                     QuantisationParams qp =
                                         quantizer.quantise_activation(
-                                            mul_and_biases, false);
+                                            mul_and_biases, nn_vlmul_shr_t::VLMUL_SHR_XS3A, false);
 
                                 auto serialised_offsets_multipliers_and_biases =
                                     OutputTransformFn::serialise_memory(
@@ -883,7 +883,7 @@ void test_Conv2dValidDirectRegression() {
                                     OutputTransformFnInt8_Group::Quantizer();
                                 OutputTransformFnInt8_Group::QuantisationParams
                                     qp = quantizer.quantise_activation(
-                                        mul_and_biases, false);
+                                        mul_and_biases, nn_vlmul_shr_t::VLMUL_SHR_XS3A, false);
 
                                 auto serialised_offsets_multipliers_and_biases =
                                     OutputTransformFn::serialise_memory(
@@ -1044,7 +1044,7 @@ void test_Conv2dValidDirectRegression_channelwise() {
                                 OutputTransformFnInt8_Channelwise::
                                     QuantisationParams qp =
                                         quantizer.quantise_activation(
-                                            mul_and_biases, false);
+                                            mul_and_biases, nn_vlmul_shr_t::VLMUL_SHR_XS3A, false);
 
                                 auto serialised_offsets_multipliers_and_biases =
                                     OutputTransformFn::serialise_memory(

@@ -241,7 +241,7 @@ void test_TransposeConv2dPaddedIndirectRegression() {
                                         OutputTransformFnInt8_Group::Quantizer();
                                     OutputTransformFnInt8_Group::QuantisationParams
                                         qp = quantizer.quantise_activation(
-                                            mul_and_biases, false);
+                                            mul_and_biases, nn_vlmul_shr_t::VLMUL_SHR_XS3A, false);
 
                                     assert(qp.multipliers.size() > 0);
                                     assert(qp.biases.size() > 0);
