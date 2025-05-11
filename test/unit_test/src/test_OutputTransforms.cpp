@@ -105,7 +105,7 @@ void test_big_range(int coef_count, int N, int product_range, int bias_range,
       }
       auto quantizer = OutputTransformFnInt8_Group::Quantizer();
       OutputTransformFnInt8_Group::QuantisationParams qp =
-          quantizer.quantise_activation(mul_and_biases, false);
+          quantizer.quantise_activation(mul_and_biases, nn_vlmul_shr_t::VLMUL_SHR_XS3A, false);
 
       seen_final_shr.insert(qp.final_shr);
       seen_initial_shr.insert(qp.initial_shr);
@@ -242,7 +242,7 @@ void test_big_range_channelwise(int coef_count, int N, int product_range,
 
       auto quantizer = OutputTransformFnInt8_Channelwise::Quantizer();
       OutputTransformFnInt8_Channelwise::QuantisationParams qp =
-          quantizer.quantise_activation(mul_and_biases, false);
+          quantizer.quantise_activation(mul_and_biases, nn_vlmul_shr_t::VLMUL_SHR_XS3A, false);
 
       seen_final_shr.insert(qp.final_shr);
       seen_initial_shr.insert(qp.initial_shifts[0]);
@@ -356,7 +356,7 @@ void test_small_range(const int accu_min, const int accu_max,
 
     auto quantizer = OutputTransformFnInt8_Group::Quantizer();
     OutputTransformFnInt8_Group::QuantisationParams qp =
-        quantizer.quantise_activation(mul_and_biases, false);
+        quantizer.quantise_activation(mul_and_biases, nn_vlmul_shr_t::VLMUL_SHR_XS3A, false);
 
     auto serialised_multipliers_and_biases =
         OutputTransformFn::serialise_memory(qp.multipliers, qp.biases);
@@ -439,7 +439,7 @@ void test_small_range_channelwise(const int accu_min, const int accu_max,
 
     auto quantizer = OutputTransformFnInt8_Channelwise::Quantizer();
     OutputTransformFnInt8_Channelwise::QuantisationParams qp =
-        quantizer.quantise_activation(mul_and_biases, false);
+        quantizer.quantise_activation(mul_and_biases, nn_vlmul_shr_t::VLMUL_SHR_XS3A, false);
 
     auto serialised_multipliers_and_biases =
         OutputTransformFn::serialise_memory(qp.initial_shifts, qp.multipliers,

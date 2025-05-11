@@ -65,3 +65,70 @@ FUNCTION_NAME:
     .size FUNCTION_NAME, .Ltmp1-FUNCTION_NAME
     
 #endif
+
+
+
+#if defined(__VX4A__)
+
+
+#define FUNCTION_NAME vpu_memmove_word_aligned
+
+#define NSTACKWORDS  0
+#define ROUND_UP(X, Y) (((X+Y-1)/Y)*Y)
+
+/*
+
+   void vpu_memmove_word_aligned(
+        void * dst,
+        const void * src, 
+        unsigned byte_count
+    );
+*/
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+
+    {xm.entsp ROUND_UP(NSTACKWORDS*4, 16); xm.shri x13, x12, 5}
+    { xm.brff  x13, vpu_memmove_word_aligned_done_whole_vectors ; xm.slt x28, x10, x11 }
+    { xm.brff x28, vpu_memmove_word_aligned_copy_down          ; xm.shli x28, x13, 5 }
+    { xm.ldcu x28, 32                  ; xm.sub x12, x12, x28}
+
+vpu_memmove_word_aligned_loop:
+    {xm.vldd x11                   ; xm.add x11, x11, x28}
+    { xm.vstd x10                   ; xm.subi x13, x13, 1}
+    { xm.bt x13, vpu_memmove_word_aligned_loop                ; xm.add x10, x10, x28}
+
+vpu_memmove_word_aligned_done_whole_vectors:
+    { xm.addi  x28, x11, 0              ; xm.mkmsk x12, x12 }
+    { xm.vldr x28                  ; xm.nop }
+    xm.vstrpv x10, x12
+
+	ret
+
+vpu_memmove_word_aligned_copy_down:
+    { xm.sub x12, x12, x28              ; xm.add x10, x10, x28 }
+    xm.add x11, x11, x28
+
+    { xm.addi  x28, x11, 0              ; xm.mkmsk x12, x12 }
+    { xm.vldr x28                  ; xm.ldcu x28, 32 }
+    xm.vstrpv x10, x12
+    xm.sub x11, x11, x28
+                      
+vpu_memmove_word_aligned_loop_down:
+    { xm.vldd x11                   ; xm.sub x10, x10, x28}
+    { xm.vstd x10                  ; xm.subi x13, x13, 1}
+    { xm.bt x13, vpu_memmove_word_aligned_loop_down           ; xm.sub x11, x11, x28}
+
+    ret
+
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  ROUND_UP(NSTACKWORDS*4, 16)
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
+#endif
+
+

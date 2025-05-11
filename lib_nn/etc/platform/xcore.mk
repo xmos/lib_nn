@@ -3,7 +3,6 @@
 PLATFORM_NAME = xcore.ai
 
 PLATFORM_FLAGS_DEFAULT := -Os                           \
-						-Wno-xcore-fptrgroup            \
 						-Wno-unused-variable            \
 						-report                         \
 						-MMD

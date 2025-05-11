@@ -165,3 +165,122 @@ vlsat_done:
     .issue_mode  single
 
 #endif
+
+
+
+
+#if defined(__VX4A__)
+
+#define FUNCTION_NAME output_transform_fn_impl_asm
+
+#define NSTACKWORDS (8+2)
+#define ROUND_UP(X, Y) (((X+Y-1)/Y)*Y)
+
+//int8_t *OT_int8::output_transform_fn( OT_int8::Params *params,         x10
+//                                      int8_t *Y,                       x11
+//                                      VPURingBuffer *A                 x12
+//                                      int16_t *multipliers_and_biases  x13
+//                                      int32_t output_count             x14)
+
+#define S_TEMP_VECTOR 2
+
+#define PARAMS_output_slice_channel_count 0
+#define PARAMS_initial_shift              2       // int16
+#define PARAMS_final_shr                  3       // int16
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+
+    {xm.entsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
+
+    xm.stdsp x18, x19, 0*8
+
+    {xm.ldcu x12, 32 ; xm.addi x28, x12, 0}
+    {xm.vldr x28     ; xm.add x28, x12, x28}
+    {xm.vldd x28     ; xm.shli x28, x12, 3}
+    {xm.vsetc x28     ;  xm.ldcu x19, 0}
+    xm.ldcu x18, PARAMS_initial_shift
+    xm.ld16s x12, x18(x10) 
+
+    //fill x28 with the initial_shift
+    xm.ldawsp x28, 4*S_TEMP_VECTOR
+    xm.st16 x12, x19(x28)
+    addi x19, x19, 1
+    xm.st16 x12, x19(x28)
+    xm.ldwi x12, 0(x28)
+    xm.stdi x12, x12, 8*0(x28)
+    xm.stdi x12, x12, 8*1(x28)
+    xm.stdi x12, x12, 8*2(x28)
+    xm.stdi x12, x12, 8*3(x28)
+    xm.vlsat x28
+
+    slli x12, x14, 1
+    xm.vlmul0 x13
+    xm.vlmul1 x13                      
+    {xm.nop ; xm.add x13, x13, x12 }
+    { xm.vladd x13 ; xm.nop }
+
+    xm.vstr x28
+
+    li x12, PARAMS_final_shr
+    xm.ld16s x12, x12(x10)
+    xm.vlashr x28, x12
+    xm.vdepth8
+    addi x12, x14, 0
+    xm.mkmsk x28, x12  
+    xm.vstrpv x11, x28
+    //slli x12, x12, 1
+    xm.lddsp x18, x19, 0*8
+    {xm.retsp ROUND_UP(NSTACKWORDS*4, 16); xm.add x10, x11, x12 }
+
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes", ROUND_UP(NSTACKWORDS*4, 16)
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
+
+#endif
+
+
+#if defined(poop)
+
+    //int8_t *OT_int8::output_transform_fn( OT_int8::Params *params,         x10
+    //                                      int8_t *Y,                       x11
+    //                                      VPURingBuffer *A                 x12
+    //                                      int16_t *multipliers_and_biases  x13
+    //                                      int32_t output_count             x14)
+
+#define FUNCTION_NAME output_transform_fn_impl_asm
+
+#define NSTACKWORDS 0
+#define ROUND_UP(X, Y) (((X+Y-1)/Y)*Y)
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+
+    {xm.ldcu x12, 32 ; xm.addi x28, x12, 0}
+    {xm.vldr x28     ; xm.add x28, x12, x28}
+    {xm.vldd x28     ; xm.shli x28, x12, 3}
+    {xm.vsetc x28    ; xm.nop}
+    mv x12, x14
+    xm.vlsat4 x13
+    { xm.vlmul0 x13  ; xm.add x10, x13, x12 }
+    xm.vlmul1 x13  
+    { xm.vladd x10   ; xm.mkmsk x28, x12  }
+    xm.vlshl3 x10
+    xm.vstrpv x11, x28
+    ret
+
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes", ROUND_UP(NSTACKWORDS*4, 16)
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
+
+#endif

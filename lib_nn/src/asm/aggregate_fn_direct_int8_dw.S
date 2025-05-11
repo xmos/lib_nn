@@ -35,9 +35,12 @@
 
 
 /*
-void mat_mul_dw_direct_impl_asm(MatMulDirectFn_DW::Params *params,
-                                      VPURingBuffer *A, int8_t *X,
-                                      int32_t output_channel_group);
+void mat_mul_dw_direct_impl_asm(
+                const void *params,
+                void *A, 
+                int8_t *X,
+                int32_t output_channel_group,
+                int8_t *weights){}
 */
 
 #define FUNCTION_NAME mat_mul_dw_direct_impl_asm
@@ -48,7 +51,7 @@ void mat_mul_dw_direct_impl_asm(MatMulDirectFn_DW::Params *params,
 #else
 #define OPTIONAL_DDR_SPILL(x) /* */
 #endif
-    
+
 #define NSTACKWORDS  6
 .text
 .issue_mode  dual
@@ -110,5 +113,104 @@ FUNCTION_NAME:
 
 #endif
 
+
+
+
+
+
+
+
+#if defined(__VX4A__)
+
+
+#define FUNCTION_NAME mat_mul_dw_direct_impl_asm
+
+#define NSTACKWORDS  8
+#define ROUND_UP(X, Y) (((X+Y-1)/Y)*Y)
+
+#define PARAMS_bytes_per_kernel_channel 0
+#define PARAMS_k_height_loop_counter 1
+#define PARAMS_k_width_loop_counter 2
+#define PARAMS_inner_x_h_step 3
+#define PARAMS_inner_x_v_step 4
+#define PARAMS_weights_bytes 5
+#define PARAMS_weights 6
+
+#define params_p             x10
+#define A_p                  x11
+
+#define X_p                  x12
+#define output_channel_group x13 
+#define kh output_channel_group 
+
+#define kw                   x18
+#define ddr_spill            x19
+
+#define sixteen              x20
+#define inner_x_h_step       x21
+
+#define inner_x_v_step       x22
+#define kw_init              x23
+
+#define t                    x28
+#define K_p                  t
+
+
+/*
+void mat_mul_dw_direct_impl_asm(
+                const void *params,
+                void *A, 
+                int8_t *X,
+                int32_t output_channel_group,
+                int8_t *weights){}
+*/
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+
+    {xm.entsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
+    xm.stdsp x18, x19, 0*8
+    xm.stdsp x20, x21, 1*8
+    xm.stdsp x22, x23, 2*8
+
+
+
+    {xm.vclrdr; xm.ldcu t, 32}
+    {xm.ldwi kw, PARAMS_bytes_per_kernel_channel*4(params_p); xm.shli t, t, 4}
+    {xm.vsetc t; xm.nop}
+    mul output_channel_group, kw, output_channel_group
+    addi K_p, x14, 0
+    {xm.ldwi inner_x_v_step, PARAMS_inner_x_v_step*4(params_p); xm.add K_p, output_channel_group, K_p}
+    {xm.ldcu sixteen, 16; xm.ldwi inner_x_h_step, PARAMS_inner_x_h_step*4(params_p)}
+    {xm.ldwi kh, PARAMS_k_height_loop_counter*4(params_p); xm.nop}
+    {xm.ldwi kw_init, PARAMS_k_width_loop_counter*4(params_p); xm.sub X_p, X_p, inner_x_v_step}
+
+    kh_loop_asm:
+        {xm.addi kw, kw_init, 0; xm.add X_p, X_p, inner_x_v_step}
+        kw_loop_asm:
+            {xm.vldc X_p; xm.add X_p, X_p, inner_x_h_step}
+            {xm.vlmacc0 K_p; xm.add K_p, K_p, sixteen}
+        {xm.bt kw, kw_loop_asm; xm.subi kw, kw, 1}
+    {xm.bt kh, kh_loop_asm; xm.subi kh, kh, 1}
+
+    {xm.shli sixteen, sixteen, 1; xm.nop}
+    {xm.vstr A_p; xm.add A_p, A_p, sixteen}
+    {xm.vstd A_p; xm.nop}
+
+    xm.lddsp x18, x19, 0*8
+    xm.lddsp x20, x21, 1*8
+    xm.lddsp x22, x23, 2*8
+
+    {xm.retsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
+
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  ROUND_UP(NSTACKWORDS*4, 16)
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
+#endif
 
 

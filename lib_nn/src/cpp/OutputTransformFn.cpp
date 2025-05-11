@@ -14,8 +14,6 @@ extern "C" {
 
 using namespace nn;
 
-const int VLMUL_SHR = 14;
-
 static int64_t saturate_non_sym(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
   const int64_t min_val = -max_val - 1;
@@ -583,7 +581,7 @@ void nn::OutputTransformFn::ActivationParams::
 
 OutputTransformFnInt8_Group::QuantisationParams
 OutputTransformFnInt8_Group::Quantizer::quantise_activation(
-    MulsAndBias &activationParams, bool verbose) {
+    MulsAndBias &activationParams, nn_vlmul_shr_t vlmul_shr , bool verbose) {
   if (activationParams.size() == 0) {
     QuantisationParams q;
     q.initial_shr = 0;
@@ -597,8 +595,8 @@ OutputTransformFnInt8_Group::Quantizer::quantise_activation(
 
   int A, M;
 
-  std::tie(A, M) = solve_for_constraints(activationParams, VLMUL_SHR, verbose);
-  int B = A + M - VLMUL_SHR;
+  std::tie(A, M) = solve_for_constraints(activationParams, vlmul_shr, verbose);
+  int B = A + M - vlmul_shr;
 
   QuantisationParams q;
 
@@ -628,7 +626,7 @@ OutputTransformFnInt8_Group::Quantizer::quantise_activation(
 
 OutputTransformFnInt8_Channelwise::QuantisationParams
 OutputTransformFnInt8_Channelwise::Quantizer::quantise_activation(
-    MulsAndBias &activationParams, bool verbose) {
+    MulsAndBias &activationParams, nn_vlmul_shr_t vlmul_shr, bool verbose) {
   if (activationParams.size() == 0) {
     QuantisationParams q;
     q.initial_shr = 0;
@@ -636,8 +634,8 @@ OutputTransformFnInt8_Channelwise::Quantizer::quantise_activation(
     return q;
   }
   std::vector<int> As, Ms;
-  std::tie(As, Ms) = solve_for_constraints(activationParams, VLMUL_SHR, false);
-  int B = As[0] + Ms[0] - VLMUL_SHR;
+  std::tie(As, Ms) = solve_for_constraints(activationParams, vlmul_shr, false);
+  int B = As[0] + Ms[0] - vlmul_shr;
   // Ensure the order is correct
   for (auto &activationParam : activationParams)
     recitfy_min_max(activationParam.accu_min_val, activationParam.accu_max_val);
@@ -650,7 +648,7 @@ OutputTransformFnInt8_Channelwise::Quantizer::quantise_activation(
     int A = As[ch];
     int M = Ms[ch];
 
-    assert(B == A + M - VLMUL_SHR);
+    assert(B == A + M - vlmul_shr);
     q.initial_shifts.push_back(-A);
 
     int16_t m = float_to_int16(activationParams[ch].multiplier, M);
@@ -695,6 +693,7 @@ int8_t *output_transform_fn_impl(const otfn_int8_params_t *params, int8_t *Y,
                                  int16_t *multipliers_and_biases) {
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
+  bool verbose = false;
 
   // we need to know how many we are processing
 
@@ -712,6 +711,11 @@ int8_t *output_transform_fn_impl(const otfn_int8_params_t *params, int8_t *Y,
   // Load accumulator into D and R Registers
   VLDR(vpu, &A->vR);
   VLDD(vpu, &A->vD);
+   
+  if(verbose){
+    printf("accu:\n");
+    vpu_sim_print(vpu);
+  }
 
   vpu_vector_t temp_mem;
 
@@ -728,19 +732,41 @@ int8_t *output_transform_fn_impl(const otfn_int8_params_t *params, int8_t *Y,
     VSTR(vpu, &temp_mem);
     VLASHR(vpu, &temp_mem, params->initial_shift);
   }
+  if(verbose){
+    printf("post VLSAT:\n");
+    vpu_sim_print(vpu);
+  }
+
 
   // multiply by set val
   VLMUL(vpu, cur_post_activation_mul);
 
+  if(verbose){
+    printf("post VLMUL:\n");
+    vpu_sim_print(vpu);
+  }
   // add set bias
   VLADD(vpu, cur_post_activation_bias);
 
+  if(verbose){
+    printf("post VLADD:\n");
+    vpu_sim_print(vpu);
+  }
   // store, load then do final shift right
   VSTR(vpu, &temp_mem);
   VLASHR(vpu, &temp_mem, params->final_shr);
 
+  if(verbose){
+    printf("post VLASHR:\n");
+    vpu_sim_print(vpu);
+  }
   VDEPTH8_FIXED(vpu);
 
+  if(verbose){
+    printf("post VDEPTH8:\n");
+    vpu_sim_print(vpu);
+    printf("output_count %d\n", output_count);
+  }
   int mask = (1 << output_count) - 1;
 
   VSTRPV(vpu, Y, mask);
@@ -784,6 +810,7 @@ int8_t *output_transform_fn_int_channelwise_impl(
     int32_t output_channel_group, int16_t *multipliers_and_biases) {
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
+  bool verbose = false;
 
   // we need to know how many we are processing
   int output_count = std::min(
@@ -802,6 +829,11 @@ int8_t *output_transform_fn_int_channelwise_impl(
   // Load accumulator into D and R Registers
   VLDR(vpu, &A->vR);
   VLDD(vpu, &A->vD);
+   
+  if(verbose){
+    printf("accu:\n");
+    vpu_sim_print(vpu);
+  }
 
   vpu_vector_t temp_mem;
 
@@ -810,20 +842,45 @@ int8_t *output_transform_fn_int_channelwise_impl(
     temp_mem.s16[i] = cur_initial_shift[i];
   for (int i = output_count; i < VPU_INT16_EPV; i++) temp_mem.s16[i] = 0;
   VLSAT(vpu, &temp_mem);
+   
+  if(verbose){
+    printf("post VLSAT:\n");
+    vpu_sim_print(vpu);
+  }
 
   // multiply by multipliers
   VLMUL(vpu, cur_post_activation_mul);
+   
+  if(verbose){
+    printf("post VLMUL:\n");
+    vpu_sim_print(vpu);
+  }
 
   // add biases
   VLADD(vpu, cur_post_activation_bias);
+   
+  if(verbose){
+    printf("post VLADD:\n");
+    vpu_sim_print(vpu);
+  }
 
   // store, load then do final shift right
   VSTR(vpu, &temp_mem);
 
   // fixed final shift
   VLASHR(vpu, &temp_mem, params->final_shr);
+   
+  if(verbose){
+    printf("post VLASHR:\n");
+    vpu_sim_print(vpu);
+  }
 
   VDEPTH8_FIXED(vpu);
+   
+  if(verbose){
+    printf("post VDEPTH8:\n");
+    vpu_sim_print(vpu);
+  }
 
   int mask = (1 << output_count) - 1;
   VSTRPV(vpu, Y, mask);

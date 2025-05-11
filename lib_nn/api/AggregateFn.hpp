@@ -98,6 +98,12 @@ class MatMulBase {
   static int get_scratch_mem_bytes(int input_bytes);
 };
 
+class MatMulInt16x8 : public MatMulBase {
+  public:
+   MatMulInt16x8(int output_slice_channel_count, int32_t bytes_per_kernel_channel) 
+   : MatMulBase(output_slice_channel_count, bytes_per_kernel_channel){};
+ };
+ 
 class MatMulInt8 : public MatMulBase {
  public:
   MatMulInt8(int output_slice_channel_count, int32_t bytes_per_kernel_channel) 
@@ -141,6 +147,10 @@ void mat_mul_direct_int8(const mat_mul_direct_params_t *params, VPURingBuffer *A
 void mat_mul_direct_int16(const mat_mul_direct_params_t *params, VPURingBuffer *A,
                               int16_t *X, int32_t output_channel_group,
                               int16_t *weights);
+
+void mat_mul_direct_int16x8(const mat_mul_direct_params_t *params, VPURingBuffer *A,
+                              int16_t *X, int32_t output_channel_group,
+                              int8_t *weights);
 
 class MatMulBinaryDirectFn : public MatMulDirectFn {
  public:

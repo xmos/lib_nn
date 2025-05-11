@@ -122,3 +122,117 @@ done:
 
 #endif
 
+
+#if defined(__VX4A__)
+
+shifts:
+    .word 0x000E000E, 0x000E000E, 0x000E000E, 0x000E000E
+    .word 0x000E000E, 0x000E000E, 0x000E000E, 0x000E000E
+minints:    
+    .word 0x80008000, 0x80008000, 0x80008000, 0x80008000
+    .word 0x80008000, 0x80008000, 0x80008000, 0x80008000
+minintmults:    
+    .word 0xC000C000, 0xC000C000, 0xC000C000, 0xC000C000
+    .word 0xC000C000, 0xC000C000, 0xC000C000, 0xC000C000
+
+#define FUNCTION_NAME add_int16_tensor_asm
+
+#define NSTACKWORDS  10
+#define ROUND_UP(X, Y) (((X+Y-1)/Y)*Y)
+
+/*
+void add_int16_tensor_asm(
+    int16_t *output, 
+    int16_t *input1, 
+    int16_t *input2, 
+    int tensor_length, 
+    void *blob)
+*/
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+
+    {xm.entsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
+    xm.stdsp x18, x19, 0*8
+    xm.stdsp x20, x21, 1*8
+    xm.stdsp x22, x23, 2*8
+    xm.stdsp x24, x25, 3*8
+
+
+    { xm.shri   x19, x13, 4            ; xm.zexti  x13, 4     }       // Number of iterations/modulo
+    { xm.ldawsp x20, 8              ; xm.shli   x13, x13, 1 }
+    addi x18, x14, 0
+    { xm.nop     ; xm.shli   x28, x28, 3 }     // Make 0x100
+    { xm.mkmsk x13, x13               ; xm.vsetc x28       }
+    { xm.ldap  x28, shifts          ; xm.ldcu   x21, 32     }
+    { xm.ldap  x28, minintmults     ; xm.addi   x22, x28, 0 }
+    addi x25, x19, 0
+    { xm.nop                        ; xm.addi   x23, x28, 0 }
+    { xm.brff    x19, zero_iterations ; xm.nop }
+    addi x25, x13, 0
+    {  xm.nop                       ; xm.mkmski x13, 32}
+add_tensor_16_loop:
+    { xm.vclrdr                      ; xm.nop }
+    // First calculate m0 * i0[] + m1 * i1[]
+    { xm.vldc     x18              ; xm.add x18, x18, x21 }
+    { xm.vlmacc0   x11             ; xm.nop }
+    xm.vlmacc1   x11              
+    { xm.vldc     x18              ; xm.sub x18, x18, x21 }
+    { xm.vlmacc0   x12             ;  xm.add x11, x11, x21}
+    xm.vlmacc1   x12            
+    // Now save the accumulator on the stack
+    { xm.vstd     x20              ; xm.add x28, x20, x21 }
+    { xm.vstr     x28              ; xm.add x12, x12, x21 }
+    // Now shift down by 14 bits to get the anwer - 0x8001 as underflow
+    xm.vlsat    x22 
+    // Save this as the answer
+    xm.vstrpv     x10, x13
+    // Restore teh accumulator with the full precision product
+    { xm.vldr     x28              ; xm.nop            }
+    { xm.vldd     x20              ; xm.nop            }
+    // Minint is reached on 0x8000 << 14 = 0xE000 0000
+    // Now add 0xC000 x 0x8000 to the accumulator
+    // This makes all values positive except < 0x8000
+    { xm.vldc     x23              ; xm.ldap x28, minints            }
+    { xm.vlmacc0   x28              ; xm.nop            }
+    xm.vlmacc1   x28
+    // Shift down, and keep sign bits
+xm.vlsat    x22 
+    { xm.nop             ; xm.subi   x19, x19, 1 }
+    xm.vsign
+    xm.vdepth1
+    { xm.vstr     x20                 ; xm.nop }
+    // Grab the sign bits, and zip them together once to create two bits for each wrong 16-bit
+    xm.ldwi        x24, 0(x20)
+    { xm.vldr     x28              ; xm.addi        x28, x24, 0 }
+    xm.zip        x28, x24, 0
+    xm.and        x24, x24, x13
+    // Overwrite minints
+    xm.vstrpv     x10, x24
+    { xm.bt    x19, add_tensor_16_loop ; add x10, x10, x21 }
+    addi x13, x25, 0
+    addi x25, x19, 0
+zero_iterations:    
+    { xm.brff    x13, done               ; xm.nop }
+    { xm.bu add_tensor_16_loop       ; xm.ldcu x19, 1 }
+
+done:   
+
+
+    xm.lddsp x18, x19, 0*8
+    xm.lddsp x20, x21, 1*8
+    xm.lddsp x22, x23, 2*8
+    xm.lddsp x24, x25, 3*8
+
+    {xm.retsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
+
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  ROUND_UP(NSTACKWORDS*4, 16)
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
+#endif
+

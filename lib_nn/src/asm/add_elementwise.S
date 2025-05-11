@@ -1,5 +1,4 @@
-
-// Copyright 2020-2021 XMOS LIMITED.
+// Copyright 2020-2025 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 #if defined(__XS3A__)
@@ -191,3 +190,48 @@ FUNCTION_NAME:
 
 #endif
 
+#if defined(__VX4A__)
+
+
+#define FUNCTION_NAME add_elementwise_asm
+
+#define NSTACKWORDS  0
+#define ROUND_UP(X, Y) (((X+Y-1)/Y)*Y)
+
+/*
+
+
+extern void add_elementwise_asm(
+    int8_t y[], 
+    const int8_t x1[],
+    const int8_t x2[], 
+    nn_add_params_t *params,
+    const int output_start, 
+    const int output_count);
+*/
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+
+    {xm.entsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
+    xm.stdsp x18, x19, 0*8
+    xm.stdsp x20, x21, 1*8
+    xm.stdsp x22, x23, 2*8
+
+
+
+    xm.lddsp x18, x19, 0*8
+    xm.lddsp x20, x21, 1*8
+    xm.lddsp x22, x23, 2*8
+
+    {xm.retsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
+
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  ROUND_UP(NSTACKWORDS*4, 16)
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
+#endif

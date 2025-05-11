@@ -23,7 +23,7 @@ function(add_unity_to_target target_name)
   endif()
 
   if(XCORE)
-    list(APPEND UNITY_FLAGS -Wno-xcore-fptrgroup)
+    list(APPEND UNITY_FLAGS)
   endif()
 
   string(REPLACE ";" " " UNITY_FLAGS "${UNITY_FLAGS}")

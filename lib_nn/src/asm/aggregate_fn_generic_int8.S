@@ -158,3 +158,131 @@ FUNCTION_NAME:
 
 
 
+
+
+#if defined(__VX4A__)
+
+
+#define FUNCTION_NAME mat_mul_generic_int8_impl_asm
+
+#define NSTACKWORDS  8
+#define ROUND_UP(X, Y) (((X+Y-1)/Y)*Y)
+
+
+#define PARAMS_output_slice_channel_count 0
+#define PARAMS_bytes_per_kernel_channel 1
+#define PARAMS_weights 2
+
+
+//Registers
+
+#define params_p          x10
+#define A_p               x11
+#define X_p               x12
+#define output_channel_group x13 
+#define K_p               x23 
+#define K_p_adjust        x18 
+#define ic_group_count    x19
+#define thirty_two        x20
+#define step              x21
+
+#define ddr_spill         x22
+#define t                 x28
+
+#define VPU_INT16_EPV 16
+
+
+/*
+ void mat_mul_generic_int8_impl_asm(
+    const void *params,
+    void *A, 
+    int8_t *X,
+    int32_t output_channel_group,
+    int8_t *weights)
+*/
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+
+    {xm.entsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
+    xm.stdsp x18, x19, 0*8
+    xm.stdsp x20, x21, 1*8
+    xm.stdsp x22, x23, 2*8
+
+
+    {xm.vclrdr; xm.ldcu t, 32}
+    {xm.nop; xm.shli t, t, 4}
+    {xm.vsetc t; xm.nop}
+
+    {xm.ldwi step, PARAMS_output_slice_channel_count*4(params_p); xm.ldcu thirty_two, 15}
+    {xm.ldwi K_p_adjust, PARAMS_bytes_per_kernel_channel*4(params_p); xm.shli output_channel_group, output_channel_group, 4}
+    addi K_p, x14, 0
+    mul t, K_p_adjust, output_channel_group
+    {xm.nop; xm.sub step, step, output_channel_group}
+    {xm.add K_p, K_p, t; xm.sub t, step, thirty_two}
+    {xm.shri ic_group_count, K_p_adjust, 5; xm.zexti K_p_adjust, 5}
+    {xm.bt K_p_adjust, K_p_adjust_lbl_asm; xm.ldcu thirty_two, 1}
+        {xm.ldcu K_p_adjust, 32; xm.subi ic_group_count, ic_group_count, 1}
+    K_p_adjust_lbl_asm:
+
+    {xm.slt thirty_two, t, thirty_two; xm.ldcu step, 32}
+    xm.brff thirty_two, step_adjust_lbl_asm; 
+        mul step, step, t 
+    step_adjust_lbl_asm:
+    {xm.ldcu thirty_two, 32; xm.nop}
+    {xm.brff ic_group_count, calc_step_asm; xm.subi ic_group_count, ic_group_count, 1}
+    input_channel_loop_asm:
+
+        {xm.vldc X_p; xm.add X_p, X_p, thirty_two}
+        
+        {xm.vlmaccr0 K_p; xm.add K_p, K_p, thirty_two}
+        {xm.vlmaccr0 K_p; xm.add K_p, K_p, thirty_two}
+        {xm.vlmaccr0 K_p; xm.add K_p, K_p, thirty_two}
+        {xm.vlmaccr0 K_p; xm.add K_p, K_p, thirty_two}
+        {xm.vlmaccr0 K_p; xm.add K_p, K_p, thirty_two}
+        {xm.vlmaccr0 K_p; xm.add K_p, K_p, thirty_two}
+        {xm.vlmaccr0 K_p; xm.add K_p, K_p, thirty_two}
+        {xm.vlmaccr0 K_p; xm.add K_p, K_p, thirty_two}
+        {xm.vlmaccr0 K_p; xm.add K_p, K_p, thirty_two}
+        {xm.vlmaccr0 K_p; xm.add K_p, K_p, thirty_two}
+        {xm.vlmaccr0 K_p; xm.add K_p, K_p, thirty_two}
+        {xm.vlmaccr0 K_p; xm.add K_p, K_p, thirty_two}
+        {xm.vlmaccr0 K_p; xm.add K_p, K_p, thirty_two}
+        {xm.vlmaccr0 K_p; xm.add K_p, K_p, thirty_two}
+        {xm.vlmaccr0 K_p; xm.add K_p, K_p, thirty_two}
+
+        {xm.vlmaccr0 K_p; xm.add K_p, K_p, step}
+
+    {xm.bt ic_group_count, input_channel_loop_asm; xm.subi ic_group_count, ic_group_count, 1}
+    
+    calc_step_asm:
+    srai step, step, 5
+    li t, (VPU_INT16_EPV-1)
+    add step, step, t
+    {xm.subi step, step, 1; xm.nop} //subtract one for now 
+
+    {xm.vldc X_p; xm.nop}
+    tail_loop_asm:
+        {xm.vlmaccr0 K_p; xm.add K_p, K_p, K_p_adjust}
+    {xm.bt step, tail_loop_asm; xm.subi step, step, 1}
+
+    {xm.vstr A_p; xm.add A_p, A_p, thirty_two}
+    {xm.vstd A_p; xm.nop}
+
+    xm.lddsp x18, x19, 0*8
+    xm.lddsp x20, x21, 1*8
+    xm.lddsp x22, x23, 2*8
+
+    {xm.retsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
+
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  ROUND_UP(NSTACKWORDS*4, 16)
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
+#endif
+
+

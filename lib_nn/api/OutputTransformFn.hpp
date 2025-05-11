@@ -6,6 +6,7 @@
 #include <limits>
 #include <vector>
 
+#include "nn_arch.h"
 #include "AggregateFn.hpp"
 #include "Utils.hpp"
 #include "geom/WindowGeometry.hpp"
@@ -425,6 +426,7 @@ class OutputTransformFnInt8_Group : public OutputTransformFnInt8 {
      * @return QuantisationParams
      */
     QuantisationParams quantise_activation(MulsAndBias &activationParams,
+                                           nn_vlmul_shr_t vlmul_shr,
                                            bool verbose);
 
    private:
@@ -544,6 +546,7 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
      * @return QuantisationParams
      */
     QuantisationParams quantise_activation(MulsAndBias &activationParams,
+                                           nn_vlmul_shr_t vlmul_shr,
                                            bool verbose);
 
    private:

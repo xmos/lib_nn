@@ -106,9 +106,15 @@ static inline unsigned smin(const unsigned a, const unsigned b) {
 
 static inline int ceil_log2(uint32_t a) {
   if (a == 0) return -1;
-#if defined(__XS3A__)
+#ifdef __xcore__
   unsigned x;
-  asm("clz %0, %1" : "=r"(x) : "r"(a));
+  #ifdef __XS3A__
+    asm("clz %0, %1" : "=r"(x) : "r"(a));
+  #endif
+  #ifdef __VX4A__
+    asm("xm.clz %0, %1" : "=r"(x) : "r"(a));
+  #endif
+
   unsigned y = 31 - x;
 
   //  clz(1) = 31 -> 31-31 = 0 -> 2^0 = 1

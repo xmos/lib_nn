@@ -179,7 +179,7 @@ void test_Conv2dValidDirectDWRegression() {
                             auto quantizer =
                                 OutputTransformFnInt8_Group::Quantizer();
                             OutputTransformFnInt8_Group::QuantisationParams qp =
-                                quantizer.quantise_activation(mul_and_biases,
+                                quantizer.quantise_activation(mul_and_biases, nn_vlmul_shr_t::VLMUL_SHR_XS3A, 
                                                               false);
 
                             auto serialised_multipliers_and_biases =
@@ -354,7 +354,7 @@ void test_Conv2dValidDirectDWRegression_channelwise() {
                             OutputTransformFnInt8_Channelwise::
                                 QuantisationParams qp =
                                     quantizer.quantise_activation(
-                                        mul_and_biases, false);
+                                        mul_and_biases, nn_vlmul_shr_t::VLMUL_SHR_XS3A, false);
 
                             auto serialised_multipliers_and_biases =
                                 OutputTransformFn::serialise_memory(
@@ -534,7 +534,7 @@ void test_Conv2dPaddedIndirectDWRegression() {
                             auto quantizer =
                                 OutputTransformFnInt8_Group::Quantizer();
                             OutputTransformFnInt8_Group::QuantisationParams qp =
-                                quantizer.quantise_activation(mul_and_biases,
+                                quantizer.quantise_activation(mul_and_biases, nn_vlmul_shr_t::VLMUL_SHR_XS3A, 
                                                               false);
 
                             auto serialised_multipliers_and_biases =
@@ -722,7 +722,7 @@ void test_Conv2dPaddedIndirectDWRegression_channelwise() {
                             OutputTransformFnInt8_Channelwise::
                                 QuantisationParams qp =
                                     quantizer.quantise_activation(
-                                        mul_and_biases, false);
+                                        mul_and_biases, nn_vlmul_shr_t::VLMUL_SHR_XS3A, false);
 
                             auto serialised_multipliers_and_biases =
                                 OutputTransformFn::serialise_memory(

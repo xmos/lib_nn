@@ -12,6 +12,8 @@ list(APPEND LIB_NN_COMPILE_FLAGS -Wno-unused-variable -Wno-missing-braces)
 # Platform-specific compile flags can go here
 unset(LIB_NN_COMPILE_FLAGS_XS3A)
 list(APPEND LIB_NN_COMPILE_FLAGS_XS3A -Wno-xcore-fptrgroup)
+unset(LIB_NN_COMPILE_FLAGS_VX4A)
+# list(APPEND LIB_NN_COMPILE_FLAGS_VX4A -Wno-xcore-fptrgroup)
 
 unset(LIB_NN_SOURCES)
 list(APPEND LIB_NN_SOURCES ${LIB_NN_C_SOURCES})
@@ -19,6 +21,8 @@ list(APPEND LIB_NN_SOURCES ${LIB_NN_CPP_SOURCES})
 
 unset(LIB_NN_SOURCES_XS3A)
 list(APPEND LIB_NN_SOURCES_XS3A ${LIB_NN_ASM_SOURCES})
+unset(LIB_NN_SOURCES_VX4A)
+list(APPEND LIB_NN_SOURCES_VX4A ${LIB_NN_ASM_SOURCES})
 
 # Combine platform-agnostic and platform-specific variables..
 list(APPEND LIB_NN_COMPILE_FLAGS ${LIB_NN_COMPILE_FLAGS_${CMAKE_SYSTEM_NAME}})
