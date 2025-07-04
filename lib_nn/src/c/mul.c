@@ -18,9 +18,9 @@ static int32_t clamp(int32_t v, int32_t lo, int32_t hi){
 
 void mul_elementwise_asm(const int8_t* in1_data, const int8_t* in2_data, int element_count, nn_mul_params_t * params, int8_t * out_data);
 
-static const unsigned vlsat_shr = 1;
+static const signed vlsat_shr = 1;
 static const unsigned vlmul_shr = 14;
-static const unsigned vdepth8_shr = 8;
+static const signed vdepth8_shr = 8;
 
 void mul_boggle(nn_mul_params_t * params, 
     double in1Scale, 
