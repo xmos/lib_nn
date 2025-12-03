@@ -57,6 +57,17 @@ void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pa
 }
 
 void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val) {
+#ifdef __VX4B__
+    int shifted_pad_val = pad_val << 24;
+    int mask = 0x00ffffff;
+    for(int i = 0; i < N_3; i++) {
+        int data = *(int *)inputs;
+        data = (data & mask) | shifted_pad_val;
+        *(int *)outputs = data;
+        inputs += 3;
+        outputs += 4;
+    }
+#else
     // First copy single pixels until the input pointer is aligned
     // That will happen as it is incremented in steps of 3
     // But we may run out of pixels before it happens
@@ -98,4 +109,5 @@ void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pa
             pad_3_to_4_single(&outputs, &inputs, &tail_N_3, pad_val);
         }
     }
+#endif
 }
