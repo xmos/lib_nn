@@ -1,4 +1,4 @@
-FROM continuumio/miniconda3:4.10.3
+FROM continuumio/miniconda3:25.3.1-1
 
 # This Dockerfile is for use by the XMOS CI system
 # It provides a minimal environment needed to execute the Jenkinsfile
@@ -13,6 +13,11 @@ RUN chmod -R 777 /opt/conda \
     && conda init \
     && conda config --set auto_activate_base false
 
+# give conda a writable package cache for non-root users (e.g. Jenkins)
+ENV CONDA_PKGS_DIRS=/tmp/conda_pkgs
+RUN mkdir -p $CONDA_PKGS_DIRS /home/jenkins/.cache \
+    && chmod -R 777 $CONDA_PKGS_DIRS /home/jenkins/.cache
+
 # install tools lib dependencies
 RUN apt-get update && apt-get install -y \
     libncurses5 libncurses5-dev \
@@ -23,7 +28,7 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get update && apt-get install -y \
     gnupg lsb-release software-properties-common
 ADD https://apt.llvm.org/llvm.sh /tmp/
-ARG clang_version=12
+ARG clang_version=16
 RUN cd /tmp \
     && chmod +x llvm.sh \
     && ./llvm.sh $clang_version
