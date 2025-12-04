@@ -66,6 +66,6 @@ void quantize_int16_tensor_asm(int16_t *output,
 // This empty stub here is to pass the build, this will not be called
 int8_t *output_transform_fn_int_channelwise_impl_asm(
     const void *params, int8_t *Y, void *A,
-    int16_t *multipliers_and_biases, int output_count) {}
+    int16_t *multipliers_and_biases, int output_count) { return NULL; }
 
 #endif
