@@ -1,6 +1,6 @@
 // Copyright 2025 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
-#if defined(__VX4A__)
+#if defined(__VX4A__) || defined(__VX4B__)
 
 /*
 void mat_mul_direct_int16x8_impl_asm(

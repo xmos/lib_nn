@@ -147,7 +147,7 @@ FUNCTION_NAME:
 
 #endif
 
-#if defined(__VX4A__)
+#if defined(__VX4A__) || defined(__VX4B__)
 
 /*
 void mat_mul_impl_asm(void *params, VPURingBuffer *A, int8_t *X, int32_t output_channel_group);

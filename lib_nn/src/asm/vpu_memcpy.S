@@ -91,7 +91,7 @@ done:
 
 
 
-#if defined(__VX4A__)
+#if defined(__VX4A__) || defined(__VX4B__)
 
 #define FUNCTION_NAME vpu_memcpy_vector_ext_asm
 
