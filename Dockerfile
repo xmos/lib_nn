@@ -13,6 +13,11 @@ RUN chmod -R 777 /opt/conda \
     && conda init \
     && conda config --set auto_activate_base false
 
+# give conda a writable package cache for non-root users (e.g. Jenkins)
+ENV CONDA_PKGS_DIRS=/tmp/conda_pkgs
+RUN mkdir -p $CONDA_PKGS_DIRS /home/jenkins/.cache \
+    && chmod -R 777 $CONDA_PKGS_DIRS /home/jenkins/.cache
+
 # install tools lib dependencies
 RUN apt-get update && apt-get install -y \
     libncurses5 libncurses5-dev \
