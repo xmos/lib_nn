@@ -123,7 +123,7 @@ done:
 #endif
 
 
-#if defined(__VX4A__)
+#if defined(__VX4A__) || defined(__VX4B__)
 
 shifts:
     .word 0x000E000E, 0x000E000E, 0x000E000E, 0x000E000E

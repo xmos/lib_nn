@@ -206,7 +206,7 @@ FUNCTION_NAME:
 
 
 
-#if defined(__VX4A__)
+#if defined(__VX4A__) || defined(__VX4B__)
 
 
 #define FUNCTION_NAME mul_elementwise_asm

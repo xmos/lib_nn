@@ -128,7 +128,7 @@ dont_zero_asm:
 #endif
 
 
-#if defined(__VX4A__)
+#if defined(__VX4A__) || defined(__VX4B__)
 
 
 //Registers
