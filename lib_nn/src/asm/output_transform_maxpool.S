@@ -1,8 +1,16 @@
 // Copyright 2020-2025 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
-#if defined(__XS3A__)
-
 #define FUNCTION_NAME output_transform_maxpool_impl_asm
+
+    //int8_t *OT_int8::output_transform_maxpool( Ignored                     r0/x10
+    //                                      int8_t *Y,                       r1/x11
+    //                                      VPURingBuffer *A                 r2/x12
+    //                                      Ignored                          r3/x13
+    //                                      int32_t output_count             sp[OC]/x14)
+
+    //  r2 holds 32.
+
+#if defined(__XS3A__)
 
     .text
 	.cc_top FUNCTION_NAME.function,FUNCTION_NAME
@@ -27,13 +35,6 @@
 
 #define t                    r11 
 
-    //int8_t *OT_int8::output_transform_maxpool( Ignored                     r0
-    //                                      int8_t *Y,                       r1
-    //                                      VPURingBuffer *A                 r2
-    //                                      Ignored                          r3
-    //                                      int32_t output_count             sp[OC])
-
-    //  r2 holds 32.
     
 #define NSTACKWORDS     (0)              
 #define S_OUTPUT_COUNT  (NSTACKWORDS + 1)
@@ -62,5 +63,25 @@ FUNCTION_NAME:
 .Ltmp0:
     .size FUNCTION_NAME, .Ltmp0-FUNCTION_NAME
     .issue_mode  single
+
+#endif
+
+
+#if defined(__VX4A__) || defined(__VX4B__)
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+    addi x13, x14, 0
+    { xm.vldr x12                            ; xm.mkmsk x12, x13 }
+    xm.vstrpv x11, x12
+    {xm.retsp 0                              ; add x10, x11, x13}
+
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  0
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
 
 #endif
