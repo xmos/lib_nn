@@ -238,8 +238,7 @@ dont_zero_asm:
     xm.lddsp x18, x19, 0*8
     xm.lddsp x20, x21, 1*8
     xm.lddsp x22, x23, 2*8
-    xm.lddsp x24, x11, 3*8
-    xm.ldwsp params_p, 8*4
+    xm.lddsp x24, x10, 3*8
 
     {xm.retsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
 
