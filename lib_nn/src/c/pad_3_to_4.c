@@ -72,7 +72,7 @@ void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pa
     // Now copy the bulk of the data in blocks of 24
     if (N_24 != 0) {
 
-#ifdef NN_USE_REF
+#if defined(NN_USE_REF) || defined(__riscv_xxcore)
         int8_t * outputs_p = (int8_t *)outputs;
         int8_t * inputs_p = inputs;
         for(uint32_t l=0;l<N_24;l++){
