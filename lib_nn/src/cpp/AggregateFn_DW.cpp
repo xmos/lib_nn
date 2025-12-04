@@ -166,7 +166,7 @@ C_API void maxpool_direct_impl_asm(const mat_mul_dw_direct_params_t *params,
 
 void nn::maxpool_direct(const mat_mul_dw_direct_params_t *params,
                         VPURingBuffer *A, int8_t *T) {
-#if defined(NN_USE_REF) || defined(__riscv_xxcore)
+#ifdef NN_USE_REF
   maxpool_direct_impl(params, A, T);
 #else
   maxpool_direct_impl_asm(params, A, T);

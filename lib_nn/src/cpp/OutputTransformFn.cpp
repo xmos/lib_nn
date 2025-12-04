@@ -937,7 +937,7 @@ int8_t *output_transform_fn_int_maxpool_impl(
 
 int8_t *nn::otfn_int8_maxpool(const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
                                                  int32_t output_channel_group, int16_t *multipliers_and_biases) {
-#if defined(NN_USE_REF) || defined(__riscv_xxcore)
+#ifdef NN_USE_REF
   return output_transform_fn_int_maxpool_impl(
       params, Y, A, output_channel_group, multipliers_and_biases);
 #else
