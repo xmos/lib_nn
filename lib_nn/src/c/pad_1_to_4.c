@@ -27,7 +27,7 @@ void pad_1_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N, uint32_t pad_
 }
 
 void pad_1_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N, uint32_t pad_val) {
-#ifdef NN_USE_REF
+#if defined(NN_USE_REF) || defined(__riscv_xxcore)
         pad_1_to_4_ref(outputs, inputs, N, pad_val);
 #else
         pad_1_to_4_asm((int32_t *) outputs, (int32_t *)inputs, N, pad_val);

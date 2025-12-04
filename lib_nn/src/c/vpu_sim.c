@@ -485,6 +485,9 @@ void VLMUL(xs3_vpu *vpu, const void *addr) {
     for (int i = 0; i < VPU_INT8_EPV; i++) {
       int32_t val = addr8[i];
       int32_t res = ((int32_t)vpu->vR.s8[i] * val + (1<<5)) >> 6;  // TODO use macros
+      if (NN_ARCH == TARGET_ARCH_VX4A){
+        res = res >> 1;
+      }
       vpu->vR.s8[i] = vpu_saturate(res, 8);
     }
   } else if (vpu->mode == MODE_S16) {

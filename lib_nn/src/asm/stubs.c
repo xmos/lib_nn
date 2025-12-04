@@ -1,4 +1,4 @@
-#if defined(__VX4A__)
+#if defined(__VX4A__) || defined(__VX4B__)
 #include "nn_operator.h"
 #include "../src/asm/asm_constants.h"
 #include "vpu_sim.h"
@@ -32,11 +32,6 @@ void requantize_int16_tensor_asm(int16_t *output, int16_t *input1, int tensor_le
     requantize_int16_tensor_ref(output, input1, tensor_length, blob);
 }
 
-void output_transform_fn_int16_impl_asm(int16_t *vDvR,
-                                        int32_t *mul_add,
-                                        int16_t *output,
-                                        uint32_t N);
-
 void pad_3_to_4_asm(int32_t outputs[], int64_t inputs[], uint32_t N_24, uint32_t pad_val) {
     int8_t * outputs_p = (int8_t *)outputs;
     int8_t * inputs_p = inputs;
@@ -51,36 +46,26 @@ void pad_3_to_4_asm(int32_t outputs[], int64_t inputs[], uint32_t N_24, uint32_t
     }
 };
 
-int8_t *output_transform_maxpool_impl_asm(
-    const void *params, int8_t *Y, void *A,
-    int16_t *multipliers_and_biases, int output_count) {}
-int8_t *output_transform_fn_int_clamped_impl_asm(
-    const void *params, int8_t *Y, void *A,
-    int32_t output_channel_group, int16_t *offsets_multipliers_and_biases) {}
-int8_t *output_transform_fn_binary_impl_asm(
-    int8_t *Y, void *A, int32_t output_channel_group,
-    int16_t *thresholds) {}
+int16_t *output_transform_fn_int16_impl(int16_t *vDvR,
+                                        int32_t *mul_add,
+                                        int16_t *output,
+                                        uint32_t N);
 void output_transform_fn_int16_impl_asm(int16_t *vDvR,
                                         int32_t *mul_add,
                                         int16_t *output,
-                                        uint32_t N) {}
+                                        uint32_t N) {
+    output_transform_fn_int16_impl(vDvR, mul_add, output, N);
+}
+
+void quantize_int16_tensor_ref(int16_t *output, float *input, int tensor_length, void *blob);
 void quantize_int16_tensor_asm(int16_t *output,
-                               float *input, int tensor_length, void *blob) {}
-void mat_mul_direct_binary_impl_asm(const void *params,
-                                    void *A, int8_t *X,
-                                    int32_t output_channel_group,
-                                    int8_t *weights) {}
-void mat_mul_generic_binary_impl_asm(const void *params,
-                                     void *A, int8_t *X,
-                                     int32_t output_channel_group,
-                                     int8_t *weights) {}
-void maxpool_direct_impl_asm(const void *params, void *A, int8_t *X) {}
-void mat_mul_dw_direct_int16_impl_asm(const void *params,
-                                      void *A, int16_t *X,
-                                      int32_t output_channel_group,
-                                      int16_t *weights) {}
+                               float *input, int tensor_length, void *blob) {
+    quantize_int16_tensor_ref(output, input, tensor_length, blob);
+}
+
+// This empty stub here is to pass the build, this will not be called
 int8_t *output_transform_fn_int_channelwise_impl_asm(
     const void *params, int8_t *Y, void *A,
-    int16_t *multipliers_and_biases, int output_count) {}
+    int16_t *multipliers_and_biases, int output_count) {return NULL;}
 
 #endif

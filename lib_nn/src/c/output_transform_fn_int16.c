@@ -12,7 +12,7 @@
 int min(int a, int b) {
     return a < b ? a : b;
 }
-#ifdef NN_USE_REF
+#if defined(NN_USE_REF) || defined(__riscv_xxcore) 
 
 int16_t *output_transform_fn_int16_impl(int16_t *vDvR,
                                         int32_t *mul_add,
@@ -57,7 +57,7 @@ int16_t *output_transform_fn_int16(otfn_int16_params_t *params,
         (int32_t)VPU_INT16_EPV);
     //
     mul_add += output_channel_group * VPU_INT32_EPV * 4;
-#ifdef NN_USE_REF
+#if defined(NN_USE_REF) || defined(__riscv_xxcore)
     return output_transform_fn_int16_impl(vDvR, mul_add,
                                           Y, output_count);
 #else
