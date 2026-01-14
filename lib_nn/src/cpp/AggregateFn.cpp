@@ -207,6 +207,74 @@ void mat_mul_generic_impl(const mat_mul_generic_params_t *params, VPURingBuffer 
   VSTD(vpu, &A->vD);
 }
 
+void mat_mul_generic_impl_accum(const mat_mul_generic_params_t *params,
+                                VPURingBuffer *A, int8_t *T,
+                                int32_t output_channel_group, int8_t *weights,
+                                void (*macc_inst)(xs3_vpu *vpu,
+                                                  const void *addr)) {
+  xs3_vpu vpu_mem;
+  xs3_vpu *vpu = &vpu_mem;
+
+  VSETC(vpu, MODE_S8);
+  VCLRDR(vpu);
+  VLDR(vpu, &A->vR);
+  VLDD(vpu, &A->vD);
+
+  const int32_t vpu_bytes = XS3_VPU_VREG_WIDTH_BYTES;
+  const int32_t vpu_epv = VPU_INT16_EPV;
+
+  const int32_t first_output_channel = output_channel_group * vpu_epv;
+
+  // Point K_p at the beginning of the first output channel
+  int8_t *K_p = (int8_t *)weights + params->bytes_per_kernel_channel *
+                                        first_output_channel;  // changes
+  int step = vpu_bytes;
+  int t = params->output_slice_channel_count - first_output_channel;
+  t -= (vpu_epv - 1);
+  if (t <= 0) step *= t;
+
+  // these are a funciton of the number of input bytes
+  // These are unchanging and could be hoisted into the constructor
+  int32_t k_p_adjust = params->bytes_per_kernel_channel % vpu_bytes;
+  int input_channel_group_count =
+      (params->bytes_per_kernel_channel) / vpu_bytes;
+
+  // The tail loop must execute in order to rotate the ring buffer to leave the
+  // results in 0->N-1 of the ring buffer
+  if (k_p_adjust == 0) {
+    input_channel_group_count--;
+    k_p_adjust = vpu_bytes;
+  }
+
+  int8_t *D_p = T;
+
+  for (int p = 0; p < input_channel_group_count; ++p) {
+    VLDC(vpu, D_p);
+
+    D_p += XS3_VPU_VREG_WIDTH_BYTES;
+
+    for (int l = 0; l < VPU_INT16_EPV - 1; l++) {
+      macc_inst(vpu, K_p);
+      K_p += XS3_VPU_VREG_WIDTH_BYTES;
+    }
+    macc_inst(vpu, K_p);
+    K_p += step;
+  }
+
+  VLDC(vpu, D_p);
+
+  int tail_loops = vpu_epv - 1 + step / vpu_bytes;
+
+  // aligned boundaries TODO put an assert on this
+  for (int l = 0; l < tail_loops; l++) {
+    macc_inst(vpu, K_p);
+    K_p += k_p_adjust;
+  }
+
+  VSTR(vpu, &A->vR);
+  VSTD(vpu, &A->vD);
+}
+
 void mat_mul_generic_int8_impl(const mat_mul_generic_params_t *params, VPURingBuffer *A,
                                int8_t *T, int32_t output_channel_group,
                                int8_t *weights) {
@@ -307,6 +375,9 @@ C_API void mat_mul_generic_int8_impl_asm(const mat_mul_generic_params_t *params,
                                          VPURingBuffer *A, int8_t *X,
                                          int32_t output_channel_group,
                                          int8_t *weights);
+C_API void mat_mul_generic_int8_accum_impl_asm(
+    const mat_mul_generic_params_t *params, VPURingBuffer *A, int8_t *X,
+    int32_t output_channel_group, int8_t *weights);
 C_API void mat_mul_direct_binary_impl_asm(const mat_mul_direct_params_t *params,
                                           VPURingBuffer *A, int8_t *X,
                                           int32_t output_channel_group,
@@ -343,6 +414,18 @@ void nn::mat_mul_generic_int8(const mat_mul_generic_params_t *params, VPURingBuf
 #else
   mat_mul_generic_int8_impl_asm(params, A, T, output_channel_group,
                                 weights);
+#endif  // NN_USE_REF
+}
+void nn::mat_mul_generic_int8_accum(const mat_mul_generic_params_t *params,
+                                    VPURingBuffer *A, int8_t *T,
+                                    int32_t output_channel_group,
+                                    int8_t *weights) {
+#ifdef NN_USE_REF
+  mat_mul_generic_impl_accum(params, A, T, output_channel_group, weights,
+                             VLMACCR);
+#else
+  mat_mul_generic_int8_accum_impl_asm(params, A, T, output_channel_group,
+                                      weights);
 #endif  // NN_USE_REF
 }
 void nn::mat_mul_generic_binary(const mat_mul_generic_params_t *params, VPURingBuffer *A, int8_t *T,

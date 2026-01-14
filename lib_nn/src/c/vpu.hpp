@@ -7,7 +7,7 @@
 
 #include "xs3_vpu.h"
 
-struct VPURingBuffer {
+struct alignas(4) VPURingBuffer {
   int16_t vR[VPU_INT16_EPV];
   int16_t vD[VPU_INT16_EPV];
 
@@ -31,7 +31,7 @@ struct VPURingBuffer {
   }
 
   /// Test equality between two VPURingBuffer
-  bool operator==(VPURingBuffer other) const {
+  bool operator==(VPURingBuffer const &other) const {
     return std::memcmp(this, &other, sizeof(VPURingBuffer)) == 0;
   }
 };
@@ -45,4 +45,4 @@ inline std::ostream &operator<<(std::ostream &stream,
   return stream;
 }
 
-#endif  // VPU_HPP_
+#endif // VPU_HPP_

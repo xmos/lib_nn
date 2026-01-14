@@ -7,7 +7,7 @@
 
 #include "xs3_vpu.h"
 
-struct VPURingBuffer {
+struct alignas(4) VPURingBuffer {
   int16_t vR[VPU_INT16_EPV];
   int16_t vD[VPU_INT16_EPV];
 

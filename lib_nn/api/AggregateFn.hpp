@@ -112,6 +112,9 @@ class MatMulInt8 : public MatMulBase {
 
 void mat_mul_generic_int8(const mat_mul_generic_params_t *params, VPURingBuffer *A, int8_t *T,
                               int32_t output_channel_group, int8_t *weights);
+void mat_mul_generic_int8_accum(const mat_mul_generic_params_t *params,
+                                VPURingBuffer *A, int8_t *T,
+                                int32_t output_channel_group, int8_t *weights);
 
 class MatMulBinary : public MatMulBase {
  public:
