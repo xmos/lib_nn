@@ -82,6 +82,17 @@ pipeline {
                  sh "cd test/gtests && ./bin/x86/unit_test"
             }
         }
+
+        // TODO once jenkinsfile is cleaned up, move this above test stage
+        stage('Examples build') {
+        steps {
+            withTools("15.3.1") {
+                dir("${REPO_NAME}/examples") {
+                    xcoreBuild()
+                }
+            }
+        }} // stage Examples build
+    
     }
     post {
         cleanup {
