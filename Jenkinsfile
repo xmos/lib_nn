@@ -1,4 +1,4 @@
-@Library('xmos_jenkins_shared_library@v0.43.3') _
+@Library('xmos_jenkins_shared_library@v0.14.2') _
 
 getApproval()
 
@@ -82,22 +82,6 @@ pipeline {
                  sh "cd test/gtests && ./bin/x86/unit_test"
             }
         }
-
-        // TODO once jenkinsfile is cleaned up, move this above test stage
-        stage('Examples build') {
-        steps {
-            script {
-            def (server, user, repo) = extractFromScmUrl()
-            env.REPO_NAME = repo
-            }
-            uninstallTools()
-            withTools("15.3.1") {
-                dir("${REPO_NAME}/examples") {
-                    xcoreBuild()
-                }
-            }
-        }} // stage Examples build
-    
     }
     post {
         cleanup {
