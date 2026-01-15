@@ -20,6 +20,7 @@ The program will output the result of adding the two input tensors element-wise.
 The expected output is:
 
 .. code-block:: console
-
-    Output Tensor:
-    101 202 303 404 505 606 707 808 909 1010 1111 1212
+    
+    Input1: -100,   200,    300,    400,    -500,   800,    100,    -50,    -25,    1000,   1100,   1200,
+    Input2: 100,    200,    300,    400,    500,    600,    700,    800,    900,    1000,   1100,   1200,
+    Output: 0,      400,    600,    800,    0,      1400,   800,    750,    875,    2000,   2200,   2400,

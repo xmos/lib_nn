@@ -12,9 +12,18 @@
 #define WORD_ALIGNED
 #endif
 
+static 
+void print_array(const char *name, int16_t *array, unsigned length) {
+    printf("%s: ", name);
+    for (unsigned i = 0; i < length; i++) {
+        printf("%d,\t", array[i]);
+    }
+    printf("\n");
+}
+
 int main() {
     WORD_ALIGNED int16_t input1[SIZE] = {
-        1,2,3,4,5,6,7,8,9,10,11,12
+        -100,200,300,400,-500,800,100,-50,-25,1000,1100,1200
     };
     WORD_ALIGNED int16_t input2[SIZE] = {
         100,200,300,400,500,600,700,800,900,1000,1100,1200
@@ -27,8 +36,9 @@ int main() {
     add_int16_tensor_blob(blob, 1, 1, 1, err_msg);
     add_int16_tensor(output, input1, input2, SIZE, blob);
 
-    for (int i = 0; i < SIZE; i++) {
-        printf("output[%d] = %d\n", i, output[i]);
-    }
+    // print the results
+    print_array("Input1", input1, SIZE);
+    print_array("Input2", input2, SIZE);
+    print_array("Output", output, SIZE);
     return 0;
 }
