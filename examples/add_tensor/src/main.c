@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <assert.h>
 
 #include "add_int16.h"
 #include "add_int16_transform.h"
@@ -28,12 +29,17 @@ int main() {
     WORD_ALIGNED int16_t input2[SIZE] = {
         100,200,300,400,500,600,700,800,900,1000,1100,1200
     };
-    WORD_ALIGNED int16_t output[SIZE + 1];
+    WORD_ALIGNED int16_t output[SIZE];
     
     int8_t blob[ADD_INT16_TENSOR_BYTES()];
     char err_msg[ERR_MSG_DESCRIPTOR_FAIL_BYTES()];
 
-    add_int16_tensor_blob(blob, 1, 1, 1, err_msg);
+    // Compute fixed-point multipliers to rescale each input into the output scale
+    // Here inputs and output are in the same scale, result is performed without rescaling.
+    int ret = add_int16_tensor_blob(blob, 1, 1, 1, err_msg);
+    assert(ret && "Failed to create add_int16 tensor blob");
+
+    // perform the addition
     add_int16_tensor(output, input1, input2, SIZE, blob);
 
     // print the results
