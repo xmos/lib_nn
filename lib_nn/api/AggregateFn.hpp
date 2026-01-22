@@ -140,12 +140,15 @@ class MatMulDirectFn {
   public:
   MatMulDirectFn(const ImageGeometry &X, const WindowGeometry &K,
                                const int input_ch_per_output);
-  mat_mul_direct_params_t getParams() {return p;};
+  mat_mul_direct_params_t getParams() const {return p;};
 };
 
 void mat_mul_direct_int8(const mat_mul_direct_params_t *params, VPURingBuffer *A,
                               int8_t *X, int32_t output_channel_group,
                               int8_t *weights);
+void mat_mul_direct_int8_accum(const mat_mul_direct_params_t *params,
+                               VPURingBuffer *A, int8_t *X,
+                               int32_t output_channel_group, int8_t *weights);
 
 void mat_mul_direct_int16(const mat_mul_direct_params_t *params, VPURingBuffer *A,
                               int16_t *X, int32_t output_channel_group,
@@ -189,7 +192,7 @@ class MatMulDirectFn_DW {
   public:
   MatMulDirectFn_DW(const ImageGeometry &X, const WindowGeometry &K);
   MatMulDirectFn_DW(const WindowGeometry &K);
-  mat_mul_dw_direct_params_t getParams() {return p;};
+  mat_mul_dw_direct_params_t getParams() const {return p;};
 
   /**
    * @brief Used to reorder the weights from their normal form ([OutputChannel,
@@ -237,6 +240,15 @@ class MatMulDirectFn_DW {
 
 void mat_mul_dw_direct(const mat_mul_dw_direct_params_t *params, VPURingBuffer *A, int8_t *T,
                                      int32_t output_channel_group, int8_t *weights);
+void mat_mul_dw_direct_accum(const mat_mul_dw_direct_params_t *params,
+                             VPURingBuffer *A, int8_t *T,
+                             int32_t output_channel_group, int8_t *weights);
+void mat_mul_dw_direct_row_accum(const mat_mul_dw_direct_params_t *params,
+                                 VPURingBuffer *A, int8_t *X,
+                                 int32_t output_channel_group, int8_t *weights,
+                                 int32_t output_width,
+                                 int32_t x_stride_bytes,
+                                 int32_t output_stride);
 /** Function that calculates a maxpool on an image. This operation works just like
  * the depthwise mat_mul_direct; in particular, it takes the same params_t descriptor
  * that contains the kernel size. There is no need for an output transform after this

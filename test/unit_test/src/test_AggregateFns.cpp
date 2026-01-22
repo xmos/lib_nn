@@ -22,6 +22,17 @@ using namespace nn::test;
 
 static auto rng = test::Rand(42);
 
+#if defined(__XS3A__) || defined(__VX4A__)
+extern "C" void mat_mul_dw_direct_row_accum_impl(
+    const mat_mul_dw_direct_params_t *params, VPURingBuffer *A, int8_t *X,
+    int32_t output_channel_group, int8_t *weights, int32_t output_width,
+    int32_t x_stride_bytes, int32_t output_stride);
+extern "C" void mat_mul_dw_direct_row_accum_impl_asm(
+    const mat_mul_dw_direct_params_t *params, VPURingBuffer *A, int8_t *X,
+    int32_t output_channel_group, int8_t *weights, int32_t output_width,
+    int32_t x_stride_bytes, int32_t output_stride);
+#endif
+
 /*
   Simple test to verify memory accesses
 */
@@ -914,6 +925,80 @@ void Test_MatMulDirectFn_DW() {
   }
 }
 
+void Test_MatMulDirectFn_DW_RowAccum_AsmMatchesRef() {
+#if defined(__XS3A__) || defined(__VX4A__)
+  const int vpu_ring_buffer_length = 16;
+
+  for (int C = 4; C <= 32; C += 4) {
+    for (int WS = 1; WS <= 5; ++WS) {
+      for (int output_width = 1; output_width <= 4; ++output_width) {
+        for (int stride = 1; stride <= 2; ++stride) {
+          const int groups = (C + vpu_ring_buffer_length - 1) /
+                             vpu_ring_buffer_length;
+          const int output_stride = groups;
+          const int x_stride_bytes = stride * C;
+
+          std::array<int, 4> shape = {{1, 1, WS, C}};
+
+          std::vector<int8_t> raw_weights(WS * C);
+          for (auto &v : raw_weights) v = rng.rand<int8_t>();
+
+          Conv2dReorderedWeights rw = MatMulDirectFn_DW::reorder_kernel_weights(
+              raw_weights.data(), shape, 0);
+
+          const std::size_t x_bytes =
+              static_cast<std::size_t>((output_width - 1) * x_stride_bytes +
+                                       WS * C + vpu_ring_buffer_length + 32);
+          std::vector<int8_t> X_mem(x_bytes);
+          for (auto &v : X_mem) v = rng.rand<int8_t>();
+
+          mat_mul_dw_direct_params_t p{};
+          p.bytes_per_kernel_channel_group = WS * VPU_INT16_VLMACC_ELMS;
+          p.k_height_loop_counter = 0;
+          p.k_width_loop_counter = WS - 1;
+          p.inner_x_h_step = C;
+          p.inner_x_v_step = 0;
+
+          std::vector<VPURingBuffer> A_ref(output_width * output_stride);
+          std::vector<VPURingBuffer> A_asm(output_width * output_stride);
+
+          for (std::size_t i = 0; i < A_ref.size(); ++i) {
+            for (int lane = 0; lane < vpu_ring_buffer_length; ++lane) {
+              const int32_t v = rng.rand<int32_t>();
+              A_ref[i].SetAccu(lane, v);
+              A_asm[i].SetAccu(lane, v);
+            }
+          }
+
+          for (int ocg = 0; ocg < groups; ++ocg) {
+            VPURingBuffer *A_ref_base = A_ref.data() + ocg;
+            VPURingBuffer *A_asm_base = A_asm.data() + ocg;
+            int8_t *X_base = X_mem.data() + ocg * vpu_ring_buffer_length;
+
+            mat_mul_dw_direct_row_accum_impl(&p, A_ref_base, X_base, ocg,
+                                             rw.weights.data(), output_width,
+                                             x_stride_bytes, output_stride);
+            mat_mul_dw_direct_row_accum_impl_asm(
+                &p, A_asm_base, X_base, ocg, rw.weights.data(), output_width,
+                x_stride_bytes, output_stride);
+          }
+
+          for (std::size_t i = 0; i < A_ref.size(); ++i) {
+            for (int lane = 0; lane < vpu_ring_buffer_length; ++lane) {
+              TEST_ASSERT_EQUAL(A_ref[i].GetAccu(lane),
+                                A_asm[i].GetAccu(lane));
+            }
+          }
+        }
+      }
+    }
+  }
+#else
+  TEST_IGNORE_MESSAGE(
+      "Row-accum ASM test requires XS3A/VX4A target build");
+#endif
+}
+
 void Test_Kernel_Reordering_DW() {
   for (int x_channels = 4; x_channels <= 32; x_channels += 4) {
     for (int k_height = 1; k_height <= 6; ++k_height) {
@@ -1171,6 +1256,7 @@ void test_aggregate_fns() {
   RUN_TEST(Test_Kernel_Reordering);
   RUN_TEST(Test_Simple_MatMulDirectFn_DW);
   RUN_TEST(Test_MatMulDirectFn_DW);
+  RUN_TEST(Test_MatMulDirectFn_DW_RowAccum_AsmMatchesRef);
   RUN_TEST(Test_Kernel_Reordering_DW);
 }
 

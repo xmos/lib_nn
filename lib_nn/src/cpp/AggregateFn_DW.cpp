@@ -201,6 +201,36 @@ void mat_mul_dw_direct_impl(const mat_mul_dw_direct_params_t *params, VPURingBuf
   VSTD(vpu, &A->vD);
 }
 
+void mat_mul_dw_direct_impl_accum(const mat_mul_dw_direct_params_t *params,
+                                  VPURingBuffer *A, int8_t *X,
+                                  int32_t output_channel_group,
+                                  int8_t *weights) {
+  xs3_vpu vpu_mem;
+  xs3_vpu *vpu = &vpu_mem;
+
+  VSETC(vpu, MODE_S8);
+  VCLRDR(vpu);
+  VLDR(vpu, &A->vR);
+  VLDD(vpu, &A->vD);
+
+  int8_t *X_cur_p = X;
+  int8_t *K_p = (int8_t *)weights +
+                params->bytes_per_kernel_channel_group * output_channel_group;
+
+  for (int kh = params->k_height_loop_counter; kh >= 0; kh--) {
+    for (int kw = params->k_width_loop_counter; kw >= 0; kw--) {
+      VLDC(vpu, X_cur_p);
+      VLMACC(vpu, K_p);
+      K_p += VPU_INT16_VLMACC_ELMS;
+      X_cur_p += params->inner_x_h_step;
+    }
+    X_cur_p += params->inner_x_v_step;
+  }
+
+  VSTR(vpu, &A->vR);
+  VSTD(vpu, &A->vD);
+}
+
 void mat_mul_dw_direct_int16_impl(const mat_mul_dw_direct_params_t *params, VPURingBuffer *A,
                             int16_t *X, int32_t output_channel_group,
                             int16_t *weights) {
@@ -229,15 +259,59 @@ void mat_mul_dw_direct_int16_impl(const mat_mul_dw_direct_params_t *params, VPUR
   VSTD(vpu, &A->vD);
 }
 
+C_API void mat_mul_dw_direct_row_accum_impl(
+    const mat_mul_dw_direct_params_t *params, VPURingBuffer *A, int8_t *X,
+    int32_t output_channel_group, int8_t *weights, int32_t output_width,
+    int32_t x_stride_bytes, int32_t output_stride) {
+  xs3_vpu vpu_mem;
+  xs3_vpu *vpu = &vpu_mem;
+
+  VSETC(vpu, MODE_S8);
+
+  int8_t *K_base = (int8_t *)weights +
+                   params->bytes_per_kernel_channel_group *
+                       output_channel_group;
+
+  for (int32_t p = 0; p < output_width; ++p) {
+    VPURingBuffer *A_p = A + p * output_stride;
+    VCLRDR(vpu);
+    VLDR(vpu, &A_p->vR);
+    VLDD(vpu, &A_p->vD);
+
+    int8_t *X_cur_p = X + p * x_stride_bytes;
+    int8_t *K_p = K_base;
+
+    for (int kh = params->k_height_loop_counter; kh >= 0; kh--) {
+      for (int kw = params->k_width_loop_counter; kw >= 0; kw--) {
+        VLDC(vpu, X_cur_p);
+        VLMACC(vpu, K_p);
+        K_p += VPU_INT16_VLMACC_ELMS;
+        X_cur_p += params->inner_x_h_step;
+      }
+      X_cur_p += params->inner_x_v_step;
+    }
+
+    VSTR(vpu, &A_p->vR);
+    VSTD(vpu, &A_p->vD);
+  }
+}
+
 C_API void mat_mul_dw_direct_impl_asm(const mat_mul_dw_direct_params_t *params,
                                       VPURingBuffer *A, int8_t *X,
                                       int32_t output_channel_group,
                                       int8_t *weights);
+C_API void mat_mul_dw_direct_accum_impl_asm(
+    const mat_mul_dw_direct_params_t *params, VPURingBuffer *A, int8_t *X,
+    int32_t output_channel_group, int8_t *weights);
 
 C_API void mat_mul_dw_direct_int16_impl_asm(const mat_mul_dw_direct_params_t *params,
                                       VPURingBuffer *A, int16_t *X,
                                       int32_t output_channel_group,
                                       int16_t *weights);
+C_API void mat_mul_dw_direct_row_accum_impl_asm(
+    const mat_mul_dw_direct_params_t *params, VPURingBuffer *A, int8_t *X,
+    int32_t output_channel_group, int8_t *weights, int32_t output_width,
+    int32_t x_stride_bytes, int32_t output_stride);
 
 void nn::mat_mul_dw_direct(const mat_mul_dw_direct_params_t *params, VPURingBuffer *A, int8_t *T,
                                      int32_t output_channel_group, int8_t *weights) {
@@ -248,11 +322,46 @@ void nn::mat_mul_dw_direct(const mat_mul_dw_direct_params_t *params, VPURingBuff
 #endif  // NN_USE_REF
 }
 
+void mat_mul_dw_direct_accum_impl_asm(const mat_mul_dw_direct_params_t *params,
+                                      VPURingBuffer *A, int8_t *X,
+                                      int32_t output_channel_group,
+                                      int8_t *weights) {
+  mat_mul_dw_direct_impl_accum(params, A, X, output_channel_group, weights);
+}
+
+void nn::mat_mul_dw_direct_accum(const mat_mul_dw_direct_params_t *params,
+                                 VPURingBuffer *A, int8_t *T,
+                                 int32_t output_channel_group,
+                                 int8_t *weights) {
+#ifdef NN_USE_REF
+  mat_mul_dw_direct_impl_accum(params, A, T, output_channel_group, weights);
+#else
+  mat_mul_dw_direct_accum_impl_asm(params, A, T, output_channel_group,
+                                   weights);
+#endif  // NN_USE_REF
+}
+
 void nn::mat_mul_dw_direct_int16(const mat_mul_dw_direct_params_t *params, VPURingBuffer *A, int16_t *T,
                                      int32_t output_channel_group, int16_t *weights) {
 #ifdef NN_USE_REF
   mat_mul_dw_direct_int16_impl(params, A, T, output_channel_group, weights);
 #else
   mat_mul_dw_direct_int16_impl_asm(params, A, T, output_channel_group, weights);
+#endif  // NN_USE_REF
+}
+
+void nn::mat_mul_dw_direct_row_accum(const mat_mul_dw_direct_params_t *params,
+                                     VPURingBuffer *A, int8_t *X,
+                                     int32_t output_channel_group,
+                                     int8_t *weights, int32_t output_width,
+                                     int32_t x_stride_bytes,
+                                     int32_t output_stride) {
+#ifdef NN_USE_REF
+  mat_mul_dw_direct_row_accum_impl(params, A, X, output_channel_group, weights,
+                                   output_width, x_stride_bytes, output_stride);
+#else
+  mat_mul_dw_direct_row_accum_impl_asm(params, A, X, output_channel_group,
+                                       weights, output_width, x_stride_bytes,
+                                       output_stride);
 #endif  // NN_USE_REF
 }
