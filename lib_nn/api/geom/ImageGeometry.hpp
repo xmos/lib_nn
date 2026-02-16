@@ -49,17 +49,17 @@ class ImageGeometry {
   /**
    * The total number of pixels in the image, i.e. height x width
    */
-  int inline const PixelCount() const { return this->height * this->width; }
+  inline int PixelCount() const { return this->height * this->width; }
 
   /**
    * The number of image elements per pixel, i.e. channels
    */
-  int inline const PixelElements() const { return this->depth; }
+  inline int PixelElements() const { return this->depth; }
 
   /**
    * The number of image elements per row of the image, i.e. width x channels
    */
-  int inline const RowElements() const {
+  inline int RowElements() const {
     return this->width * this->PixelElements();
   }
 
@@ -67,49 +67,49 @@ class ImageGeometry {
    * The number of image elements per column of the image, i.e. height x
    * channels
    */
-  int inline const ColElements() const {
+  inline int ColElements() const {
     return this->height * this->PixelElements();
   }
 
   /**
    * The total number of image elements, i.e. width x height x channels
    */
-  int inline const ElementCount() const {
+  inline int ElementCount() const {
     return this->height * this->RowElements();
   }
 
   /**
    * The number of image pixels multiplied by the square of image depth
    */
-  int inline const VolumeElements() const {
+  inline int VolumeElements() const {
     return this->depth * this->ElementCount();
   }
 
   /**
    * The number of bytes per image pixel
    */
-  int inline const PixelBytes() const {
+  inline int PixelBytes() const {
     return PixelElements() * element_bits / CHAR_BIT;
   }
 
   /**
    * The number of bytes per row of the image
    */
-  int inline const RowBytes() const {
+  inline int RowBytes() const {
     return RowElements() * element_bits / CHAR_BIT;
   }
 
   /**
    * The number of bytes per column of the image
    */
-  int inline const ColBytes() const {
+  inline int ColBytes() const {
     return ColElements() * element_bits / CHAR_BIT;
   }
 
   /**
    * The total number of bytes of the image
    */
-  int inline const ImageBytes() const {
+  inline int ImageBytes() const {
     return ElementCount() * element_bits / CHAR_BIT;
   }
 
