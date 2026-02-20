@@ -364,7 +364,7 @@ class OutputTransformFnInt8 : public OutputTransformFn {
     if (use_high_precision) {
       double max_avg_abs_error = 0.0;
 
-      for (int idx = 0; idx < mul_and_bias.size(); ++idx) {
+      for (size_t idx = 0; idx < mul_and_bias.size(); ++idx) {
         int64_t abs_error_sum = 0;
 
         for (int accu = mul_and_bias[idx].accu_min_val;
@@ -481,7 +481,7 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
     if (use_high_precision) {
       double max_avg_abs_error = 0.0;
 
-      for (int idx = 0; idx < mul_and_bias.size(); ++idx) {
+      for (size_t idx = 0; idx < mul_and_bias.size(); ++idx) {
         int64_t abs_error_sum = 0;
 
         for (int accu = mul_and_bias[idx].accu_min_val;
@@ -525,7 +525,7 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
       //-1          7                          2^-6
       // 0           8                          2^-7
       double abs_error_sum = mul_and_bias.size()*std::ldexp(1, -(qp.final_shr + 7));
-      // for (int idx = 0; idx < mul_and_bias.size(); ++idx) {
+      // for (size_t idx = 0; idx < mul_and_bias.size(); ++idx) {
       //   abs_error_sum -= std::ldexp(1, -(qp.initial_shifts[idx] +  7));
       // }
       return abs_error_sum/mul_and_bias.size();
@@ -741,7 +741,7 @@ class OT_binary : public OutputTransformFn {
     if (final_load_bytes == 0) final_load_bytes = vpu_vector_byte_count;
 
     assert(final_load_bytes > 0);
-    for (int ch = 0; ch < thresholds.size(); ++ch) {
+    for (size_t ch = 0; ch < thresholds.size(); ++ch) {
       int final_vpu_load_address =
           reordered_weights.final_vpu_load_addresses[ch];
       int8_t padding_byte = 0;
