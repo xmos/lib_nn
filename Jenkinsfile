@@ -1,4 +1,4 @@
-@Library('xmos_jenkins_shared_library@v0.14.2') _
+@Library('xmos_jenkins_shared_library@v0.46.0') _
 
 getApproval()
 
@@ -12,7 +12,7 @@ pipeline {
     parameters { // Available to modify on the job page within Jenkins if starting a build
         string( // use to try different tools versions
             name: 'TOOLS_VERSION',
-            defaultValue: '15.0.6',
+            defaultValue: '15.3.1',
             description: 'The tools version to build with (check /projects/tools/ReleasesTools/)'
         )
     }
