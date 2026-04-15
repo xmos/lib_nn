@@ -467,12 +467,12 @@ void VLSUB(xs3_vpu *vpu, const void *addr) {
 }
 
 static inline
-unsigned _VLMUL_GET_SHIFT(const nn_target_arch_t arch, xs3_vpu *vpu) {
+unsigned vlmul_get_shift(const nn_target_arch_t arch, const vector_mode mode) {
   // VLMUL shift = bpe - 2 for XS3A, bpe - 1 for VX4A
   assert(arch == TARGET_ARCH_XS3A || arch == TARGET_ARCH_VX4A);
   unsigned shift = 0;
   unsigned adj = (arch == TARGET_ARCH_XS3A) ? 0 : 1;
-  switch (vpu->mode) {
+  switch (mode) {
     case MODE_S8:
       shift = 8 - 2 + adj;
       break;
@@ -494,7 +494,7 @@ void VLMUL(xs3_vpu *vpu, const void *addr) {
   assert_word_aligned(addr);
   #endif
 
-  const unsigned shift = _VLMUL_GET_SHIFT(NN_ARCH, vpu);
+  const unsigned shift = vlmul_get_shift(NN_ARCH, vpu->mode);
   if (vpu->mode == MODE_S8) {
     const int8_t *addr8 = (const int8_t *)addr;
     for (int i = 0; i < VPU_INT8_EPV; i++) {
