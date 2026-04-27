@@ -220,7 +220,8 @@ FUNCTION_NAME:
     xm.stdsp x20, x21, 1*8
     xm.stdsp x22, x23, 2*8
 
-
+    xm.ldcu x10, 0
+    xm.assert x10 //NOT IMPLEMENTED
 
     xm.lddsp x18, x19, 0*8
     xm.lddsp x20, x21, 1*8
