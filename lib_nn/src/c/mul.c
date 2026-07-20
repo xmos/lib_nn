@@ -109,7 +109,7 @@ void mul_elementwise_ref(const int8_t* in1_data, const int8_t* in2_data, int ele
 }
 
 void mul_elementwise(const int8_t* in1_data, const int8_t* in2_data, int element_count, nn_mul_params_t * params, int8_t * out_data){
-#if (defined(NN_USE_REF)
+#if defined(NN_USE_REF)
    mul_elementwise_ref(in1_data, in2_data, element_count, params, out_data);
 #elif defined(__XS3A__) || defined(__VX4B__)
    mul_elementwise_asm(in1_data, in2_data, element_count, params, out_data);
