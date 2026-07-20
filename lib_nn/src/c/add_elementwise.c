@@ -122,10 +122,11 @@ void add_elementwise_ref(int8_t y[], const int8_t x1[], const int8_t x2[],
 void add_elementwise(int8_t Y[], const int8_t X0[], const int8_t X1[],
                      nn_add_params_t *p, const int output_start,
                      const int output_count) {
-#if (defined(NN_USE_REF) || defined(__VX4B__) || defined(__VX4A__))
-  //TODO: implement vx4 to use asm version
+#if (defined(NN_USE_REF))
   add_elementwise_ref(Y, X0, X1, p, output_start, output_count);
-#else
+#elif defined(__XS3A__) || defined(__VX4B__)
   add_elementwise_asm(Y, X0, X1, p, output_start, output_count);
+#else
+  add_elementwise_ref(Y, X0, X1, p, output_start, output_count);
 #endif // NN_USE_REF
 }
