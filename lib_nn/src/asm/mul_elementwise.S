@@ -206,12 +206,11 @@ FUNCTION_NAME:
 
 
 
-#if defined(__VX4A__) || defined(__VX4B__)
+#if defined(__VX4B__)
 
 
 #define FUNCTION_NAME mul_elementwise_asm
 
-#define NSTACKWORDS  0
 #define ROUND_UP(X, Y) (((X+Y-1)/Y)*Y)
 
 /*
@@ -226,24 +225,188 @@ void mul_elementwise_asm(
 .p2align 1
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
+.p2align 2
+BYTE_TO_WORD:
+VECT8_ONES:
+	.word    0x01010101
+	.word    0x01010101
+	.word    0x01010101
+	.word    0x01010101
+
+HALF_TO_WORD:
+VECT16_ONES:
+	.word    0x00010001
+	.word    0x00010001
+	.word    0x00010001
+	.word    0x00010001
+	.word    0x00010001
+	.word    0x00010001
+	.word    0x00010001
+	.word    0x00010001
+VECT16_ZEROS:
+	.word    0x00000000
+	.word    0x00000000
+	.word    0x00000000
+	.word    0x00000000
+	.word    0x00000000
+	.word    0x00000000
+	.word    0x00000000
+	.word    0x00000000
+VECT_INT16_MAX:
+	.word    0x7f807f80
+	.word    0x7f807f80
+	.word    0x7f807f80
+	.word    0x7f807f80
+	.word    0x7f807f80
+	.word    0x7f807f80
+	.word    0x7f807f80
+	.word    0x7f807f80
+VECT_INT8_MIN:
+	.word    0x80808080
+	.word    0x80808080
+	.word    0x80808080
+	.word    0x80808080	
+
+#define S_R4 0
+#define S_R5 (S_R4 + 4)
+#define S_R6 (S_R5 + 4)
+#define S_R7 (S_R6 + 4)
+#define S_R8 (S_R7 + 4)
+#define S_R9 (S_R8 + 4)
+#define S_R10 (S_R9 + 4)
+#define S_MASK (S_R10 + 4)
+#define S_TEMP (S_MASK + 4)
+#define S_BIAS (S_TEMP + 32)
+#define S_IN1_ZERO_POINT (S_BIAS + 32)
+#define S_IN2_ZERO_POINT (S_IN1_ZERO_POINT + 16)
+#define S_SCALAR (S_IN2_ZERO_POINT + 16) //place to put the result for vdepth8
+
+#define NSTACKBYTES (S_SCALAR + 32 + 4)
+
+#define in1_data x10 
+#define in2_data x11 
+#define element_count x12 
+#define params x13
+#define bias x18
+#define scalar x19 
+#define in1_zero_point x20 
+#define in2_zero_point x21 
+#define out_data x22
+
+#define temp3 x23
+#define temp2 x24
+#define temp x28
 FUNCTION_NAME:
 
-    {xm.entsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
+    { xm.entsp ROUND_UP(NSTACKBYTES, 16); xm.nop				}
     xm.stdsp x18, x19, 0*8
     xm.stdsp x20, x21, 1*8
     xm.stdsp x22, x23, 2*8
+	sw x24, 3*8(sp)
 
-    xm.ldcu x10, 0
-    xm.assert x10 //NOT IMPLEMENTED
+	xm.ldap temp, BYTE_TO_WORD
+	{ xm.ldwi temp2, 0(temp)			; xm.ldcu temp, 0 		}
+	{ xm.ld8u temp3, temp(x13) 			; xm.ldcu temp, 1		}
+	mul temp3, temp3, temp2 	//broadcast the byte to a word
+	addi in1_zero_point, sp, S_IN1_ZERO_POINT
+	xm.stdi temp3, temp3, 0(in1_zero_point)
+	xm.stdi temp3, temp3, 8(in1_zero_point)
+	
+	xm.ld8u temp3, temp(x13)
+	mul temp3, temp3, temp2 	//broadcast the byte to a word
+	addi in2_zero_point, sp, S_IN2_ZERO_POINT
+	xm.stdi temp3, temp3, 0(in2_zero_point)
+	xm.stdi temp3, temp3, 8(in2_zero_point)
+	
+	xm.ldap temp, HALF_TO_WORD
+	{ xm.ldwi temp2, 0(temp)			; xm.ldcu temp, 1		}
+	xm.ld16s temp3, temp(x13)
+	{ xm.zexti temp3, 16				; xm.ldcu temp, 2		}
+	mul temp3, temp3, temp2 	//broadcast the short to a word
+	addi bias, sp, S_BIAS
+	xm.stdi temp3, temp3, 0(bias)
+	xm.stdi temp3, temp3, 8(bias)
+	xm.stdi temp3, temp3, 16(bias)
+	xm.stdi temp3, temp3, 24(bias)
+
+	xm.ld16s temp3, x28(x13)
+	{ xm.nop						; xm.ldcu temp, 0		}
+	mul temp3, temp3, temp2 	//broadcast the short to a word
+	addi scalar, sp, S_SCALAR
+	xm.stdi temp3, temp3, 0(scalar)
+	xm.stdi temp3, temp3, 8(scalar)
+	xm.stdi temp3, temp3, 16(scalar)
+	xm.stdi temp3, temp3, 24(scalar)
+
+	sw temp, S_MASK(sp)
+
+	//load out_data with x14
+	addi out_data, x14, 0
+	xm.ldcu temp, 512	// prepare for vCTRL: VSETCTRL_TYPE_INT8
+	FUNCTION_NAME.loop:
+		
+		{ xm.vsetc temp					; xm.nop							}
+		{ xm.vclrdr						; xm.ldap temp, VECT8_ONES			}
+	
+		{ xm.vldc temp					; xm.nop							}
+		{ xm.vlmacc0 in1_data			; xm.nop							}
+		{ xm.vlmacc0 in2_data			; xm.nop							}
+		{ xm.vlmacc0 in1_zero_point		; xm.nop							}
+		{ xm.vlmacc0 in2_zero_point		; xm.ldcu temp, 16					}
+
+		{ xm.vldc in1_data				; xm.add in1_data, in1_data, temp	}
+		{ xm.vlmacc0 in2_zero_point		; xm.nop							}
+		{ xm.vlmacc0 in2_data			; xm.nop							}
+
+		{ xm.vldc in1_zero_point		; xm.ldcu temp2, 1					}
+		{ xm.vlmacc0 in2_data			; xm.add in2_data, in2_data, temp	}
+		{ xm.vlmacc0 in2_zero_point		; xm.shl temp, temp2, 8				}	// prepare for vCTRL: VSETCTRL_TYPE_INT16
+
+		{ xm.vsetc temp					; xm.ldap temp, VECT16_ZEROS		}
+		
+		xm.vlsat temp	//shift all right by one and truncate to 16 bits per element
+
+		xm.vlmul0 scalar
+		xm.vlmul1 scalar
+		{ xm.vladd bias					; addi temp2, sp, S_TEMP			}
+		{ xm.vstr temp2					; xm.ldcu temp, 3					}
+		
+		xm.ld16s temp, temp(x13)
+		
+		xm.vlashr temp2, temp
+
+		{ xm.vstr temp2 				; xm.ldap temp, VECT_INT16_MAX 		}  
+			
+		{ xm.vladd temp					; xm.mkmsk temp2, 2					}
+		{ xm.vdepth1					; addi temp3, sp, S_MASK			}
+
+		xm.vstrpv temp3, temp2
+
+		xm.ldap temp, VECT_INT8_MIN
+		{ xm.vldr temp 					; addi temp, sp, S_TEMP 			} 
+
+		{ xm.mkmsk temp2, element_count	; lw temp3, S_MASK(sp) 				}
+		{ xm.zext temp2, 16 			; xm.nop							}
+		xm.vstrpv out_data, temp2         //store the int8_mins to output Y
+
+		{ xm.vldr temp 					; xm.ldcu temp, 16					}
+		{ xm.vdepth8					; xm.nop 							}
+		{ xm.andnot temp2, temp3		; xm.nop							}
+		xm.vstrpv out_data, temp2
+
+		{ xm.ldcu temp2, 1					; xm.sub element_count, element_count, temp	}
+		{ xm.add out_data, out_data, temp	; xm.shl temp, temp, 5						}
+		bge element_count, temp2, FUNCTION_NAME.loop
 
     xm.lddsp x18, x19, 0*8
     xm.lddsp x20, x21, 1*8
     xm.lddsp x22, x23, 2*8
+	lw x24, 3*8(sp)
 
-    {xm.retsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
+    {xm.retsp ROUND_UP(NSTACKBYTES, 16); xm.nop}
 
 .size FUNCTION_NAME, . -FUNCTION_NAME
-.resource_const FUNCTION_NAME, "stack_frame_bytes",  ROUND_UP(NSTACKWORDS*4, 16)
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  ROUND_UP(NSTACKBYTES, 16)
 .resource_list_empty FUNCTION_NAME, "callees"
 .resource_list_empty FUNCTION_NAME, "tail_callees"
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
