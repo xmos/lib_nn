@@ -139,6 +139,15 @@ void lookup8_ref(uint8_t *Y, const uint8_t *X, const uint8_t *lut,
   }
 }
 
+#if defined(__XS3A__) || defined(__VX4B__)
+void lookup8_asm(
+    uint8_t* Y,
+    const uint8_t* X,
+    const uint8_t* lut,
+    const unsigned elm_start,
+    const unsigned elm_count);
+#endif
+
 #ifdef NN_USE_REF
 void requantize_16_to_8(int8_t *y, const int16_t *x, const unsigned elm_start,
                         const unsigned elm_count) {
@@ -148,10 +157,12 @@ void requantize_16_to_8(int8_t *y, const int16_t *x, const unsigned elm_start,
 
 void lookup8(uint8_t *Y, const uint8_t *X, const uint8_t *lut,
              const unsigned elm_start, const unsigned elm_count) {
-#if defined(NN_USE_REF) || defined(__VX4A__) || defined(__VX4B__)
+#if defined(NN_USE_REF)
   lookup8_ref(Y, X, lut, elm_start, elm_count);
-#elif defined(__XS3A__)
+#elif defined(__XS3A__) || defined(__VX4B__)
   lookup8_asm(Y, X, lut, elm_start, elm_count);
+#else
+  lookup8_ref(Y, X, lut, elm_start, elm_count);
 #endif // NN_USE_REF
 }
 
