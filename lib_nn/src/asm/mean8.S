@@ -25,7 +25,7 @@
     .text
 	.cc_top FUNCTION_NAME.function,FUNCTION_NAME
     
-#define NSTACKWORDS     10
+#define NSTACKWORDS     16
     .issue_mode dual
 
     .align 4
