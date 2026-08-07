@@ -116,48 +116,41 @@ void lookup8_asm(
 
 #define FUNCTION_NAME lookup8_asm
 
-.p2align 1
+.p2align 2
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
 
-#define STACK_X18         (0)
-#define STACK_X19         (STACK_X18 + 4)
-#define STACK_X20         (STACK_X19 + 4)
-#define STACK_X21         (STACK_X20 + 4)
-#define STACK_X22         (STACK_X21 + 4)
-#define STACK_X23         (STACK_X22 + 4)
-#define STACK_X24         (STACK_X23 + 4)
-#define STACK_VEC1_TMP    (STACK_X24 + 4)
-#define STACK_RA          (STACK_VEC1_TMP + 32)
-#define NSTACKBYTES       (STACK_RA + 4)
-#define ROUND_UP(X, Y)    (((X+Y-1)/Y)*Y)
+#define STACK_S2            (0)
+#define STACK_S3            (STACK_S2 + 4)
+#define STACK_S4            (STACK_S3 + 4)
+#define STACK_S5            (STACK_S4 + 4)
+#define STACK_S6            (STACK_S5 + 4)
+#define STACK_VEC1_TMP      (STACK_S6 + 4)
+#define STACK_RA            (STACK_VEC1_TMP + 32)
+#define NSTACKBYTES         (STACK_RA + 4)
+#define ROUND_UP(X, Y)      (((X+Y-1)/Y)*Y)
 
-#define out_data    x10 
-#define in_data     x11 
-#define lut         x12
-#define start       x13
-#define count       x18
-#define mask        x19
-#define counter     x20
-#define thirty_two  x21
-#define vec1_tmp    x22
+#define out_data    a0
+#define in_data     a1
+#define lut         a2
+#define start       a3
+#define count       s2
+#define mask        s3
+#define counter     s4
+#define thirty_two  s5
+#define vec1_tmp    s6
 
 FUNCTION_NAME:
 
-    { xm.entsp ROUND_UP(NSTACKBYTES, 16)    ; xm.nop				    }
-    xm.stdsp x18, x19, 0*8
-    xm.stdsp x20, x21, 1*8
-    xm.stdsp x22, x23, 2*8
-    sw x24, 3*8(sp)
-    addi count, x14, 0
-    add out_data, out_data, start
-    add in_data, in_data, start
-    addi vec1_tmp, sp, STACK_VEC1_TMP
-    xm.mkmski mask, 32
-    li thirty_two, 32
-    // out_data substract 32 first for optimize in the loop
-    sub out_data, out_data, thirty_two
-
+    xm.entsp ROUND_UP(NSTACKBYTES, 16)
+    xm.stdsp s2, s3, 0*8
+    xm.stdsp s4, s5, 1*8
+    sw s6, 2*8(sp)
+    mv count, a4
+    { add out_data, out_data, start         ; add in_data, in_data, start           }
+    { addi vec1_tmp, sp, STACK_VEC1_TMP     ; xm.ldcu thirty_two, 32                }
+    { xm.mkmski mask, 32                    ; sub out_data, out_data, thirty_two    }   // out_data substract 32 first for optimize in the loop
+    
     // Set VPU to 8-bit mode
     li x28, 512
     { xm.vsetc x28                          ; xm.shri counter, count, 5 }
@@ -173,24 +166,23 @@ FUNCTION_NAME:
         xm.vlookup lut, 5, 6
         xm.vlookup lut, 6, 7
         xm.vlookup lut, 7, 0
-        bnez counter, FUNCTION_NAME.save
+        xm.bt counter, FUNCTION_NAME.save
         // In last loop - make mask for remaining elements
         xm.zexti count, 4
         xm.mkmsk mask, count
 
         FUNCTION_NAME.save:
-            { xm.vstd vec1_tmp                  ; xm.nop                                }
+            xm.vstd vec1_tmp
             { xm.vldr vec1_tmp                  ; add out_data, out_data, thirty_two    }
             xm.vstrpv out_data, mask
             { addi counter, counter, -1         ; xm.bt counter, FUNCTION_NAME.loop     }
 
 
-    xm.lddsp x18, x19, 0*8
-    xm.lddsp x20, x21, 1*8
-    xm.lddsp x22, x23, 2*8
-    lw x24, 3*8(sp)
+    xm.lddsp s2, s3, 0*8
+    xm.lddsp s4, s5, 1*8
+    lw s6, 3*8(sp)
 
-    {xm.retsp ROUND_UP(NSTACKBYTES, 16); xm.nop}
+    xm.retsp ROUND_UP(NSTACKBYTES, 16)
 
 .size FUNCTION_NAME, . -FUNCTION_NAME
 .resource_const FUNCTION_NAME, "stack_frame_bytes",  ROUND_UP(NSTACKBYTES, 16)
@@ -199,7 +191,3 @@ FUNCTION_NAME:
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
 
 #endif
-
-
-
-
