@@ -25,7 +25,7 @@
     .text
 	.cc_top FUNCTION_NAME.function,FUNCTION_NAME
     
-#define NSTACKWORDS     32
+#define NSTACKWORDS     10
     .issue_mode dual
 
     .align 4
@@ -43,13 +43,10 @@ filter:
 FUNCTION_NAME:
     { dualentsp NSTACKWORDS     ; nop    }
 
-    stw r4, sp[NSTACKWORDS-1]
-    stw r5, sp[NSTACKWORDS-2]
-    stw r6, sp[NSTACKWORDS-3]
-    stw r7, sp[NSTACKWORDS-4]
-    stw r8, sp[NSTACKWORDS-5]
-    stw r9, sp[NSTACKWORDS-6]
-    stw r10, sp[NSTACKWORDS-7]
+    std r4, r5, sp[2]
+    std r6, r7, sp[3]
+    std r8, r9, sp[4]
+    stw r10, sp[10]
 
 #define input       r0
 #define output      r1
@@ -134,13 +131,10 @@ output_loop:
     bu prepare
 
 exit:
-    ldw r4, sp[NSTACKWORDS-1]
-    ldw r5, sp[NSTACKWORDS-2]
-    ldw r6, sp[NSTACKWORDS-3]
-    ldw r7, sp[NSTACKWORDS-4]
-    ldw r8, sp[NSTACKWORDS-5]
-    ldw r9, sp[NSTACKWORDS-6]
-    ldw r10, sp[NSTACKWORDS-7]
+    ldd r4, r5, sp[2]
+    ldd r6, r7, sp[3]
+    ldd r8, r9, sp[4]
+    ldw r10, sp[10]
     retsp NSTACKWORDS
 
 maccr_tail_prepare:
@@ -153,7 +147,7 @@ maccr_tail_loop:
     { bau r11                       ; nop                   }
 
     .cc_bottom FUNCTION_NAME.function
-    .set FUNCTION_NAME.nstackwords, NSTACKWORDS+s32_to_f32.nstackwords+round8.nstackwords
+    .set FUNCTION_NAME.nstackwords, NSTACKWORDS + (s32_to_f32.nstackwords $M round8.nstackwords)
     .globl FUNCTION_NAME.nstackwords
     .set FUNCTION_NAME.maxcores,1
     .globl FUNCTION_NAME.maxcores
