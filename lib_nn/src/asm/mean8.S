@@ -41,7 +41,7 @@ filter:
     .globl FUNCTION_NAME
     .align 16
 FUNCTION_NAME:
-    { dualentsp NSTACKWORDS     ; nop    }
+    dualentsp NSTACKWORDS
 
     std r4, r5, sp[2]
     std r6, r7, sp[3]
