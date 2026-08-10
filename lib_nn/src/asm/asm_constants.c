@@ -47,9 +47,9 @@ const int8_t vpu_vect_0x80[VPU_INT8_EPV] = {
     0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
 };
 
-#if __xcore__
+#if defined(__xcore__) || defined(__riscv_xxcore)
 
-#if defined(__XS3A__)
+#if defined(__XS3A__) || defined(__VX4B__)
 asm(".set vpu_vects_vec_0x007F, (vpu_vects + 0x00); .global "
     "vpu_vects_vec_0x007F");
 asm(".set vpu_vects_vec_0x01,   (vpu_vects + 0x20); .global "
