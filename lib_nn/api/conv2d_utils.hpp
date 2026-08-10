@@ -6,6 +6,7 @@
 
 #include "geom/Filter2dGeometry.hpp"
 #include "geom/util.hpp"
+#include "nn_arch.h"
 
 C_API typedef struct {
   int16_t high[16];
@@ -33,7 +34,7 @@ class TfLiteConverter {
 
   static std::vector<nn_acc32_to_int8_params_t> ConvertOutputParams(
       const Filter2dGeometry& filter, const float effective_output_multiplier[],
-      const int32_t output_zero_point);
+      const int32_t output_zero_point, nn_vlmul_shr_t vlmul_shr);
 
   static void QuantizeEffectiveOutputMultiplier(int32_t& quantized_multiplier,
                                                 int32_t& shift,

@@ -21,13 +21,13 @@ struct Conv2dChannelParams {
 };
 
 static void compute_rshift_scale(int16_t &rshift, int16_t &scale,
-                                 const float &multiplier) {
+                                 const float &multiplier, int vlmul_shr) {
   rshift = 16;
   float fscale = 0x7FFF;
 
   if (multiplier != 0.0f) {
     rshift = int16_t(-ceilf(log2f(multiplier))) + 1;
-    fscale = roundf(ldexpf(multiplier, 14 + rshift));
+    fscale = roundf(ldexpf(multiplier, vlmul_shr + rshift));
   }
 
   if (fscale == ldexpf(1, 15)) {
@@ -44,11 +44,11 @@ static void compute_rshift_scale(int16_t &rshift, int16_t &scale,
 }
 
 static Conv2dChannelParams computeConv2dChannelParams(
-    const float multiplier, const int32_t output_zero_point) {
+    const float multiplier, const int32_t output_zero_point, int vlmul_shr) {
   // Conv2dChannelParams params;
 
   int16_t rshift, scale;
-  compute_rshift_scale(rshift, scale, multiplier);
+  compute_rshift_scale(rshift, scale, multiplier, vlmul_shr);
 
   constexpr int SHIFT_ADJUSTMENT = 7;
   constexpr int OUTPUT_BITS = 8;
@@ -187,7 +187,7 @@ std::vector<vpu_split_acc32_t> conv2d::util::TfLiteConverter::ConvertBiases(
 std::vector<nn_acc32_to_int8_params_t>
 conv2d::util::TfLiteConverter::ConvertOutputParams(
     const Filter2dGeometry &filter, const float effective_output_multiplier[],
-    const int32_t output_zero_point) {
+    const int32_t output_zero_point, nn_vlmul_shr_t vlmul_shr) {
   // kernel weights do not change.
 
   const unsigned cog_count = (filter.output.depth + VPU_INT8_ACC_PERIOD - 1) >>
@@ -200,7 +200,7 @@ conv2d::util::TfLiteConverter::ConvertOutputParams(
     const unsigned coff = cout - (cog << VPU_INT8_ACC_PERIOD_LOG2);
 
     Conv2dChannelParams params = computeConv2dChannelParams(
-        effective_output_multiplier[cout], output_zero_point);
+        effective_output_multiplier[cout], output_zero_point, vlmul_shr);
 
     params_out[cog].shift1[coff] = params.shift1;
     params_out[cog].scale[coff] = params.scale;

@@ -61,9 +61,9 @@ static inline int16_t vlsat_single_s16(int32_t acc, uint16_t shr) {
   return sat_s16(acc >> shr);
 }
 
-static inline int16_t vlmul_single_s16(int16_t vR, int16_t mem) {
+static inline int16_t vlmul_single_s16(int16_t vR, int16_t mem, int vlmul_shr) {
   int32_t p = ((int32_t)vR) * mem;
-  p = vlsat_single_s16(p, 14);
+  p = vlsat_single_s16(p, vlmul_shr);
   return (int16_t)p;
 }
 

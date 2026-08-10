@@ -345,10 +345,10 @@ class OutputTransformFnInt8 : public OutputTransformFn {
     return sat((int64_t)a + (int64_t)b, bits);
   }
 
-  static int32_t mul(int32_t a, int32_t b, int bits = 16) {
+  static int32_t mul(int32_t a, int32_t b, int vlmul_shr, int bits = 16) {
     int64_t prod = (int64_t)a * (int64_t)b;
-    prod = prod + (1LL << (14 - 1));
-    return sat(prod >> 14, bits);
+    prod = prod + (1LL << (vlmul_shr - 1));
+    return sat(prod >> vlmul_shr, bits);
   }
 
   /**
@@ -360,6 +360,7 @@ class OutputTransformFnInt8 : public OutputTransformFn {
    */
   template <class QParams>
   static double get_quant_error(MulsAndBias &mul_and_bias, QParams &qp,
+                                nn_vlmul_shr_t vlmul_shr,
                                 bool use_high_precision = false) {
     if (use_high_precision) {
       double max_avg_abs_error = 0.0;
@@ -370,7 +371,7 @@ class OutputTransformFnInt8 : public OutputTransformFn {
         for (int accu = mul_and_bias[idx].accu_min_val;
              accu <= mul_and_bias[idx].accu_max_val; ++accu) {
           int32_t t = shr(accu, qp.initial_shr);  // vlsat
-          t = mul(t, qp.multipliers[idx]);        // vlmul
+          t = mul(t, qp.multipliers[idx], vlmul_shr);  // vlmul
           t = add(t, qp.biases[idx]);             // vladd
           t = shr(t, qp.final_shr);               // vlashr
           t = sat(shr(t, 8), 8);                  // vdepth8
@@ -477,6 +478,7 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
    */
   template <class QParams>
   static double get_quant_error(MulsAndBias &mul_and_bias, QParams &qp,
+                                nn_vlmul_shr_t vlmul_shr,
                                 bool use_high_precision = false) {
     if (use_high_precision) {
       double max_avg_abs_error = 0.0;
@@ -487,7 +489,7 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
         for (int accu = mul_and_bias[idx].accu_min_val;
              accu <= mul_and_bias[idx].accu_max_val; ++accu) {
           int32_t t = shr(accu, qp.initial_shifts[idx]);  // vlsat
-          t = mul(t, qp.multipliers[idx]);        // vlmul
+          t = mul(t, qp.multipliers[idx], vlmul_shr);  // vlmul
           t = add(t, qp.biases[idx]);             // vladd
           t = shr(t, qp.final_shr);               // vlashr
           t = sat(shr(t, 8), 8);                  // vdepth8
