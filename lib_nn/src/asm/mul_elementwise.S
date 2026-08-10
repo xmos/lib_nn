@@ -267,52 +267,52 @@ VECT_INT8_MIN:
 	.word    0x80808080
 	.word    0x80808080	
 
-#define S_R4 0
-#define S_R5 (S_R4 + 4)
-#define S_R6 (S_R5 + 4)
-#define S_R7 (S_R6 + 4)
-#define S_R8 (S_R7 + 4)
-#define S_R9 (S_R8 + 4)
-#define S_R10 (S_R9 + 4)
-#define S_MASK (S_R10 + 4)
-#define S_TEMP (S_MASK + 4)
-#define S_BIAS (S_TEMP + 32)
-#define S_IN1_ZERO_POINT (S_BIAS + 32)
-#define S_IN2_ZERO_POINT (S_IN1_ZERO_POINT + 16)
-#define S_SCALAR (S_IN2_ZERO_POINT + 16) //place to put the result for vdepth8
+#define S_S2 				0
+#define S_S3 				(S_S2 + 4)
+#define S_S4 				(S_S3 + 4)
+#define S_S5 				(S_S4 + 4)
+#define S_S6 				(S_S5 + 4)
+#define S_S7 				(S_S6 + 4)
+#define S_S8 				(S_S7 + 4)
+#define S_MASK 				(S_S8 + 4)
+#define S_TEMP 				(S_MASK + 4)
+#define S_BIAS 				(S_TEMP + 32)
+#define S_IN1_ZERO_POINT 	(S_BIAS + 32)
+#define S_IN2_ZERO_POINT 	(S_IN1_ZERO_POINT + 16)
+#define S_SCALAR 			(S_IN2_ZERO_POINT + 16) //place to put the result for vdepth8
 
 #define NSTACKBYTES (S_SCALAR + 32 + 4)
 
-#define in1_data x10 
-#define in2_data x11 
-#define element_count x12 
-#define params x13
-#define bias x18
-#define scalar x19 
-#define in1_zero_point x20 
-#define in2_zero_point x21 
-#define out_data x22
+#define in1_data		a0
+#define in2_data		a1
+#define element_count	a2
+#define params			a3
+#define bias			s2
+#define scalar			s3
+#define in1_zero_point	s4
+#define in2_zero_point	s5
+#define out_data		s6
 
-#define temp3 x23
-#define temp2 x24
-#define temp x28
+#define temp3			s7
+#define temp2			s8
+#define temp			t3
 FUNCTION_NAME:
 
-    { xm.entsp ROUND_UP(NSTACKBYTES, 16); xm.nop				}
-    xm.stdsp x18, x19, 0*8
-    xm.stdsp x20, x21, 1*8
-    xm.stdsp x22, x23, 2*8
-	sw x24, 3*8(sp)
+    xm.entsp ROUND_UP(NSTACKBYTES, 16)
+    xm.stdsp s2, s3, 0*8
+    xm.stdsp s4, s5, 1*8
+    xm.stdsp s6, s7, 2*8
+	sw s8, 3*8(sp)
 
 	xm.ldap temp, BYTE_TO_WORD
 	{ xm.ldwi temp2, 0(temp)			; xm.ldcu temp, 0 		}
-	{ xm.ld8u temp3, temp(x13) 			; xm.ldcu temp, 1		}
+	{ xm.ld8u temp3, temp(a3) 			; xm.ldcu temp, 1		}
 	mul temp3, temp3, temp2 	//broadcast the byte to a word
 	addi in1_zero_point, sp, S_IN1_ZERO_POINT
 	xm.stdi temp3, temp3, 0(in1_zero_point)
 	xm.stdi temp3, temp3, 8(in1_zero_point)
 	
-	xm.ld8u temp3, temp(x13)
+	xm.ld8u temp3, temp(a3)
 	mul temp3, temp3, temp2 	//broadcast the byte to a word
 	addi in2_zero_point, sp, S_IN2_ZERO_POINT
 	xm.stdi temp3, temp3, 0(in2_zero_point)
@@ -320,7 +320,7 @@ FUNCTION_NAME:
 	
 	xm.ldap temp, HALF_TO_WORD
 	{ xm.ldwi temp2, 0(temp)			; xm.ldcu temp, 1		}
-	xm.ld16s temp3, temp(x13)
+	xm.ld16s temp3, temp(a3)
 	{ xm.zexti temp3, 16				; xm.ldcu temp, 2		}
 	mul temp3, temp3, temp2 	//broadcast the short to a word
 	addi bias, sp, S_BIAS
@@ -329,7 +329,7 @@ FUNCTION_NAME:
 	xm.stdi temp3, temp3, 16(bias)
 	xm.stdi temp3, temp3, 24(bias)
 
-	xm.ld16s temp3, x28(x13)
+	xm.ld16s temp3, t3(a3)
 	{ xm.nop						; xm.ldcu temp, 0		}
 	mul temp3, temp3, temp2 	//broadcast the short to a word
 	addi scalar, sp, S_SCALAR
@@ -340,8 +340,8 @@ FUNCTION_NAME:
 
 	sw temp, S_MASK(sp)
 
-	//load out_data with x14
-	addi out_data, x14, 0
+	//load out_data with a4
+	mv out_data, a4
 	xm.ldcu temp, 512	// prepare for vCTRL: VSETCTRL_TYPE_INT8
 	FUNCTION_NAME.loop:
 		
@@ -371,7 +371,7 @@ FUNCTION_NAME:
 		{ xm.vladd bias					; addi temp2, sp, S_TEMP			}
 		{ xm.vstr temp2					; xm.ldcu temp, 3					}
 		
-		xm.ld16s temp, temp(x13)
+		xm.ld16s temp, temp(a3)
 		
 		xm.vlashr temp2, temp
 
@@ -398,12 +398,12 @@ FUNCTION_NAME:
 		{ xm.add out_data, out_data, temp	; xm.shl temp, temp, 5						}
 		bge element_count, temp2, FUNCTION_NAME.loop
 
-    xm.lddsp x18, x19, 0*8
-    xm.lddsp x20, x21, 1*8
-    xm.lddsp x22, x23, 2*8
-	lw x24, 3*8(sp)
+    xm.lddsp s2, s3, 0*8
+    xm.lddsp s4, s5, 1*8
+    xm.lddsp s6, s7, 2*8
+	lw s8, 3*8(sp)
 
-    {xm.retsp ROUND_UP(NSTACKBYTES, 16); xm.nop}
+    xm.retsp ROUND_UP(NSTACKBYTES, 16)
 
 .size FUNCTION_NAME, . -FUNCTION_NAME
 .resource_const FUNCTION_NAME, "stack_frame_bytes",  ROUND_UP(NSTACKBYTES, 16)
