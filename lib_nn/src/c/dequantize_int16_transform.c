@@ -4,8 +4,6 @@
 #include <math.h>
 #include "dequantize_int16_transform.h"
 
-#define SHIFT  14
-
 int dequantize_int16_tensor_blob(void *output,
                                  float input_scaler,
                                  char *err_msg) {

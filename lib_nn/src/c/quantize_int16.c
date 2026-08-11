@@ -5,8 +5,6 @@
 #include <math.h>
 #include "quantize_int16.h"
 
-#define SHIFT 14
-
 // Element quantization of float to int16_t tensor
 
 extern void quantize_int16_tensor_asm(int16_t *output, float *input, int tensor_length, void *blob);

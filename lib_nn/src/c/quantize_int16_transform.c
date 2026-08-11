@@ -4,8 +4,6 @@
 #include <math.h>
 #include "quantize_int16_transform.h"
 
-#define SHIFT  14
-
 int quantize_int16_tensor_blob(void *output,
                                  float output_scaler) {
     float *blob = (float *)output;
