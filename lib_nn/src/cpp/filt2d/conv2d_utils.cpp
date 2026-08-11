@@ -21,7 +21,7 @@ struct Conv2dChannelParams {
 };
 
 static void compute_rshift_scale(int16_t &rshift, int16_t &scale,
-                                 const float &multiplier, int vlmul_shr) {
+                                 const float &multiplier, nn_vlmul_shr_t vlmul_shr) {
   rshift = 16;
   float fscale = 0x7FFF;
 
@@ -44,7 +44,7 @@ static void compute_rshift_scale(int16_t &rshift, int16_t &scale,
 }
 
 static Conv2dChannelParams computeConv2dChannelParams(
-    const float multiplier, const int32_t output_zero_point, int vlmul_shr) {
+    const float multiplier, const int32_t output_zero_point, nn_vlmul_shr_t vlmul_shr) {
   // Conv2dChannelParams params;
 
   int16_t rshift, scale;
