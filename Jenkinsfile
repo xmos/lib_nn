@@ -1,91 +1,88 @@
-@Library('xmos_jenkins_shared_library@v0.46.0') _
+@Library('xmos_jenkins_shared_library@v0.53.0') _
 
 getApproval()
-
 pipeline {
-    agent {
-        dockerfile {
-            args "-v /etc/passwd:/etc/passwd:ro -v /etc/group:/etc/group:ro -v /home/jenkins/.ssh:/home/jenkins/.ssh:ro"
-        }
+    agent none
+    environment {
+        REPO = "lib_nn"
     }
 
-    parameters { // Available to modify on the job page within Jenkins if starting a build
-        string( // use to try different tools versions
+    parameters {
+        string(
             name: 'TOOLS_VERSION',
             defaultValue: '15.3.1',
-            description: 'The tools version to build with (check /projects/tools/ReleasesTools/)'
+            description: 'XTC tools version'
         )
     }
 
-    options { // plenty of things could go here
-        //buildDiscarder(logRotator(numToKeepStr: '10'))
+    options {
+        buildDiscarder(xmosDiscardBuildSettings(onlyArtifacts = false))
         timestamps()
+        skipDefaultCheckout()
     }
 
     stages {
-        stage("Setup") {
-            // Clone and install build dependencies
-            steps {
-                // clean auto default checkout
-                sh "rm -rf *"
-                // clone
-                checkout([
-                    $class: 'GitSCM',
-                    branches: scm.branches,
-                    doGenerateSubmoduleConfigurations: false,
-                    extensions: [[$class: 'SubmoduleOption',
-                                  threads: 8,
-                                  timeout: 20,
-                                  shallow: true,
-                                  parentCredentials: true,
-                                  recursiveSubmodules: true],
-                                 [$class: 'CleanCheckout']],
-                    userRemoteConfigs: [[credentialsId: 'xmos-bot',
-                                         url: 'git@github.com:xmos/lib_nn']]
-                ])
-                // fetch dependencies
-                sshagent (credentials: ['xmos-bot']) {
-                    dir("${env.WORKSPACE}/test") {
-                        sh "python fetch_dependencies.py"
+        stage("Build and test") {
+            agent {
+                label "linux && x86_64"
+            }
+
+            stages {
+                stage("Setup") {
+                    // Clone and install build dependencies
+                    steps {
+                        dir(REPO) {
+                            checkoutScmShallow()
+                            // fetch dependencies
+                            sshagent (credentials: ['xmos-bot']) {
+                                dir("test") {
+                                    sh "python3 fetch_dependencies.py"
+                                }
+                            }
+                        }
                     }
+                } // Setup
+
+                stage("Build") {
+                    steps {
+                        dir(REPO) {
+                            withTools(params.TOOLS_VERSION) {
+                                sh "cmake -B build_xs3a --toolchain etc/xs3a.cmake"
+                                sh "make -C build_xs3a -j8"
+                            }
+                            sh "cmake -B build_native"
+                            sh "make -C build_native -j8"
+                            dir("test/gtests") {
+                                sh "./build.sh"
+                                sh "make all PLATFORM=x86"
+                            }
+                        }
+                    }
+                } // Build
+
+                stage("Test") {
+                    steps {
+                        dir(REPO) { 
+                           sh "./build_native/test/unit_test/unit_test"
+                           sh "./test/gtests/bin/x86/unit_test"
+                        }
+                    }
+                } // Test
+            } // stages
+            post {
+                cleanup {
+                    xcoreCleanSandbox()
                 }
-                // create venv
-                sh "conda env create -q -p lib_nn_venv -f environment.yml"
-                // install xmos tools version
-                sh "/XMOS/get_tools.py " + params.TOOLS_VERSION
             }
-        }
-        stage("Update all packages") {
-            // Roll all conda packages forward beyond their pinned versions
-            when { expression { return params.UPDATE_ALL } }
+        } // Build and test
+
+        stage('🚀 Release') {
+            when {
+                expression { triggerRelease.isReleasable() }
+            }
             steps {
-                sh "conda update --all -y -q -p lib_nn_venv"
+                triggerRelease()
             }
         }
-        stage("Build") {
-            steps {
-                // below is how we can activate the tools, NOTE: xTIMEcomposer -> XTC at tools 15.0.5
-                sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
-                      . activate ./lib_nn_venv && mkdir -p build_x86 && cd build_x86 && 
-                      cmake .. && make"""
-                sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
-                      . activate ./lib_nn_venv && mkdir -p build_xcore && cd build_xcore && 
-                      cmake -DCMAKE_TOOLCHAIN_FILE=../etc/xs3a.cmake .. && make"""
-                sh """. /XMOS/tools/${params.TOOLS_VERSION}/XMOS/XTC/${params.TOOLS_VERSION}/SetEnv &&
-                      . activate ./lib_nn_venv &&
-                      cd test/gtests && ./build.sh && make all PLATFORM=x86"""
-             }
-         }
-         stage("Test") {
-             steps {
-                 sh "./build_x86/test/unit_test/unit_test"
-                 sh "cd test/gtests && ./bin/x86/unit_test"
-            }
-        }
-    }
-    post {
-        cleanup {
-            cleanWs()
-        }
-    }
-}
+    } // stages
+} // pipeline
