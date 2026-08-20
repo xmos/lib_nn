@@ -52,10 +52,6 @@ pipeline {
                             }
                             sh "cmake -B build_native"
                             sh "make -C build_native -j8"
-                            dir("test/gtests") {
-                                sh "./build.sh"
-                                sh "make all PLATFORM=x86"
-                            }
                         }
                     }
                 } // Build
@@ -64,7 +60,7 @@ pipeline {
                     steps {
                         dir(REPO) { 
                            sh "./build_native/test/unit_test/unit_test"
-                           sh "./test/gtests/bin/x86/unit_test"
+                           sh "./build_native/test/gtests/gtests"
                         }
                     }
                 } // Test

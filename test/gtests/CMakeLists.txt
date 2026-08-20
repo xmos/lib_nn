@@ -2,8 +2,10 @@ cmake_minimum_required(VERSION 3.14)
 
 set(APP_NAME gtests)
 
-include(${CMAKE_CURRENT_LIST_DIR}/../etc/Unity/Unity.cmake)
-# include(${CMAKE_CURRENT_LIST_DIR}/../../../ai_deployment_framework.cmake)
+set(GOOGLETEST_DIR ${CMAKE_CURRENT_LIST_DIR}/../deps/googletest)
+add_subdirectory(${GOOGLETEST_DIR}
+                 ${CMAKE_CURRENT_BINARY_DIR}/googletest
+                 EXCLUDE_FROM_ALL)
 
 # Depends on libraries
 list(APPEND DEP_LIBS_XS3A "")
@@ -58,12 +60,11 @@ target_include_directories(
   PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../deps/tensorflow
   PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../deps/ruy
   PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../deps/gemmlowp
-  PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../deps/googletest/googletest/include
   PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../deps/flatbuffers/include
   PRIVATE ${LIB_NN_ALT_INCLUDE_DIR}
   PRIVATE ${LIB_NN_TESTS_SHARED_INCLUDE_DIR})
 
-target_link_libraries(${APP_NAME} ${DEP_LIBS})
+target_link_libraries(${APP_NAME} ${DEP_LIBS} gtest)
 
 target_compile_options(${APP_NAME} PRIVATE ${COMPILE_FLAGS})
 
@@ -80,5 +81,3 @@ if(VX4A)
   set_target_properties(${APP_NAME} PROPERTIES SUFFIX ".xe" LINK_DEPENDS
                                                             ${XSCOPE_CONFIG})
 endif()
-
-add_unity_to_target(${APP_NAME} CONFIG)
