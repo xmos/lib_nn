@@ -6,7 +6,7 @@ lib_nn: Neural network library
 Introduction
 ************
 
-``lib_nn`` is a library of hand-optimized kernels for the neural network operators commonly used in 8-bit quantized inference, such as convolution, pooling, fully-connected layers and elementwise operations. Each kernel is written to maximize performance and minimize memory footprint on XMOS devices.
+``lib_nn`` is a library of optimised kernels for the neural network operators commonly used in 8-bit quantised inference, such as convolution, pooling, fully-connected layers and elementwise operations. Each kernel is written to maximise performance and minimise memory footprint on XMOS devices.
 
 This library targets the xs3 and vx4 architectures. These architectures have a vector unit with 256-bit wide registers that can operate in 8-bit, 16-bit or 32-bit integer mode; ``lib_nn`` kernels are hand-written to make direct use of this vector unit, alongside portable C reference implementations of the same operators.
 
@@ -15,6 +15,31 @@ This document assumes familiarity with the XMOS xCORE architecture, the XMOS too
 *****
 Usage
 *****
+
+``lib_nn`` is intended to be used with the `XCommon CMake <https://www.xmos.com/file/xcommon-cmake-documentation/?version=latest>`_
+, the `XMOS` application build and dependency management system.
+
+To use this library in an application include ``lib_nn`` in the application's ``APP_DEPENDENT_MODULES`` list in
+`CMakeLists.txt`, for example:
+
+.. code-block:: cmake
+
+    set(APP_DEPENDENT_MODULES "lib_nn")
+
+.. note:: Dependent modules should be pinned to release versions where possible, otherwise the
+   latest commit on the `develop` branch will be used.  For further details on managing modules,
+   pinning to a release version and other options, please see the page `xcommon-cmake Dependency Management <https://www.xmos.com/documentation/XM-015090-PC/html/doc/dependency_management.html>`_.
+
+``lib_nn`` functions are accessed via their respective header files, for example:
+
+.. code-block:: C
+
+    #include "nn_pooling.h"
+    #include "nn_layers.h"
+
+*********************
+Example application
+*********************
 
 The ``examples/add_tensor`` directory contains a minimal application that demonstrates how to use ``lib_nn``.
 
@@ -45,7 +70,7 @@ Concepts
 Networks, Operators, Instances and Jobs
 ========================================
 
-The design of ``lib_nn`` centers around a concept hierarchy that breaks down as follows.
+The design of ``lib_nn`` centres around a concept hierarchy that breaks down as follows.
 
 Networks
 --------
@@ -76,7 +101,7 @@ representation is the pointer, shape information, and memory layout supplied
 to a kernel. 
 
 The representation is sometimes the standard tensor layout, and
-sometimes an optimized layout required by the VPU.
+sometimes an optimised layout required by the VPU.
 
 For example, ``maxpool2d()`` uses a simple representation: ``X`` and ``Y``
 are pointers to images, while ``x_params`` and ``y_params`` supply their
@@ -95,7 +120,7 @@ mapped to the operators and source files that implement them.
 - **Pooling and image operators**: reduce an input image to an output image by sliding a window and computing a per-channel aggregate. e.g. ``maxpool2d()``, ``avgpool2d_global()``, ``argmax_16()``.
 - **Convolution**: transform an input image and kernel into an output image through weight reordering, multiply-accumulate, and per-channel output scaling. e.g. ``reorder_kernel_weights()``, ``mat_mul_direct_int8()``, ``execute()``. Depthwise and transpose variants included.
 - **Elementwise operators**: apply arithmetic operations element-by-element across two tensors of the same shape. e.g. ``add_elementwise()``, ``mul_elementwise()``, ``add_int16_tensor()``.
-- **Quantization / dequantization**: convert tensors between floating-point and fixed-point representations, with a compile-time ``*_blob()`` call to pre-compute runtime parameters. e.g. ``quantize_int16_tensor()``, ``dequantize_int16_tensor_blob()``.
+- **Quantisation / dequantisation**: convert tensors between floating-point and fixed-point representations, with a compile-time ``*_blob()`` call to pre-compute runtime parameters. e.g. ``quantize_int16_tensor()``, ``dequantize_int16_tensor_blob()``.
 - **Activation and reduction**: apply non-linear functions or reduce a tensor along a dimension to a scalar output. e.g. ``softmax_generate_exp_lut()``, ``quadratic_interpolation_128()``, ``mean_int8()``.
 - **Data utilities**: repack or reformat tensor data into layouts required by the VPU. e.g. ``bsign_8()``, ``expand_8_to_16()``, ``pad_3_to_4_run()``.
 - **VPU utilities**: copy, move and set memory at word and vector alignment; simulate VPU instructions for C reference implementations. e.g. ``vpu_memcpy()``, ``VLMACCR()``, ``VLSAT()``.
@@ -108,7 +133,7 @@ The following notes describe the memory layouts, numerical conventions and
 VPU constraints that apply across the library.
 
 - **Standard tensor layout**: row-major, later dimensions fastest, matching C array order. Element ``A[i,j,k]`` is at byte offset ``(i*s1 + j*s2 + k) * element_size``.
-- **VPU saturation**: the XS3 VPU clamps results to symmetric bounds rather than rolling over — 8-bit ``[-127, 127]``, 16-bit ``[-32767, 32767]``, 32-bit ``[-2147483647, 2147483647]``. Inner products are therefore not associative. See the `XS3 ISA reference <https://www.xmos.com/documentation/XM-014007-PS/html/doc/rst/xs3-arch-inst.html>`_ for full VPU instruction details.
+- **VPU saturation**: the XS3 VPU clamps results to symmetric bounds rather than rolling over — 8-bit ``[-127, 127]``, 16-bit ``[-32767, 32767]``, 32-bit ``[-2147483647, 2147483647]``. Inner products are therefore not associative. See `VPU saturating arithmetic <https://www.xmos.com/documentation/XM-015059-UG/html/doc/rst/src/reference/notes.html#note-vpu-saturating-arithmetic>`_ and the `XS3 ISA reference <https://www.xmos.com/documentation/XM-014007-PS/html/doc/rst/xs3-arch-inst.html>`_ for full VPU instruction details.
 - **Accumulation and output scaling**: convolution accumulates 8-bit products into a 32-bit accumulator seeded with a 32-bit bias, then applies: ``y[i] = ((acc32[i] >> shr1[i]) * scale[i]) >> shr2[i]``, with an additional ``>> 8`` for 8-bit outputs. Shifts are saturating and rounding; negative accumulators never shift to zero.
 - **Channel groups**: the VPU processes ``VPU_INT8_EPV = 32`` input channels per load and holds ``VPU_INT8_ACC_PERIOD = 16`` accumulators. Parameter tensors are grouped accordingly: input channel groups of 32, output channel groups of 16.
 - **BSO tensor layout**: the Bias-Scale-Offset tensor packs the per-channel output parameters required after accumulation into a single 3-D buffer of shape ``(ceil(C_out/16), 7, 16)``. Axis 0 is the output channel group, axis 2 is the channel offset within that group (so channel ``k`` is at ``[k//16, :, k%16]``), and axis 1 selects the parameter: 0 = bias high half-word, 1 = bias low half-word, 2 = shift1, 3 = scale, 4 = offset scale, 5 = offset, 6 = shift2. The interleaved layout lets the VPU load all parameters for a channel group in one pass.
