@@ -1,0 +1,27 @@
+# This file relates to internal XMOS infrastructure and should be ignored by external users
+---
+lib_name: lib_nn
+project: '{{lib_name}}'
+title: '{{lib_name}}: Neural network library'
+version: 0.6.0
+
+documentation:
+  exclude_patterns_path: doc/exclude_patterns.inc
+  root_doc: doc/rst/lib_nn.rst
+  linkcheck_ignore_regex: ['']
+  latex_toc_depth: 3
+  latex_secnum_depth: 3
+  cognidox_part_number: XM-XXXXXX-UG
+  doxygen_projects:
+    lib_nn:
+      doxyfile_path: doc/Doxyfile.inc
+  pdfs:
+    doc/rst/lib_nn.rst:
+      pdf_title: '{{title}}'
+      pdf_filename: '{{lib_name}}_v{{version}}'
+    README.rst:
+      pdf_title: '{{title}} (README)'
+      pdf_filename: '{{lib_name}}_v{{version}}_readme'
+      pdf_short: yes
+software:
+  cognidox_part_number: XM-XXXXXX-SM
