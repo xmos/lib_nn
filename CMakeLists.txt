@@ -72,9 +72,7 @@ set(LIB_NN_TESTS_SHARED_INCLUDE_DIR
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test/shared)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test/unit_test)
 
-option(BUILD_GTESTS "Builds the googletests test suite" OFF)
-
-if(BUILD_GTESTS)
+if(NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "XS3A")
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test/gtests)
 endif()
 
