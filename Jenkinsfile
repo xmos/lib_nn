@@ -64,6 +64,25 @@ pipeline {
                         }
                     }
                 } // Test
+
+                
+                // stage('Repo checks') {
+                //     steps {
+                //         warnError("Repo checks failed")
+                //         {
+                //             runRepoChecks("${WORKSPACE}/${REPO}")
+                //         }
+                //     }
+                // }
+
+                stage('Doc build') {
+                    steps {
+                        dir(REPO) {
+                            buildDocs()
+                        }
+                    }
+                } // Doc build
+
             } // stages
             post {
                 cleanup {
