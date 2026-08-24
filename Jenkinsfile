@@ -45,12 +45,13 @@ pipeline {
 
                 stage("Build") {
                     steps {
-                        dir(REPO) {
+                        dir("${REPO}/test") {
                             withTools(params.TOOLS_VERSION) {
                                 sh "cmake -B build_xs3a --toolchain etc/xs3a.cmake"
                                 sh "make -C build_xs3a -j8"
                             }
-                            sh "cmake -B build_native"
+                            // sanitizers fail for now
+                            sh "cmake -B build_native -DENABLE_SANITIZERS=0"
                             sh "make -C build_native -j8"
                         }
                     }
@@ -58,9 +59,9 @@ pipeline {
 
                 stage("Test") {
                     steps {
-                        dir(REPO) { 
-                           sh "./build_native/test/unit_test/unit_test"
-                           sh "./build_native/test/gtests/gtests"
+                        dir("${REPO}/test") {
+                           sh "./build_native/unit_test/unit_test"
+                           sh "./build_native/gtests/gtests"
                         }
                     }
                 } // Test

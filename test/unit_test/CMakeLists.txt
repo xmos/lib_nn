@@ -1,77 +1,22 @@
-cmake_minimum_required(VERSION 3.14)
-
-set(APP_NAME unit_test)
-
 include(${CMAKE_CURRENT_LIST_DIR}/../etc/Unity/Unity.cmake)
 
-# Depends on libraries
-list(APPEND DEP_LIBS_XS3A "")
+file(GLOB_RECURSE UNIT_TEST_SOURCES CONFIGURE_DEPENDS
+     "${CMAKE_CURRENT_LIST_DIR}/src/*.c"
+     "${CMAKE_CURRENT_LIST_DIR}/src/*.cpp")
 
-list(APPEND DEP_LIBS lib_nn test_shared ${DEP_LIBS_${CMAKE_SYSTEM_NAME}})
+add_executable(unit_test ${UNIT_TEST_SOURCES})
 
-list(APPEND DEP_LIBS ${DEP_LIBS_${CMAKE_SYSTEM_NAME}})
+target_include_directories(unit_test PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src")
+target_compile_options(unit_test PRIVATE -g -O3 -Wno-unused-variable)
+target_link_libraries(unit_test PRIVATE test_shared)
 
-# Sources
-file(GLOB_RECURSE SOURCES_C src/*.c)
-file(GLOB_RECURSE SOURCES_CPP src/*.cpp)
+add_unity_to_target(unit_test CONFIG)
 
-list(APPEND SOURCES ${SOURCES_C})
-list(APPEND SOURCES ${SOURCES_CPP})
-list(APPEND SOURCES ${SOURCES_${CMAKE_SYSTEM_NAME}})
-
-# set( XSCOPE_CONFIG config.xscope )
-get_filename_component(XSCOPE_CONFIG config.xscope ABSOLUTE)
-
-# Compile flags
-unset(COMPILE_FLAGS)
-list(APPEND COMPILE_FLAGS -Wno-unused-variable)
-list(APPEND COMPILE_FLAGS ${COMPILE_FLAGS_${CMAKE_SYSTEM_NAME}})
-
-# Linker flags
-unset(LINKER_FLAGS)
-list(APPEND LINKER_FLAGS "")
-
-unset(LINKER_FLAGS_XS3A)
-list(APPEND LINKER_FLAGS_XS3A "-target=${XCORE_TARGET}")
-list(APPEND LINKER_FLAGS_XS3A "-report")
-list(APPEND LINKER_FLAGS_XS3A "-fcmdline-buffer-bytes=1024")
-list(APPEND LINKER_FLAGS_XS3A "${XSCOPE_CONFIG}")
-
-unset(LINKER_FLAGS_VX4A)
-list(APPEND LINKER_FLAGS_VX4A "-target=${XCORE_TARGET}")
-list(APPEND LINKER_FLAGS_VX4A "-report")
-list(APPEND LINKER_FLAGS_VX4A "-fcmdline-buffer-bytes=1024")
-list(APPEND LINKER_FLAGS_VX4A "${XSCOPE_CONFIG}")
-
-list(APPEND LINKER_FLAGS ${LINKER_FLAGS_${CMAKE_SYSTEM_NAME}})
-
-#
-
-add_executable(${APP_NAME} ${SOURCES})
-
-target_include_directories(
-  ${APP_NAME}
-  PRIVATE src
-  PRIVATE ${LIB_NN_INCLUDE_DIR}
-  PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../deps/compute-engine
-  PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../deps/tensorflow
-  PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../deps/ruy
-  PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../deps/gemmlowp
-  PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../deps/flatbuffers/include
-  PRIVATE ${LIB_NN_ALT_INCLUDE_DIR}
-  PRIVATE ${LIB_NN_TESTS_SHARED_INCLUDE_DIR})
-
-target_link_libraries(${APP_NAME} ${DEP_LIBS})
-
-target_compile_options(${APP_NAME} PRIVATE ${COMPILE_FLAGS})
-
-# (because otherwise the set_target_properties command fails)
-string(REPLACE ";" " " LINKER_FLAGS_STR "${LINKER_FLAGS}")
-set_target_properties(${APP_NAME} PROPERTIES LINK_FLAGS "${LINKER_FLAGS_STR}")
-
-if(XCORE)
-  set_target_properties(${APP_NAME} PROPERTIES SUFFIX ".xe" LINK_DEPENDS
-                                                            ${XSCOPE_CONFIG})
+if(CMAKE_SYSTEM_NAME STREQUAL "XS3A" OR CMAKE_SYSTEM_NAME STREQUAL "VX4A")
+  set(XSCOPE_CONFIG "${CMAKE_CURRENT_LIST_DIR}/config.xscope")
+  target_link_options(
+    unit_test
+    PRIVATE "-target=${XCORE_TARGET}" -report -fcmdline-buffer-bytes=1024
+            ${XSCOPE_CONFIG})
+  set_property(TARGET unit_test PROPERTY LINK_DEPENDS ${XSCOPE_CONFIG})
 endif()
-
-add_unity_to_target(${APP_NAME} CONFIG)
