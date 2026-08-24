@@ -8,9 +8,9 @@ Introduction
 
 ``lib_nn`` is a library of optimised kernels for the neural network operators commonly used in 8-bit quantised inference, such as convolution, pooling, fully-connected layers and elementwise operations. Each kernel is written to maximise performance and minimise memory footprint on XMOS devices.
 
-This library targets the xs3 and vx4 architectures. These architectures have a vector unit with 256-bit wide registers that can operate in 8-bit, 16-bit or 32-bit integer mode; ``lib_nn`` kernels are hand-written to make direct use of this vector unit, alongside portable C reference implementations of the same operators.
+This library targets the xs3 and vx4 architectures. These architectures have a vector unit with 256-bit wide registers that can operate in 8-bit, 16-bit or 32-bit integer mode; ``lib_nn`` kernels are written to make direct use of this vector unit, alongside portable C reference implementations of the same operators.
 
-This document assumes familiarity with the XMOS xCORE architecture, the XMOS tool chain, the C programming language, and neural network concepts.
+This document assumes familiarity with the XMOS xCORE architecture, the XMOS tool chain, the C programming language, and neural network concepts. 
 
 *****
 Usage
@@ -37,9 +37,9 @@ To use this library in an application include ``lib_nn`` in the application's ``
     #include "nn_pooling.h"
     #include "nn_layers.h"
 
-*********************
+*******************
 Example application
-*********************
+*******************
 
 The ``examples/add_tensor`` directory contains a minimal application that demonstrates how to use ``lib_nn``.
 
@@ -133,7 +133,12 @@ The following notes describe the memory layouts, numerical conventions and
 VPU constraints that apply across the library.
 
 - **Standard tensor layout**: row-major, later dimensions fastest, matching C array order. Element ``A[i,j,k]`` is at byte offset ``(i*s1 + j*s2 + k) * element_size``.
-- **VPU saturation**: the XS3 VPU clamps results to symmetric bounds rather than rolling over — 8-bit ``[-127, 127]``, 16-bit ``[-32767, 32767]``, 32-bit ``[-2147483647, 2147483647]``. Inner products are therefore not associative. See `VPU saturating arithmetic <https://www.xmos.com/documentation/XM-015059-UG/html/doc/rst/src/reference/notes.html#note-vpu-saturating-arithmetic>`_ and the `XS3 ISA reference <https://www.xmos.com/documentation/XM-014007-PS/html/doc/rst/xs3-arch-inst.html>`_ for full VPU instruction details.
+- **VPU saturation**: both architectures use saturating rather than wrapping arithmetic, so inner products are not associative. The saturation model differs between them:
+
+  - **xs3** uses *symmetric* saturation — the lower bound is the negative of the upper bound: 8-bit ``[-127, 127]``, 16-bit ``[-32767, 32767]``, 32-bit ``[-2147483647, 2147483647]``. This avoids the twos-complement corner case where ``abs(INT_MIN) = INT_MIN``, at the cost of a possible 1 LSb error at the negative extreme.
+  - **vx4** uses *asymmetric* saturation — standard twos-complement bounds: 8-bit ``[-128, 127]``, 16-bit ``[-32768, 32767]``, 32-bit ``[-2147483648, 2147483647]``.
+  - For more details on saturation behaviour, see `VPU saturating arithmetic <https://www.xmos.com/documentation/XM-015059-UG/html/doc/rst/src/reference/notes.html#note-vpu-saturating-arithmetic>`_. 
+
 - **Accumulation and output scaling**: convolution accumulates 8-bit products into a 32-bit accumulator seeded with a 32-bit bias, then applies: ``y[i] = ((acc32[i] >> shr1[i]) * scale[i]) >> shr2[i]``, with an additional ``>> 8`` for 8-bit outputs. Shifts are saturating and rounding; negative accumulators never shift to zero.
 - **Channel groups**: the VPU processes ``VPU_INT8_EPV = 32`` input channels per load and holds ``VPU_INT8_ACC_PERIOD = 16`` accumulators. Parameter tensors are grouped accordingly: input channel groups of 32, output channel groups of 16.
 - **BSO tensor layout**: the Bias-Scale-Offset tensor packs the per-channel output parameters required after accumulation into a single 3-D buffer of shape ``(ceil(C_out/16), 7, 16)``. Axis 0 is the output channel group, axis 2 is the channel offset within that group (so channel ``k`` is at ``[k//16, :, k%16]``), and axis 1 selects the parameter: 0 = bias high half-word, 1 = bias low half-word, 2 = shift1, 3 = scale, 4 = offset scale, 5 = offset, 6 = shift2. The interleaved layout lets the VPU load all parameters for a channel group in one pass.
