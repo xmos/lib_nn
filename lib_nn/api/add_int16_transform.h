@@ -1,3 +1,5 @@
+// Copyright 2024-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #ifndef _add_int16_transform_h_
 #define _add_int16_transform_h_
 

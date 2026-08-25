@@ -1,3 +1,5 @@
+// Copyright 2025-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if defined(__VX4A__) || defined(__VX4B__)
 #include "nn_operator.h"
 #include "../src/asm/asm_constants.h"

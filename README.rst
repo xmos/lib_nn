@@ -9,7 +9,7 @@ lib_nn: Neural network library
 :scope: General Use
 :description: Efficient neural network kernels for XMOS devices
 :category: General Purpose
-:keywords: Neural Network, Inference, AI
+:keywords: AI
 :devices: xcore.ai
 
 *******
