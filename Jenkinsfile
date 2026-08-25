@@ -25,6 +25,9 @@ pipeline {
         stage("Build and test") {
             parallel {
                 stage("Native test") {
+                    when {
+                        expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }
+                    }
                     agent {
                         label "linux && x86_64"
                     }
