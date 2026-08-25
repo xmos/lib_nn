@@ -1,3 +1,5 @@
+// Copyright 2021-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include "larq_compute_engine/core/bitpacking/bitpack.h"
 
 using namespace tflite;
