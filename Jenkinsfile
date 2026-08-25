@@ -93,14 +93,14 @@ pipeline {
                             }
                         } // Examples build
 
-                        // stage('Repo checks') {
-                        //     steps {
-                        //         warnError("Repo checks failed")
-                        //         {
-                        //             runRepoChecks("${WORKSPACE}/${REPO}")
-                        //         }
-                        //     }
-                        // } // Repo checks
+                        stage('Repo checks') {
+                            steps {
+                                warnError("Repo checks failed")
+                                {
+                                    runRepoChecks("${WORKSPACE}/${REPO}")
+                                }
+                            }
+                        } // Repo checks
 
                         stage('Doc build') {
                             steps {
