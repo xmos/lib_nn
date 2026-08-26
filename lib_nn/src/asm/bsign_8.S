@@ -13,12 +13,7 @@ void bsign_8(
     const nn_bsign_8_job_t* job);
 */
 
-#ifndef NN_USE_REF
-  #define FUNCTION_NAME bsign_8
-#else
-  #define FUNCTION_NAME bsign_8_asm
-#endif // NN_USE_REF
-
+#define FUNCTION_NAME bsign_8_asm
     
 .text
 .issue_mode  dual
@@ -114,5 +109,32 @@ FUNCTION_NAME:
     .size FUNCTION_NAME, .Ltmp0-FUNCTION_NAME
     .issue_mode  single
 
-#endif
+#endif // defined(__XS3A__)
 
+#if (defined(__VX4A__) || defined(__VX4B__))
+
+#define FUNCTION_NAME bsign_8_asm
+
+/*
+void bsign_8(
+    bnn_b32_t* Y,
+    const int8_t* X,
+    const int8_t* zero_point_vect,
+    const nn_bsign_8_job_t* job);
+*/
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+    xm.entsp 0
+    // NOT IMPLEMENTED on VX4 yet: purposely empty until CI/CD tests pass
+    xm.retsp 0
+
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  0
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
+#endif // defined(__VX4A__) || defined(__VX4B__)

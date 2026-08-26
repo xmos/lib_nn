@@ -9,9 +9,28 @@ pipeline {
 
     parameters {
         string(
-            name: 'TOOLS_VERSION',
+            name: 'TOOLS_VERSION_XS',
             defaultValue: '15.3.1',
-            description: 'XTC tools version'
+            description: 'XS XTC tools version'
+        )
+        string(
+            name: 'TOOLS_VERSION_VX',
+            defaultValue: '-j --repo arch_vx_slipgate -b master -a XTC 131',
+            description: 'VX XTC tools version'
+        )
+        string(
+            name: 'XMOSDOC_VERSION',
+            defaultValue: 'v7.4.0',
+            description: 'xmosdoc version'
+        )
+        string(
+            name: 'INFR_APPS_VERSION',
+            defaultValue: 'v3.1.1',
+            description: 'The infr_apps version'
+        )
+        choice(
+            name: 'TEST_LEVEL', choices: ['smoke', 'default', 'extended'],
+            description: 'The level of test coverage to run'
         )
     }
 
@@ -25,59 +44,99 @@ pipeline {
         stage("Build and test") {
             parallel {
                 stage("Native test") {
-                    when {
-                        expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }
-                    }
-                    agent {
-                        label "linux && x86_64"
-                    }
+                    when {expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }}
+                    agent {label "linux && x86_64"}
 
                     stages {
                         stage("Setup") {
-                            // Clone and install build dependencies
                             steps {
                                 dir(REPO) {
                                     checkoutScmShallow()
-                                    // fetch dependencies
-                                    sshagent (credentials: ['xmos-bot']) {
-                                        dir("test") {
-                                            sh "python3 fetch_dependencies.py"
-                                        }
+                                    dir("test/unit_test") {
+                                        xcoreBuild(
+                                            buildDir: 'build_native',
+                                            cmakeOpts: '-DBUILD_NATIVE=ON'
+                                        )
                                     }
                                 }
                             }
                         } // Setup
 
-                        stage("Build") {
-                            steps {
-                                dir("${REPO}/test") {
-                                    withTools(params.TOOLS_VERSION) {
-                                        sh "cmake -B build_xs3a --toolchain etc/xs3a.cmake"
-                                        sh "make -C build_xs3a -j8"
-                                    }
-                                    // sanitizers fail for now
-                                    sh "cmake -B build_native -DENABLE_SANITIZERS=0"
-                                    sh "make -C build_native -j8"
-                                }
-                            }
-                        } // Build
-
                         stage("Test") {
                             steps {
-                                dir("${REPO}/test") {
-                                   sh "./build_native/unit_test/unit_test"
-                                   sh "./build_native/gtests/gtests"
+                                dir("${REPO}/test/unit_test") {
+                                    sh "./bin/unit_test"
                                 }
                             }
                         } // Test
 
                     } // stages
-                    post {
-                        cleanup {
-                            xcoreCleanSandbox()
-                        }
-                    }
+                    post {cleanup {xcoreCleanSandbox()}}
                 } // Native test
+
+                stage("XS3 test") {
+                    when {expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }}
+                    agent {label "linux && x86_64"}
+
+                    stages {
+                        stage("Setup") {
+                            steps {
+                                dir(REPO) {
+                                    checkoutScmShallow()
+                                    dir("test/unit_test") {
+                                        xcoreBuild(
+                                            buildDir: 'build_xs3',
+                                            toolsVersion: params.TOOLS_VERSION_XS,
+                                            cmakeOpts: '-DAPP_HW_TARGET=XK-EVK-XU316',
+                                        )
+                                    }
+                                }
+                            }
+                        } // Setup
+
+                        stage("Test") {
+                            steps {
+                                dir("${REPO}/test/unit_test") {
+                                    withTools(params.TOOLS_VERSION_XS) {sh "xsim --args bin/unit_test.xe"}
+                                }
+                            }
+                        } // Test
+
+                    } // stages
+                    post {cleanup {xcoreCleanSandbox()}}
+                } // XS3 test
+
+                stage("VX4 test") {
+                    when {expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }}
+                    agent {label "linux && x86_64"}
+
+                    stages {
+                        stage("Setup") {
+                            steps {
+                                dir(REPO) {
+                                    checkoutScmShallow()
+                                    dir("test/unit_test") {
+                                        xcoreBuild(
+                                            buildDir: 'build_vx4',
+                                            toolsVersion: params.TOOLS_VERSION_VX,
+                                            cmakeOpts: '-DAPP_HW_TARGET=XK-EVK-XU416',
+                                        )
+                                    }
+                                }
+                            }
+                        } // Setup
+
+                        stage("Test") {
+                            steps {
+                                dir("${REPO}/test/unit_test") {
+                                    withTools(params.TOOLS_VERSION_VX) {sh "xsim --args bin/unit_test.xe"}
+                                }
+                            }
+                        } // Test
+
+                    } // stages
+                    post {cleanup {xcoreCleanSandbox()}}
+                } // VX4 test
 
                 stage("Docs and lib checks") {
                     agent {
@@ -120,6 +179,7 @@ pipeline {
                         } // Archive lib
 
                     } // stages
+
 
                     post {
                         cleanup {

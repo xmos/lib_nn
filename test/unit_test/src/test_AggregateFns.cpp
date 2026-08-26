@@ -10,24 +10,40 @@ extern "C" {
 #include "expand_8_to_16.h"
 
 #include "tst_common.h"
-#ifdef LOCAL_MAIN
-    #undef UNITY_SET_FILE
-#define UNITY_SET_FILE()
-#define RUN_TEST(x) x()
-#define TEST_ASSERT_EQUAL(a, b)   if ((a) != (b)) printf("Expected %08x saw %08x\n", (int) a, (int) b);
-#else
 #include "unity.h"
-#endif
+#include "unity_fixture.h"
 }
 using namespace nn;
 using namespace nn::test;
 
 static auto rng = test::Rand(42);
 
+extern "C" {
+
+TEST_GROUP(group_aggregate_fns);
+TEST_SETUP(group_aggregate_fns) {}
+TEST_TEAR_DOWN(group_aggregate_fns) {}
+TEST_GROUP_RUNNER(group_aggregate_fns) {
+  RUN_TEST_CASE(group_aggregate_fns, Test_MatMulDirectFn_int16_DW);
+  RUN_TEST_CASE(group_aggregate_fns, Test_MatMulDirectFn_int16);
+  RUN_TEST_CASE(group_aggregate_fns, Test_SimpleMatMulInt8);
+  RUN_TEST_CASE(group_aggregate_fns, Test_SimpleMatMulBinary);
+  RUN_TEST_CASE(group_aggregate_fns, Test_MatMulInt8);
+  RUN_TEST_CASE(group_aggregate_fns, Test_MatMulBinary);
+  RUN_TEST_CASE(group_aggregate_fns, Test_Simple_MatMulDirectFn);
+  RUN_TEST_CASE(group_aggregate_fns, Test_Simple_MatMulBinaryDirectFn);
+  RUN_TEST_CASE(group_aggregate_fns, Test_MatMulDirectFn);
+  RUN_TEST_CASE(group_aggregate_fns, Test_MatMulBinaryDirectFn);
+  RUN_TEST_CASE(group_aggregate_fns, Test_Kernel_Reordering);
+  RUN_TEST_CASE(group_aggregate_fns, Test_Simple_MatMulDirectFn_DW);
+  RUN_TEST_CASE(group_aggregate_fns, Test_MatMulDirectFn_DW);
+  RUN_TEST_CASE(group_aggregate_fns, Test_Kernel_Reordering_DW);
+}
+
 /*
   Simple test to verify memory accesses
 */
-void Test_SimpleMatMulInt8() {
+TEST(group_aggregate_fns, Test_SimpleMatMulInt8) {
   const int vpu_ring_buffer_length = 16;
 
   for (auto input_bytes = 4; input_bytes < 48; input_bytes += 4) {
@@ -89,7 +105,7 @@ void accumulate_binary_bytes(int *accu, int8_t a, int8_t b) {
 /*
   Simple test to verify memory accesses
 */
-void Test_SimpleMatMulBinary() {
+TEST(group_aggregate_fns, Test_SimpleMatMulBinary) {
   const int vpu_ring_buffer_length = 16;
 
   for (auto input_bytes = 4; input_bytes < 48; input_bytes += 4) {
@@ -152,7 +168,7 @@ void Test_SimpleMatMulBinary() {
 /*
   Simple test to verify memory accesses
 */
-void Test_MatMulInt8() {
+TEST(group_aggregate_fns, Test_MatMulInt8) {
   const int vpu_bytes = 32;
   const int vpu_ring_buffer_length = 16;
 
@@ -241,7 +257,7 @@ void Test_MatMulInt8() {
 /*
   Simple test to verify memory accesses
 */
-void Test_MatMulBinary() {
+TEST(group_aggregate_fns, Test_MatMulBinary) {
   const int vpu_bytes = 32;
   const int vpu_ring_buffer_length = 16;
 
@@ -338,7 +354,7 @@ void Test_MatMulBinary() {
 /*
   Simple test to verify memory accesses.
 */
-void Test_Simple_MatMulDirectFn() {
+TEST(group_aggregate_fns, Test_Simple_MatMulDirectFn) {
   const int vpu_ring_buffer_length = 16;
 
   std::list<std::tuple<int8_t, int8_t> > args = {
@@ -410,7 +426,7 @@ void Test_Simple_MatMulDirectFn() {
 /*
   Simple test to verify memory accesses.
 */
-void Test_Simple_MatMulBinaryDirectFn() {
+TEST(group_aggregate_fns, Test_Simple_MatMulBinaryDirectFn) {
   const int vpu_ring_buffer_length = 16;
 
   std::list<std::tuple<int8_t, int8_t> > args = {
@@ -485,7 +501,7 @@ void Test_Simple_MatMulBinaryDirectFn() {
 /*
   Simple test to verify memory accesses.
 */
-void Test_MatMulDirectFn() {
+TEST(group_aggregate_fns, Test_MatMulDirectFn) {
   const int vpu_ring_buffer_length = 16;
 
   // TODO replace 16 and 32
@@ -594,7 +610,7 @@ void Test_MatMulDirectFn() {
 /*
   Simple test to verify memory accesses.
 */
-void Test_MatMulBinaryDirectFn() {
+TEST(group_aggregate_fns, Test_MatMulBinaryDirectFn) {
   const int vpu_ring_buffer_length = 16;
 
   // TODO replace 16 and 32
@@ -705,7 +721,7 @@ void Test_MatMulBinaryDirectFn() {
   }
 }
 
-void Test_Kernel_Reordering() {
+TEST(group_aggregate_fns, Test_Kernel_Reordering) {
   for (int x_channels = 1; x_channels <= 6; ++x_channels) {
     for (int k_height = 1; k_height <= 6; ++k_height) {
       for (int k_width = 1; k_width <= 6; ++k_width) {
@@ -729,7 +745,7 @@ void Test_Kernel_Reordering() {
 /*
   Simple test to verify memory accesses.
 */
-void Test_Simple_MatMulDirectFn_DW() {
+TEST(group_aggregate_fns, Test_Simple_MatMulDirectFn_DW) {
   const int vpu_ring_buffer_length = 16;
 
   std::list<std::tuple<int8_t, int8_t> > args = {
@@ -814,7 +830,7 @@ void Test_Simple_MatMulDirectFn_DW() {
 /*
   Simple test to verify memory accesses.
 */
-void Test_MatMulDirectFn_DW() {
+TEST(group_aggregate_fns, Test_MatMulDirectFn_DW) {
   const int vpu_ring_buffer_length = 16;
 
   // TODO replace 16 and 32
@@ -916,7 +932,7 @@ void Test_MatMulDirectFn_DW() {
   }
 }
 
-void Test_Kernel_Reordering_DW() {
+TEST(group_aggregate_fns, Test_Kernel_Reordering_DW) {
   for (int x_channels = 4; x_channels <= 32; x_channels += 4) {
     for (int k_height = 1; k_height <= 6; ++k_height) {
       for (int k_width = 1; k_width <= 6; ++k_width) {
@@ -936,7 +952,7 @@ void Test_Kernel_Reordering_DW() {
   }
 }
 
-void Test_MatMulDirectFn_int16() {
+TEST(group_aggregate_fns, Test_MatMulDirectFn_int16) {
   const int vpu_ring_buffer_length = 16;
   int max_width = 3;
 
@@ -1049,8 +1065,12 @@ void Test_MatMulDirectFn_int16() {
 
 /*
   Simple test to verify memory accesses.
+  Disabled: crashes, see lib_nn issue tracker.
 */
-void Test_MatMulDirectFn_int16_DW() {
+TEST(group_aggregate_fns, Test_MatMulDirectFn_int16_DW) {
+  // KNOWN ISSUE: fails on native (Expected -1529670 Was 466068094), not yet
+  // root-caused.
+  TEST_IGNORE_MESSAGE("Test_MatMulDirectFn_int16_DW fails on native");
   const int vpu_ring_buffer_length = 16;
   int max_width = 3;
 
@@ -1157,29 +1177,4 @@ void Test_MatMulDirectFn_int16_DW() {
   }
 }
 
-extern "C" void test_aggregate_fns();
-void test_aggregate_fns() {
-  UNITY_SET_FILE();
-  // RUN_TEST(Test_MatMulDirectFn_int16_DW);
-  RUN_TEST(Test_MatMulDirectFn_int16);
-  RUN_TEST(Test_SimpleMatMulInt8);
-  RUN_TEST(Test_SimpleMatMulBinary);
-  RUN_TEST(Test_MatMulInt8);
-  RUN_TEST(Test_MatMulBinary);
-  RUN_TEST(Test_Simple_MatMulDirectFn);
-  RUN_TEST(Test_Simple_MatMulBinaryDirectFn);
-  RUN_TEST(Test_MatMulDirectFn);
-  RUN_TEST(Test_MatMulBinaryDirectFn);
-  RUN_TEST(Test_Kernel_Reordering);
-  RUN_TEST(Test_Simple_MatMulDirectFn_DW);
-  RUN_TEST(Test_MatMulDirectFn_DW);
-  RUN_TEST(Test_Kernel_Reordering_DW);
-}
-
-#ifdef LOCAL_MAIN
-extern "C" int main();
-int main() {
-    //Test_MatMulDirectFn_int16_DW();
-    Test_MatMulDirectFn_int16();
-}
-#endif
+}  // extern "C"

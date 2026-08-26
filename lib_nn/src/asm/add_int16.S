@@ -137,7 +137,7 @@ minintmults:
 
 #define FUNCTION_NAME add_int16_tensor_asm
 
-#define NSTACKWORDS  10
+#define NSTACKWORDS  28
 #define ROUND_UP(X, Y) (((X+Y-1)/Y)*Y)
 
 /*
@@ -235,4 +235,3 @@ done:
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
 
 #endif
-

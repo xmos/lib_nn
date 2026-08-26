@@ -8,6 +8,7 @@
 extern "C" {
 #include "tst_common.h"
 #include "unity.h"
+#include "unity_fixture.h"
 }
 
 using namespace nn;
@@ -15,8 +16,19 @@ using namespace nn::test;
 
 static auto rng = test::Rand(42);
 
+extern "C" {
+
+TEST_GROUP(group_mem_cpy_fns);
+TEST_SETUP(group_mem_cpy_fns) {}
+TEST_TEAR_DOWN(group_mem_cpy_fns) {}
+TEST_GROUP_RUNNER(group_mem_cpy_fns) {
+  RUN_TEST_CASE(group_mem_cpy_fns, Test_ImToColValid);
+  RUN_TEST_CASE(group_mem_cpy_fns, Test_ImToColPadded);
+  RUN_TEST_CASE(group_mem_cpy_fns, Test_DerefInputFn);
+}
+
 // TODO binary tests for ImToColValid
-void Test_ImToColValid() {
+TEST(group_mem_cpy_fns, Test_ImToColValid) {
   for (int x_height = 1; x_height <= 8; ++x_height) {
     for (int x_width = 1; x_width <= 8; ++x_width) {
       for (int x_channels = 4; x_channels <= 16; x_channels += 4) {
@@ -119,7 +131,7 @@ void Test_ImToColValid() {
   }
 }
 
-void Test_ImToColPadded() {
+TEST(group_mem_cpy_fns, Test_ImToColPadded) {
   // TODO use above generator class
 
   for (int x_height = 1; x_height <= 4; ++x_height) {
@@ -270,7 +282,7 @@ void Test_ImToColPadded() {
   }
 }
 
-void Test_DerefInputFn() {
+TEST(group_mem_cpy_fns, Test_DerefInputFn) {
   int k_h_dilation = 1;
   int k_v_dilation = 1;
 
@@ -318,10 +330,4 @@ void Test_DerefInputFn() {
   }
 }
 
-extern "C" void test_mem_cpy_fns();
-void test_mem_cpy_fns() {
-  UNITY_SET_FILE();
-  RUN_TEST(Test_ImToColValid);
-  RUN_TEST(Test_ImToColPadded);
-  RUN_TEST(Test_DerefInputFn);
-}
+}  // extern "C"

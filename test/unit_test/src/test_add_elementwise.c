@@ -12,6 +12,7 @@
 #include "nn_op_helper.h"
 #include "tst_common.h"
 #include "unity.h"
+#include "unity_fixture.h"
 #include "xs3_vpu.h"
 
 #define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
@@ -30,14 +31,19 @@
   #define NEG_SAT_VAL   (-128)
 #endif 
 
-
-
 char msg_buff[200];
 
-#define LENGTH     (16)
+TEST_GROUP(group_add_elementwise);
+TEST_SETUP(group_add_elementwise) { srand(563456); }
+TEST_TEAR_DOWN(group_add_elementwise) {}
+TEST_GROUP_RUNNER(group_add_elementwise) {
+    RUN_TEST_CASE(group_add_elementwise, test_add_elementwise_case0);
+    RUN_TEST_CASE(group_add_elementwise, test_add_elementwise_case1);
+    RUN_TEST_CASE(group_add_elementwise, test_add_elementwise_case2);
+}
 
-// Keep this real simple.
-static void test_add_elementwise_case0()
+#define LENGTH     (16)
+TEST(group_add_elementwise, test_add_elementwise_case0)
 {
     PRINTF("%s...\n", __func__);
 
@@ -52,40 +58,33 @@ static void test_add_elementwise_case0()
     }
 
     nn_add_params_t params;
-    //  = {
-    //     {   {   0, 0x0001 },
-    //         {   0, 0x0001 } },
-    //         {   0, 1}     };
-    int m1 = 0x0001;
-    int m2 = 0x0001;
-    int bias = 0;
-    int shift = 1;
+    int16_t m1 = 0x0001; // multiplier of 1 
+    int16_t m2 = 0x0001; // multiplier of 1
+    int16_t bias = 0;    // bias of 0
+    int16_t shift = 1;   // divide by 2
+
     // Broadcast values into vectors
     for (int i = 0; i < 16; i++) {
-        params.m1[i] = (int16_t)m1;
-        params.m2[i] = (int16_t)m2;
-        params.shift[i] = (int16_t)shift;
+        params.m1[i] = m1;
+        params.m2[i] = m2;
+        params.shift[i] = shift;
         params.bias_hi[i] = bias >> 16;
-        params.bias_lo[i] = (int16_t) (bias & 0XFFFF);
+        params.bias_lo[i] =  (bias & 0XFFFF);
     }
 
-            
-    for(int i = 0; i < LENGTH; i++)
+    // we expect sum and divide by 2 be the same            
+    for(int i = 0; i < LENGTH; i++){
         Y_expected[i] = i;
-
+    }
 
     add_elementwise(Y, X1, X2, &params, 0, LENGTH);
     TEST_ASSERT_EQUAL_INT8_ARRAY(Y_expected, Y, LENGTH);
-
 }
 #undef LENGTH
 
 
-
 #define LENGTH     (128)
-
-// Keep this real simple.
-static void test_add_elementwise_case1()
+TEST(group_add_elementwise, test_add_elementwise_case1)
 {
     PRINTF("%s...\n", __func__);
 
@@ -164,8 +163,7 @@ static void test_add_elementwise_case1()
 
 #define LEN     (100)
 #define REPS    (200)
-
-static void test_add_elementwise_case2()
+TEST(group_add_elementwise, test_add_elementwise_case2)
 {
     PRINTF("%s...\n", __func__);
 
@@ -257,14 +255,3 @@ static void test_add_elementwise_case2()
 }
 #undef LEN
 #undef REPS
-
-void test_add_elementwise()
-{
-    srand(563456);
-
-    UNITY_SET_FILE();
-    
-    RUN_TEST(test_add_elementwise_case0);
-    RUN_TEST(test_add_elementwise_case1);
-    RUN_TEST(test_add_elementwise_case2);
-}
