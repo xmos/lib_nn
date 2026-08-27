@@ -229,7 +229,8 @@ void mul_elementwise_asm(
 FUNCTION_NAME:
 
     xm.entsp 0
-    // NOT IMPLEMENTED on VX4 yet: purposely empty until CI/CD tests pass
+    xm.ldcu x10, 0
+    xm.assert x10 //NOT IMPLEMENTED
     xm.retsp 0
 
 .size FUNCTION_NAME, . -FUNCTION_NAME
