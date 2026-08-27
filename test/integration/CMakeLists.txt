@@ -28,7 +28,9 @@ function(fetch_dep name repo tag)
 endfunction()
 
 fetch_dep(tensorflow     https://github.com/tensorflow/tensorflow.git   v2.15.0)
-fetch_dep(gemmlowp       https://github.com/google/gemmlowp.git        f9959600daa42992baace8a49544a00a743ce1b6)
+# gemmlowp has no tags; pinned to the exact commit tensorflow v2.15.0 itself
+# vendors (see tensorflow/third_party/gemmlowp/workspace.bzl), not an arbitrary SHA.
+fetch_dep(gemmlowp       https://github.com/google/gemmlowp.git        e844ffd17118c1e17d94e1ba4354c075a4577b88)
 
 # fetch_dep(googletest     https://github.com/google/googletest.git      6c58c11d5497b6ee1df3cb400ce30deb72fc28c0)
 # fetch_dep(flatbuffers    https://github.com/google/flatbuffers.git     20aad0c41e1252b04c72111c3eb221280a9c2009)

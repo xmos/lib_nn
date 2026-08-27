@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <cstring>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -13,24 +14,28 @@
 #include "RefOps.hpp"
 #include "geom/Filter2dGeometry.hpp"
 #include "geom/util.hpp"
-#include "gtest/gtest.h"
 #include "nn_types.h"
 #include "ref_tests.hpp"
+
+extern "C" {
+#include "unity.h"
+#include "unity_fixture.h"
+}
 
 using namespace nn;
 using namespace nn::test;
 
-/**
- *
- *
- *
- */
-class Conv2dDenseReferenceTestA
-    : public ::testing::TestWithParam<Filter2dGeometry> {};
+extern "C" {
 
-TEST_P(Conv2dDenseReferenceTestA, NoPadding) {
-  auto geom = GetParam();
+TEST_GROUP(group_Conv2dDenseReference);
+TEST_SETUP(group_Conv2dDenseReference) {}
+TEST_TEAR_DOWN(group_Conv2dDenseReference) {}
+TEST_GROUP_RUNNER(group_Conv2dDenseReference) {
+  RUN_TEST_CASE(group_Conv2dDenseReference, NoPadding);
+  RUN_TEST_CASE(group_Conv2dDenseReference, WithPadding);
+}
 
+static void CheckNoPadding(Filter2dGeometry geom) {
   auto weights =
       std::vector<int8_t>(geom.window.shape.ElementCount() * geom.output.depth);
   auto bias = std::vector<int32_t>(geom.output.depth);
@@ -62,23 +67,26 @@ TEST_P(Conv2dDenseReferenceTestA, NoPadding) {
       geom, &input[0], &weights[0], &bias[0], &eff_mult[0], input_zero,
       output_zero);
 
-  ASSERT_EQ(output, expected);
+  TEST_ASSERT_EQUAL(expected.size(), output.size());
+  for (int i = 0; i < expected.size(); i++) {
+    TEST_ASSERT_EQUAL(expected[i], output[i]);
+  }
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    Basic, Conv2dDenseReferenceTestA,
-    ::testing::Values(
-        Filter2dGeometry(ImageGeometry(1, 1, 2), ImageGeometry(1, 1, 2),
-                         WindowGeometry(1, 1, 2)),
-        Filter2dGeometry(ImageGeometry(2, 2, 2), ImageGeometry(2, 2, 2),
-                         WindowGeometry(1, 1, 2)),
-        Filter2dGeometry(ImageGeometry(2, 2, 2), ImageGeometry(1, 1, 2),
-                         WindowGeometry(2, 2, 2))));
+TEST(group_Conv2dDenseReference, NoPadding) {
+  CheckNoPadding(Filter2dGeometry(ImageGeometry(1, 1, 2), ImageGeometry(1, 1, 2),
+                                  WindowGeometry(1, 1, 2)));
+  CheckNoPadding(Filter2dGeometry(ImageGeometry(2, 2, 2), ImageGeometry(2, 2, 2),
+                                  WindowGeometry(1, 1, 2)));
+  CheckNoPadding(Filter2dGeometry(ImageGeometry(2, 2, 2), ImageGeometry(1, 1, 2),
+                                  WindowGeometry(2, 2, 2)));
 
-static auto iterA = nn::test::ParamedRandIter<Filter2dGeometry, SimpleFilter>(
-    100, SimpleFilter(false, false));
-INSTANTIATE_TEST_SUITE_P(Random, Conv2dDenseReferenceTestA,
-                         ::testing::ValuesIn(iterA.begin(), iterA.end()));
+  auto iterA = nn::test::ParamedRandIter<Filter2dGeometry, SimpleFilter>(
+      100, SimpleFilter(false, false));
+  for (auto geom : iterA) {
+    CheckNoPadding(geom);
+  }
+}
 
 /**
  *
@@ -86,11 +94,10 @@ INSTANTIATE_TEST_SUITE_P(Random, Conv2dDenseReferenceTestA,
  *
  */
 
-class Conv2dDenseReferenceTestB
-    : public ::testing::TestWithParam<Filter2dGeometry> {};
-
-TEST_P(Conv2dDenseReferenceTestB, WithPadding) {
-  auto geom = GetParam();
+TEST(group_Conv2dDenseReference, WithPadding) {
+  auto iterB = nn::test::ParamedRandIter<Filter2dGeometry, SimpleFilter>(
+      100, SimpleFilter(false, true), 763577);
+  for (auto geom : iterB) {
 
   auto weights =
       std::vector<int8_t>(geom.window.shape.ElementCount() * geom.output.depth);
@@ -141,10 +148,11 @@ TEST_P(Conv2dDenseReferenceTestB, WithPadding) {
       geom, &input[0], &weights[0], &bias[0], &eff_mult[0], input_zero,
       output_zero);
 
-  ASSERT_EQ(output, expected);
+  TEST_ASSERT_EQUAL(expected.size(), output.size());
+  for (int i = 0; i < expected.size(); i++) {
+    TEST_ASSERT_EQUAL(expected[i], output[i]);
+  }
+  }
 }
 
-static auto iterB = nn::test::ParamedRandIter<Filter2dGeometry, SimpleFilter>(
-    100, SimpleFilter(false, true), 763577);
-INSTANTIATE_TEST_SUITE_P(Random, Conv2dDenseReferenceTestB,
-                         ::testing::ValuesIn(iterB.begin(), iterB.end()));
+}  // extern "C"
