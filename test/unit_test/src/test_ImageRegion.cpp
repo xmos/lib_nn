@@ -1,22 +1,31 @@
 // Copyright 2021-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
-#include <iostream>
-#include <tuple>
-#include <vector>
-
 #include "Rand.hpp"
 #include "geom/ImageGeometry.hpp"
 #include "geom/util.hpp"
-#include "gtest/gtest.h"
+#include "unity.h"
+#include "unity_fixture.h"
 
 using namespace nn;
 using namespace nn::test;
 
+TEST_GROUP(group_ImageRegion);
+TEST_SETUP(group_ImageRegion) {}
+TEST_TEAR_DOWN(group_ImageRegion) {}
+TEST_GROUP_RUNNER(group_ImageRegion) {
+  RUN_TEST_CASE(group_ImageRegion, Constructor);
+  RUN_TEST_CASE(group_ImageRegion, StartVect);
+  RUN_TEST_CASE(group_ImageRegion, EndVect);
+  RUN_TEST_CASE(group_ImageRegion, Within);
+  RUN_TEST_CASE(group_ImageRegion, Counts);
+  RUN_TEST_CASE(group_ImageRegion, ChannelOutputGroups);
+}
+
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(ImageRegion_Test, Constructor) {
+TEST(group_ImageRegion, Constructor) {
   constexpr int ITER_COUNT = 1000;
 
   auto rng = Rand(1278);
@@ -36,28 +45,28 @@ TEST(ImageRegion_Test, Constructor) {
     ImageRegion regionA(row, col, chan, height, width, depth);
     ImageRegion regionB({row, col, chan}, {height, width, depth});
 
-    ASSERT_EQ(row, regionA.start.row);
-    ASSERT_EQ(col, regionA.start.col);
-    ASSERT_EQ(chan, regionA.start.channel);
+    TEST_ASSERT_EQUAL(row, regionA.start.row);
+    TEST_ASSERT_EQUAL(col, regionA.start.col);
+    TEST_ASSERT_EQUAL(chan, regionA.start.channel);
 
-    ASSERT_EQ(height, regionA.shape.height);
-    ASSERT_EQ(width, regionA.shape.width);
-    ASSERT_EQ(depth, regionA.shape.depth);
+    TEST_ASSERT_EQUAL(height, regionA.shape.height);
+    TEST_ASSERT_EQUAL(width, regionA.shape.width);
+    TEST_ASSERT_EQUAL(depth, regionA.shape.depth);
 
-    ASSERT_EQ(row, regionB.start.row);
-    ASSERT_EQ(col, regionB.start.col);
-    ASSERT_EQ(chan, regionB.start.channel);
+    TEST_ASSERT_EQUAL(row, regionB.start.row);
+    TEST_ASSERT_EQUAL(col, regionB.start.col);
+    TEST_ASSERT_EQUAL(chan, regionB.start.channel);
 
-    ASSERT_EQ(height, regionB.shape.height);
-    ASSERT_EQ(width, regionB.shape.width);
-    ASSERT_EQ(depth, regionB.shape.depth);
+    TEST_ASSERT_EQUAL(height, regionB.shape.height);
+    TEST_ASSERT_EQUAL(width, regionB.shape.width);
+    TEST_ASSERT_EQUAL(depth, regionB.shape.depth);
   }
 }
 
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(ImageRegion_Test, StartVect) {
+TEST(group_ImageRegion, StartVect) {
   constexpr int ITER_COUNT = 1000;
 
   auto rng = Rand(8383);
@@ -79,14 +88,14 @@ TEST(ImageRegion_Test, StartVect) {
 
     auto startVect = region.StartVect();
 
-    ASSERT_EQ(start, startVect);
+    TEST_ASSERT_TRUE(start == startVect);
   }
 }
 
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(ImageRegion_Test, EndVect) {
+TEST(group_ImageRegion, EndVect) {
   constexpr int ITER_COUNT = 1000;
 
   auto rng = Rand(123555);
@@ -112,15 +121,15 @@ TEST(ImageRegion_Test, EndVect) {
     auto endVect_inclusive_true = region.EndVect(true);
     auto endVect_inclusive_false = region.EndVect(false);
 
-    ASSERT_EQ(endVect_inclusive_true, end_inclusive);
-    ASSERT_EQ(endVect_inclusive_false, end_exclusive);
+    TEST_ASSERT_TRUE(endVect_inclusive_true == end_inclusive);
+    TEST_ASSERT_TRUE(endVect_inclusive_false == end_exclusive);
   }
 }
 
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(ImageRegion_Test, Within) {
+TEST(group_ImageRegion, Within) {
   constexpr int ITER_COUNT = 1000;
 
   auto rng = Rand(7684);
@@ -154,16 +163,14 @@ TEST(ImageRegion_Test, Within) {
     expected = expected && (col < end.col);
     expected = expected && (chan < end.channel);
 
-    ASSERT_EQ(expected, region.Within(row, col, chan))
-        << "Region: " << region << "\n"
-        << "Test coords: " << ImageVect(row, col, chan);
+    TEST_ASSERT_EQUAL(expected, region.Within(row, col, chan));
   }
 }
 
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(ImageRegion_Test, Counts) {
+TEST(group_ImageRegion, Counts) {
   constexpr int ITER_COUNT = 1000;
 
   auto rng = Rand(7684);
@@ -186,15 +193,15 @@ TEST(ImageRegion_Test, Counts) {
     const auto pixel_count = shape.row * shape.col;
     const auto element_count = pixel_count * shape.channel;
 
-    ASSERT_EQ(pixel_count, region.PixelCount());
-    ASSERT_EQ(element_count, region.ElementCount());
+    TEST_ASSERT_EQUAL(pixel_count, region.PixelCount());
+    TEST_ASSERT_EQUAL(element_count, region.ElementCount());
   }
 }
 
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(ImageRegion_Test, ChannelOutputGroups) {
+TEST(group_ImageRegion, ChannelOutputGroups) {
   constexpr int ITER_COUNT = 1000;
 
   auto rng = Rand(7684);
@@ -219,6 +226,6 @@ TEST(ImageRegion_Test, ChannelOutputGroups) {
     const auto expected_count =
         (region.shape.depth + chans_per_group - 1) / chans_per_group;
 
-    EXPECT_EQ(expected_count, region.ChannelOutputGroups(chans_per_group));
+    TEST_ASSERT_EQUAL(expected_count, region.ChannelOutputGroups(chans_per_group));
   }
 }

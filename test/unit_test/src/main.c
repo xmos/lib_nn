@@ -18,6 +18,7 @@ int main(int argc, const char* argv[]) {
   RUN_TEST_GROUP(group_lookup8);
   RUN_TEST_GROUP(group_mul_elementwise);
   RUN_TEST_GROUP(group_multiply_int16);
+  RUN_TEST_GROUP(group_output_transform_fn_int16);
   RUN_TEST_GROUP(group_pad_3_to_4);
   RUN_TEST_GROUP(group_quantize_int16);
   RUN_TEST_GROUP(group_softmax);
@@ -26,9 +27,15 @@ int main(int argc, const char* argv[]) {
   // -------- Native only --------------
   #ifdef TEST_BUILD_NATIVE
     RUN_TEST_GROUP(group_aggregate_fns);
+    RUN_TEST_GROUP(group_Filter2dGeometry);
+    RUN_TEST_GROUP(group_ImageGeometry);
+    RUN_TEST_GROUP(group_ImageRegion);
+    RUN_TEST_GROUP(group_ImageVect);
     RUN_TEST_GROUP(group_maxpool);
     RUN_TEST_GROUP(group_mem_cpy_fns);
     RUN_TEST_GROUP(group_output_transforms);
+    RUN_TEST_GROUP(group_WindowGeometry);
+    RUN_TEST_GROUP(group_WindowLocation);
   #endif
   
   return UnityEnd();

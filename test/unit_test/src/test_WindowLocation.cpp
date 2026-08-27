@@ -1,20 +1,31 @@
 // Copyright 2021-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
-#include <iostream>
-#include <tuple>
 #include <vector>
 
-#include "FilterGen.hpp"
 #include "FilterGeometryIterHelper.hpp"
 #include "Rand.hpp"
 #include "geom/WindowLocation.hpp"
-#include "gtest/gtest.h"
+#include "unity.h"
+#include "unity_fixture.h"
 
 using namespace nn;
 
-// class WindowLocationTest : public ::testing::TestWithParam<Filter2dGeometry>
-// {};
+TEST_GROUP(group_WindowLocation);
+TEST_SETUP(group_WindowLocation) {}
+TEST_TEAR_DOWN(group_WindowLocation) {}
+TEST_GROUP_RUNNER(group_WindowLocation) {
+  RUN_TEST_CASE(group_WindowLocation, InputStart);
+  RUN_TEST_CASE(group_WindowLocation, InputEnd);
+  RUN_TEST_CASE(group_WindowLocation, InputCoords);
+  RUN_TEST_CASE(group_WindowLocation, Padding);
+  RUN_TEST_CASE(group_WindowLocation, SignedPadding);
+  RUN_TEST_CASE(group_WindowLocation, IsPadding);
+  RUN_TEST_CASE(group_WindowLocation, InputElement);
+  RUN_TEST_CASE(group_WindowLocation, GetInput);
+  RUN_TEST_CASE(group_WindowLocation, InputIndex);
+  RUN_TEST_CASE(group_WindowLocation, Fold);
+}
 
 static nn::ff::FilterGeometryIterator filter_sets[] = {
     test::unpadded::SimpleDepthwise({1, 8}, {1, 4}, {4, 66}),
@@ -23,7 +34,7 @@ static nn::ff::FilterGeometryIterator filter_sets[] = {
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(WindowLocation_Test, InputStart) {
+TEST(group_WindowLocation, InputStart) {
   for (auto filter_set : filter_sets) {
     filter_set.Reset();
     for (auto filter : filter_set) {
@@ -39,12 +50,9 @@ TEST(WindowLocation_Test, InputStart) {
 
             auto start = loc.InputStart();
 
-            EXPECT_EQ(start.row, exp.row)
-                << "Output Coords: " << loc.output_coords;
-            EXPECT_EQ(start.col, exp.col)
-                << "Output Coords: " << loc.output_coords;
-            EXPECT_EQ(start.channel, exp.channel)
-                << "Output Coords: " << loc.output_coords;
+            TEST_ASSERT_EQUAL(start.row, exp.row);
+            TEST_ASSERT_EQUAL(start.col, exp.col);
+            TEST_ASSERT_EQUAL(start.channel, exp.channel);
 
             exp.channel += filter.window.stride.channel;
           }
@@ -61,7 +69,7 @@ TEST(WindowLocation_Test, InputStart) {
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(WindowLocation_Test, InputEnd) {
+TEST(group_WindowLocation, InputEnd) {
   for (auto filter_set : filter_sets) {
     filter_set.Reset();
     for (auto filter : filter_set) {
@@ -79,12 +87,9 @@ TEST(WindowLocation_Test, InputEnd) {
 
             auto end = loc.InputEnd();
 
-            EXPECT_EQ(end.row, exp.row)
-                << "Output Coords: " << loc.output_coords;
-            EXPECT_EQ(end.col, exp.col)
-                << "Output Coords: " << loc.output_coords;
-            EXPECT_EQ(end.channel, exp.channel)
-                << "Output Coords: " << loc.output_coords;
+            TEST_ASSERT_EQUAL(end.row, exp.row);
+            TEST_ASSERT_EQUAL(end.col, exp.col);
+            TEST_ASSERT_EQUAL(end.channel, exp.channel);
 
             exp.channel += filter.window.stride.channel;
           }
@@ -101,7 +106,7 @@ TEST(WindowLocation_Test, InputEnd) {
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(WindowLocation_Test, InputCoords) {
+TEST(group_WindowLocation, InputCoords) {
   for (auto filter_set : filter_sets) {
     filter_set.Reset();
     for (auto filter : filter_set) {
@@ -127,15 +132,9 @@ TEST(WindowLocation_Test, InputCoords) {
                 for (int kx = 0; kx < filter.window.shape.depth; kx++) {
                   auto in_coords = loc.InputCoords(kr, kc, kx);
 
-                  EXPECT_EQ(in_coords.row, exp.row)
-                      << "Output Coords: " << loc.output_coords
-                      << "| Filter Coords: " << ImageVect(kr, kc, kx);
-                  EXPECT_EQ(in_coords.col, exp.col)
-                      << "Output Coords: " << loc.output_coords
-                      << "| Filter Coords: " << ImageVect(kr, kc, kx);
-                  EXPECT_EQ(in_coords.channel, exp.channel)
-                      << "Output Coords: " << loc.output_coords
-                      << "| Filter Coords: " << ImageVect(kr, kc, kx);
+                  TEST_ASSERT_EQUAL(in_coords.row, exp.row);
+                  TEST_ASSERT_EQUAL(in_coords.col, exp.col);
+                  TEST_ASSERT_EQUAL(in_coords.channel, exp.channel);
 
                   exp.channel += 1;
                 }
@@ -161,7 +160,7 @@ TEST(WindowLocation_Test, InputCoords) {
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(WindowLocation_Test, Padding) {
+TEST(group_WindowLocation, Padding) {
   for (auto filter_set : filter_sets) {
     filter_set.Reset();
     for (auto filter : filter_set) {
@@ -172,7 +171,7 @@ TEST(WindowLocation_Test, Padding) {
 
           for (int kr = 0; kr < filter.window.shape.height; kr++) {
             for (int kc = 0; kc < filter.window.shape.width; kc++) {
-              EXPECT_EQ(loc.IsPadding(kr, kc, 0),
+              TEST_ASSERT_EQUAL(loc.IsPadding(kr, kc, 0),
                         (kr < actual.top) ||
                             (kr > filter.window.shape.height - actual.bottom) ||
                             (kc < actual.left) ||
@@ -188,7 +187,7 @@ TEST(WindowLocation_Test, Padding) {
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(WindowLocation_Test, SignedPadding) {
+TEST(group_WindowLocation, SignedPadding) {
   for (auto filter_set : filter_sets) {
     filter_set.Reset();
     for (auto filter : filter_set) {
@@ -199,19 +198,19 @@ TEST(WindowLocation_Test, SignedPadding) {
           auto pad = loc.SignedPadding();
 
           auto p = loc.InputStart();
-          ASSERT_TRUE(filter.input.IsWithinImage(p.add(pad.top - 0, 0, 0)));
-          ASSERT_FALSE(filter.input.IsWithinImage(p.add(pad.top - 1, 0, 0)));
+          TEST_ASSERT_TRUE(filter.input.IsWithinImage(p.add(pad.top - 0, 0, 0)));
+          TEST_ASSERT_FALSE(filter.input.IsWithinImage(p.add(pad.top - 1, 0, 0)));
 
-          ASSERT_TRUE(filter.input.IsWithinImage(p.add(0, pad.left - 0, 0)));
-          ASSERT_FALSE(filter.input.IsWithinImage(p.add(0, pad.left - 1, 0)));
+          TEST_ASSERT_TRUE(filter.input.IsWithinImage(p.add(0, pad.left - 0, 0)));
+          TEST_ASSERT_FALSE(filter.input.IsWithinImage(p.add(0, pad.left - 1, 0)));
 
           p = loc.InputEnd();
-          ASSERT_TRUE(filter.input.IsWithinImage(p.add(-pad.bottom + 0, 0, 0)));
-          ASSERT_FALSE(
+          TEST_ASSERT_TRUE(filter.input.IsWithinImage(p.add(-pad.bottom + 0, 0, 0)));
+          TEST_ASSERT_FALSE(
               filter.input.IsWithinImage(p.add(-pad.bottom + 1, 0, 0)));
 
-          ASSERT_TRUE(filter.input.IsWithinImage(p.add(0, -pad.right + 0, 0)));
-          ASSERT_FALSE(filter.input.IsWithinImage(p.add(0, -pad.right + 1, 0)));
+          TEST_ASSERT_TRUE(filter.input.IsWithinImage(p.add(0, -pad.right + 0, 0)));
+          TEST_ASSERT_FALSE(filter.input.IsWithinImage(p.add(0, -pad.right + 1, 0)));
         }
       }
     }
@@ -221,7 +220,7 @@ TEST(WindowLocation_Test, SignedPadding) {
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(WindowLocation_Test, IsPadding) {
+TEST(group_WindowLocation, IsPadding) {
   auto rand = nn::test::Rand(4564523);
 
   for (auto filter_set : filter_sets) {
@@ -246,9 +245,7 @@ TEST(WindowLocation_Test, IsPadding) {
                   auto expected = !filter.input.IsWithinImage(in_coords);
                   auto actual = loc.IsPadding(kr, kc, kx);
 
-                  EXPECT_EQ(expected, actual)
-                      << "Output Coords: " << loc.output_coords
-                      << "| Filter Coords: " << ImageVect(kr, kc, kx);
+                  TEST_ASSERT_EQUAL(expected, actual);
                 }
               }
             }
@@ -262,7 +259,7 @@ TEST(WindowLocation_Test, IsPadding) {
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(WindowLocation_Test, InputElement) {
+TEST(group_WindowLocation, InputElement) {
   for (auto filter_set : filter_sets) {
     filter_set.Reset();
     for (auto filter : filter_set) {
@@ -290,11 +287,7 @@ TEST(WindowLocation_Test, InputElement) {
                   int8_t* expected = &input_img[index];
                   int8_t* actual = &loc.InputElement(&input_img[0], kr, kc, kx);
 
-                  EXPECT_EQ(expected, actual)
-                      << "Output Coords: " << loc.output_coords
-                      << " | Filter Coords: " << ImageVect(kr, kc, kx)
-                      << " | in_coords: " << in_coords << " | index: " << index
-                      << " | input_img: " << &input_img[0];
+                  TEST_ASSERT_EQUAL_PTR(expected, actual);
                 }
               }
             }
@@ -308,7 +301,7 @@ TEST(WindowLocation_Test, InputElement) {
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(WindowLocation_Test, GetInput) {
+TEST(group_WindowLocation, GetInput) {
   auto rand = nn::test::Rand(754444);
 
   for (auto filter_set : filter_sets) {
@@ -342,12 +335,7 @@ TEST(WindowLocation_Test, GetInput) {
                   int8_t actual =
                       loc.GetInput<int8_t>(&input_img[0], kr, kc, kx, zero_pad);
 
-                  ASSERT_EQ(expected, actual)
-                      << "Output Coords: " << loc.output_coords
-                      << " | Filter Coords: " << ImageVect(kr, kc, kx)
-                      << " | in_coords: " << in_coords << " | index: " << index
-                      << " | input_img: " << &input_img[0]
-                      << " | zero_pad: " << int(zero_pad);
+                  TEST_ASSERT_EQUAL(expected, actual);
                 }
               }
             }
@@ -361,7 +349,7 @@ TEST(WindowLocation_Test, GetInput) {
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(WindowLocation_Test, InputIndex) {
+TEST(group_WindowLocation, InputIndex) {
   auto rand = nn::test::Rand(7695699);
 
   for (auto filter_set : filter_sets) {
@@ -384,7 +372,7 @@ TEST(WindowLocation_Test, InputIndex) {
                   auto in_coords = loc.InputCoords(kr, kc, kx);
                   auto offset = filter.input.GetStride(in_coords);
                   auto index = loc.InputIndex(kr, kc, kx);
-                  EXPECT_EQ(offset, index);
+                  TEST_ASSERT_EQUAL(offset, index);
                 }
               }
             }
@@ -398,7 +386,7 @@ TEST(WindowLocation_Test, InputIndex) {
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(WindowLocation_Test, Fold) {
+TEST(group_WindowLocation, Fold) {
   auto rand = nn::test::Rand(4564523);
 
   for (auto filter_set : filter_sets) {
@@ -442,7 +430,7 @@ TEST(WindowLocation_Test, Fold) {
             auto res = loc.Fold<int32_t, int8_t>(&input_img[0], lfunc,
                                                  original_expected, 0);
 
-            ASSERT_EQ(expected, res);
+            TEST_ASSERT_EQUAL(expected, res);
           }
         }
       }

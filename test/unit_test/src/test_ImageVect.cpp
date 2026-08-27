@@ -1,21 +1,28 @@
 // Copyright 2021-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
-#include <iostream>
-#include <tuple>
-#include <vector>
-
 #include "Rand.hpp"
 #include "geom/util.hpp"
-#include "gtest/gtest.h"
+#include "unity.h"
+#include "unity_fixture.h"
 
 using namespace nn;
 using namespace nn::test;
 
+TEST_GROUP(group_ImageVect);
+TEST_SETUP(group_ImageVect) {}
+TEST_TEAR_DOWN(group_ImageVect) {}
+TEST_GROUP_RUNNER(group_ImageVect) {
+  RUN_TEST_CASE(group_ImageVect, Constructor);
+  RUN_TEST_CASE(group_ImageVect, addition);
+  RUN_TEST_CASE(group_ImageVect, subtraction);
+  RUN_TEST_CASE(group_ImageVect, equality);
+}
+
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(ImageVect_Test, Constructor) {
+TEST(group_ImageVect, Constructor) {
   constexpr int ITER_COUNT = 1000;
 
   auto rng = Rand(4563456);
@@ -28,20 +35,20 @@ TEST(ImageVect_Test, Constructor) {
     auto vect1 = ImageVect(row, col, xan);
     ImageVect vect2 = {row, col, xan};
 
-    ASSERT_EQ(vect1.row, row);
-    ASSERT_EQ(vect1.col, col);
-    ASSERT_EQ(vect1.channel, xan);
+    TEST_ASSERT_EQUAL(vect1.row, row);
+    TEST_ASSERT_EQUAL(vect1.col, col);
+    TEST_ASSERT_EQUAL(vect1.channel, xan);
 
-    ASSERT_EQ(vect2.row, row);
-    ASSERT_EQ(vect2.col, col);
-    ASSERT_EQ(vect2.channel, xan);
+    TEST_ASSERT_EQUAL(vect2.row, row);
+    TEST_ASSERT_EQUAL(vect2.col, col);
+    TEST_ASSERT_EQUAL(vect2.channel, xan);
   }
 }
 
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(ImageVect_Test, addition) {
+TEST(group_ImageVect, addition) {
   constexpr int ITER_COUNT = 1000;
 
   auto rng = Rand(4563456);
@@ -60,15 +67,15 @@ TEST(ImageVect_Test, addition) {
 
     {
       auto sum_vect = vectA.add(rowB, colB, xanB);
-      ASSERT_EQ(sum_vect.row, rowA + rowB);
-      ASSERT_EQ(sum_vect.col, colA + colB);
-      ASSERT_EQ(sum_vect.channel, xanA + xanB);
+      TEST_ASSERT_EQUAL(sum_vect.row, rowA + rowB);
+      TEST_ASSERT_EQUAL(sum_vect.col, colA + colB);
+      TEST_ASSERT_EQUAL(sum_vect.channel, xanA + xanB);
     }
     {
       auto sum_vect = vectA + vectB;
-      ASSERT_EQ(sum_vect.row, rowA + rowB);
-      ASSERT_EQ(sum_vect.col, colA + colB);
-      ASSERT_EQ(sum_vect.channel, xanA + xanB);
+      TEST_ASSERT_EQUAL(sum_vect.row, rowA + rowB);
+      TEST_ASSERT_EQUAL(sum_vect.col, colA + colB);
+      TEST_ASSERT_EQUAL(sum_vect.channel, xanA + xanB);
     }
   }
 }
@@ -76,7 +83,7 @@ TEST(ImageVect_Test, addition) {
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(ImageVect_Test, subtraction) {
+TEST(group_ImageVect, subtraction) {
   constexpr int ITER_COUNT = 1000;
 
   auto rng = Rand(4563456);
@@ -95,15 +102,15 @@ TEST(ImageVect_Test, subtraction) {
 
     {
       auto sum_vect = vectA.sub(rowB, colB, xanB);
-      ASSERT_EQ(sum_vect.row, rowA - rowB);
-      ASSERT_EQ(sum_vect.col, colA - colB);
-      ASSERT_EQ(sum_vect.channel, xanA - xanB);
+      TEST_ASSERT_EQUAL(sum_vect.row, rowA - rowB);
+      TEST_ASSERT_EQUAL(sum_vect.col, colA - colB);
+      TEST_ASSERT_EQUAL(sum_vect.channel, xanA - xanB);
     }
     {
       auto sum_vect = vectA - vectB;
-      ASSERT_EQ(sum_vect.row, rowA - rowB);
-      ASSERT_EQ(sum_vect.col, colA - colB);
-      ASSERT_EQ(sum_vect.channel, xanA - xanB);
+      TEST_ASSERT_EQUAL(sum_vect.row, rowA - rowB);
+      TEST_ASSERT_EQUAL(sum_vect.col, colA - colB);
+      TEST_ASSERT_EQUAL(sum_vect.channel, xanA - xanB);
     }
   }
 }
@@ -111,7 +118,7 @@ TEST(ImageVect_Test, subtraction) {
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(ImageVect_Test, equality) {
+TEST(group_ImageVect, equality) {
   for (int row1 = -2; row1 <= 2; row1++) {
     for (int col1 = -2; col1 <= 2; col1++) {
       for (int xan1 = -2; xan1 <= 2; xan1++) {
@@ -123,8 +130,8 @@ TEST(ImageVect_Test, equality) {
 
               bool should_eq = row1 == row2 && col1 == col2 && xan1 == xan2;
 
-              ASSERT_EQ(vect1 == vect2, should_eq);
-              ASSERT_EQ(vect1 != vect2, !should_eq);
+              TEST_ASSERT_EQUAL(vect1 == vect2, should_eq);
+              TEST_ASSERT_EQUAL(vect1 != vect2, !should_eq);
             }
           }
         }
