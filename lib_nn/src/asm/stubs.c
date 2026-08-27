@@ -33,17 +33,6 @@ void pad_3_to_4_asm(int32_t outputs[], int64_t inputs[], uint32_t N_24, uint32_t
     }
 };
 
-int16_t *output_transform_fn_int16_impl(int16_t *vDvR,
-                                        int32_t *mul_add,
-                                        int16_t *output,
-                                        uint32_t N);
-void output_transform_fn_int16_impl_asm(int16_t *vDvR,
-                                        int32_t *mul_add,
-                                        int16_t *output,
-                                        uint32_t N) {
-    output_transform_fn_int16_impl(vDvR, mul_add, output, N);
-}
-
 void quantize_int16_tensor_ref(int16_t *output, float *input, int tensor_length, void *blob);
 void quantize_int16_tensor_asm(int16_t *output,
                                float *input, int tensor_length, void *blob) {

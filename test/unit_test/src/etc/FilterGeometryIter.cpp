@@ -1,6 +1,10 @@
 // Copyright 2021-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
+// VX4's reduced libc++ runtime lacks typeinfo for shared_ptr's internal
+// control block, which the polymorphic IFilterFrame hierarchy below needs.
+#if !defined(__VX4A__) && !defined(__VX4B__)
+
 #include "FilterGeometryIter.hpp"
 
 #include <iostream>
@@ -406,3 +410,5 @@ nn::Filter2dGeometry nn::ff::MakePaddedDepthwise(nn::Filter2dGeometry filter) {
 //   filter.window.shape.depth = (filter.window.stride.channel == 0)?
 //   filter.input.depth : filter.window.shape.depth; return filter;
 // }
+
+#endif  // !__VX4A__ && !__VX4B__

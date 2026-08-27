@@ -13,7 +13,6 @@
 #include "unity.h"
 #include "unity_fixture.h"
 
-#define N 25
 
 TEST_GROUP(group_multiply_int16);
 TEST_SETUP(group_multiply_int16) {}
@@ -23,6 +22,8 @@ TEST_GROUP_RUNNER(group_multiply_int16) {
   RUN_TEST_CASE(group_multiply_int16, test_requantize_transform_int16);
 }
 
+
+#define N 25
 TEST(group_multiply_int16, test_multiply_tensor_int16) {
     int16_t input1[N];
     int16_t input2[N];

@@ -1,20 +1,31 @@
 // Copyright 2021-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
-#include <iostream>
-#include <tuple>
-#include <vector>
-
 #include "Rand.hpp"
 #include "geom/WindowGeometry.hpp"
-#include "gtest/gtest.h"
+
+extern "C" {
+#include "unity.h"
+#include "unity_fixture.h"
+}
 
 using namespace nn;
+
+extern "C" {
+
+TEST_GROUP(group_WindowGeometry);
+TEST_SETUP(group_WindowGeometry) {}
+TEST_TEAR_DOWN(group_WindowGeometry) {}
+TEST_GROUP_RUNNER(group_WindowGeometry) {
+  RUN_TEST_CASE(group_WindowGeometry, Constructor);
+  RUN_TEST_CASE(group_WindowGeometry, UsesDilation);
+  RUN_TEST_CASE(group_WindowGeometry, WindowOffset);
+}
 
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(WindowGeometry_Test, Constructor) {
+TEST(group_WindowGeometry, Constructor) {
   for (int iter = 0; iter < 100; iter++) {
     auto rng = nn::test::Rand(iter);
 
@@ -37,27 +48,27 @@ TEST(WindowGeometry_Test, Constructor) {
         WindowGeometry(height, width, depth, start_row, start_col, stride_row,
                        stride_col, stride_chan, dil_row, dil_col, cbytes);
 
-    ASSERT_EQ(window.shape.height, height);
-    ASSERT_EQ(window.shape.width, width);
-    ASSERT_EQ(window.shape.depth, depth);
-    ASSERT_EQ(window.shape.element_bits, cbytes * CHAR_BIT);
+    TEST_ASSERT_EQUAL(window.shape.height, height);
+    TEST_ASSERT_EQUAL(window.shape.width, width);
+    TEST_ASSERT_EQUAL(window.shape.depth, depth);
+    TEST_ASSERT_EQUAL(window.shape.element_bits, cbytes * CHAR_BIT);
 
-    ASSERT_EQ(window.start.row, start_row);
-    ASSERT_EQ(window.start.col, start_col);
+    TEST_ASSERT_EQUAL(window.start.row, start_row);
+    TEST_ASSERT_EQUAL(window.start.col, start_col);
 
-    ASSERT_EQ(window.stride.row, stride_row);
-    ASSERT_EQ(window.stride.col, stride_col);
-    ASSERT_EQ(window.stride.channel, stride_chan);
+    TEST_ASSERT_EQUAL(window.stride.row, stride_row);
+    TEST_ASSERT_EQUAL(window.stride.col, stride_col);
+    TEST_ASSERT_EQUAL(window.stride.channel, stride_chan);
 
-    ASSERT_EQ(window.dilation.row, dil_row);
-    ASSERT_EQ(window.dilation.col, dil_col);
+    TEST_ASSERT_EQUAL(window.dilation.row, dil_row);
+    TEST_ASSERT_EQUAL(window.dilation.col, dil_col);
   }
 }
 
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(WindowGeometry_Test, UsesDilation) {
+TEST(group_WindowGeometry, UsesDilation) {
   auto r = nn::test::Rand();
 
   const auto max_height = 4;
@@ -76,9 +87,7 @@ TEST(WindowGeometry_Test, UsesDilation) {
           auto is_using_dilation =
               (win.dilation.row != 1) || (win.dilation.col != 1);
 
-          ASSERT_EQ(is_using_dilation, win.UsesDilation())
-              << "dilation = {" << win.dilation.row << "," << win.dilation.col
-              << "}";
+          TEST_ASSERT_EQUAL(is_using_dilation, win.UsesDilation());
         }
       }
     }
@@ -88,7 +97,7 @@ TEST(WindowGeometry_Test, UsesDilation) {
 /////////////////////////////////////////////////////////////////////////
 //
 //
-TEST(WindowGeometry_Test, WindowOffset) {
+TEST(group_WindowGeometry, WindowOffset) {
   auto r = nn::test::Rand();
 
   const auto max_height = 4;
@@ -111,9 +120,9 @@ TEST(WindowGeometry_Test, WindowOffset) {
               for (int k = 0; k < 10; ++k) {
                 auto out_v = ImageVect(i, j, k);
                 auto res_v = win.WindowOffset(out_v);
-                EXPECT_EQ(exp_v.row, res_v.row);
-                EXPECT_EQ(exp_v.col, res_v.col);
-                EXPECT_EQ(exp_v.channel, res_v.channel);
+                TEST_ASSERT_EQUAL(exp_v.row, res_v.row);
+                TEST_ASSERT_EQUAL(exp_v.col, res_v.col);
+                TEST_ASSERT_EQUAL(exp_v.channel, res_v.channel);
                 exp_v.channel += win.stride.channel;
               }
               exp_v.col += win.stride.col;
@@ -127,3 +136,5 @@ TEST(WindowGeometry_Test, WindowOffset) {
     }
   }
 }
+
+}  // extern "C"

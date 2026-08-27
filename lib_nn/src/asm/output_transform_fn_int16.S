@@ -80,4 +80,26 @@ output_transform_16_unzip_loop:
     .size FUNCTION_NAME, .Ltmp0-FUNCTION_NAME
     .issue_mode  single
 
-#endif
+#endif // defined(__XS3A__)
+
+#if (defined(__VX4A__) || defined(__VX4B__))
+
+#define FUNCTION_NAME output_transform_fn_int16_impl_asm
+
+// output_transform_fn_int16_impl_asm(int32_t *vDvR, int32_t *mul_add, int32_t *output, int elements);
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+    xm.entsp 0
+    xm.ldcu x10, 0
+    xm.assert x10 //NOT IMPLEMENTED
+    xm.retsp 0
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  0
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
+#endif // defined(__VX4A__) || defined(__VX4B__)
