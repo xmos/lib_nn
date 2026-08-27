@@ -16,12 +16,14 @@ include(FetchContent)
 function(fetch_dep name repo tag)
   if(NOT EXISTS ${XMOS_SANDBOX_DIR}/${name})
     message(STATUS "Fetching ${name}")
+    # GIT_SHALLOW only fetches the tips of branches/tags, so it can't be used
+    # here: some pins (e.g. gemmlowp, which has no tags) are arbitrary
+    # historical commits that a shallow clone would never reach.
     FetchContent_Declare(
       ${name}
       GIT_REPOSITORY ${repo}
       GIT_TAG ${tag}
       SOURCE_DIR ${XMOS_SANDBOX_DIR}/${name}
-      GIT_SHALLOW TRUE
     )
     FetchContent_Populate(${name})
   endif()
