@@ -3,10 +3,15 @@
 
 #include "Rand.hpp"
 #include "geom/WindowGeometry.hpp"
+
+extern "C" {
 #include "unity.h"
 #include "unity_fixture.h"
+}
 
 using namespace nn;
+
+extern "C" {
 
 TEST_GROUP(group_WindowGeometry);
 TEST_SETUP(group_WindowGeometry) {}
@@ -131,3 +136,5 @@ TEST(group_WindowGeometry, WindowOffset) {
     }
   }
 }
+
+}  // extern "C"

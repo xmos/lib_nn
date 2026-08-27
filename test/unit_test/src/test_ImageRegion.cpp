@@ -4,11 +4,16 @@
 #include "Rand.hpp"
 #include "geom/ImageGeometry.hpp"
 #include "geom/util.hpp"
+
+extern "C" {
 #include "unity.h"
 #include "unity_fixture.h"
+}
 
 using namespace nn;
 using namespace nn::test;
+
+extern "C" {
 
 TEST_GROUP(group_ImageRegion);
 TEST_SETUP(group_ImageRegion) {}
@@ -229,3 +234,5 @@ TEST(group_ImageRegion, ChannelOutputGroups) {
     TEST_ASSERT_EQUAL(expected_count, region.ChannelOutputGroups(chans_per_group));
   }
 }
+
+}  // extern "C"

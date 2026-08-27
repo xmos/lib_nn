@@ -6,25 +6,13 @@
 
 #include "Rand.hpp"
 #include "geom/ImageGeometry.hpp"
+
+extern "C" {
 #include "unity.h"
 #include "unity_fixture.h"
+}
 
 using namespace nn;
-
-TEST_GROUP(group_ImageGeometry);
-TEST_SETUP(group_ImageGeometry) {}
-TEST_TEAR_DOWN(group_ImageGeometry) {}
-TEST_GROUP_RUNNER(group_ImageGeometry) {
-  RUN_TEST_CASE(group_ImageGeometry, PixelCount);
-  RUN_TEST_CASE(group_ImageGeometry, ElementCounts);
-  RUN_TEST_CASE(group_ImageGeometry, ByteCounts);
-  RUN_TEST_CASE(group_ImageGeometry, Index);
-  RUN_TEST_CASE(group_ImageGeometry, GetStride);
-  RUN_TEST_CASE(group_ImageGeometry, IsWithinImage);
-  RUN_TEST_CASE(group_ImageGeometry, Element);
-  RUN_TEST_CASE(group_ImageGeometry, Get);
-  RUN_TEST_CASE(group_ImageGeometry, ApplyOperation);
-}
 
 /**
  * Generates a set of ImageGeometry objects used as parameters for tests.
@@ -60,6 +48,23 @@ static std::vector<ImageGeometry> AllTestGeometries() {
   res.insert(res.end(), v16.begin(), v16.end());
   res.insert(res.end(), v32.begin(), v32.end());
   return res;
+}
+
+extern "C" {
+
+TEST_GROUP(group_ImageGeometry);
+TEST_SETUP(group_ImageGeometry) {}
+TEST_TEAR_DOWN(group_ImageGeometry) {}
+TEST_GROUP_RUNNER(group_ImageGeometry) {
+  RUN_TEST_CASE(group_ImageGeometry, PixelCount);
+  RUN_TEST_CASE(group_ImageGeometry, ElementCounts);
+  RUN_TEST_CASE(group_ImageGeometry, ByteCounts);
+  RUN_TEST_CASE(group_ImageGeometry, Index);
+  RUN_TEST_CASE(group_ImageGeometry, GetStride);
+  RUN_TEST_CASE(group_ImageGeometry, IsWithinImage);
+  RUN_TEST_CASE(group_ImageGeometry, Element);
+  RUN_TEST_CASE(group_ImageGeometry, Get);
+  RUN_TEST_CASE(group_ImageGeometry, ApplyOperation);
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -191,6 +196,8 @@ TEST(group_ImageGeometry, IsWithinImage) {
   }
 }
 
+}  // extern "C"
+
 /////////////////////////////////////////////////////////////////////////
 //
 //
@@ -212,6 +219,8 @@ static void _ElementTest(nn::ImageGeometry img) {
   }
 }
 
+extern "C" {
+
 TEST(group_ImageGeometry, Element) {
   for (auto img : AllTestGeometries()) {
     switch (img.element_bits / CHAR_BIT) {
@@ -229,6 +238,8 @@ TEST(group_ImageGeometry, Element) {
     }
   }
 }
+
+}  // extern "C"
 
 /////////////////////////////////////////////////////////////////////////
 //
@@ -261,6 +272,8 @@ static void _GetTest(nn::ImageGeometry img) {
   }
 }
 
+extern "C" {
+
 TEST(group_ImageGeometry, Get) {
   for (auto img : AllTestGeometries()) {
     switch (img.element_bits / CHAR_BIT) {
@@ -278,6 +291,8 @@ TEST(group_ImageGeometry, Get) {
     }
   }
 }
+
+}  // extern "C"
 
 /////////////////////////////////////////////////////////////////////////
 //
@@ -299,6 +314,8 @@ static void _ApplyOpTest(nn::ImageGeometry img) {
   }
 }
 
+extern "C" {
+
 TEST(group_ImageGeometry, ApplyOperation) {
   for (auto img : AllTestGeometries()) {
     switch (img.element_bits / CHAR_BIT) {
@@ -316,3 +333,5 @@ TEST(group_ImageGeometry, ApplyOperation) {
     }
   }
 }
+
+}  // extern "C"

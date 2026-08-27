@@ -6,10 +6,19 @@
 #include "FilterGeometryIterHelper.hpp"
 #include "Rand.hpp"
 #include "geom/WindowLocation.hpp"
+
+extern "C" {
 #include "unity.h"
 #include "unity_fixture.h"
+}
 
 using namespace nn;
+
+// VX4's reduced libc++ runtime lacks typeinfo for shared_ptr's internal
+// control block used by FilterGeometryIterator's polymorphic frame stack.
+#if !defined(__VX4A__) && !defined(__VX4B__)
+
+extern "C" {
 
 TEST_GROUP(group_WindowLocation);
 TEST_SETUP(group_WindowLocation) {}
@@ -437,3 +446,7 @@ TEST(group_WindowLocation, Fold) {
     }
   }
 }
+
+}  // extern "C"
+
+#endif  // !__VX4A__ && !__VX4B__

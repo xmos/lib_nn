@@ -3,11 +3,16 @@
 
 #include "Rand.hpp"
 #include "geom/util.hpp"
+
+extern "C" {
 #include "unity.h"
 #include "unity_fixture.h"
+}
 
 using namespace nn;
 using namespace nn::test;
+
+extern "C" {
 
 TEST_GROUP(group_ImageVect);
 TEST_SETUP(group_ImageVect) {}
@@ -139,3 +144,5 @@ TEST(group_ImageVect, equality) {
     }
   }
 }
+
+}  // extern "C"
