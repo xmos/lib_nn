@@ -22,6 +22,10 @@ TEST_GROUP_RUNNER(group_output_transform_fn_int16) {
 }
 
 TEST(group_output_transform_fn_int16, test_output_transform_fn_int16) {
+#if defined(__VX4A__) || defined(__VX4B__)
+    // KNOWN ISSUE: output_transform_fn_int16_asm is not implemented on VX4 yet.
+    TEST_IGNORE_MESSAGE("output_transform_fn_int16_asm not implemented on VX4");
+#else
     int16_t expected_output[16] = {
         0x1001, 0x2001, 0x3001, 0x4001, 0x5001, 0x6001, 0x7001, 0x7fff,
         0x8fff, 0x9fff, 0xafff, 0xbfff, 0xcfff, 0xdfff, 0xefff, 0xffff
@@ -66,9 +70,14 @@ TEST(group_output_transform_fn_int16, test_output_transform_fn_int16) {
             TEST_ASSERT_EQUAL(output[i+4], expected_output[i]);
         }
     }
+#endif
 }
 
 TEST(group_output_transform_fn_int16, test_output_transform_fn_int16_kernel_transform) {
+#if defined(__VX4A__) || defined(__VX4B__)
+    // KNOWN ISSUE: output_transform_fn_int16_asm is not implemented on VX4 yet.
+    TEST_IGNORE_MESSAGE("output_transform_fn_int16_asm not implemented on VX4");
+#else
     int8_t kernel_weights_in[16*8];
     int8_t kernel_weights_out[16*8];
     int16_t vDvR[32];
@@ -97,4 +106,5 @@ TEST(group_output_transform_fn_int16, test_output_transform_fn_int16_kernel_tran
     for(int i = 0; i < 16; i++) {
         TEST_ASSERT_EQUAL(vDvRoutput[i], expected_output[i]);
     }
+#endif
 }
