@@ -34,4 +34,3 @@ void add_int16_tensor(int16_t *output, int16_t *input1, int16_t *input2, int ten
     add_int16_tensor_asm(output, input1, input2, tensor_length, blob);
 #endif
 }
-

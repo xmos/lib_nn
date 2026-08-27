@@ -228,19 +228,9 @@ void mul_elementwise_asm(
 .type FUNCTION_NAME,@function
 FUNCTION_NAME:
 
-    {xm.entsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
-    xm.stdsp x18, x19, 0*8
-    xm.stdsp x20, x21, 1*8
-    xm.stdsp x22, x23, 2*8
-
-    xm.ldcu x10, 0
-    xm.assert x10 //NOT IMPLEMENTED
-
-    xm.lddsp x18, x19, 0*8
-    xm.lddsp x20, x21, 1*8
-    xm.lddsp x22, x23, 2*8
-
-    {xm.retsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
+    xm.entsp 0
+    // NOT IMPLEMENTED on VX4 yet: purposely empty until CI/CD tests pass
+    xm.retsp 0
 
 .size FUNCTION_NAME, . -FUNCTION_NAME
 .resource_const FUNCTION_NAME, "stack_frame_bytes",  ROUND_UP(NSTACKWORDS*4, 16)

@@ -48,9 +48,19 @@ void bsign_8_ref(bnn_b32_t* y, const int8_t* x, const int8_t* zero_point_vect,
   }
 }
 
+extern void bsign_8_asm(
+  bnn_b32_t* y, const int8_t* x,
+  const int8_t* zero_point_vect,
+  const nn_bsign_8_job_t* job);
+
+
+void bsign_8(
+  bnn_b32_t* y, const int8_t* x, 
+  const int8_t* zero_point_vect,
+  const nn_bsign_8_job_t* job) {
 #ifdef NN_USE_REF
-void bsign_8(bnn_b32_t* y, const int8_t* x, const int8_t* zero_point_vect,
-             const nn_bsign_8_job_t* job) {
   bsign_8_ref(y, x, zero_point_vect, job);
+#else
+  bsign_8_asm(y, x, zero_point_vect, job);
+#endif // NN_USE_REF
 }
-#endif  // NN_USE_REF

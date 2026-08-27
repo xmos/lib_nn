@@ -10,28 +10,23 @@
 #include "quantize_int16_transform.h"
 
 #include "tst_common.h"
-#ifdef LOCAL_MAIN
-    #undef UNITY_SET_FILE
-int intbits(float f) {
-    return *(int *)&f;
-}
-#define UNITY_SET_FILE()
-#define RUN_TEST(x) x()
-#define TEST_ASSERT_EQUAL(a, b) if ((a) != (b)) {printf("Expected %08x saw %08x\n", (int) a, (int) b); errors++;}
-#define TEST_ASSERT_EQUAL_FLOAT(a, b) if ((a) != (b)) {printf("Expected %f saw %f (%08x != %08x)\n", a, b, intbits(a), intbits(b)); errors++;}
-#define TEST_ASSERT_INT_WITHIN(d, a, b) if (abs((a)-(b)) > (d)) {printf("Expected %08x +/- %d saw %08x\n", (int) (a), (int) (d), (int) (b)); errors++;}
-#else
 #include "unity.h"
-#endif
+#include "unity_fixture.h"
 
 #define N 25
 
-int test_quantize_tensor_int16(void) {
+TEST_GROUP(group_quantize_int16);
+TEST_SETUP(group_quantize_int16) {}
+TEST_TEAR_DOWN(group_quantize_int16) {}
+TEST_GROUP_RUNNER(group_quantize_int16) {
+  RUN_TEST_CASE(group_quantize_int16, test_quantize_tensor_int16);
+}
+
+TEST(group_quantize_int16, test_quantize_tensor_int16) {
     float input1[N];
     int8_t blob[QUANTIZE_INT16_TENSOR_BYTES()];
     int16_t output[N+1];
     int16_t ref_output[N];
-    int errors = 0;
     for(int i = 0; i < N; i++) {
         input1[i] = (20000 - 2513 * i)/32768.0;
     }
@@ -63,22 +58,4 @@ int test_quantize_tensor_int16(void) {
     for(int i = 0; i < N; i++) {
         TEST_ASSERT_EQUAL(ref_output[i], output[i]);
     }
-
-    return errors;
 }
-
-void test_quantize_int16() {
-  UNITY_SET_FILE();
-  RUN_TEST(test_quantize_tensor_int16);
-}
-
-#ifdef LOCAL_MAIN
-
-int main(void) {
-    int errors = 0;
-    errors += test_quantize_tensor_int16();
-    if (errors != 0) printf("FAIL\n"); else printf("PASS\n");
-    return errors;
-}
-
-#endif

@@ -5,9 +5,9 @@
 .issue_mode  dual
 
 
-// extern void expand_8_to_16(int16_t *out, int8_t *in, int N);
+// extern void expand_8_to_16_ref_asm(int16_t *out, int8_t *in, int N);
 
-#define FUNCTION_NAME expand_8_to_16
+#define FUNCTION_NAME expand_8_to_16_ref_asm
 
 #define NSTACKWORDS  0
     
@@ -60,7 +60,27 @@ ones:
     .size FUNCTION_NAME, .Ltmp0-FUNCTION_NAME
     .issue_mode  single
 
-#endif
+#endif // defined(__XS3A__)
 
+#if (defined(__VX4A__) || defined(__VX4B__))
 
+#define FUNCTION_NAME expand_8_to_16_ref_asm
 
+// NOT IMPLEMENTED on VX4 yet: returns without writing `out`, so callers get
+// a wrong (not a crash/trap) result and tests fail normally instead of
+// halting the whole binary.
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+    xm.entsp 0
+    xm.retsp 0
+
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  0
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
+#endif // defined(__VX4A__) || defined(__VX4B__)

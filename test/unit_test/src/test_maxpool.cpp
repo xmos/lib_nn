@@ -8,24 +8,27 @@
 
 extern "C" {
 #include "tst_common.h"
-#ifdef LOCAL_MAIN
-#undef UNITY_SET_FILE
-#define UNITY_SET_FILE()
-#define RUN_TEST(x) x()
-#define TEST_ASSERT_EQUAL(a, b)   if ((a) != (b)) {printf("Expected %08x saw %08x\n", (int) a, (int) b); errors++;}
-#else
 #include "unity.h"
-#endif
+#include "unity_fixture.h"
 }
 
 using namespace nn;
 
+extern "C" {
+
+TEST_GROUP(group_maxpool);
+TEST_SETUP(group_maxpool) {}
+TEST_TEAR_DOWN(group_maxpool) {}
+TEST_GROUP_RUNNER(group_maxpool) {
+  RUN_TEST_CASE(group_maxpool, Test_Max_Pool_aggr);
+  RUN_TEST_CASE(group_maxpool, Test_Max_Pool_ot);
+}
+
 /*
   Simple test to verify maxpool
 */
-int Test_Max_Pool_aggr() {
+TEST(group_maxpool, Test_Max_Pool_aggr) {
   const int vpu_ring_buffer_length = 16;
-  int errors = 0;
 
   for (int x_height = 1; x_height <= 4; ++x_height) {
     for (int x_width = 1; x_width <= 4; ++x_width) {
@@ -88,16 +91,14 @@ int Test_Max_Pool_aggr() {
       }
     }
   }
-  return errors;
 }
 
-int Test_Max_Pool_ot() {
+TEST(group_maxpool, Test_Max_Pool_ot) {
     int8_t outp[24];
     alignas(4) VPURingBuffer A;
     for(int i = 0; i <= 16; i++) {
         ((int8_t *)&A)[i] = i+8;
     }
-    int errors = 0;
 
     for(int len_count = 1; len_count < 16; len_count++) {
         struct otfn_int8_channelwise_params_t st = {len_count, 0};
@@ -113,24 +114,6 @@ int Test_Max_Pool_ot() {
             }
         }
     }
-    return errors;
 }
 
-extern "C" void test_maxpool();
-void test_maxpool() {
-  UNITY_SET_FILE();
-  RUN_TEST(Test_Max_Pool_aggr);
-  RUN_TEST(Test_Max_Pool_ot);
-}
-
-#ifdef LOCAL_MAIN
-
-int main(void) {
-    int errors = 0;
-    errors += Test_Max_Pool_aggr();
-    errors += Test_Max_Pool_ot();
-    if (errors != 0) printf("FAIL\n"); else printf("PASS\n");
-    return errors;
-}
-
-#endif
+}  // extern "C"
