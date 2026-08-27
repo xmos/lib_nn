@@ -23,10 +23,7 @@ TEST_GROUP_RUNNER(group_expand_8_to_16) {
 }
 
 TEST(group_expand_8_to_16, Test_expand_8_to_16) {
-#if defined(__VX4A__) || defined(__VX4B__)
-    // KNOWN ISSUE: expand_8_to_16_ref_asm is not implemented on VX4 yet.
-    TEST_IGNORE_MESSAGE("expand_8_to_16_ref_asm not implemented on VX4");
-#endif
+
     for(int i = 0; i < 64; i++) {
         inputs[i] = (int8_t)(i*i);
     }
