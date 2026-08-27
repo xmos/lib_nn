@@ -83,10 +83,7 @@ TEST_GROUP_RUNNER(group_bsign_8) {
 
 /* A few basic short singular job rected tests and zero length corner */
 TEST(group_bsign_8, test_bsign_8_basic0) {
-#if defined(__VX4A__) || defined(__VX4B__)
-  // KNOWN ISSUE: bsign_8_asm is not implemented on VX4 yet.
-  TEST_IGNORE_MESSAGE("bsign_8_asm not implemented on VX4");
-#endif
+
   int8_t WORD_ALIGNED x[VPU_INT8_EPV + 8] = {
       0xFF, 0x01, 0x7F, 0x80, 0xFF, 0x7F, 0x7E, 0x00, 0x80, 0x80, 0x80,
       0x80, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x01, 0x7F, 0x80, 0xFF, 0x7F,
@@ -103,10 +100,7 @@ TEST(group_bsign_8, test_bsign_8_basic0) {
 /* A few longer basic directed tests */
 #define MULT (7)
 TEST(group_bsign_8, test_bsign_8_basic1) {
-#if defined(__VX4A__) || defined(__VX4B__)
-  // KNOWN ISSUE: bsign_8_asm is not implemented on VX4 yet.
-  TEST_IGNORE_MESSAGE("bsign_8_asm not implemented on VX4");
-#endif
+
   size_t jobLen = VPU_INT8_EPV * MULT;
 
   int8_t WORD_ALIGNED test_data[VPU_INT8_EPV] = {
@@ -133,10 +127,7 @@ TEST(group_bsign_8, test_bsign_8_basic1) {
 #define MAX_INPUT_BYTES (512)
 #define REPS (100)
 TEST(group_bsign_8, test_bsign_8_rand0) {
-#if defined(__VX4A__) || defined(__VX4B__)
-  // KNOWN ISSUE: bsign_8_asm is not implemented on VX4 yet.
-  TEST_IGNORE_MESSAGE("bsign_8_asm not implemented on VX4");
-#endif
+
   int8_t WORD_ALIGNED x[MAX_INPUT_BYTES] = {0};
   int8_t WORD_ALIGNED x_orig[MAX_INPUT_BYTES] = {0};
 

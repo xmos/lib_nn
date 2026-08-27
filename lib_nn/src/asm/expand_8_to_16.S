@@ -66,16 +66,37 @@ ones:
 
 #define FUNCTION_NAME expand_8_to_16_ref_asm
 
-// NOT IMPLEMENTED on VX4 yet: returns without writing `out`, so callers get
-// a wrong (not a crash/trap) result and tests fail normally instead of
-// halting the whole binary.
-
 .p2align 1
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
 FUNCTION_NAME:
-    xm.entsp 0
-    xm.retsp 0
+
+    li t3, 0x200
+    { xm.ldap t3, ones ; xm.vsetc t3 }
+    { li a3, 16 ; xm.vldc t3 }
+    { xm.zext a2, 4 ; xm.shr t3, a2, 4 }
+    xm.brff t3, .tail
+
+.loop:
+    { addi t3, t3, -1 ; xm.vclrdr }
+    { add a1, a1, a3 ; xm.vlmacc0 a1 }
+    { add a0, a0, a3 ; xm.vstr a0 }
+    { add a0, a0, a3 ; xm.bt t3, .loop }
+
+.tail:
+    { xm.shl a2, a2, 1 ; xm.brff a2, .done }
+    { xm.mkmsk a2, a2 ; xm.vclrdr }
+    xm.vlmacc0 a1
+    xm.vstrpv a0, a2
+
+.done:
+    ret
+
+ones:
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
 
 .size FUNCTION_NAME, . -FUNCTION_NAME
 .resource_const FUNCTION_NAME, "stack_frame_bytes",  0
