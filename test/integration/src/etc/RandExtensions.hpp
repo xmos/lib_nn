@@ -2,7 +2,9 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #pragma once
 
+#include <cmath>
 #include <cstdint>
+#include <limits>
 
 #include "Rand.hpp"
 #include "geom/Filter2dGeometry.hpp"
@@ -27,7 +29,7 @@ struct RandFilterParams {
 }  // namespace nn
 
 template <>
-nn::Filter2dGeometry
+inline nn::Filter2dGeometry
 nn::test::Rand::rand<nn::Filter2dGeometry, nn::test::RandFilterParams>(
     nn::test::RandFilterParams params) {
   // Some of the stuff below should be parameterized in the future
@@ -101,4 +103,78 @@ nn::test::Rand::rand<nn::Filter2dGeometry, nn::test::RandFilterParams>(
       nn::ImageGeometry(X_h, X_w, X_c), nn::ImageGeometry(Y_h, Y_w, Y_c),
       nn::WindowGeometry(K_h, K_w, K_c, W_start_row, W_start_col, W_stride_row,
                          W_stride_col, W_dilation_row, W_dilation_col));
+}
+
+namespace nn {
+namespace test {
+
+struct SimpleFilter {
+  bool depthwise;
+  bool padded;
+  unsigned cog_size;
+
+  SimpleFilter(bool depthwise = false, bool padded = false,
+               unsigned cog_size = 16)
+      : depthwise(depthwise), padded(padded), cog_size(cog_size) {}
+};
+
+}  // namespace test
+}  // namespace nn
+
+template <>
+inline nn::Filter2dGeometry
+nn::test::Rand::rand<nn::Filter2dGeometry, nn::test::SimpleFilter>(
+    nn::test::SimpleFilter p) {
+  if (p.padded) {
+    const int K_h = this->rand<int>(2, 4);
+    const int K_w = this->rand<int>(2, 4);
+
+    const int pad_t = this->rand<int>(1, K_h - 1);
+    const int pad_l = this->rand<int>(1, K_w - 1);
+    const int pad_b = this->rand<int>(1, K_h - 1);
+    const int pad_r = this->rand<int>(1, K_w - 1);
+
+    const int Y_h = this->rand<int>(2, 10);
+    const int Y_w = this->rand<int>(2, 10);
+
+    const int X_h = Y_h * K_h - (pad_t + pad_b);
+    const int X_w = Y_w * K_w - (pad_l + pad_r);
+
+    const int X_c = this->rand<int>(1, 10) * 4;
+    const int Y_c = p.depthwise ? X_c : (this->rand<int>(1, 10) * 4);
+    const int W_c = p.depthwise ? 1 : X_c;
+    const int W_stride_chan = p.depthwise ? 1 : 0;
+
+    return nn::Filter2dGeometry(
+        nn::ImageGeometry(X_h, X_w, X_c), nn::ImageGeometry(Y_h, Y_w, Y_c),
+        nn::WindowGeometry(K_h, K_w, W_c, -pad_t, -pad_l, K_h, K_w,
+                           W_stride_chan));
+
+  } else {
+    const int K_h = this->rand<int>(3, 3);
+    const int K_w = this->rand<int>(4, 4);
+
+    const int Y_h = this->rand<int>(1, 10);
+    const int Y_w = this->rand<int>(1, 10);
+
+    const int X_h = Y_h * K_h;
+    const int X_w = Y_w * K_w;
+
+    const int X_c = this->rand<int>(1, 10) * 4;
+    const int Y_c = p.depthwise ? X_c : (this->rand<int>(1, 10) * 4);
+    const int W_c = p.depthwise ? 1 : X_c;
+    const int W_stride_chan = p.depthwise ? 1 : 0;
+
+    return nn::Filter2dGeometry(
+        nn::ImageGeometry(X_h, X_w, X_c), nn::ImageGeometry(Y_h, Y_w, Y_c),
+        nn::WindowGeometry(K_h, K_w, W_c, 0, 0, K_h, K_w, W_stride_chan));
+  }
+}
+
+// Rounds and saturates to int8_t, matching the reference kernels' rounding.
+static inline int8_t round_int8(float val) {
+  auto r = std::roundf(val + ldexpf(((val >= 0) ? 1 : -1), -10));
+  return int8_t(
+      std::max<float>(std::numeric_limits<int8_t>::min(),
+                      std::min<float>(std::numeric_limits<int8_t>::max(), r)));
 }

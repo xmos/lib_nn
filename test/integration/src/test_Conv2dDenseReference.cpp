@@ -11,11 +11,11 @@
 #include <vector>
 
 #include "Rand.hpp"
+#include "RandExtensions.hpp"
 #include "RefOps.hpp"
 #include "geom/Filter2dGeometry.hpp"
 #include "geom/util.hpp"
 #include "nn_types.h"
-#include "ref_tests.hpp"
 
 extern "C" {
 #include "unity.h"

@@ -8,6 +8,9 @@ add_library(tflite_reference_kernels INTERFACE)
 target_include_directories(tflite_reference_kernels INTERFACE
   ${XMOS_SANDBOX_DIR}/tensorflow
   ${XMOS_SANDBOX_DIR}/gemmlowp
+  ${XMOS_SANDBOX_DIR}/compute-engine
+  ${XMOS_SANDBOX_DIR}/flatbuffers/include
+  ${XMOS_SANDBOX_DIR}/ruy
 )
 
 # RuntimeShape and MultiplyByQuantizedMultiplier are declared in common.h/
@@ -21,6 +24,5 @@ set(TFLITE_REFERENCE_KERNEL_SRCS
 foreach(target ${APP_BUILD_TARGETS})
     message(STATUS "Linking ${target} with tflite_reference_kernels")
     target_link_libraries(${target} PRIVATE tflite_reference_kernels)
-    target_sources(${target} PRIVATE ${TFLITE_REFERENCE_KERNEL_SRCS})
+    # target_sources(${target} PRIVATE ${TFLITE_REFERENCE_KERNEL_SRCS})
 endforeach()
-

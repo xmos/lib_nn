@@ -16,9 +16,6 @@ include(FetchContent)
 function(fetch_dep name repo tag)
   if(NOT EXISTS ${XMOS_SANDBOX_DIR}/${name})
     message(STATUS "Fetching ${name}")
-    # GIT_SHALLOW only fetches the tips of branches/tags, so it can't be used
-    # here: some pins (e.g. gemmlowp, which has no tags) are arbitrary
-    # historical commits that a shallow clone would never reach.
     FetchContent_Declare(
       ${name}
       GIT_REPOSITORY ${repo}
@@ -29,17 +26,13 @@ function(fetch_dep name repo tag)
   endif()
 endfunction()
 
-fetch_dep(tensorflow     https://github.com/tensorflow/tensorflow.git   v2.15.0)
-# gemmlowp has no tags; pinned to the exact commit tensorflow v2.15.0 itself
-# vendors (see tensorflow/third_party/gemmlowp/workspace.bzl), not an arbitrary SHA.
-fetch_dep(gemmlowp       https://github.com/google/gemmlowp.git        e844ffd17118c1e17d94e1ba4354c075a4577b88)
-
-# fetch_dep(googletest     https://github.com/google/googletest.git      6c58c11d5497b6ee1df3cb400ce30deb72fc28c0)
-# fetch_dep(flatbuffers    https://github.com/google/flatbuffers.git     20aad0c41e1252b04c72111c3eb221280a9c2009)
-# fetch_dep(ruy            https://github.com/google/ruy.git             9c56af3fce210a8a103eda19bd6f47c08a9e3d90)
-# fetch_dep(compute-engine https://github.com/larq/compute-engine.git    v0.13.0)
+fetch_dep(compute-engine               git@github.com:larq/compute-engine.git          e0683a7cb2ce1c2e15f6c59bb140f7d6f8da6a9b)
+fetch_dep(flatbuffers                  git@github.com:google/flatbuffers.git           6df40a2471737b27271bdd9b900ab5f3aec746c7)
+fetch_dep(gemmlowp                     git@github.com:google/gemmlowp.git              2483d846ad865dd4190fe4a1a1ba2d9cfcea78e1)
+fetch_dep(ruy                          git@github.com:google/ruy.git                   baa860187fe7fc115c64210ca00bc90ccd197642)
+fetch_dep(tensorflow                   git@github.com:xmos/tensorflow                  fdfd74c614bf0850c332486826f91654f2a0181a)
 
 XMOS_REGISTER_APP()
 
 # third party links
-include(tensorflow.cmake)
+include(third-party.cmake)

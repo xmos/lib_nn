@@ -5,9 +5,11 @@
 #include "geom/Filter2dGeometry.hpp"
 
 #include <larq_compute_engine/core/bitpacking/bitpack.h>
+
+using namespace tflite;  // reference.h relies on RuntimeShape being unqualified
+
 #include <larq_compute_engine/core/bconv2d/reference.h>
 
-using namespace tflite;
 using namespace nn;
 using namespace nn::test::ops::ref;
 

@@ -18,12 +18,24 @@
 #include "nn_types.h"
 
 extern "C" {
-#include "tst_common.h"
 #include "unity.h"
+#include "unity_fixture.h"
 }
 
 using namespace nn;
 using namespace nn::test;
+
+extern "C" {
+
+TEST_GROUP(group_Conv2dRegressionBinary);
+TEST_SETUP(group_Conv2dRegressionBinary) {}
+TEST_TEAR_DOWN(group_Conv2dRegressionBinary) {}
+TEST_GROUP_RUNNER(group_Conv2dRegressionBinary) {
+  RUN_TEST_CASE(group_Conv2dRegressionBinary, ValidIndirectBinaryRegression);
+  RUN_TEST_CASE(group_Conv2dRegressionBinary, ValidDirectBinaryRegression);
+  RUN_TEST_CASE(group_Conv2dRegressionBinary, ValidIndirectInt8Regression);
+  RUN_TEST_CASE(group_Conv2dRegressionBinary, ValidDirectInt8Regression);
+}
 
 static auto rng = Rand(69);
 
@@ -89,7 +101,7 @@ BinaryKernelStimulus create_simple_binary_stimulus(Filter2dGeometry &geom) {
   return ks;
 }
 
-void test_Conv2dValidIndirectBinaryRegression() {
+TEST(group_Conv2dRegressionBinary, ValidIndirectBinaryRegression) {
   for (int x_height = 1; x_height <= 2; ++x_height) {
     for (int x_width = 1; x_width <= 2; ++x_width) {
       for (int x_channels = chans_per_int32; x_channels <= chans_per_int32 * 3;
@@ -269,7 +281,7 @@ void test_Conv2dValidIndirectBinaryRegression() {
   }
 }
 
-void test_Conv2dValidDirectBinaryRegression() {
+TEST(group_Conv2dRegressionBinary, ValidDirectBinaryRegression) {
   for (int x_height = 1; x_height <= 4; ++x_height) {
     for (int x_width = 1; x_width <= 4; ++x_width) {
       for (int x_channels = 256; x_channels <= 256 * 2; x_channels += 256) {
@@ -444,7 +456,7 @@ void test_Conv2dValidDirectBinaryRegression() {
   }
 }
 
-void test_Conv2dValidIndirectInt8Regression() {
+TEST(group_Conv2dRegressionBinary, ValidIndirectInt8Regression) {
   for (int x_height = 1; x_height <= 2; ++x_height) {
     for (int x_width = 1; x_width <= 2; ++x_width) {
       for (int x_channels = chans_per_int32; x_channels <= chans_per_int32 * 3;
@@ -650,7 +662,7 @@ void test_Conv2dValidIndirectInt8Regression() {
   }
 }
 
-void test_Conv2dValidDirectInt8Regression() {
+TEST(group_Conv2dRegressionBinary, ValidDirectInt8Regression) {
   for (int x_height = 1; x_height <= 4; ++x_height) {
     for (int x_width = 1; x_width <= 4; ++x_width) {
       for (int x_channels = 256; x_channels <= 256 * 2; x_channels += 256) {
@@ -848,11 +860,4 @@ void test_Conv2dValidDirectInt8Regression() {
   }
 }
 
-extern "C" void test_conv2d_binary_regression();
-void test_conv2d_binary_regression() {
-  UNITY_SET_FILE();
-  RUN_TEST(test_Conv2dValidIndirectBinaryRegression);
-  RUN_TEST(test_Conv2dValidDirectBinaryRegression);
-  RUN_TEST(test_Conv2dValidIndirectInt8Regression);
-  RUN_TEST(test_Conv2dValidDirectInt8Regression);
-}
+}  // extern "C"

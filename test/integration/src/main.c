@@ -11,7 +11,12 @@ int main(int argc, const char* argv[]) {
   UnityBegin(argv[0]);
 
   RUN_TEST_GROUP(group_Conv2dRegression);
+  RUN_TEST_GROUP(group_Conv2dRegression_DW);
+  RUN_TEST_GROUP(group_Conv2dRegressionBinary);
   RUN_TEST_GROUP(group_Conv2dDenseReference);
+  RUN_TEST_GROUP(group_Conv2dDenseBinaryReference);
+  RUN_TEST_GROUP(group_Conv2dDepthwiseReference);
+  RUN_TEST_GROUP(group_TransposeConv2dRegression);
 
   return UnityEnd();
 }
