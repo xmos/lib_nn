@@ -33,7 +33,7 @@ pad_3_to_4_asm:
     std r6, r7, sp[1]
     std r8, r9, sp[2]
     { stw r10, sp[6]              ; mkmsk r4, 24 }
-    { andnot r3, r4               ; nop }
+    { shl r3, r3, 24              ; nop }
     { ldc r8, 0                   ; ldc r9, 8 }
 loop:
     ldd r4, r5, r1[0]
@@ -65,6 +65,7 @@ loop:
     { or r7, r7, r3}
     { stw r7, r0[7]               ; add r0, r0, r10 }
     { bt r2, loop                 ; add r0, r0, r10 }
+
     ldd r4, r5, sp[0]
     ldd r6, r7, sp[1]
     ldd r8, r9, sp[2]
@@ -73,3 +74,57 @@ loop:
     
     .cc_bottom pad_3_to_4_asm.func
 #endif
+
+#if defined(__VX4B__)
+
+#define FUNCTION_NAME pad_3_to_4_asm
+#define NSTACKWORDS 12
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+    { xm.shl a3, a3, 24 ; xm.entsp (NSTACKWORDS * 4) }
+    { add t3, a3, 0 ; xm.stwsp s2, 32 }
+    xm.ldcu s2, 32 // could move before the loop, align it and packet with xm.bu
+
+    xm.stdsp a3, t3, 0
+    xm.stdsp a3, t3, 8
+    xm.stdsp a3, t3, 16
+    xm.stdsp a3, t3, 24
+    { add t3, sp, 0 ; xm.mkmsk a3, 3 }
+
+.loop:
+    { add a1, a1, 3 ; xm.vldr a1 }
+    { add t3, t3, 4 ; xm.vstrpv t3, a3}
+    { add a1, a1, 3 ; xm.vldr a1 }
+    { add t3, t3, 4 ; xm.vstrpv t3, a3}
+    { add a1, a1, 3 ; xm.vldr a1 }
+    { add t3, t3, 4 ; xm.vstrpv t3, a3}
+    { add a1, a1, 3 ; xm.vldr a1 }
+    { add t3, t3, 4 ; xm.vstrpv t3, a3}
+
+    { add a1, a1, 3 ; xm.vldr a1 }
+    { add t3, t3, 4 ; xm.vstrpv t3, a3}
+    { add a1, a1, 3 ; xm.vldr a1 }
+    { add t3, t3, 4 ; xm.vstrpv t3, a3}
+    { add a1, a1, 3 ; xm.vldr a1 }
+    { add t3, t3, 4 ; xm.vstrpv t3, a3}
+    { add a1, a1, 3 ; xm.vldr a1 }
+    { add t3, sp, 0 ; xm.vstrpv t3, a3}
+
+    { add a2, a2, -1 ; xm.vldr t3 }
+    { add a0, a0, s2 ; xm.vstr a0 }
+    xm.bt a2, .loop
+
+    xm.ldwsp s2, 32
+    xm.retsp (NSTACKWORDS * 4)
+
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  (NSTACKWORDS * 4)
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
+#endif // defined(__VX4B__)
+

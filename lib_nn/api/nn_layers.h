@@ -87,7 +87,7 @@ void pad_3_to_4_prepare(uint32_t *n_3, const unsigned height,
                         const unsigned width);
 
 /**
- * @brief Pad an image of 3-byte pixels out to 4 bytes per pixel, writing a 0 in the added byte.
+ * @brief Pad an image of 3-byte pixels out to 4 bytes per pixel, setting the added byte to a specified value.
  *
  * The output image must be word-aligned. This function handles the general case and calls an optimized assembly routine for the bulk copy.
  *

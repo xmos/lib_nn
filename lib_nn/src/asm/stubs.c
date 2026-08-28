@@ -19,20 +19,6 @@ void requantize_int16_tensor_asm(int16_t *output, int16_t *input1, int tensor_le
     requantize_int16_tensor_ref(output, input1, tensor_length, blob);
 }
 
-void pad_3_to_4_asm(int32_t outputs[], int64_t inputs[], uint32_t N_24, uint32_t pad_val) {
-    int8_t * outputs_p = (int8_t *)outputs;
-    int8_t * inputs_p = (int8_t *)inputs;
-    for(uint32_t l=0;l<N_24;l++){
-        for (unsigned i=0;i<8;i++){
-            memcpy(outputs_p, inputs_p, 3);
-            inputs_p += 3;
-            outputs_p += 3;
-            memcpy(outputs_p, &pad_val, 1);
-            outputs_p += 1;
-        }
-    }
-};
-
 void quantize_int16_tensor_ref(int16_t *output, float *input, int tensor_length, void *blob);
 void quantize_int16_tensor_asm(int16_t *output,
                                float *input, int tensor_length, void *blob) {
