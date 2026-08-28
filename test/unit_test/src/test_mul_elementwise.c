@@ -41,10 +41,6 @@ static int32_t clamp(int32_t v, int32_t lo, int32_t hi){
 #define LENGTH     (256)
 TEST(group_mul_elementwise, test_mul_elementwise_case0)
 {
-#if defined(__VX4A__) || defined(__VX4B__)
-    // KNOWN ISSUE: mul_elementwise_asm is not implemented on VX4 yet.
-    TEST_IGNORE_MESSAGE("mul_elementwise_asm not implemented on VX4");
-#endif
     nn_mul_params_t params;
 
     double in1Scale = 1. / 128.;
@@ -78,10 +74,6 @@ TEST(group_mul_elementwise, test_mul_elementwise_case0)
 #define LENGTH     (128)
 TEST(group_mul_elementwise, test_mul_elementwise_case1)
 {
-#if defined(__VX4A__) || defined(__VX4B__)
-    // KNOWN ISSUE: mul_elementwise_asm is not implemented on VX4 yet.
-    TEST_IGNORE_MESSAGE("mul_elementwise_asm not implemented on VX4");
-#endif
     nn_mul_params_t params;
 
     const double in1Scale = 1. / 128.;
