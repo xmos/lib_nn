@@ -1,4 +1,4 @@
-// Copyright 2020-2021 XMOS LIMITED.
+// Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 #include <assert.h>
@@ -10,20 +10,32 @@
 #include "nn_operator.h"
 #include "tst_common.h"
 #include "unity.h"
+#include "unity_fixture.h"
 #include "xs3_vpu.h"
-
-#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 // for sprintf() calls
 static char str_buff[200];
 
-// Reference bsign implementation (currently copied from larq-compute-engine);
-void larq_ref_bsign(int8_t *input, int32_t *output, size_t inputLength,
-                    int32_t zeroPoint);
+// Independent reference (same bit-packing rule as larq-compute-engine's
+// bitpack_array): bit i of a packed word is 1 iff input[i] < zeroPoint.
+static void larq_ref_bsign(int8_t *input, int32_t *output, size_t inputLength,
+                          int32_t zeroPoint) {
+  size_t num_words = inputLength / 32;
+  size_t tail = inputLength - num_words * 32;
 
-void gen_expected(int8_t *input, uint32_t *output, size_t inputLength,
-                  int32_t zeroPoint) {
-  larq_ref_bsign(input, (int32_t *)output, inputLength, zeroPoint);
+  for (size_t w = 0; w < num_words; w++) {
+    uint32_t bits = 0;
+    for (unsigned b = 0; b < 32; b++)
+      bits |= (uint32_t)(input[w * 32 + b] < zeroPoint) << b;
+    output[w] = (int32_t)bits;
+  }
+
+  if (tail != 0) {
+    uint32_t bits = 0;
+    for (unsigned b = 0; b < tail; b++)
+      bits |= (uint32_t)(input[num_words * 32 + b] < zeroPoint) << b;
+    output[num_words] = (int32_t)bits;
+  }
 }
 
 #define MAX_OUTPUT_WORDS (128)
@@ -39,7 +51,7 @@ void run_bsign_test(int8_t *x, size_t inputLength, int8_t zeroPoint,
 
   size_t outputLength = (inputLength / 32) + ((inputLength % 32) != 0);
 
-  gen_expected(x, y_exp, inputLength, zeroPoint);
+  larq_ref_bsign(x, (int32_t *)y_exp, inputLength, zeroPoint);
 
   nn_bsign_8_job_t jobs[MAX_JOBS];
   int8_t zero_point_vec[VPU_INT8_EPV];
@@ -60,9 +72,17 @@ void run_bsign_test(int8_t *x, size_t inputLength, int8_t zeroPoint,
   }
 }
 
+TEST_GROUP(group_bsign_8);
+TEST_SETUP(group_bsign_8) { srand(6654734); }
+TEST_TEAR_DOWN(group_bsign_8) {}
+TEST_GROUP_RUNNER(group_bsign_8) {
+  RUN_TEST_CASE(group_bsign_8, test_bsign_8_basic0);
+  RUN_TEST_CASE(group_bsign_8, test_bsign_8_basic1);
+  RUN_TEST_CASE(group_bsign_8, test_bsign_8_rand0);
+}
+
 /* A few basic short singular job rected tests and zero length corner */
-void test_bsign_8_basic0() {
-  PRINTF("%s...\n", __func__);
+TEST(group_bsign_8, test_bsign_8_basic0) {
 
   int8_t WORD_ALIGNED x[VPU_INT8_EPV + 8] = {
       0xFF, 0x01, 0x7F, 0x80, 0xFF, 0x7F, 0x7E, 0x00, 0x80, 0x80, 0x80,
@@ -78,10 +98,9 @@ void test_bsign_8_basic0() {
 }
 
 /* A few longer basic directed tests */
-void test_bsign_8_basic1() {
-  PRINTF("%s...\n", __func__);
+#define MULT (7)
+TEST(group_bsign_8, test_bsign_8_basic1) {
 
-#define MULT 7
   size_t jobLen = VPU_INT8_EPV * MULT;
 
   int8_t WORD_ALIGNED test_data[VPU_INT8_EPV] = {
@@ -103,16 +122,16 @@ void test_bsign_8_basic1() {
   run_bsign_test(x, jobLen - 24, 0, 1);
 }
 
-#define MAX_INPUT_BYTES (512)
-#define REPS (100)
 
 /* Pseudo random test including multiple jobs */
-void test_bsign_8_rand0() {
+#define MAX_INPUT_BYTES (512)
+#define REPS (100)
+TEST(group_bsign_8, test_bsign_8_rand0) {
+
   int8_t WORD_ALIGNED x[MAX_INPUT_BYTES] = {0};
   int8_t WORD_ALIGNED x_orig[MAX_INPUT_BYTES] = {0};
 
   for (int r = 0; r < REPS; r++) {
-    PRINTF("%s...\n", __func__);
     unsigned inputLen = pseudo_rand_uint16() % (MAX_INPUT_BYTES + 1);
 
     const int8_t zeroPoint = pseudo_rand_int8();
@@ -127,14 +146,4 @@ void test_bsign_8_rand0() {
 
     run_bsign_test(x, inputLen, zeroPoint, jobCount);
   }
-}
-
-void test_bsign_8() {
-  srand(6654734);
-
-  UNITY_SET_FILE();
-
-  RUN_TEST(test_bsign_8_basic0);
-  RUN_TEST(test_bsign_8_basic1);
-  RUN_TEST(test_bsign_8_rand0);
 }

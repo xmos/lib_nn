@@ -1,3 +1,5 @@
+// Copyright 2023-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include "output_transform_fn_int16_mappings.h"
 
 // This defines the mapping of the output transform multipliers from output channels

@@ -1,3 +1,5 @@
+// Copyright 2024-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -8,25 +10,26 @@
 #include "multiply_int16_transform.h"
 
 #include "tst_common.h"
-#ifdef LOCAL_MAIN
-    #undef UNITY_SET_FILE
-#define UNITY_SET_FILE()
-#define RUN_TEST(x) x()
-#define TEST_ASSERT_EQUAL(a, b) if ((a) != (b)) {printf("Expected %08x saw %08x\n", (int) a, (int) b); errors++;}
-#define TEST_ASSERT_INT_WITHIN(d, a, b) if (abs((a)-(b)) > (d)) {printf("Expected %08x saw %08x\n", (int) a, (int) b); errors++;}
-#else
 #include "unity.h"
-#endif
+#include "unity_fixture.h"
+
+
+TEST_GROUP(group_multiply_int16);
+TEST_SETUP(group_multiply_int16) {}
+TEST_TEAR_DOWN(group_multiply_int16) {}
+TEST_GROUP_RUNNER(group_multiply_int16) {
+  RUN_TEST_CASE(group_multiply_int16, test_multiply_tensor_int16);
+  RUN_TEST_CASE(group_multiply_int16, test_requantize_transform_int16);
+}
+
 
 #define N 25
-
-int test_multiply_tensor_int16(void) {
+TEST(group_multiply_int16, test_multiply_tensor_int16) {
     int16_t input1[N];
     int16_t input2[N];
     int8_t blob[MULTIPLY_INT16_TENSOR_BYTES()];
     int16_t output[N+1];
     int16_t ref_output[N];
-    int errors = 0;
     for(int i = 0; i < N; i++) {
         input1[i] = 20000 - 2513 * i;
         input2[i] = 417 * i + 82;
@@ -66,16 +69,13 @@ int test_multiply_tensor_int16(void) {
     for(int i = 0; i < N; i++) {
         TEST_ASSERT_INT_WITHIN(1, ref_output[i], output[i]);
     }
-
-    return errors;
 }
 
-int test_requantize_transform_int16(void) {
+TEST(group_multiply_int16, test_requantize_transform_int16) {
     int16_t input1[N];
     int8_t requantize_blob[REQUANTIZE_INT16_TENSOR_BYTES()];
     int16_t output[N+1];
     int16_t req_output[N];
-    int errors = 0;
     for(int j = 1; j <= N; j++) {
         for(int i = 0; i < j; i++) {
             input1[i] = 20000 - 2513 * i;
@@ -113,24 +113,4 @@ int test_requantize_transform_int16(void) {
 //        printf("Sq error %d\n", sqerr);
         TEST_ASSERT_INT_WITHIN(6, 0, sqerr);
     }
-    return errors;
 }
-
-
-void test_multiply_int16() {
-  UNITY_SET_FILE();
-  RUN_TEST(test_multiply_tensor_int16);
-  RUN_TEST(test_requantize_transform_int16);
-}
-
-#ifdef LOCAL_MAIN
-
-int main(void) {
-    int errors = 0;
-    errors += test_multiply_tensor_int16();
-    errors += test_requantize_transform_int16();
-    if (errors != 0) printf("FAIL\n"); else printf("PASS\n");
-    return errors;
-}
-
-#endif
