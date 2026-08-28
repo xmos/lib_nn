@@ -1,10 +1,10 @@
+// Copyright 2024-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include <assert.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
 #include "dequantize_int16_transform.h"
-
-#define SHIFT  14
 
 int dequantize_int16_tensor_blob(void *output,
                                  float input_scaler,

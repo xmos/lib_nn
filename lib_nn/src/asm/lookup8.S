@@ -1,4 +1,4 @@
-// Copyright 2020-2025 XMOS LIMITED.
+// Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if defined(__XS3A__)
 
@@ -103,7 +103,7 @@ FUNCTION_NAME:
 
 #endif
 
-#if defined(__VX4B__)
+#if defined(__VX4A__) || defined(__VX4B__)
 
 /*
 void lookup8_asm(

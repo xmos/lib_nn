@@ -1,3 +1,5 @@
+// Copyright 2023-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #ifndef _output_transform_fn_int16_kernel_transform_h_
 #define _output_transform_fn_int16_kernel_transform_h_
 

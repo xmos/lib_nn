@@ -1,3 +1,5 @@
+// Copyright 2023-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 #include <assert.h>
 #include <math.h>
@@ -16,7 +18,7 @@ static int32_t clamp(int32_t v, int32_t lo, int32_t hi){
     return v;
 }
 
-void mul_elementwise_asm(const int8_t* in1_data, const int8_t* in2_data, int element_count, nn_mul_params_t * params, int8_t * out_data);
+
 
 static const signed vlsat_shr = 1;
 static const unsigned vlmul_shr = 14;
@@ -108,9 +110,21 @@ void mul_elementwise_ref(const int8_t* in1_data, const int8_t* in2_data, int ele
   }
 }
 
-void mul_elementwise(const int8_t* in1_data, const int8_t* in2_data, int element_count, nn_mul_params_t * params, int8_t * out_data){
-#if (defined(NN_USE_REF) || defined(__VX4B__) || defined(__VX4A__))
-  //TODO: implement vx4 to use asm version
+extern void mul_elementwise_asm(
+    const int8_t* in1_data, 
+    const int8_t* in2_data, 
+    int element_count, 
+    nn_mul_params_t * params, 
+    int8_t * out_data);
+
+void mul_elementwise(
+    const int8_t* in1_data, 
+    const int8_t* in2_data, 
+    int element_count, 
+    nn_mul_params_t * params, 
+    int8_t * out_data)
+{
+#ifdef NN_USE_REF
    mul_elementwise_ref(in1_data, in2_data, element_count, params, out_data);
 #else
    mul_elementwise_asm(in1_data, in2_data, element_count, params, out_data);

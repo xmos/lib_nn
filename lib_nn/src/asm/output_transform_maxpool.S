@@ -1,4 +1,4 @@
-// Copyright 2020-2025 XMOS LIMITED.
+// Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #define FUNCTION_NAME output_transform_maxpool_impl_asm
 

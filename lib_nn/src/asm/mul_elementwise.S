@@ -1,6 +1,6 @@
-	
-// Copyright 2020-2025 XMOS LIMITED.
+// Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
+	
 #if defined(__XS3A__)
 
 	.text
@@ -228,19 +228,10 @@ void mul_elementwise_asm(
 .type FUNCTION_NAME,@function
 FUNCTION_NAME:
 
-    {xm.entsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
-    xm.stdsp x18, x19, 0*8
-    xm.stdsp x20, x21, 1*8
-    xm.stdsp x22, x23, 2*8
-
+    xm.entsp 0
     xm.ldcu x10, 0
     xm.assert x10 //NOT IMPLEMENTED
-
-    xm.lddsp x18, x19, 0*8
-    xm.lddsp x20, x21, 1*8
-    xm.lddsp x22, x23, 2*8
-
-    {xm.retsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
+    xm.retsp 0
 
 .size FUNCTION_NAME, . -FUNCTION_NAME
 .resource_const FUNCTION_NAME, "stack_frame_bytes",  ROUND_UP(NSTACKWORDS*4, 16)
