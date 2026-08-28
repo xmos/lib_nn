@@ -57,11 +57,6 @@ static void impl_test_lookup8(const unsigned max_elm_start,
 }
 
 TEST(group_lookup8, test_lookup8) {
-#if defined(__VX4A__) || defined(__VX4B__)
-  // KNOWN ISSUE: lookup8_asm's tail/loop logic on VX4 leaves part of the
-  // requested range unwritten (see lookup8.S), not yet fixed.
-  TEST_IGNORE_MESSAGE("lookup8_asm broken on VX4");
-#endif
   impl_test_lookup8(4, 16);
 }
 
