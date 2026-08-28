@@ -168,7 +168,7 @@ FUNCTION_NAME:
         xm.vlookup lut, 7, 0
         xm.bt counter, FUNCTION_NAME.save
         // In last loop - make mask for remaining elements
-        xm.zexti count, 4
+        xm.zexti count, 5
         xm.mkmsk mask, count
 
         FUNCTION_NAME.save:
@@ -180,7 +180,7 @@ FUNCTION_NAME:
 
     xm.lddsp s2, s3, 0*8
     xm.lddsp s4, s5, 1*8
-    lw s6, 3*8(sp)
+    lw s6, 2*8(sp)
 
     xm.retsp ROUND_UP(NSTACKBYTES, 16)
 
