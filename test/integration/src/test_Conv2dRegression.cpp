@@ -18,12 +18,27 @@
 #include "nn_types.h"
 
 extern "C" {
-#include "tst_common.h"
 #include "unity.h"
+#include "unity_fixture.h"
 }
 
 using namespace nn;
 using namespace nn::test;
+
+extern "C" {
+
+TEST_GROUP(group_Conv2dRegression);
+TEST_SETUP(group_Conv2dRegression) {}
+TEST_TEAR_DOWN(group_Conv2dRegression) {}
+TEST_GROUP_RUNNER(group_Conv2dRegression) {
+  RUN_TEST_CASE(group_Conv2dRegression, Minimal);
+  RUN_TEST_CASE(group_Conv2dRegression, Conv2dPaddedIndirectRegression);
+  RUN_TEST_CASE(group_Conv2dRegression, Conv2dPaddedIndirectRegression_channelwise);
+  RUN_TEST_CASE(group_Conv2dRegression, Conv2dValidDirectRegression);
+  RUN_TEST_CASE(group_Conv2dRegression, Conv2dValidIndirectRegression_channelwise);
+  RUN_TEST_CASE(group_Conv2dRegression, Conv2dValidIndirectRegression);
+  RUN_TEST_CASE(group_Conv2dRegression, Conv2dValidDirectRegression_channelwise);
+}
 
 static auto rng = Rand(69);
 
@@ -72,7 +87,27 @@ KernelStimulus create_simple_stimulus(Filter2dGeometry &geom) {
   return ks;
 }
 
-void test_Conv2dPaddedIndirectRegression() {
+/////////////////////////////////////////////////////////////////////////
+//
+//
+// Smallest possible geometry: just proves the TensorFlow reference kernel
+// wiring compiles, links and runs, without the full regression's nested loops.
+TEST(group_Conv2dRegression, Minimal) {
+  ImageGeometry X(1, 1, 4);
+  ImageGeometry Y(1, 1, 4);
+  WindowGeometry K(1, 1, 4, 0, 0, 1, 1, 0, 1, 1);
+  Filter2dGeometry geom(X, Y, K);
+
+  KernelStimulus ks = create_simple_stimulus(geom);
+
+  auto expected = nn::test::ops::ref::Conv2dDenseReference(
+      geom, ks.input.data(), ks.weights.data(), ks.bias.data(),
+      ks.eff_mult.data(), ks.input_zero_point, ks.output_zero_point);
+
+  TEST_ASSERT_EQUAL(4, expected.size());
+}
+
+TEST(group_Conv2dRegression, Conv2dPaddedIndirectRegression) {
   for (int x_height = 1; x_height <= 2; ++x_height) {
     for (int x_width = 1; x_width <= 2; ++x_width) {
       for (int x_channels = 4; x_channels <= 16; x_channels += 4) {
@@ -248,7 +283,7 @@ void test_Conv2dPaddedIndirectRegression() {
   }
 }
 
-void test_Conv2dPaddedIndirectRegression_channelwise() {
+TEST(group_Conv2dRegression, Conv2dPaddedIndirectRegression_channelwise) {
   for (int x_height = 1; x_height <= 2; ++x_height) {
     for (int x_width = 1; x_width <= 2; ++x_width) {
       for (int x_channels = 4; x_channels <= 16; x_channels += 4) {
@@ -427,7 +462,7 @@ void test_Conv2dPaddedIndirectRegression_channelwise() {
   }
 }
 
-void test_Conv2dValidIndirectRegression() {
+TEST(group_Conv2dRegression, Conv2dValidIndirectRegression) {
   for (int x_height = 1; x_height <= 5; ++x_height) {
     for (int x_width = 1; x_width <= 5; ++x_width) {
       for (int x_channels = 4; x_channels <= 16; x_channels += 4) {
@@ -604,7 +639,7 @@ void test_Conv2dValidIndirectRegression() {
   }
 }
 
-void test_Conv2dValidIndirectRegression_channelwise() {
+TEST(group_Conv2dRegression, Conv2dValidIndirectRegression_channelwise) {
   for (int x_height = 1; x_height <= 5; ++x_height) {
     for (int x_width = 1; x_width <= 5; ++x_width) {
       for (int x_channels = 4; x_channels <= 16; x_channels += 4) {
@@ -782,7 +817,7 @@ void test_Conv2dValidIndirectRegression_channelwise() {
   }
 }
 
-void test_Conv2dValidDirectRegression() {
+TEST(group_Conv2dRegression, Conv2dValidDirectRegression) {
   for (int x_height = 1; x_height <= 3; ++x_height) {
     for (int x_width = 1; x_width <= 3; ++x_width) {
       for (int x_channels = 32; x_channels <= 64; x_channels += 32) {
@@ -948,7 +983,7 @@ void test_Conv2dValidDirectRegression() {
   }
 }
 
-void test_Conv2dValidDirectRegression_channelwise() {
+TEST(group_Conv2dRegression, Conv2dValidDirectRegression_channelwise) {
   for (int x_height = 1; x_height <= 3; ++x_height) {
     for (int x_width = 1; x_width <= 3; ++x_width) {
       for (int x_channels = 32; x_channels <= 64; x_channels += 32) {
@@ -1118,13 +1153,4 @@ void test_Conv2dValidDirectRegression_channelwise() {
   }
 }
 
-extern "C" void test_conv2d_regression();
-void test_conv2d_regression() {
-  UNITY_SET_FILE();
-  RUN_TEST(test_Conv2dPaddedIndirectRegression);
-  RUN_TEST(test_Conv2dPaddedIndirectRegression_channelwise);
-  RUN_TEST(test_Conv2dValidDirectRegression);
-  RUN_TEST(test_Conv2dValidIndirectRegression_channelwise);
-  RUN_TEST(test_Conv2dValidIndirectRegression);
-  RUN_TEST(test_Conv2dValidIndirectRegression_channelwise);
-}
+}  // extern "C"

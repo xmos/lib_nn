@@ -52,7 +52,7 @@ pipeline {
                             steps {
                                 dir(REPO) {
                                     checkoutScmShallow()
-                                    dir("test/unit_test") {
+                                    dir("test") {
                                         xcoreBuild(
                                             buildDir: 'build_native',
                                             cmakeOpts: '-DBUILD_NATIVE=ON'
@@ -66,6 +66,9 @@ pipeline {
                             steps {
                                 dir("${REPO}/test/unit_test") {
                                     sh "./bin/unit_test"
+                                }
+                                dir("${REPO}/test/integration") {
+                                    sh "./bin/integration_test"
                                 }
                             }
                         } // Test

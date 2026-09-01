@@ -19,12 +19,21 @@
 #include "TransposeConv.h"
 
 extern "C" {
-#include "tst_common.h"
 #include "unity.h"
+#include "unity_fixture.h"
 }
 
 using namespace nn;
 using namespace nn::test;
+
+extern "C" {
+
+TEST_GROUP(group_TransposeConv2dRegression);
+TEST_SETUP(group_TransposeConv2dRegression) {}
+TEST_TEAR_DOWN(group_TransposeConv2dRegression) {}
+TEST_GROUP_RUNNER(group_TransposeConv2dRegression) {
+  RUN_TEST_CASE(group_TransposeConv2dRegression, TransposeConv2dPaddedIndirectRegression);
+}
 
 static auto rng = Rand(69);
 
@@ -83,7 +92,7 @@ KernelStimulus create_simple_stimulus2(Filter2dGeometry &geom) {
   return ks;
 }
 
-void test_TransposeConv2dPaddedIndirectRegression() {
+TEST(group_TransposeConv2dRegression, TransposeConv2dPaddedIndirectRegression) {
 
   int tid = 0;
   for (int x_height = 1; x_height <= 6; ++x_height) {
@@ -347,8 +356,4 @@ void test_TransposeConv2dPaddedIndirectRegression() {
   printf("done %d\n", tid);
 }
 
-extern "C" void test_transposeconv2d_regression();
-void test_transposeconv2d_regression() {
-  UNITY_SET_FILE();
-  RUN_TEST(test_TransposeConv2dPaddedIndirectRegression);
-}
+}  // extern "C"
