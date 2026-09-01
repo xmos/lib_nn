@@ -664,12 +664,11 @@ TEST(group_output_transforms, Test_OT_int8_channelwise_big_range) {
   // %d\n", ini_shift);
   for (int i = INITIAL_SHR_RANGE_MIN; i <= INITIAL_SHR_RANGE_MAX; i++) {
     const bool is_in = seen_initial_shift.find(i) != seen_initial_shift.end();
-
-    // TEST_ASSERT_TRUE(is_in);
+    TEST_ASSERT_TRUE(is_in);
   }
   for (int i = FINAL_SHR_RANGE_MIN; i <= FINAL_SHR_RANGE_MAX; i++) {
     const bool is_in = seen_final_shr.find(i) != seen_final_shr.end();
-    // TEST_ASSERT_TRUE(is_in);
+    TEST_ASSERT_TRUE(is_in);
   }
 }
 
