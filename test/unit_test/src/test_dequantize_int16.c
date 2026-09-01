@@ -23,6 +23,9 @@ TEST_GROUP_RUNNER(group_dequantize_int16) {
 }
 
 TEST(group_dequantize_int16, test_dequantize_tensor_int16) {
+#if defined(__VX4A__) || defined(__VX4B__)
+    TEST_IGNORE_MESSAGE("dequantize_int16_tensor_asm not implemented on VX4");
+#endif
     int16_t input1[N];
     int8_t blob[DEQUANTIZE_INT16_TENSOR_BYTES()];
     float output[N+1];
