@@ -1,11 +1,11 @@
+// Copyright 2024-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include <assert.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <math.h>
 #include "quantize_int16.h"
-
-#define SHIFT 14
 
 // Element quantization of float to int16_t tensor
 

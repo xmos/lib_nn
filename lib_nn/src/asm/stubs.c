@@ -1,22 +1,9 @@
+// Copyright 2025-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if defined(__VX4A__) || defined(__VX4B__)
 #include "nn_operator.h"
 #include "../src/asm/asm_constants.h"
 #include "vpu_sim.h"
-void bsign_8_ref(bnn_b32_t* y, const int8_t* x, const int8_t* zero_point_vect,
-    const nn_bsign_8_job_t* job) ;
-void bsign_8(
-    bnn_b32_t *Y,
-    const int8_t *X,
-    const int8_t *zero_point_vect,
-    const nn_bsign_8_job_t *job) {
-        bsign_8_ref(Y, X, zero_point_vect, job);
-    }
-
-void expand_8_to_16(int16_t *out, int8_t *in, int N) {
-    for(int i = 0; i < N; i++) {
-        out[i] = in[i];
-    }
-}
 
 void dequantize_int16_tensor_ref(float *output, int16_t *input, int tensor_length, void *blob);
 void dequantize_int16_tensor_asm(float *output, int16_t *input, int tensor_length, void *blob) {
@@ -34,7 +21,7 @@ void requantize_int16_tensor_asm(int16_t *output, int16_t *input1, int tensor_le
 
 void pad_3_to_4_asm(int32_t outputs[], int64_t inputs[], uint32_t N_24, uint32_t pad_val) {
     int8_t * outputs_p = (int8_t *)outputs;
-    int8_t * inputs_p = inputs;
+    int8_t * inputs_p = (int8_t *)inputs;
     for(uint32_t l=0;l<N_24;l++){
         for (unsigned i=0;i<8;i++){
             memcpy(outputs_p, inputs_p, 3);
@@ -45,17 +32,6 @@ void pad_3_to_4_asm(int32_t outputs[], int64_t inputs[], uint32_t N_24, uint32_t
         }
     }
 };
-
-int16_t *output_transform_fn_int16_impl(int16_t *vDvR,
-                                        int32_t *mul_add,
-                                        int16_t *output,
-                                        uint32_t N);
-void output_transform_fn_int16_impl_asm(int16_t *vDvR,
-                                        int32_t *mul_add,
-                                        int16_t *output,
-                                        uint32_t N) {
-    output_transform_fn_int16_impl(vDvR, mul_add, output, N);
-}
 
 void quantize_int16_tensor_ref(int16_t *output, float *input, int tensor_length, void *blob);
 void quantize_int16_tensor_asm(int16_t *output,

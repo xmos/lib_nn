@@ -1,4 +1,4 @@
-// Copyright 2020-2025 XMOS LIMITED.
+// Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if defined(__XS3A__)
 
@@ -13,12 +13,7 @@ void bsign_8(
     const nn_bsign_8_job_t* job);
 */
 
-#ifndef NN_USE_REF
-  #define FUNCTION_NAME bsign_8
-#else
-  #define FUNCTION_NAME bsign_8_asm
-#endif // NN_USE_REF
-
+#define FUNCTION_NAME bsign_8_asm
     
 .text
 .issue_mode  dual
@@ -114,5 +109,67 @@ FUNCTION_NAME:
     .size FUNCTION_NAME, .Ltmp0-FUNCTION_NAME
     .issue_mode  single
 
-#endif
+#endif // defined(__XS3A__)
 
+#if (defined(__VX4A__) || defined(__VX4B__))
+
+#define FUNCTION_NAME bsign_8_asm
+#define NSTACKWORDS 4
+
+#define Y a0
+#define X a1
+#define zero_pv a2
+#define len a3
+
+#define mask s2
+#define tail_mask s3
+
+/*
+void bsign_8(
+    bnn_b32_t* Y,
+    const int8_t* X,
+    const int8_t* zero_point_vect,
+    const nn_bsign_8_job_t* job);
+*/
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+    xm.entsp (NSTACKWORDS * 4)
+    xm.stdsp s2, s3, 0
+
+    xm.ldd s2, s3, 0(a3)
+    li t3, 0x200
+    { add X, X, s2 ; xm.shr s2, s2, 3 }
+    { add Y, Y, s2 ; xm.vsetc t3 }
+    { xm.zext s3, 5 ; xm.shr len, s3, 5 }
+    { xm.shr s3, s3, 3 ; xm.mkmsk mask, 4 }
+    { xm.mkmsk tail_mask, s3 ; li t3, 32 }
+    xm.brff len, .L_loop_end
+
+.L_loop_top:
+    { addi len, len, -1 ; xm.vldr zero_pv }
+    { add X, X, t3 ; xm.vlsub X }
+    xm.vdepth1
+    { add Y, Y, 4 ; xm.vstrpv Y, mask }
+    xm.bt len, .L_loop_top
+.L_loop_end:
+    xm.brff tail_mask, .Lfunc_end
+    xm.vldr zero_pv
+    xm.vlsub X
+    xm.vdepth1
+    xm.stw len, 0(Y)
+    xm.vstrpv Y, tail_mask
+
+.Lfunc_end:
+    xm.lddsp s2, s3, 0
+    xm.retsp (NSTACKWORDS * 4)
+
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  (NSTACKWORDS * 4)
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
+#endif // defined(__VX4A__) || defined(__VX4B__)

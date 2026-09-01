@@ -1,4 +1,4 @@
-// Copyright 2020-2025 XMOS LIMITED.
+// Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if defined(__XS3A__)
 
@@ -137,7 +137,7 @@ minintmults:
 
 #define FUNCTION_NAME add_int16_tensor_asm
 
-#define NSTACKWORDS  10
+#define NSTACKWORDS  28
 #define ROUND_UP(X, Y) (((X+Y-1)/Y)*Y)
 
 /*
@@ -235,4 +235,3 @@ done:
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
 
 #endif
-

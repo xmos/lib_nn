@@ -1,3 +1,5 @@
+// Copyright 2021-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include <algorithm>
 #include <cmath>
 #include <random>
@@ -9,10 +11,39 @@
 extern "C" {
 #include "tst_common.h"
 #include "unity.h"
+#include "unity_fixture.h"
 }
 using namespace nn;
 using namespace nn::test;
 static auto rng = test::Rand(42);
+
+extern "C" {
+
+TEST_GROUP(group_output_transforms);
+TEST_SETUP(group_output_transforms) {}
+TEST_TEAR_DOWN(group_output_transforms) {}
+TEST_GROUP_RUNNER(group_output_transforms) {
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_range);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_channelwise_range);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_range_small_bias);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_channelwise_range_small_bias);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_range_small_bias2);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_channelwise_range_small_bias2);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_small_range);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_channelwise_small_range);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_small_range_bias);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_channelwise_small_range_bias);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_small_range_bias2);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_channelwise_small_range_bias2);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_small_range_massive_bias_range);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_channelwise_small_range_massive_bias_range);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_small_range_wide_bias_range);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_channelwise_small_range_wide_bias_range);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_big_range);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_channelwise_big_range);
+}
+
+}  // extern "C"
 
 /*
   Test for zero multipliers
@@ -505,75 +536,79 @@ void test_small_range_channelwise(const int accu_min, const int accu_max,
   }
 }
 
-void Test_OT_int8_range() { test_small_range(INT8_MIN, INT8_MAX, 0); }
-void Test_OT_int8_channelwise_range() {
+extern "C" {
+
+TEST(group_output_transforms, Test_OT_int8_range) { test_small_range(INT8_MIN, INT8_MAX, 0); }
+TEST(group_output_transforms, Test_OT_int8_channelwise_range) {
   test_small_range_channelwise(INT8_MIN, INT8_MAX, 0);
 }
 
-void Test_OT_int8_range_small_bias() {
+TEST(group_output_transforms, Test_OT_int8_range_small_bias) {
   test_small_range(INT8_MIN, INT8_MAX, 1);
 }
 
-void Test_OT_int8_channelwise_range_small_bias() {
+TEST(group_output_transforms, Test_OT_int8_channelwise_range_small_bias) {
   test_small_range_channelwise(INT8_MIN, INT8_MAX, 1);
 }
 
-void Test_OT_int8_range_small_bias2() {
+TEST(group_output_transforms, Test_OT_int8_range_small_bias2) {
   test_small_range(INT8_MIN, INT8_MAX, -1);
 }
 
-void Test_OT_int8_channelwise_range_small_bias2() {
+TEST(group_output_transforms, Test_OT_int8_channelwise_range_small_bias2) {
   test_small_range_channelwise(INT8_MIN, INT8_MAX, -1);
 }
 
-void Test_OT_int8_small_range() {
+TEST(group_output_transforms, Test_OT_int8_small_range) {
   test_small_range(INT8_MIN - 10, INT8_MAX + 10, 0);
 }
 
-void Test_OT_int8_channelwise_small_range() {
+TEST(group_output_transforms, Test_OT_int8_channelwise_small_range) {
   test_small_range_channelwise(INT8_MIN - 10, INT8_MAX + 10, 0);
 }
 
-void Test_OT_int8_small_range_bias() {
+TEST(group_output_transforms, Test_OT_int8_small_range_bias) {
   test_small_range(INT8_MIN - 10, INT8_MAX + 10, 1);
 }
-void Test_OT_int8_channelwise_small_range_bias() {
+TEST(group_output_transforms, Test_OT_int8_channelwise_small_range_bias) {
   test_small_range_channelwise(INT8_MIN - 10, INT8_MAX + 10, 1);
 }
-void Test_OT_int8_small_range_bias2() {
+TEST(group_output_transforms, Test_OT_int8_small_range_bias2) {
   test_small_range(INT8_MIN - 10, INT8_MAX + 10, -1);
 }
-void Test_OT_int8_channelwise_small_range_bias2() {
+TEST(group_output_transforms, Test_OT_int8_channelwise_small_range_bias2) {
   test_small_range_channelwise(INT8_MIN - 10, INT8_MAX + 10, -1);
 }
 
-void Test_OT_int8_small_range_wide_bias_range() {
+TEST(group_output_transforms, Test_OT_int8_small_range_wide_bias_range) {
   for (int bias = INT8_MIN * 2 - 10; bias < 48; bias++) {
     test_small_range(INT8_MIN, INT8_MAX, bias);
   }
 }
 
-void Test_OT_int8_channelwise_small_range_wide_bias_range() {
+TEST(group_output_transforms,
+     Test_OT_int8_channelwise_small_range_wide_bias_range) {
   for (int bias = INT8_MIN * 2 - 10; bias < 48; bias++) {
     test_small_range_channelwise(INT8_MIN, INT8_MAX, bias);
   }
 }
 
-void Test_OT_int8_small_range_massive_bias_range() {
+TEST(group_output_transforms, Test_OT_int8_small_range_massive_bias_range) {
   for (int itt = 0; itt < 32; ++itt) {
     int32_t bias = rng.rand<int32_t>(1 << 15, 1 << 30);
     test_small_range(INT8_MIN, INT8_MAX, bias);
   }
 }
 
-void Test_OT_int8_channelwise_small_range_massive_bias_range() {
+TEST(group_output_transforms,
+     Test_OT_int8_channelwise_small_range_massive_bias_range) {
   for (int itt = 0; itt < 32; ++itt) {
     int32_t bias = rng.rand<int32_t>(1 << 15, 1 << 30);
     test_small_range_channelwise(INT8_MIN, INT8_MAX, bias);
   }
 }
 
-void Test_OT_int8_big_range() {
+TEST(group_output_transforms, Test_OT_int8_big_range) {
   std::set<int> seen_initial_shift;
   std::set<int> seen_final_shr;
   for (int product_range = -3; product_range < 3; product_range++) {
@@ -603,7 +638,7 @@ void Test_OT_int8_big_range() {
   }
 }
 
-void Test_OT_int8_channelwise_big_range() {
+TEST(group_output_transforms, Test_OT_int8_channelwise_big_range) {
   std::set<int> seen_initial_shift;
   std::set<int> seen_final_shr;
   for (int product_range = -3; product_range < 3; product_range++) {
@@ -638,25 +673,4 @@ void Test_OT_int8_channelwise_big_range() {
   }
 }
 
-extern "C" void test_output_transforms();
-void test_output_transforms() {
-  UNITY_SET_FILE();
-  RUN_TEST(Test_OT_int8_range);
-  RUN_TEST(Test_OT_int8_channelwise_range);
-  RUN_TEST(Test_OT_int8_range_small_bias);
-  RUN_TEST(Test_OT_int8_channelwise_range_small_bias);
-  RUN_TEST(Test_OT_int8_range_small_bias2);
-  RUN_TEST(Test_OT_int8_channelwise_range_small_bias2);
-  RUN_TEST(Test_OT_int8_small_range);
-  RUN_TEST(Test_OT_int8_channelwise_small_range);
-  RUN_TEST(Test_OT_int8_small_range_bias);
-  RUN_TEST(Test_OT_int8_channelwise_small_range_bias);
-  RUN_TEST(Test_OT_int8_small_range_bias2);
-  RUN_TEST(Test_OT_int8_channelwise_small_range_bias2);
-  RUN_TEST(Test_OT_int8_small_range_massive_bias_range);
-  RUN_TEST(Test_OT_int8_channelwise_small_range_massive_bias_range);
-  RUN_TEST(Test_OT_int8_small_range_wide_bias_range);
-  RUN_TEST(Test_OT_int8_channelwise_small_range_wide_bias_range);
-  RUN_TEST(Test_OT_int8_big_range);
-  RUN_TEST(Test_OT_int8_channelwise_big_range);
-}
+}  // extern "C"

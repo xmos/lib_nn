@@ -1,3 +1,5 @@
+// Copyright 2023-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -7,20 +9,21 @@
 #include "expand_8_to_16.h"
 
 #include "tst_common.h"
-#ifdef LOCAL_MAIN
-    #undef UNITY_SET_FILE
-#define UNITY_SET_FILE()
-#define RUN_TEST(x) x()
-#define TEST_ASSERT_EQUAL(a, b)   if ((a) != (b)) {printf("Expected %08x saw %08x\n", (int) a, (int) b); errors++;}
-#else
 #include "unity.h"
-#endif
+#include "unity_fixture.h"
 
 int8_t inputs[64];
 int16_t outputs[72];
 
-int Test_expand_8_to_16() {
-    int errors = 0;
+TEST_GROUP(group_expand_8_to_16);
+TEST_SETUP(group_expand_8_to_16) {}
+TEST_TEAR_DOWN(group_expand_8_to_16) {}
+TEST_GROUP_RUNNER(group_expand_8_to_16) {
+    RUN_TEST_CASE(group_expand_8_to_16, Test_expand_8_to_16);
+}
+
+TEST(group_expand_8_to_16, Test_expand_8_to_16) {
+
     for(int i = 0; i < 64; i++) {
         inputs[i] = (int8_t)(i*i);
     }
@@ -38,21 +41,4 @@ int Test_expand_8_to_16() {
             TEST_ASSERT_EQUAL(outputs[i+4], inputs[i]);
         }
     }
-    return errors;
 }
-
-void test_expand_8_to_16() {
-  UNITY_SET_FILE();
-  RUN_TEST(Test_expand_8_to_16);
-}
-
-#ifdef LOCAL_MAIN
-
-int main(void) {
-    int errors = 0;
-    errors += Test_expand_8_to_16();
-    if (errors != 0) printf("FAIL\n"); else printf("PASS\n");
-    return errors;
-}
-
-#endif

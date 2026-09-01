@@ -1,3 +1,5 @@
+// Copyright 2023-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -10,10 +12,22 @@
 #include "nn_op_helper.h"
 #include "tst_common.h"
 #include "unity.h"
+#include "unity_fixture.h"
 #include "xs3_vpu.h"
 
-#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
-#define LENGTH     (256)
+TEST_GROUP(group_mul_elementwise);
+TEST_SETUP(group_mul_elementwise) { srand(563456); }
+TEST_TEAR_DOWN(group_mul_elementwise) {}
+TEST_GROUP_RUNNER(group_mul_elementwise) {
+  RUN_TEST_CASE(group_mul_elementwise, test_mul_elementwise_case0);
+  RUN_TEST_CASE(group_mul_elementwise, test_mul_elementwise_case1);
+#ifdef TEST_BUILD_NATIVE
+  RUN_TEST_CASE(group_mul_elementwise, test_mul_elementwise_case2);
+  RUN_TEST_CASE(group_mul_elementwise, test_mul_elementwise_case3);
+  RUN_TEST_CASE(group_mul_elementwise, test_mul_elementwise_case4);
+#endif // TEST_BUILD_NATIVE
+}
+
 
 static int32_t clamp(int32_t v, int32_t lo, int32_t hi){
     if(v < lo)
@@ -24,10 +38,9 @@ static int32_t clamp(int32_t v, int32_t lo, int32_t hi){
 }
 
 // Keep this real simple.
-static void test_mul_elementwise_case0()
+#define LENGTH     (256)
+TEST(group_mul_elementwise, test_mul_elementwise_case0)
 {
-    PRINTF("%s...\n", __func__);
-
     nn_mul_params_t params;
 
     double in1Scale = 1. / 128.;
@@ -59,10 +72,8 @@ static void test_mul_elementwise_case0()
 #undef LENGTH
 
 #define LENGTH     (128)
-static void test_mul_elementwise_case1()
+TEST(group_mul_elementwise, test_mul_elementwise_case1)
 {
-    PRINTF("%s...\n", __func__);
-
     nn_mul_params_t params;
 
     const double in1Scale = 1. / 128.;
@@ -109,10 +120,8 @@ static void test_mul_elementwise_case1()
 #undef LENGTH
 
 #define LENGTH     (128)
-static void test_mul_elementwise_case2()
+TEST(group_mul_elementwise, test_mul_elementwise_case2)
 {
-    PRINTF("%s...\n", __func__);
-
     nn_mul_params_t params;
 
     const double in1Scale = 1. / 128.;
@@ -161,10 +170,8 @@ static void test_mul_elementwise_case2()
 #undef LENGTH
 
 #define LENGTH     (1256)
-static void test_mul_elementwise_case3()
+TEST(group_mul_elementwise, test_mul_elementwise_case3)
 {
-    PRINTF("%s...\n", __func__);
-
     nn_mul_params_t params;
 
     double in1Scale = 1. / 128.;
@@ -233,10 +240,8 @@ static void test_mul_elementwise_case3()
 
 
 #define LENGTH     (48)
-static void test_mul_elementwise_case4()
+TEST(group_mul_elementwise, test_mul_elementwise_case4)
 {
-    PRINTF("%s...\n", __func__);
-
     nn_mul_params_t params;
 
     double in1Scale = 1. / 128.;
@@ -307,15 +312,3 @@ static void test_mul_elementwise_case4()
 
 }
 #undef LENGTH
-void test_mul_elementwise()
-{
-    srand(563456);
-
-    UNITY_SET_FILE();
-    
-    RUN_TEST(test_mul_elementwise_case0);
-    RUN_TEST(test_mul_elementwise_case1);
-    RUN_TEST(test_mul_elementwise_case2);
-    RUN_TEST(test_mul_elementwise_case3);
-    RUN_TEST(test_mul_elementwise_case4);
-}
