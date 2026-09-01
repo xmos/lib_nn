@@ -7,7 +7,6 @@
 #include <string.h>
 #include <assert.h>
 
-
 #include "nn_operator.h"
 #include "nn_op_helper.h"
 #include "tst_common.h"
@@ -15,7 +14,6 @@
 #include "unity_fixture.h"
 #include "xs3_vpu.h"
 
-#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 #ifdef CONFIG_SYMMETRIC_SATURATION_GLOBAL
   #define CONFIG_SYMMETRIC_SATURATION_add_elementwise CONFIG_SYMMETRIC_SATURATION_GLOBAL
@@ -45,8 +43,6 @@ TEST_GROUP_RUNNER(group_add_elementwise) {
 #define LENGTH     (16)
 TEST(group_add_elementwise, test_add_elementwise_case0)
 {
-    PRINTF("%s...\n", __func__);
-
     int8_t WORD_ALIGNED Y[LENGTH];
     int8_t WORD_ALIGNED X1[LENGTH];
     int8_t WORD_ALIGNED X2[LENGTH];
@@ -86,8 +82,6 @@ TEST(group_add_elementwise, test_add_elementwise_case0)
 #define LENGTH     (128)
 TEST(group_add_elementwise, test_add_elementwise_case1)
 {
-    PRINTF("%s...\n", __func__);
-
     int8_t WORD_ALIGNED Y[LENGTH];
     int8_t WORD_ALIGNED X1[LENGTH];
     int8_t WORD_ALIGNED X2[LENGTH];
@@ -165,8 +159,6 @@ TEST(group_add_elementwise, test_add_elementwise_case1)
 #define REPS    (200)
 TEST(group_add_elementwise, test_add_elementwise_case2)
 {
-    PRINTF("%s...\n", __func__);
-
     int8_t WORD_ALIGNED Y[LEN];
     int8_t WORD_ALIGNED X0[LEN];
     int8_t WORD_ALIGNED X1[LEN];
@@ -177,7 +169,7 @@ TEST(group_add_elementwise, test_add_elementwise_case2)
         unsigned elm_start = (pseudo_rand_uint32() % LEN) & 0xFFFFFFFC;
         unsigned elm_count = pseudo_rand_uint32() % (LEN - elm_start);
 
-        PRINTF("  rep %u... (%u <= k < %u)\n", v, elm_start, elm_start+elm_count);
+        printf("  rep %u... (%u <= k < %u)\n", v, elm_start, elm_start+elm_count);
 
         int32_t min = 0;
         int32_t max = 0;
@@ -230,22 +222,22 @@ TEST(group_add_elementwise, test_add_elementwise_case2)
         add_elementwise(Y, X0, X1, &params, elm_start, elm_count);
 
         if(v == -1){
-            PRINTF("    params.input[0].multiplier = %d   (0x%04X)\n", m[0], (unsigned) m[0]);
-            PRINTF("    params.input[1].multiplier = %d   (0x%04X)\n", m[1], (unsigned) m[1]);
+            printf("    params.input[0].multiplier = %d   (0x%04X)\n", m[0], (unsigned) m[0]);
+            printf("    params.input[1].multiplier = %d   (0x%04X)\n", m[1], (unsigned) m[1]);
 
-            PRINTF("    max = %ld\n", max);
-            PRINTF("    min = %ld\n", min);
-            PRINTF("    diff = %lu     (0x%08lX)\n", diff, diff);
-            PRINTF("    scale = %u\n", scale);
+            printf("    max = %d\n", (int)max);
+            printf("    min = %d\n", (int)min);
+            printf("    diff = %u     (0x%08X)\n", (unsigned)diff, (unsigned)diff);
+            printf("    scale = %u\n", scale);
 
-            PRINTF("    params.output.bias = %ld    (0x%08lX)\n", bias, (uint32_t)bias);
-            PRINTF("    params.output.shr = %d\n", shr);
+            printf("    params.output.bias = %d    (0x%08X)\n", bias, (unsigned)bias);
+            printf("    params.output.shr = %d\n", shr);
 
             unsigned m = 13;
-            PRINTF("      X0[%u] = %d\n", m, X0[m]);
-            PRINTF("      X1[%u] = %d\n", m, X1[m]);
-            PRINTF("      Y_expected[%u] = %d\n", m, Y_expected[m]);
-            PRINTF("      Y[%u] = %d\n", m, Y[m]);
+            printf("      X0[%u] = %d\n", m, X0[m]);
+            printf("      X1[%u] = %d\n", m, X1[m]);
+            printf("      Y_expected[%u] = %d\n", m, Y_expected[m]);
+            printf("      Y[%u] = %d\n", m, Y[m]);
         }
 
 

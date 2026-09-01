@@ -542,7 +542,7 @@ void nn::OutputTransformFn::ActivationParams::
 
   if (debug) {
     printf("accu_out_clamp_min: %lld accu_out_clamp_max: %lld\n",
-           accu_out_clamp_min, accu_out_clamp_max);
+           (long long)accu_out_clamp_min, (long long)accu_out_clamp_max);
     printf(
         "activationParam.accu_min_val: %d activationParam.accu_max_val: %d\n",
         accu_min_val, accu_max_val);
