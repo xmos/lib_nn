@@ -41,6 +41,37 @@ typedef struct {
 .type FUNCTION_NAME,@function
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
+.align 4
+.vec_0x01:
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
+
+.vec_0x007F:
+    .word 0x007F007F
+    .word 0x007F007F
+    .word 0x007F007F
+    .word 0x007F007F
+    .word 0x007F007F
+    .word 0x007F007F
+    .word 0x007F007F
+    .word 0x007F007F
+
+.vec_0x80:
+    .word 0x80808080
+    .word 0x80808080
+    .word 0x80808080
+    .word 0x80808080
+    .word 0x80808080
+    .word 0x80808080
+    .word 0x80808080
+    .word 0x80808080
+
 #define PARAMS_M1         0
 #define PARAMS_M2         8
 #define PARAMS_SHR        16
@@ -94,10 +125,10 @@ FUNCTION_NAME:
 
   label_loop_main:
     // x1 and x2 are 8 bit inputs
-    // We load them and macc with vpu_vects_vec_0x01
+    // We load them and macc with .vec_0x01
     // to extend them into 16 bit
     vclrdr
-    ldap r11, vpu_vects_vec_0x01
+    ldap r11, .vec_0x01
     {ldaw tmp1, sp[STACK_VEC1_TMP]    ;     ldaw tmp2, sp[STACK_VEC2_TMP]}
     {vldc r11[0]                      ;     ldc r11, 16}
     OPTIONAL_DDR_SPILL(arg_x1_p, r11, 16)
@@ -134,7 +165,7 @@ FUNCTION_NAME:
     OPTIONAL_DDR_SPILL(shift, r11, 0)
     {vlsat shift[0]                   ;     shl tmp1, tmp1, 4}
     vldd tmp2[0]
-    ldap r11, vpu_vects_vec_0x007F
+    ldap r11, .vec_0x007F
     {vladd r11[0]                     ;     mov r11, tmp1}
     vdepth1
     // Switch to 8-bit mode
@@ -152,7 +183,7 @@ FUNCTION_NAME:
 
   label_store_with_mask:
     ldw saturated_mask, sp[STACK_VEC2_TMP]
-    ldap r11, vpu_vects_vec_0x80
+    ldap r11, .vec_0x80
     and saturated_mask, saturated_mask, mask
     {vldr r11[0]                      ;     ldaw r11, sp[STACK_VEC1_TMP]}
     // Store -128's
