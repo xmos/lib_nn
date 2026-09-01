@@ -16,27 +16,23 @@ TEST_SETUP(group_pad_3_to_4) {}
 TEST_TEAR_DOWN(group_pad_3_to_4) {}
 TEST_GROUP_RUNNER(group_pad_3_to_4) {
   RUN_TEST_CASE(group_pad_3_to_4, test_pad_3_to_4_param_space_int8);
-// Full param space is slow under simulation, so only run it natively.
-#ifdef TEST_BUILD_NATIVE
-  RUN_TEST_CASE(group_pad_3_to_4, test_pad_3_to_4_param_space_int8_full);
-#endif // TEST_BUILD_NATIVE
 }
 
 void impl_pad_3_to_4_param_space(
-    const unsigned max_x_height,
-    const unsigned max_x_width) 
+    const unsigned N_loop)
 {
   const int x_chan_words = 3, y_chan_words = 4;
   int seed = 0;
   for (unsigned pad_val_idx = 0; pad_val_idx < 8; pad_val_idx++) {
     // pick a pad value
     uint32_t pad_value = (uint32_t)pseudo_rand(&seed);
+    unsigned x_height = 1;
 
-    for (unsigned x_height = 1; x_height <= max_x_height; ++x_height) {
-      for (unsigned x_width = 1; x_width <= max_x_width; ++x_width) {
+    for (unsigned i = 0; i < N_loop; i++, x_height += 3) {
+      unsigned x_width = 1;
+      for (unsigned j = 0; j < N_loop; j++, x_width += 3) {
 
-          size_t X_bytes =
-              x_height * x_width * x_chan_words;
+          size_t X_bytes = x_height * x_width * x_chan_words;
           int8_t* X = (int8_t* )malloc(X_bytes);
 
           unsigned y_height = x_height;
@@ -49,7 +45,6 @@ void impl_pad_3_to_4_param_space(
 
           for (unsigned b = 0; b < X_bytes; b++)
             X[b] = (int8_t)pseudo_rand(&seed);
-          uint32_t pad_value = pseudo_rand(&seed);
           memset(Y, 0x55, Y_bytes);
           memset(Y_ref, 0xaa, Y_bytes);
 
@@ -70,16 +65,12 @@ void impl_pad_3_to_4_param_space(
 }
 
 TEST(group_pad_3_to_4, test_pad_3_to_4_param_space_int8) {
-#if defined(__XS3A__)
-  // KNOWN ISSUE: fails on XS3A hardware (element mismatch), not yet
-  // root-caused.
-  TEST_IGNORE_MESSAGE("pad_3_to_4 element mismatch on XS3A");
-#endif
-  impl_pad_3_to_4_param_space(4, 4);
+#ifdef TEST_BUILD_NATIVE
+  // This test on native will run reference againts itself
+  // reference code is run against xs3a and vx4b
+  // so we know it must work
+  TEST_IGNORE_MESSAGE("pad_3_to_4 is not tested natively");
+#endif // TEST_BUILD_NATIVE
+  impl_pad_3_to_4_param_space(4);
 }
 
-#ifdef TEST_BUILD_NATIVE
-TEST(group_pad_3_to_4, test_pad_3_to_4_param_space_int8_full) {
-  impl_pad_3_to_4_param_space(12, 12);
-}
-#endif // TEST_BUILD_NATIVE
