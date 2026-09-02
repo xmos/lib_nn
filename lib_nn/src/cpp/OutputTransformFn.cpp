@@ -522,7 +522,7 @@ void nn::OutputTransformFn::ActivationParams::
     if(verbose){
       printf("bias: %f -> %f ", original_bias, bias);
       printf("mult: %f -> %f\n", original_multiplier, multiplier);
-      printf("accu: [%d, %d] ", accu_min_val, accu_max_val);
+      printf("accu: [%d, %d] ", (int)accu_min_val, (int)accu_max_val);
       printf("output: [%d, %d]\n", output_min_val, output_max_val);
     }
     return;
@@ -544,7 +544,7 @@ void nn::OutputTransformFn::ActivationParams::
            (long long)accu_out_clamp_min, (long long)accu_out_clamp_max);
     printf(
         "activationParam.accu_min_val: %d activationParam.accu_max_val: %d\n",
-        accu_min_val, accu_max_val);
+        (int)accu_min_val, (int)accu_max_val);
   }
 
   int64_t union_max = std::min(accu_out_clamp_max, (int64_t)accu_max_val);
@@ -575,7 +575,7 @@ void nn::OutputTransformFn::ActivationParams::
   if (verbose) {
       printf("bias: %f -> %f ", original_bias, bias);
       printf("mult: %f -> %f ", original_multiplier, multiplier);
-      printf("accu:  [%d, %d] -> [%d, %d] %f ",original_accu_max_val, original_accu_min_val,  accu_min_val, accu_max_val, (float)(accu_max_val - accu_min_val) /(original_accu_max_val - original_accu_min_val) );
+      printf("accu:  [%d, %d] -> [%d, %d] %f ",(int)original_accu_max_val, (int)original_accu_min_val,  (int)accu_min_val, (int)accu_max_val, (float)(accu_max_val - accu_min_val) /(original_accu_max_val - original_accu_min_val) );
       printf("output: [%d, %d]\n", output_min_val, output_max_val);
   }
 }

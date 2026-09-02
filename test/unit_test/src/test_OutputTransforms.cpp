@@ -351,7 +351,8 @@ void test_big_range_channelwise(int coef_count, int N, int product_range,
     }
   }
   float bias = error_sum / error_count;
-
+  (void)bias;
+  //TODO check bias ranges and acepted values, uncomment below
   // TEST_ASSERT_TRUE_MESSAGE(std::abs(bias) < 2e-2, "Bias out of range");
   // printf("bias %d, error_count %d, error_sum %d, average error %d\n", bias,
   // error_count, abs_error_sum, (error_count/abs_error_sum));
@@ -615,11 +616,11 @@ TEST(group_output_transforms, Test_OT_int8_big_range) {
 
   for (int i = INITIAL_SHR_RANGE_MIN; i <= INITIAL_SHR_RANGE_MAX; i++) {
     const bool is_in = seen_initial_shift.find(i) != seen_initial_shift.end();
-    // TEST_ASSERT_TRUE(is_in);
+    TEST_ASSERT_TRUE(is_in);
   }
   for (int i = FINAL_SHR_RANGE_MIN; i <= FINAL_SHR_RANGE_MAX; i++) {
     const bool is_in = seen_final_shr.find(i) != seen_final_shr.end();
-    // TEST_ASSERT_TRUE(is_in);
+    TEST_ASSERT_TRUE(is_in);
   }
 }
 

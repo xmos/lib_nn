@@ -3,10 +3,9 @@
 
 #pragma once
 
-#include <xs1.h>
-
 #include "nn_api.h"
 
+#define XS1_ALL_BITS_SIZE 0x20
 #define XS1_VSETC_TYPE_INT8 0x2
 #define XS1_NUM_WORDS_PER_VECTOR 0x8
 #define XS3_VPU_VREG_WIDTH_BITS (XS1_NUM_WORDS_PER_VECTOR * XS1_ALL_BITS_SIZE)

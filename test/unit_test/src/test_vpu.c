@@ -134,7 +134,7 @@ TEST(group_vpu, test_vpu_memcpy) {
 }
 
 #ifdef TEST_BUILD_NATIVE
-TEST(group_vpu, vpu_memcpy_full) {
+TEST(group_vpu, test_vpu_memcpy_full) {
   impl_vpu_memcpy_pseudo_random(8, 8, 1, 32, 4, vpu_memcpy);
   impl_vpu_memcpy_pseudo_random(8, 8, 1, 32, 4, vpu_memcpy_int);
   impl_vpu_memcpy_pseudo_random(8, 8, 1, 32, 4, vpu_memcpy_ext);
