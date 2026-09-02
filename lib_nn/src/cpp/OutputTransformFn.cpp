@@ -931,8 +931,8 @@ int8_t *output_transform_fn_int_maxpool_impl(
   for(int i = 0; i < output_count; i++) {
       ((int8_t *)Y)[i] = ((int8_t *)&A->vR)[i];
   }
-  return Y + output_count;
   (void)multipliers_and_biases;
+  return Y + output_count;
 }
 
 int8_t *nn::otfn_int8_maxpool(const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
