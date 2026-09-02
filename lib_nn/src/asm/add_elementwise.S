@@ -283,6 +283,36 @@ typedef struct {
 .p2align 2
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
+.p2align 2
+.vec_0x01:
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
+
+.vec_0x007F:
+    .word 0x007F007F
+    .word 0x007F007F
+    .word 0x007F007F
+    .word 0x007F007F
+    .word 0x007F007F
+    .word 0x007F007F
+    .word 0x007F007F
+    .word 0x007F007F
+
+.vec_0x80:
+    .word 0x80808080
+    .word 0x80808080
+    .word 0x80808080
+    .word 0x80808080
+    .word 0x80808080
+    .word 0x80808080
+    .word 0x80808080
+    .word 0x80808080
 
 FUNCTION_NAME:
 
@@ -312,10 +342,10 @@ FUNCTION_NAME:
 
   label_loop_main:
     // x1 and x2 are 8 bit inputs
-    // We load them and macc with vpu_vects_vec_0x01
+    // We load them and macc with .vec_0x01
     // to extend them into 16 bit
     { xm.vclrdr                         ; xm.nop                        }
-    lla t3, vpu_vects_vec_0x01
+    lla t3, .vec_0x01
     addi tmp1, sp, STACK_VEC1_TMP
     addi tmp2, sp, STACK_VEC2_TMP
     { xm.vldc t3                        ; xm.ldcu t3, 16                }
@@ -350,7 +380,7 @@ FUNCTION_NAME:
     xm.vlsat shift                    
     { xm.vldd tmp2                      ; xm.shl tmp1, tmp1, 4          }
     
-    lla t3, vpu_vects_vec_0x007F
+    lla t3, .vec_0x007F
     { xm.vladd t3                       ; mv t3, tmp1                   }
     xm.vdepth1
     // Switch to 8-bit mode
@@ -368,7 +398,7 @@ FUNCTION_NAME:
 
   label_store_with_mask:
     lw saturated_mask, STACK_VEC2_TMP(sp)
-    lla t3, vpu_vects_vec_0x80
+    lla t3, .vec_0x80
     and saturated_mask, saturated_mask, mask
     { xm.vldr t3                        ; addi t3, sp, STACK_VEC1_TMP   }
     // Store -128's
