@@ -78,7 +78,7 @@ pipeline {
                                     UnityJunit("NativeUnit.log", "NativeUnit")
                                 }
                                 dir("${REPO}/test/integration") {
-                                    sh "./bin/integration_test -v > NativeIntegration.log"
+                                    sh "ctest --test-dir build_native -j 8 -V > NativeIntegration.log"
                                     UnityJunit("NativeIntegration.log", "NativeIntegration")
                                 }
                             }

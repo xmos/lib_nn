@@ -4,6 +4,8 @@ include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
 project(integration_test)
 set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../..)
 
+enable_testing()
+
 set(APP_INCLUDES src src/etc)
 set(APP_DEPENDENT_MODULES "lib_nn" "lib_unity(v2.7.0)")
 
@@ -33,6 +35,19 @@ fetch_dep(ruy                          git@github.com:google/ruy.git            
 fetch_dep(tensorflow                   git@github.com:xmos/tensorflow                  fdfd74c614bf0850c332486826f91654f2a0181a)
 
 XMOS_REGISTER_APP()
+
+set(INTEGRATION_TEST_GROUPS
+    group_Conv2dRegression
+    group_Conv2dRegression_DW
+    group_Conv2dRegressionBinary
+    group_Conv2dDenseReference
+    group_Conv2dDenseBinaryReference
+    group_Conv2dDepthwiseReference
+    group_TransposeConv2dRegression)
+
+foreach(group IN LISTS INTEGRATION_TEST_GROUPS)
+  add_test(NAME ${group} COMMAND integration_test -v -g ${group})
+endforeach()
 
 # third party links
 include(third-party.cmake)
