@@ -38,7 +38,7 @@ static inline void pad_3_to_4_single(int8_t **outputs, int8_t **inputs, uint32_t
     for(uint32_t i = 0; i < 3; i++) {
         (*(int8_t**)outputs)[i] = (*inputs)[i];
     }
-    (*(int8_t**)outputs)[3] = (int8_t)pad_val;
+    (*(int8_t**)outputs)[3] = (int8_t)(pad_val >> 24);
     *inputs += 3;
     *outputs += 4;
     *N_3 -= 1;
@@ -53,7 +53,7 @@ void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pa
         memcpy(output_p, input_p, 3);
         output_p += 3;
         input_p += 3;
-        memcpy(output_p, &pad_val, 1);
+        *output_p = (int8_t)(pad_val >> 24);
         output_p += 1;
     }
 }

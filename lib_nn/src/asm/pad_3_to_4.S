@@ -33,7 +33,7 @@ pad_3_to_4_asm:
     std r6, r7, sp[1]
     std r8, r9, sp[2]
     { stw r10, sp[6]              ; mkmsk r4, 24 }
-    { shl r3, r3, 24              ; nop }
+    { andnot r3, r4               ; nop }
     { ldc r8, 0                   ; ldc r9, 8 }
 loop:
     ldd r4, r5, r1[0]
@@ -78,46 +78,31 @@ loop:
 #if defined(__VX4B__)
 
 #define FUNCTION_NAME pad_3_to_4_asm
-#define NSTACKWORDS 12
+#define NSTACKWORDS 4
+
+.pad_3_to_4_lut:
+    .word 0xFF020100, 0xFF050403, 0xFF080706, 0xFF0B0A09
+    .word 0xFF0E0D0C, 0xFF11100F, 0xFF141312, 0xFF171615
 
 .p2align 1
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
 FUNCTION_NAME:
-    { xm.shl a3, a3, 24 ; xm.entsp (NSTACKWORDS * 4) }
-    { add t3, a3, 0 ; xm.stwsp s2, 32 }
-    xm.ldcu s2, 32 // could move before the loop, align it and packet with xm.bu
 
-    xm.stdsp a3, t3, 0
-    xm.stdsp a3, t3, 8
-    xm.stdsp a3, t3, 16
-    xm.stdsp a3, t3, 24
-    { add t3, sp, 0 ; xm.mkmsk a3, 3 }
+    { xm.shr a3, a3, 24 ; xm.entsp (NSTACKWORDS * 4) }
+    { add a3, sp, 0 ; xm.stwsp a3, 0 }
+    { xm.ldap t3, .pad_3_to_4_lut ; xm.vclrdr }
+    // will load beyond the stack, but is only interested in the first byte
+    { li a3, 24 ; xm.vldc a3 }
+    xm.vlookup a1, 0, 0
+    { add a1, a1, a3 ; xm.vldr t3 }
 
 .loop:
-    { add a1, a1, 3 ; xm.vldr a1 }
-    { add t3, t3, 4 ; xm.vstrpv t3, a3}
-    { add a1, a1, 3 ; xm.vldr a1 }
-    { add t3, t3, 4 ; xm.vstrpv t3, a3}
-    { add a1, a1, 3 ; xm.vldr a1 }
-    { add t3, t3, 4 ; xm.vstrpv t3, a3}
-    { add a1, a1, 3 ; xm.vldr a1 }
-    { add t3, t3, 4 ; xm.vstrpv t3, a3}
+    xm.vlookup a1, 0, 0
+    { addi a2, a2, -1 ; xm.vstd a0 }
+    add a0, a0, 32 // could load 32 into t3 and make it short, but has nothing to go with
+    { add a1, a1, a3 ; xm.bt a2, .loop }
 
-    { add a1, a1, 3 ; xm.vldr a1 }
-    { add t3, t3, 4 ; xm.vstrpv t3, a3}
-    { add a1, a1, 3 ; xm.vldr a1 }
-    { add t3, t3, 4 ; xm.vstrpv t3, a3}
-    { add a1, a1, 3 ; xm.vldr a1 }
-    { add t3, t3, 4 ; xm.vstrpv t3, a3}
-    { add a1, a1, 3 ; xm.vldr a1 }
-    { add t3, sp, 0 ; xm.vstrpv t3, a3}
-
-    { add a2, a2, -1 ; xm.vldr t3 }
-    { add a0, a0, s2 ; xm.vstr a0 }
-    xm.bt a2, .loop
-
-    xm.ldwsp s2, 32
     xm.retsp (NSTACKWORDS * 4)
 
 .size FUNCTION_NAME, . -FUNCTION_NAME

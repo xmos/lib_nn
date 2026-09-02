@@ -19,7 +19,7 @@ int main(int argc, const char* argv[]) {
   RUN_TEST_GROUP(group_mul_elementwise);
   RUN_TEST_GROUP(group_multiply_int16);
   RUN_TEST_GROUP(group_output_transform_fn_int16);
-  RUN_TEST_GROUP(group_pad_3_to_4);
+  RUN_TEST_GROUP(group_pad);
   RUN_TEST_GROUP(group_quantize_int16);
   RUN_TEST_GROUP(group_quadratic_interpolation);
   RUN_TEST_GROUP(group_softmax);
