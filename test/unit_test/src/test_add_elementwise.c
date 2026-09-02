@@ -168,9 +168,7 @@ TEST(group_add_elementwise, test_add_elementwise_case2)
 
         unsigned elm_start = (pseudo_rand_uint32() % LEN) & 0xFFFFFFFC;
         unsigned elm_count = pseudo_rand_uint32() % (LEN - elm_start);
-
-        printf("  rep %u... (%u <= k < %u)\n", v, elm_start, elm_start+elm_count);
-
+        // printf("  rep %u... (%u <= k < %u)\n", v, elm_start, elm_start+elm_count);
         int32_t min = 0;
         int32_t max = 0;
 
