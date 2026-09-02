@@ -60,18 +60,11 @@ TEST(group_mem_cpy_fns, Test_ImToColValid) {
 
                       ImToColValid cpy(X, K, input_ch_per_output);
                       memcpyfn_imtocol_valid_params_t p = cpy.getParams();
-                      size_t scratch_bytes =
-                          cpy.get_scratch_bytes();  // TODO add test that
-                                                    // crashes when this is one
-                                                    // less
-                      int overread_bytes =
-                          cpy.get_overread_bytes();  // TODO add test that
-                                                     // crashes when this is one
-                                                     // less
+                      size_t scratch_bytes = cpy.get_scratch_bytes();
+                      int overread_bytes = cpy.get_overread_bytes();
 
-                      int8_t T[scratch_bytes];
-                      int8_t X_mem[x_width * x_height * x_channels +
-                                   overread_bytes];
+                      std::vector<int8_t> T(scratch_bytes);
+                      std::vector<int8_t> X_mem(x_width * x_height * x_channels + overread_bytes);
 
                       // The count of x channels from whick a memcopy could
                       // start
@@ -88,10 +81,9 @@ TEST(group_mem_cpy_fns, Test_ImToColValid) {
                             for (int j = 0; j < sizeof X_mem; ++j)
                               X_mem[j] = rng.rand<int8_t>();
 
-                            std::memset(T, 0x55, sizeof T);
+                            std::memset(T.data(), 0x55, sizeof T);
 
-                            memcpyfn_imtocol_valid(&p, T, X_mem, output_h, output_w,
-                                           output_c);
+                            memcpyfn_imtocol_valid(&p, T.data(), X_mem.data(), output_h, output_w, output_c);
 
                             int t_idx = 0;
 
@@ -191,36 +183,42 @@ TEST(group_mem_cpy_fns, Test_ImToColPadded) {
                                                              // when this is one
                                                              // less
 
-                              int8_t T[scratch_bytes];
-                              int8_t X_mem[x_height][x_width][x_channels];
+                              std::vector<int8_t> T(scratch_bytes);
+                              std::vector<int8_t> X_mem(x_height * x_width *
+                                                        x_channels);
 
                               // create an explicitly padded version of X
-                              int8_t X_mem_padded[padded_x_height]
-                                                 [padded_x_width][x_channels];
+                              std::vector<int8_t> X_mem_padded(
+                                  padded_x_height * padded_x_width *
+                                  x_channels);
 
-                              for (int i = 0; i < sizeof X_mem; ++i)
-                                ((int8_t *)X_mem)[i] = rng.rand<int8_t>();
+                              for (size_t i = 0; i < X_mem.size(); ++i)
+                                X_mem[i] = rng.rand<int8_t>();
 
-                              std::memset(X_mem_padded, pad_val,
-                                          sizeof X_mem_padded);
+                              std::memset(X_mem_padded.data(), pad_val,
+                                          X_mem_padded.size());
 
                               for (int h = 0; h < x_height; h++) {
                                 for (int w = 0; w < x_width; w++) {
                                   for (int c = 0; c < x_channels; c++) {
-                                    X_mem_padded[h + padding.top]
-                                                [w + padding.left][c] =
-                                                    X_mem[h][w][c];
+                                    X_mem_padded[((h + padding.top) *
+                                                      padded_x_width +
+                                                  (w + padding.left)) *
+                                                     x_channels +
+                                                 c] =
+                                        X_mem[(h * x_width + w) * x_channels +
+                                              c];
                                   }
                                 }
                               }
 
-                              int8_t X_mem_with_overread[sizeof X_mem +
-                                                         overread_bytes];
+                              std::vector<int8_t> X_mem_with_overread(
+                                  X_mem.size() + overread_bytes);
 
-                              std::memcpy(X_mem_with_overread, (int8_t *)X_mem,
-                                          sizeof X_mem);
-                              for (int j = sizeof X_mem;
-                                   j < sizeof X_mem_with_overread; ++j)
+                              std::memcpy(X_mem_with_overread.data(),
+                                          X_mem.data(), X_mem.size());
+                              for (size_t j = X_mem.size();
+                                   j < X_mem_with_overread.size(); ++j)
                                 X_mem_with_overread[j] = rng.rand<int8_t>();
 
                               int output_ch_starts =
@@ -235,9 +233,10 @@ TEST(group_mem_cpy_fns, Test_ImToColPadded) {
                                        ++output_c) {  // only test from aligned
                                                       // memory addresses
 
-                                    std::memset(T, 0xaa, sizeof T);
+                                    std::memset(T.data(), 0xaa, T.size());
 
-                                    memcpyfn_imtocol_padded(&p, T, X_mem_with_overread,
+                                    memcpyfn_imtocol_padded(&p, T.data(),
+                                                   X_mem_with_overread.data(),
                                                    output_h, output_w,
                                                    output_c);
 
@@ -251,11 +250,13 @@ TEST(group_mem_cpy_fns, Test_ImToColPadded) {
 
                                           // TODO use Aarons code here
                                           int x = (int)X_mem_padded
-                                              [kh * k_v_dilation +
-                                               k_v_stride * output_h]
-                                              [kw * k_h_dilation +
-                                               k_h_stride * output_w]
-                                              [kc + output_c];
+                                              [((kh * k_v_dilation +
+                                                 k_v_stride * output_h) *
+                                                    padded_x_width +
+                                                (kw * k_h_dilation +
+                                                 k_h_stride * output_w)) *
+                                                   x_channels +
+                                               kc + output_c];
                                           TEST_ASSERT_EQUAL(t, x);
                                         }
                                       }
@@ -307,16 +308,19 @@ TEST(group_mem_cpy_fns, Test_DerefInputFn) {
                 DerefInputFn memcpy(X,K);
                 memcpyfn_deref_params_t m = memcpy.getParams();
 
-                int8_t X_mem[x_height][x_width][x_channels];
+                std::vector<int8_t> X_mem(x_height * x_width * x_channels);
 
-                for (int j = 0; j < sizeof X_mem; ++j)
-                  ((int8_t *)X_mem)[j] = rng.rand<int8_t>();
+                for (size_t j = 0; j < X_mem.size(); ++j)
+                  X_mem[j] = rng.rand<int8_t>();
 
                 for (int h = 0; h < output_height; ++h) {
                   for (int w = 0; w < output_width; ++w) {
                     for (int c = 0; c < x_channels; ++c) {
-                      int8_t *p = memcpyfn_deref(&m, 0, (int8_t *)X_mem, h, w, c);
-                      int x = (int)X_mem[k_v_stride * h][k_h_stride * w][c];
+                      int8_t *p = memcpyfn_deref(&m, 0, X_mem.data(), h, w, c);
+                      int x = (int)X_mem[(k_v_stride * h * x_width +
+                                          k_h_stride * w) *
+                                             x_channels +
+                                         c];
                       TEST_ASSERT_EQUAL((int)*p, x);
                     }
                   }

@@ -21,7 +21,8 @@ void bsign_8_prepare(nn_bsign_8_job_t* jobs, int8_t* zero_point_vect,
   int32_t full_vectors = (length - r) / VPU_INT8_EPV;
   int32_t p = full_vectors % job_count;
   int32_t k = (full_vectors - p) / job_count;
-  assert(length == k * job_count * VPU_INT8_EPV + p * VPU_INT8_EPV + r);
+  uint32_t dlength = k * job_count * VPU_INT8_EPV + p * VPU_INT8_EPV + r;
+  assert(length == dlength);
 
   for (int j = 0; j < job_count; j++) {
     jobs[j].start = (j > 0) ? jobs[j - 1].start + jobs[j - 1].length : 0;

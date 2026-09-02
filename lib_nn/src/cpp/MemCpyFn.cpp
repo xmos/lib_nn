@@ -25,6 +25,7 @@ int8_t *nn::memcpyfn_deref(const memcpyfn_deref_params_t *params, int8_t *T, int
                                  int32_t output_c_coord) {
   return X + (int)(output_v_coord * params->bytes_per_h_line +
                    output_h_coord * params->bytes_per_pixel + output_c_coord);
+  (void)T;
 }
 
 int ImToColPadded::get_scratch_bytes() {

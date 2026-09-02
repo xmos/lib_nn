@@ -85,7 +85,9 @@ static int64_t sumConv2dWeights_Deep(const Filter2dGeometry &filter,
   // Sum of weights
   int64_t acc = 0;
 
-  for (int i = 0; i < weight_count; ++i) acc += cout_weights[i];
+  for (unsigned i = 0; i < weight_count; ++i) {
+    acc += cout_weights[i];
+  }
 
   return acc;
 }
@@ -169,7 +171,7 @@ std::vector<vpu_split_acc32_t> conv2d::util::TfLiteConverter::ConvertBiases(
 
   std::vector<vpu_split_acc32_t> biases_out(cog_count);
 
-  for (unsigned cout = 0; cout < filter.output.depth; ++cout) {
+  for (int cout = 0; cout < filter.output.depth; ++cout) {
     const unsigned cog = cout >> VPU_INT8_ACC_PERIOD_LOG2;
     const unsigned coff = cout - (cog << VPU_INT8_ACC_PERIOD_LOG2);
 
@@ -197,7 +199,7 @@ conv2d::util::TfLiteConverter::ConvertOutputParams(
 
   std::vector<nn_acc32_to_int8_params_t> params_out(cog_count);
 
-  for (unsigned cout = 0; cout < filter.output.depth; ++cout) {
+  for (int cout = 0; cout < filter.output.depth; ++cout) {
     const unsigned cog = cout >> VPU_INT8_ACC_PERIOD_LOG2;
     const unsigned coff = cout - (cog << VPU_INT8_ACC_PERIOD_LOG2);
 

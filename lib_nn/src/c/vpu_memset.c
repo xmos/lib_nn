@@ -35,7 +35,7 @@ void vpu_memset_32(void *dst, const int32_t value, const int word_count) {
 
   // do the leading words
   unsigned leading_words = word_count % VPU_MEMSET_VECTOR_WORDS;
-  for (int i = 0; i < leading_words; i++) dst32[i] = value;
+  for (unsigned i = 0; i < leading_words; i++) dst32[i] = value;
 
   dst32 += leading_words;
   int remaining_words = word_count - leading_words;

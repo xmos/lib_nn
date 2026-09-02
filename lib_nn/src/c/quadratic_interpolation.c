@@ -13,7 +13,7 @@ static int clamp(int64_t x) {
 
 void quadratic_interpolation_128_ref(int16_t *outputs, int16_t *inputs,
                                      uint8_t *bytes, uint32_t N) {
-    for(int j = 0 ; j < N; j++) {
+    for(uint32_t j = 0 ; j < N; j++) {
         int64_t input_val = inputs[j];
 
         int table_index = (input_val >> 9) + (1 << 6);

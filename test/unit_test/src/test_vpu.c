@@ -14,6 +14,7 @@
 #include "unity_fixture.h"
 #include "vpu_memmove_word_aligned.h"
 #include "vpu_memset_256.h"
+#include "vpu_memcpy.h"
 #include "xs3_vpu.h"
 
 TEST_GROUP(group_vpu);
@@ -34,8 +35,12 @@ TEST_GROUP_RUNNER(group_vpu) {
 // vpu_memcpy / vpu_memcpy_int / vpu_memcpy_ext / vpu_memcpy_vector_{int,ext}
 // ---------------------------------------------------------------------------
 
-static void impl_vpu_memcpy_directed(size_t atom_bytes, int atom_count,
-                                     int alignment, void (*mem_cpy_func)()) {
+static 
+void impl_vpu_memcpy_directed(
+  size_t atom_bytes, int atom_count,
+  int alignment, 
+  MEMCPY_FPTRGROUP memcpy_fn_t mem_cpy_func) 
+{
   size_t byte_count = atom_bytes * atom_count;
 
   int8_t* src_unaligned = (int8_t*)malloc(byte_count + alignment);
@@ -65,7 +70,7 @@ static void impl_vpu_memcpy_pseudo_random(size_t src_pointer_inc,
                                           size_t dst_relative_pointer_inc,
                                           size_t atom_bytes, int atom_count,
                                           int alignment,
-                                          void (*mem_cpy_func)()) {
+                                          MEMCPY_FPTRGROUP memcpy_fn_t mem_cpy_func) {
   size_t byte_count = atom_bytes * atom_count;
 
   int8_t* src_unaligned = (int8_t*)malloc(byte_count + alignment);
@@ -124,21 +129,17 @@ TEST(group_vpu, test_vpu_memcpy) {
   impl_vpu_memcpy_pseudo_random(32, 32, 1, 32, 4, vpu_memcpy);
   impl_vpu_memcpy_pseudo_random(32, 32, 1, 32, 4, vpu_memcpy_int);
   impl_vpu_memcpy_pseudo_random(32, 32, 1, 32, 4, vpu_memcpy_ext);
-  impl_vpu_memcpy_pseudo_random(2, 2, MEMCPY_VECT_EXT_BYTES, 2, 4,
-                                vpu_memcpy_vector_ext);
-  impl_vpu_memcpy_pseudo_random(2, 2, MEMCPY_VECT_INT_BYTES, 2, 4,
-                                vpu_memcpy_vector_int);
+  impl_vpu_memcpy_pseudo_random(2, 2, MEMCPY_VECT_EXT_BYTES, 2, 4, vpu_memcpy_vector_ext);
+  impl_vpu_memcpy_pseudo_random(2, 2, MEMCPY_VECT_INT_BYTES, 2, 4, vpu_memcpy_vector_int);
 }
 
 #ifdef TEST_BUILD_NATIVE
-TEST(group_vpu, test_vpu_memcpy_full) {
+TEST(group_vpu, vpu_memcpy_full) {
   impl_vpu_memcpy_pseudo_random(8, 8, 1, 32, 4, vpu_memcpy);
   impl_vpu_memcpy_pseudo_random(8, 8, 1, 32, 4, vpu_memcpy_int);
   impl_vpu_memcpy_pseudo_random(8, 8, 1, 32, 4, vpu_memcpy_ext);
-  impl_vpu_memcpy_pseudo_random(4, 4, MEMCPY_VECT_EXT_BYTES, 8, 4,
-                                vpu_memcpy_vector_ext);
-  impl_vpu_memcpy_pseudo_random(4, 4, MEMCPY_VECT_INT_BYTES, 8, 4,
-                                vpu_memcpy_vector_int);
+  impl_vpu_memcpy_pseudo_random(4, 4, MEMCPY_VECT_EXT_BYTES, 8, 4, vpu_memcpy_vector_ext);
+  impl_vpu_memcpy_pseudo_random(4, 4, MEMCPY_VECT_INT_BYTES, 8, 4, vpu_memcpy_vector_int);
 }
 #endif // TEST_BUILD_NATIVE
 

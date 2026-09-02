@@ -13,12 +13,9 @@ using namespace nn;
 #define CHAR_BIT (sizeof(char) * 8)
 #endif
 
-static int8_t *deref2d(int8_t *p, int p_w, int h, int w) {
-  return p + h * p_w + w;
-}
-
-static int16_t *deref2d(int16_t *p, int p_w, int h, int w) {
-  return p + h * p_w + w;
+template <typename t_int>
+static t_int* deref2d(t_int* p, int p_w, int h, int w) {
+    return p + h * p_w + w;
 }
 
 Conv2dReorderedWeights MatMulBase::reorder_kernel_weights(

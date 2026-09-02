@@ -4,9 +4,9 @@
 
 #include <xs1.h>
 
-// void vpu_memmove_word_aligned(void * dst, const void * src, unsigned byte_count);
+// void vpu_memmove_word_aligned_asm(void * dst, const void * src, unsigned byte_count);
 
-#define FUNCTION_NAME vpu_memmove_word_aligned
+#define FUNCTION_NAME vpu_memmove_word_aligned_asm
     
 #define NSTACKWORDS     0
 
@@ -71,14 +71,14 @@ FUNCTION_NAME:
 #if defined(__VX4A__) || defined(__VX4B__)
 
 
-#define FUNCTION_NAME vpu_memmove_word_aligned
+#define FUNCTION_NAME vpu_memmove_word_aligned_asm
 
 #define NSTACKWORDS  0
 #define ROUND_UP(X, Y) (((X+Y-1)/Y)*Y)
 
 /*
 
-   void vpu_memmove_word_aligned(
+   void vpu_memmove_word_aligned_asm(
         void * dst,
         const void * src, 
         unsigned byte_count
@@ -130,5 +130,3 @@ vpu_memmove_word_aligned_loop_down:
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
 
 #endif
-
-

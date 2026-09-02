@@ -155,13 +155,10 @@ void test_big_range(int coef_count, int N, int product_range, int bias_range,
       OT_int8 ot((int32_t)output_ch_count, qp.initial_shr, qp.final_shr);
       otfn_int8_params_t p = ot.getParams();
 
-      int8_t Y[output_ch_count];
-      memset(Y, 0, sizeof Y);
-
-      int ocg_count = (output_ch_count + vpu_ring_buffer_length - 1) /
-                      vpu_ring_buffer_length;
-
-      int8_t *y = (int8_t *)Y;
+      std::vector<int8_t> vector_y(output_ch_count);
+      std::fill(vector_y.begin(), vector_y.end(), 0);
+      int8_t* y = vector_y.data();
+      int ocg_count = (output_ch_count + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
 
       for (int ocg = 0; ocg < ocg_count; ++ocg) {
         int chs_in_group =
@@ -175,19 +172,14 @@ void test_big_range(int coef_count, int N, int product_range, int bias_range,
         for (int t = 0; t < 1 << 6; t++) {
           memset(&A, 0, sizeof A);
 
-          int32_t accu_values[chs_in_group];
+          std::vector<int32_t> accu_values_vector(chs_in_group);
+          int32_t* accu_values = accu_values_vector.data();
 
           for (int output_chan = 0; output_chan < chs_in_group; ++output_chan) {
-            int actual_output_channel =
-                output_chan + ocg * vpu_ring_buffer_length;
-
-            int32_t accu_min =
-                mul_and_biases[actual_output_channel].original_accu_min_val;
-            int32_t accu_max =
-                mul_and_biases[actual_output_channel].original_accu_max_val;
-
+            int actual_output_channel = output_chan + ocg * vpu_ring_buffer_length;
+            int32_t accu_min = mul_and_biases[actual_output_channel].original_accu_min_val;
+            int32_t accu_max = mul_and_biases[actual_output_channel].original_accu_max_val;
             int32_t v = rng.rand<int32_t>(accu_min, accu_max);
-
             accu_values[output_chan] = v;
             A.vR[output_chan] = ((int16_t *)&v)[0];
             A.vD[output_chan] = ((int16_t *)&v)[1];
@@ -207,7 +199,7 @@ void test_big_range(int coef_count, int N, int product_range, int bias_range,
             expected = std::min(std::max(expected, (double)INT8_MIN),
                                            (double)INT8_MAX);
 
-            int actual = (int)Y[actual_output_channel];
+            int actual = (int)y[actual_output_channel];
 
             TEST_ASSERT_INT32_WITHIN(1, (int)std::round(expected), actual);
 
@@ -293,13 +285,10 @@ void test_big_range_channelwise(int coef_count, int N, int product_range,
       OT_int8_channelwise ot((int32_t)output_ch_count, qp.final_shr);
       otfn_int8_channelwise_params_t p = ot.getParams();
 
-      int8_t Y[output_ch_count];
-      memset(Y, 0, sizeof Y);
-
-      int ocg_count = (output_ch_count + vpu_ring_buffer_length - 1) /
-                      vpu_ring_buffer_length;
-
-      int8_t *y = (int8_t *)Y;
+      std::vector<int8_t> vector_y(output_ch_count);
+      std::fill(vector_y.begin(), vector_y.end(), 0);
+      int8_t* y = vector_y.data();
+      int ocg_count = (output_ch_count + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
 
       for (int ocg = 0; ocg < ocg_count; ++ocg) {
         int chs_in_group =
@@ -313,7 +302,8 @@ void test_big_range_channelwise(int coef_count, int N, int product_range,
         for (int t = 0; t < 1 << 6; t++) {
           memset(&A, 0, sizeof A);
 
-          int32_t accu_values[chs_in_group];
+          std::vector<int32_t> accu_values_vector(chs_in_group);
+          int32_t* accu_values = accu_values_vector.data();
 
           for (int output_chan = 0; output_chan < chs_in_group; ++output_chan) {
             int actual_output_channel =
@@ -347,7 +337,7 @@ void test_big_range_channelwise(int coef_count, int N, int product_range,
               expected = std::round(std::min(
                   std::max(expected, (double)INT8_MIN), (double)INT8_MAX));
 
-              int actual = (int)Y[actual_output_channel];
+              int actual = (int)y[actual_output_channel];
               TEST_ASSERT_INT32_WITHIN(1, (int)expected, actual);
 
               error_count += 1;
@@ -402,13 +392,10 @@ void test_small_range(const int accu_min, const int accu_max,
     OT_int8 ot((int32_t)output_ch_count, qp.initial_shr, qp.final_shr);
     otfn_int8_params_t p = ot.getParams();
 
-    int8_t Y[output_ch_count];
-    memset(Y, 0, sizeof Y);
-
-    int ocg_count =
-        (output_ch_count + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
-
-    int8_t *y = (int8_t *)Y;
+    std::vector<int8_t> vector_y(output_ch_count);
+    std::fill(vector_y.begin(), vector_y.end(), 0);
+    int8_t* y = vector_y.data();
+    int ocg_count = (output_ch_count + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
 
     for (int ocg = 0; ocg < ocg_count; ++ocg) {
       int chs_in_group =
@@ -422,7 +409,8 @@ void test_small_range(const int accu_min, const int accu_max,
       for (int t = accu_min; t <= accu_max; t++) {
         memset(&A, 0, sizeof A);
 
-        int32_t accu_values[chs_in_group];
+        std::vector<int32_t> accu_values_vector(chs_in_group);
+        int32_t* accu_values = accu_values_vector.data();
         for (int output_chan = 0; output_chan < chs_in_group; ++output_chan) {
           int32_t v = t;
           accu_values[output_chan] = v;
@@ -444,7 +432,7 @@ void test_small_range(const int accu_min, const int accu_max,
               std::min(std::max(expected, (double)INT8_MIN), (double)INT8_MAX));
 
           TEST_ASSERT_INT32_WITHIN(1, (int)expected,
-                                   (int)Y[actual_output_channel]);
+                                   (int)y[actual_output_channel]);
         }
       }
       y = next_y;
@@ -486,14 +474,11 @@ void test_small_range_channelwise(const int accu_min, const int accu_max,
     OT_int8_channelwise ot((int32_t)output_ch_count, qp.final_shr);
     otfn_int8_channelwise_params_t p = ot.getParams();
 
-    int8_t Y[output_ch_count];
-    memset(Y, 0, sizeof Y);
-
-    int ocg_count =
-        (output_ch_count + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
-
-    int8_t *y = (int8_t *)Y;
-
+    std::vector<int8_t> vector_y(output_ch_count);
+    std::fill(vector_y.begin(), vector_y.end(), 0);
+    int8_t* y = vector_y.data();
+    int ocg_count = (output_ch_count + vpu_ring_buffer_length - 1) / vpu_ring_buffer_length;
+    
     for (int ocg = 0; ocg < ocg_count; ++ocg) {
       int chs_in_group =
           std::min(output_ch_count - vpu_ring_buffer_length * ocg,
@@ -506,7 +491,8 @@ void test_small_range_channelwise(const int accu_min, const int accu_max,
       for (int t = accu_min; t <= accu_max; t++) {
         memset(&A, 0, sizeof A);
 
-        int32_t accu_values[chs_in_group];
+        std::vector<int32_t> accu_values_vector(chs_in_group);
+        int32_t* accu_values = accu_values_vector.data();
         for (int output_chan = 0; output_chan < chs_in_group; ++output_chan) {
           int32_t v = t;
           accu_values[output_chan] = v;
@@ -527,8 +513,7 @@ void test_small_range_channelwise(const int accu_min, const int accu_max,
           expected = std::round(
               std::min(std::max(expected, (double)INT8_MIN), (double)INT8_MAX));
 
-          TEST_ASSERT_INT32_WITHIN(1, (int)expected,
-                                   (int)Y[actual_output_channel]);
+          TEST_ASSERT_INT32_WITHIN(1, (int)expected, (int)y[actual_output_channel]);
         }
       }
       y = next_y;

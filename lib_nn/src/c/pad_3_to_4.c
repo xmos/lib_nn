@@ -49,7 +49,7 @@ void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pa
     int8_t * output_p = (int8_t *)outputs;
     int8_t * input_p = (int8_t *)inputs;
 
-    for(int i=0;i<N_3;i++){
+    for(uint32_t i=0;i<N_3;i++){
         memcpy(output_p, input_p, 3);
         output_p += 3;
         input_p += 3;

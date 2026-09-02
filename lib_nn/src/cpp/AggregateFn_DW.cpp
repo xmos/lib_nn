@@ -64,8 +64,7 @@ Conv2dReorderedWeights MatMulDirectFn_DW::reorder_kernel_weights(
     }
   }
 
-  assert(kernel_size ==
-         reordered_weights.weights.size() + VPU_INT16_VLMACC_ELMS);
+  assert((unsigned)kernel_size == reordered_weights.weights.size() + VPU_INT16_VLMACC_ELMS);
 
   // Finally, pad with the required amount to ensure no reading of bad data
   reordered_weights.weights.resize(kernel_size, pad_value);

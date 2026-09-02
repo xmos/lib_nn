@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "vpu_memcpy.h"
 #include "xs3_vpu.h"
 
 C_API int calculateAlignedThreadSplit(int tc, int split_size, int split_start[], int split_end[]);
@@ -44,82 +45,6 @@ extern "C" {
 #else
 #define USING_C_REFERENCE (0)
 #endif // NN_USE_REF
-
-#define MEMCPY_VECT_EXT_BYTES (128)
-#define MEMCPY_VECT_INT_BYTES (32)
-
-/**
- * @brief Copy `size` bytes from `src` to `dst`.
- *
- * `dst` and `src` both must be word-aligned addresses.
- *
- * `size` need not be an integer number of words.
- *
- * @param dst  [out]    Destination address
- * @param src  [in]     Source address
- * @param byte_count [in]     Number of bytes to be copied
- */
-void vpu_memcpy(void *dst, const void *src, size_t byte_count);
-
-/**
- * @brief Copy `size` bytes from `src` to `dst`.
- * Faster for copies from internal SRAM.
- *
- * `dst` and `src` both must be word-aligned addresses.
- *
- * `size` need not be an integer number of words.
- *
- * @param dst  [out]    Destination address
- * @param src  [in]     Source address
- * @param byte_count [in]     Number of bytes to be copied
- */
-void vpu_memcpy_int(void *dst, const void *src, size_t byte_count);
-
-/**
- * @brief Copy `size` bytes from `src` to `dst`.
- * Faster for copies from external flash and DDR.
- *
- * `dst` and `src` both must be word-aligned addresses.
- *
- * `size` need not be an integer number of words.
- *
- * @param dst  [out]    Destination address
- * @param src  [in]     Source address
- * @param byte_count [in]     Number of bytes to be copied
- */
-void vpu_memcpy_ext(void *dst, const void *src, size_t byte_count);
-
-/**
- * @brief Copy `vector_count` multiples of MEMCPY_VECT_EXT_BYTES bytes
- * from `src` to `dst`.
- * Faster for copies from external flash and DDR.
- *
- * `dst` and `src` both must be word-aligned addresses.
- *
- * `size` need not be an integer number of words.
- *
- * @param dst  [out]    Destination address
- * @param src  [in]     Source address
- * @param vector_count [in]     Number of MEMCPY_VECT_EXT_BYTES bytes copies to
- * be bytes to be performed
- */
-void vpu_memcpy_vector_ext(void *dst, const void *src, int vector_count);
-
-/**
- * @brief Copy `vector_count` multiples of MEMCPY_VECT_INT_BYTES bytes
- * from `src` to `dst`.
- * Faster for copies from internal SRAM.
- *
- * `dst` and `src` both must be word-aligned addresses.
- *
- * `size` need not be an integer number of words.
- *
- * @param dst  [out]    Destination address
- * @param src  [in]     Source address
- * @param vector_count [in]     Number of MEMCPY_VECT_INT_BYTES bytes copies to
- * be bytes to be performed
- */
-void vpu_memcpy_vector_int(void *dst, const void *src, int vector_count);
 
 /**
  * @brief set `word_count` words from `value` to `dst`.
