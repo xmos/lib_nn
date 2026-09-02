@@ -1,7 +1,6 @@
-// Copyright 2021-2026 XMOS LIMITED.
+// Copyright 2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
-#ifndef VPU_MEMCPY_H_
-#define VPU_MEMCPY_H_
+#pragma once
 
 #include <stddef.h>
 
@@ -9,8 +8,7 @@
 extern "C" {
 #endif
 
-// fptrgroup is an xcore-only extension; guard it so native builds still see
-// a valid (empty) attribute.
+// fptrgroup 
 #if (defined(__XS3A__) || defined(__VX4B__))
 #define MEMCPY_FPTRGROUP __attribute__((fptrgroup("memcpy_fn_group")))
 #else
@@ -103,5 +101,3 @@ void vpu_memcpy_vector_int(void *dst, const void *src, size_t vector_count);
 #ifdef __XC__
 } // extern "C"
 #endif
-
-#endif // VPU_MEMCPY_H_

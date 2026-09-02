@@ -3,7 +3,7 @@
 
 #include <string.h>
 
-#include "vpu_memmove_word_aligned.h"
+#include "vpu_memmove.h"
 
 extern void vpu_memmove_word_aligned_asm(void * dst, const void * src, unsigned byte_count);
 

@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <stdint.h>
 #include "nn_api.h"
 
 #define XS1_ALL_BITS_SIZE 0x20
