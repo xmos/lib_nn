@@ -81,8 +81,7 @@ TEST(group_mem_cpy_fns, Test_ImToColValid) {
                             for (int j = 0; j < sizeof X_mem; ++j)
                               X_mem[j] = rng.rand<int8_t>();
 
-                            std::memset(T.data(), 0x55, sizeof T);
-
+                            std::memset(T.data(), 0x55, T.size());
                             memcpyfn_imtocol_valid(&p, T.data(), X_mem.data(), output_h, output_w, output_c);
 
                             int t_idx = 0;
