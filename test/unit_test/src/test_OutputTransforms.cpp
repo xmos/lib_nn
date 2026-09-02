@@ -352,7 +352,7 @@ void test_big_range_channelwise(int coef_count, int N, int product_range,
   }
   float bias = error_sum / error_count;
   (void)bias;
-  //TODO check bias ranges and acepted values, uncomment below
+  // TODO: check bias ranges and accepted values, uncomment below
   // TEST_ASSERT_TRUE_MESSAGE(std::abs(bias) < 2e-2, "Bias out of range");
   // printf("bias %d, error_count %d, error_sum %d, average error %d\n", bias,
   // error_count, abs_error_sum, (error_count/abs_error_sum));
