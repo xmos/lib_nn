@@ -23,10 +23,9 @@ DerefInputFn::DerefInputFn(const ImageGeometry &input,
 int8_t *nn::memcpyfn_deref(const memcpyfn_deref_params_t *params, int8_t *T, int8_t *X, int32_t output_v_coord,
                                  int32_t output_h_coord,
                                  int32_t output_c_coord) {
+  (void)T;
   return X + (int)(output_v_coord * params->bytes_per_h_line +
                    output_h_coord * params->bytes_per_pixel + output_c_coord);
-  (void)T;
-}
 
 int ImToColPadded::get_scratch_bytes() {
   return p.kernel_height * p.kernel_width *
