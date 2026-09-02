@@ -39,6 +39,7 @@ pipeline {
         )
         choice(
             name: 'TEST_LEVEL', choices: ['smoke', 'default', 'extended'],
+            defaultValue: 'smoke',
             description: 'The level of test coverage to run'
         )
     }
@@ -64,7 +65,7 @@ pipeline {
                                     dir("test") {
                                         xcoreBuild(
                                             buildDir: 'build_native',
-                                            cmakeOpts: '-DBUILD_NATIVE=ON'
+                                            cmakeOpts: "-DBUILD_NATIVE=ON -DTEST_LEVEL=${params.TEST_LEVEL}"
                                         )
                                     }
                                 }
@@ -78,7 +79,7 @@ pipeline {
                                     UnityJunit("NativeUnit.log", "NativeUnit")
                                 }
                                 dir("${REPO}/test/integration") {
-                                    sh "ctest --test-dir ../build_native/integration -j 8 -V > NativeIntegration.log"
+                                    sh "./bin/integration_test -v > NativeIntegration.log"
                                     UnityJunit("NativeIntegration.log", "NativeIntegration")
                                 }
                             }
