@@ -1,47 +1,43 @@
-// Copyright 2020-2021 XMOS LIMITED.
+// Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 #include <stdio.h>
 
-#include "unity.h"
+#include "unity_fixture.h"
 
-#define CALL(F)                                                                \
-  do {                                                                         \
-    void F();                                                                  \
-    F();                                                                       \
-  } while (0)
+int main(int argc, const char* argv[]) {
+  printf("Running unit tests for lib_nn\n");
+  UnityGetCommandLineOptions(argc, argv);
+  UnityBegin(argv[0]);
 
-int main(void) {
-  UNITY_BEGIN();
+  RUN_TEST_GROUP(group_add_elementwise);
+  RUN_TEST_GROUP(group_add_int16);
+  RUN_TEST_GROUP(group_bsign_8);
+  RUN_TEST_GROUP(group_dequantize_int16);
+  RUN_TEST_GROUP(group_expand_8_to_16);
+  RUN_TEST_GROUP(group_lookup8);
+  RUN_TEST_GROUP(group_mul_elementwise);
+  RUN_TEST_GROUP(group_multiply_int16);
+  RUN_TEST_GROUP(group_output_transform_fn_int16);
+  RUN_TEST_GROUP(group_pad_3_to_4);
+  RUN_TEST_GROUP(group_quantize_int16);
+  RUN_TEST_GROUP(group_quadratic_interpolation);
+  RUN_TEST_GROUP(group_softmax);
+  RUN_TEST_GROUP(group_vpu);
 
-  CALL(test_softmax);
-  CALL(test_conv2d_binary_regression);
-  CALL(test_transposeconv2d_regression);
-
-  CALL(test_conv2d_regression);
-  CALL(test_output_transforms);
-  CALL(test_aggregate_fns);
-  CALL(test_conv2d_dw_regression);
-  CALL(test_mem_cpy_fns);
-
-  CALL(test_vpu_memcpy);
-  CALL(test_vpu_memset);
-
-  CALL(test_bsign_8);
-  CALL(test_3_to_4);
-  CALL(test_maxpool);
-  CALL(test_add_elementwise);
-  CALL(test_mul_elementwise);
-
-  CALL(test_expand_8_to_16);
-
-  //  CALL(test_output_transform_16);
-  CALL(test_multiply_int16);
-  CALL(test_dequantize_int16);
-  CALL(test_quantize_int16);
-  CALL(test_add_int16);
-
-  CALL(test_vpu_memmove_aligned);
-  CALL(test_vpu_memset_256);
-  return UNITY_END();
+  // -------- Native only --------------
+  #ifdef TEST_BUILD_NATIVE
+    RUN_TEST_GROUP(group_aggregate_fns);
+    RUN_TEST_GROUP(group_Filter2dGeometry);
+    RUN_TEST_GROUP(group_ImageGeometry);
+    RUN_TEST_GROUP(group_ImageRegion);
+    RUN_TEST_GROUP(group_ImageVect);
+    RUN_TEST_GROUP(group_maxpool);
+    RUN_TEST_GROUP(group_mem_cpy_fns);
+    RUN_TEST_GROUP(group_output_transforms);
+    RUN_TEST_GROUP(group_WindowGeometry);
+    RUN_TEST_GROUP(group_WindowLocation);
+  #endif
+  
+  return UnityEnd();
 }

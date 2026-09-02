@@ -1,3 +1,5 @@
+// Copyright 2023-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
@@ -9,10 +11,9 @@
 #define VPU_INT16_EPV 16
 #define VPU_INT32_EPV 8
 
-int min(int a, int b) {
+static int min(int a, int b) {
     return a < b ? a : b;
 }
-#if defined(NN_USE_REF) || defined(__riscv_xxcore) 
 
 int16_t *output_transform_fn_int16_impl(int16_t *vDvR,
                                         int32_t *mul_add,
@@ -38,32 +39,25 @@ int16_t *output_transform_fn_int16_impl(int16_t *vDvR,
     return &output[N];
 }
 
-#else
-
 extern void output_transform_fn_int16_impl_asm(int16_t *vDvR,
                                                int32_t *mul_add,
                                                int16_t *output,
                                                uint32_t N);
-#endif
-
 
 int16_t *output_transform_fn_int16(otfn_int16_params_t *params,
                                    int16_t *Y,
                                    int16_t *vDvR,
                                    int32_t output_channel_group,
-                                   int32_t *mul_add) {
-    int output_count = min(
-        params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
-        (int32_t)VPU_INT16_EPV);
-    //
+                                   int32_t *mul_add) 
+{
+    int channel_count = params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV;
+    int output_count = min(channel_count, VPU_INT16_EPV);
     mul_add += output_channel_group * VPU_INT32_EPV * 4;
-#if defined(NN_USE_REF) || defined(__riscv_xxcore)
-    return output_transform_fn_int16_impl(vDvR, mul_add,
-                                          Y, output_count);
+
+#if defined(NN_USE_REF)
+    return output_transform_fn_int16_impl(vDvR, mul_add, Y, output_count);
 #else
-    output_transform_fn_int16_impl_asm(vDvR, mul_add,
-                                       Y, output_count);
+    output_transform_fn_int16_impl_asm(vDvR, mul_add, Y, output_count);
     return Y + output_count;
 #endif  // NN_USE_REF
 }
-

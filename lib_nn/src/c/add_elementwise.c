@@ -1,4 +1,4 @@
-// Copyright 2020-2021 XMOS LIMITED.
+// Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 #include <assert.h>
@@ -31,9 +31,7 @@
 #define MAX(A, B) (((A) >= (B)) ? (A) : (B))
 #define MIN(A, B) (((A) <= (B)) ? (A) : (B))
 
-extern const int8_t vpu_vect_0x01[32];
-
-unsigned mkmsk(int num) {
+static unsigned mkmsk(int num) {
   assert((num >= 0 && num <= 32) &&
          "Number to be made into a mask has to be in this range!");
   unsigned mask = 0;
@@ -52,6 +50,13 @@ void add_elementwise_ref(int8_t y[], const int8_t x1[], const int8_t x2[],
                          const int output_count) {
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
+
+  // Constant vpu vect
+  static const int8_t vpu_vect_0x01[VPU_INT8_EPV] __attribute__((aligned(4))) = {
+    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+  };
 
   // Scratch for temp vectors
   int16_t vec_tmp1[16];

@@ -1,3 +1,5 @@
+// Copyright 2021-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #ifndef LIB_NN_AGGREGATE_FN_HPP_
 #define LIB_NN_AGGREGATE_FN_HPP_
 

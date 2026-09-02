@@ -1,3 +1,5 @@
+// Copyright 2024-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include <assert.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -32,4 +34,3 @@ void add_int16_tensor(int16_t *output, int16_t *input1, int16_t *input2, int ten
     add_int16_tensor_asm(output, input1, input2, tensor_length, blob);
 #endif
 }
-

@@ -1,4 +1,4 @@
-// Copyright 2020-2025 XMOS LIMITED.
+// Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if defined(__XS3A__)
 
@@ -137,7 +137,7 @@ minintmults:
 
 #define FUNCTION_NAME add_int16_tensor_asm
 
-#define NSTACKWORDS  10
+#define NSTACKWORDS  28
 #define ROUND_UP(X, Y) (((X+Y-1)/Y)*Y)
 
 /*
@@ -154,15 +154,14 @@ void add_int16_tensor_asm(
 .type FUNCTION_NAME,@function
 FUNCTION_NAME:
 
-    {xm.entsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
+    {xm.entsp ROUND_UP(NSTACKWORDS*4, 16); xm.ldcu x28, 32}
     xm.stdsp x18, x19, 0*8
     xm.stdsp x20, x21, 1*8
     xm.stdsp x22, x23, 2*8
     xm.stdsp x24, x25, 3*8
 
-
     { xm.shri   x19, x13, 4            ; xm.zexti  x13, 4     }       // Number of iterations/modulo
-    { xm.ldawsp x20, 8              ; xm.shli   x13, x13, 1 }
+    { xm.ldawsp x20, 4*8               ; xm.shli   x13, x13, 1}
     addi x18, x14, 0
     { xm.nop     ; xm.shli   x28, x28, 3 }     // Make 0x100
     { xm.mkmsk x13, x13               ; xm.vsetc x28       }
@@ -235,4 +234,3 @@ done:
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
 
 #endif
-
