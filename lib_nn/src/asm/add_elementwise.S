@@ -295,17 +295,15 @@ FUNCTION_NAME:
     // Load bias into acc
     // vldr - vR can only be loaded from t3
     { xm.vstr tmp2                      ; mv t3, bias_lo                }
-    { xm.vldr t3                        ; xm.ldcu t3, 32                }
-    // Set vector mode to 16 bit
-    { xm.vldd bias_hi                   ; xm.shl t3, t3, 3              }
-    { xm.vsetc t3                       ; xm.nop                        }
+    { xm.vldr t3                        ; xm.ldcu t3, 24                }
+    // Set vector mode to 16x8 bit
+    { xm.vldd bias_hi                   ; xm.shli t3, t3, 5             }
+    { xm.vsetc t3                       ; xm.ldcu t3, 32                }
     // Macc inputs with multipliers
-    xm.vldc tmp1
-    xm.vlmacc0 m1
-    xm.vlmacc1 m1
-    xm.vldc tmp2
-    xm.vlmacc0 m2
-    xm.vlmacc1 m2
+    xm.vldc m1
+    xm.vlmacc0 tmp1
+    xm.vldc m2
+    { xm.vlmacc0 tmp2                   ; xm.shli t3, t3, 3             }
 
     // Saturation fix
     // Save original 32-bit outputs
@@ -315,6 +313,7 @@ FUNCTION_NAME:
     // -128's are written to output with a mask.
     // The lower 16-bits are later saturated using vlsat and
     // written with a mask to fill in remaining spaces.
+    xm.vsetc t3
     xm.vstd tmp2
     { xm.vstr tmp1                      ; xm.ldcu tmp1, 32              }
     xm.vlsat shift                    
