@@ -39,7 +39,6 @@ pipeline {
         )
         choice(
             name: 'TEST_LEVEL', choices: ['smoke', 'default', 'extended'],
-            defaultValue: 'smoke',
             description: 'The level of test coverage to run'
         )
     }
