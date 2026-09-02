@@ -1,5 +1,14 @@
 @Library('xmos_jenkins_shared_library@v0.53.0') _
 
+// Converts a Unity fixture-verbose log file into JUnit XML via lib_unity's
+// parse_output.rb, writing "<suiteName>_results.xml" (relative to cwd), and
+// publishes it via the junit step.
+def UnityJunit(String logFile, String suiteName) {
+    sh "ruby ${WORKSPACE}/lib_unity/lib_unity/Unity/auto/parse_output.rb -xml -suite${suiteName} ${logFile}"
+    sh "mv report.xml ${suiteName}_results.xml"
+    junit "${suiteName}_results.xml"
+}
+
 getApproval()
 pipeline {
     agent none
@@ -52,7 +61,7 @@ pipeline {
                             steps {
                                 dir(REPO) {
                                     checkoutScmShallow()
-                                    dir("test/unit_test") {
+                                    dir("test") {
                                         xcoreBuild(
                                             buildDir: 'build_native',
                                             cmakeOpts: '-DBUILD_NATIVE=ON'
@@ -65,7 +74,12 @@ pipeline {
                         stage("Test") {
                             steps {
                                 dir("${REPO}/test/unit_test") {
-                                    sh "./bin/unit_test"
+                                    sh "./bin/unit_test -v > NativeUnit.log"
+                                    UnityJunit("NativeUnit.log", "NativeUnit")
+                                }
+                                dir("${REPO}/test/integration") {
+                                    sh "./bin/integration_test -v > NativeIntegration.log"
+                                    UnityJunit("NativeIntegration.log", "NativeIntegration")
                                 }
                             }
                         } // Test
@@ -97,7 +111,8 @@ pipeline {
                         stage("Test") {
                             steps {
                                 dir("${REPO}/test/unit_test") {
-                                    withTools(params.TOOLS_VERSION_XS) {sh "xsim --args bin/unit_test.xe"}
+                                    withTools(params.TOOLS_VERSION_XS) {sh "xsim --args bin/unit_test.xe -v > XS3.log"}
+                                    UnityJunit("XS3.log", "XS3")
                                 }
                             }
                         } // Test
@@ -129,7 +144,8 @@ pipeline {
                         stage("Test") {
                             steps {
                                 dir("${REPO}/test/unit_test") {
-                                    withTools(params.TOOLS_VERSION_VX) {sh "xsim --args bin/unit_test.xe"}
+                                    withTools(params.TOOLS_VERSION_VX) {sh "xsim --args bin/unit_test.xe -v > VX4.log"}
+                                    UnityJunit("VX4.log", "VX4")
                                 }
                             }
                         } // Test

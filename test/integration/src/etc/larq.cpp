@@ -1,12 +1,14 @@
 // Copyright 2021-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
-#include "larq_compute_engine/core/bitpacking/bitpack.h"
-
-using namespace tflite;
 
 #include "RefOps.hpp"
 #include "geom/Filter2dGeometry.hpp"
-#include "larq_compute_engine/core/bconv2d/reference.h"
+
+#include <larq_compute_engine/core/bitpacking/bitpack.h>
+
+using namespace tflite;  // reference.h relies on RuntimeShape being unqualified
+
+#include <larq_compute_engine/core/bconv2d/reference.h>
 
 using namespace nn;
 using namespace nn::test::ops::ref;

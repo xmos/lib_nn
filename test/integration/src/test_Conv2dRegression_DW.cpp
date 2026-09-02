@@ -19,12 +19,24 @@
 #include "nn_types.h"
 
 extern "C" {
-#include "tst_common.h"
 #include "unity.h"
+#include "unity_fixture.h"
 }
 
 using namespace nn;
 using namespace nn::test;
+
+extern "C" {
+
+TEST_GROUP(group_Conv2dRegression_DW);
+TEST_SETUP(group_Conv2dRegression_DW) {}
+TEST_TEAR_DOWN(group_Conv2dRegression_DW) {}
+TEST_GROUP_RUNNER(group_Conv2dRegression_DW) {
+  RUN_TEST_CASE(group_Conv2dRegression_DW, Conv2dValidDirectDWRegression);
+  RUN_TEST_CASE(group_Conv2dRegression_DW, Conv2dValidDirectDWRegression_channelwise);
+  RUN_TEST_CASE(group_Conv2dRegression_DW, Conv2dPaddedIndirectDWRegression);
+  RUN_TEST_CASE(group_Conv2dRegression_DW, Conv2dPaddedIndirectDWRegression_channelwise);
+}
 
 static auto rng = Rand(69);
 
@@ -77,7 +89,7 @@ DWKernelStimulus create_simple_stimulus_dw(Filter2dGeometry &geom) {
   return ks;
 }
 
-void test_Conv2dValidDirectDWRegression() {
+TEST(group_Conv2dRegression_DW, Conv2dValidDirectDWRegression) {
   /*
   This is an array of counters to record that all outputs are getting hit
   */
@@ -252,7 +264,7 @@ void test_Conv2dValidDirectDWRegression() {
   TEST_ASSERT_FLOAT_WITHIN(128.0, 0, dynamic_range);
 }
 
-void test_Conv2dValidDirectDWRegression_channelwise() {
+TEST(group_Conv2dRegression_DW, Conv2dValidDirectDWRegression_channelwise) {
   /*
   This is an array of counters to record that all outputs are getting hit
   */
@@ -426,7 +438,7 @@ void test_Conv2dValidDirectDWRegression_channelwise() {
   TEST_ASSERT_FLOAT_WITHIN(128.0, 0, dynamic_range);
 }
 
-void test_Conv2dPaddedIndirectDWRegression() {
+TEST(group_Conv2dRegression_DW, Conv2dPaddedIndirectDWRegression) {
   /*
   This is an array of counters to record that all outputs are getting hit
   */
@@ -612,7 +624,7 @@ void test_Conv2dPaddedIndirectDWRegression() {
   TEST_ASSERT_FLOAT_WITHIN(128.0, 0, dynamic_range);
 }
 
-void test_Conv2dPaddedIndirectDWRegression_channelwise() {
+TEST(group_Conv2dRegression_DW, Conv2dPaddedIndirectDWRegression_channelwise) {
   /*
   This is an array of counters to record that all outputs are getting hit
   */
@@ -800,11 +812,4 @@ void test_Conv2dPaddedIndirectDWRegression_channelwise() {
   TEST_ASSERT_FLOAT_WITHIN(128.0, 0, dynamic_range);
 }
 
-extern "C" void test_conv2d_dw_regression();
-void test_conv2d_dw_regression() {
-  UNITY_SET_FILE();
-  RUN_TEST(test_Conv2dValidDirectDWRegression);
-  RUN_TEST(test_Conv2dValidDirectDWRegression_channelwise);
-  RUN_TEST(test_Conv2dPaddedIndirectDWRegression);
-  RUN_TEST(test_Conv2dPaddedIndirectDWRegression_channelwise);
-}
+}  // extern "C"
