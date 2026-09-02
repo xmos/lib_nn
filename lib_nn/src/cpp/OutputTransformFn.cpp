@@ -892,7 +892,7 @@ int8_t *output_transform_fn_int_channelwise_impl(
 
 int8_t *nn::otfn_int8_channelwise(const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
                                                  int32_t output_channel_group, int16_t *multipliers_and_biases) {
-#if defined(NN_USE_REF) || defined(__riscv_xxcore)
+#if defined(NN_USE_REF)
   return output_transform_fn_int_channelwise_impl(
       params, Y, A, output_channel_group, multipliers_and_biases);
 #else
@@ -1001,7 +1001,7 @@ extern "C" int8_t *output_transform_fn_int_clamped_impl_asm(
 
 int8_t *nn::otfn_int8_clamped(const otfn_int8_clamped_params_t *params, int8_t *Y, VPURingBuffer *A,
                                              int32_t output_channel_group, int16_t *offsets_multipliers_and_biases) {
-#if defined(NN_USE_REF) || defined(__riscv_xxcore)
+#if defined(NN_USE_REF)
 
   return output_transform_fn_int_clamped_impl(
       params, Y, A, output_channel_group, offsets_multipliers_and_biases);

@@ -24,12 +24,6 @@ TEST_GROUP_RUNNER(group_add_int16) {
 
 TEST(group_add_int16, test_add_tensor_int16)
 {
-#if defined(__VX4A__) || defined(__VX4B__)
-    // KNOWN ISSUE: add_int16_tensor_asm has a pre-existing bug (see the
-    // "asm is broken" TODO in add_int16.c) that traps with an unhandled
-    // LOAD_STORE exception on VX4, halting the whole binary.
-    TEST_IGNORE_MESSAGE("add_int16_tensor_asm traps with LOAD_STORE on VX4");
-#endif
     int16_t input1[N];
     int16_t input2[N];
     int8_t blob[ADD_INT16_TENSOR_BYTES()];

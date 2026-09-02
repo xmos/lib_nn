@@ -68,10 +68,9 @@ FUNCTION_NAME:
 
 #endif // __XS3A__
 
-#if (defined(__VX4A__) || defined(__VX4B__))
+#if defined(__VX4A__) || defined(__VX4B__)
 
 #define FUNCTION_NAME output_transform_fn_binary_impl_asm
-
 .p2align 1
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
@@ -86,4 +85,4 @@ FUNCTION_NAME:
 .resource_list_empty FUNCTION_NAME, "tail_callees"
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
 
-#endif // defined(__VX4A__) || defined(__VX4B__)
+#endif
