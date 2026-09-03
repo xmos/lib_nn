@@ -77,16 +77,51 @@ skip:
 #if defined(__VX4A__) || defined(__VX4B__)
 
 #define FUNCTION_NAME multiply_int16_tensor_asm
+#define NSTACKWORDS 8
+    // a0: output
+    // a1: input1
+    // a2: input2
+    // a3: number of elements,
+    // a4: blob, then temp
+
+    // s2: rounding value
+    // s3, s4, s5: temporary values
+    // s6: shift - 16
+    // s7: multiplier
+    // t3: shift
 .p2align 1
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
 FUNCTION_NAME:
-    xm.entsp 0
-    xm.ldcu x10, 0
-    xm.assert x10 //NOT IMPLEMENTED
-    xm.retsp 0
+    xm.entsp (NSTACKWORDS * 4)
+    xm.stdsp s2, s3, 0
+    xm.stdsp s4, s5, 8
+    xm.stdsp s6, s7, 16
+    { xm.brff a3, .skip ; addi a3, a3, -1 }
+    lw s7, 0(a4)
+    { li s3, 16 ; xm.shr t3, s7, 16 }
+    { sub s6, t3, s3 ; addi s3, t3, -1 }
+    { li s2, 1 ; xm.sext s7, 16 }
+    xm.shl s2, s2, s3
+
+.loop:
+    xm.ld16s s3, a3(a2)
+    xm.ld16s a4, a3(a1)
+    { li s4, 0 ; add s5, s2, 0 }
+    mul s3, s3, a4
+    xm.maccs s4, s5, s3, s7
+    xm.lsats s4, s5, s6
+    xm.lextract s4, s4, s5, t3, 16
+    xm.st16 s4, a3(a0)
+    { addi a3, a3, -1 ; xm.bt a3, .loop }
+
+.skip:
+    xm.lddsp s2, s3, 0
+    xm.lddsp s4, s5, 8
+    xm.lddsp s6, s7, 16
+    xm.retsp (NSTACKWORDS * 4)
 .size FUNCTION_NAME, . -FUNCTION_NAME
-.resource_const FUNCTION_NAME, "stack_frame_bytes",  0
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  (NSTACKWORDS * 4)
 .resource_list_empty FUNCTION_NAME, "callees"
 .resource_list_empty FUNCTION_NAME, "tail_callees"
 .resource_list_empty FUNCTION_NAME, "parallel_callees"

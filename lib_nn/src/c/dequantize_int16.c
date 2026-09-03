@@ -33,3 +33,4 @@ void dequantize_int16_tensor(float *output, int16_t *input1, int tensor_length, 
     dequantize_int16_tensor_asm(output, input1, tensor_length, blob);
 #endif
 }
+
