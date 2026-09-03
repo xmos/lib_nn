@@ -13,6 +13,7 @@ int main(int argc, const char* argv[]) {
   // ---------- Common tests --------------
   RUN_TEST_GROUP(group_add_elementwise);
   RUN_TEST_GROUP(group_add_int16);
+  RUN_TEST_GROUP(group_argmax16);
   RUN_TEST_GROUP(group_bsign_8);
   RUN_TEST_GROUP(group_dequantize_int16);
   RUN_TEST_GROUP(group_expand_8_to_16);

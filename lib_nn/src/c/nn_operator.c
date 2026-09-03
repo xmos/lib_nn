@@ -57,15 +57,16 @@ return calculateThreadSplit(tc, split_size, split_start,
 }
 
 // Note: There currently is no assembly implementation.
-void argmax_16(int32_t *Y, const int16_t *X, const int32_t N) {
-  if (N <= 0)
+void argmax_16(int32_t *output_index, const int16_t *input_values,
+               const int32_t element_count) {
+  if (element_count <= 0)
     return;
 
-  *Y = 0;
+  *output_index = 0;
 
-  for (int32_t i = 1; i < N; i++) {
-    if (X[i] > X[*Y]) {
-      *Y = i;
+  for (int32_t i = 1; i < element_count; i++) {
+    if (input_values[i] > input_values[*output_index]) {
+      *output_index = i;
     }
   }
 }

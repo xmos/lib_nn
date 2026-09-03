@@ -12,6 +12,7 @@
 #include "nn_arch.h"
 
 #include "tst_common.h"
+#ifndef TEST_BUILD_NATIVE
 #include "etc/test_vpu_sim.h"
 
 TEST_GROUP(group_vpu_sim);
@@ -306,3 +307,5 @@ TEST(group_vpu_sim, test_vdepth16) {
   VSTR(&sim, out_sim);
   TEST_ASSERT_EQUAL_INT8_ARRAY(out_sim, out_asm, sizeof(out_asm));
 }
+
+#endif  // TEST_BUILD_NATIVE

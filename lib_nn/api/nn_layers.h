@@ -282,4 +282,14 @@ void mean_int16(const int16_t *input, int16_t *output, const int start_dim_size,
                 const int mean_dim_size, const int end_dim_size,
                 const float scale_mul);
 
+/**
+ * @brief Return the index of the maximum value in an int16 vector.
+ *
+ * @param[out]  output_index  The index of the maximum input value
+ * @param[in]   input_values  The input int16 vector
+ * @param[in]   element_count The number of input values
+ */
+void argmax_16(int32_t *output_index, const int16_t *input_values,
+               const int32_t element_count);
+
 #endif // LAYERS_H_
