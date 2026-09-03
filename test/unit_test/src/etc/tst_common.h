@@ -5,17 +5,12 @@
 #define TST_COMMON_H_
 
 #include <stdint.h>
+#include <nn_api.h>
 
 #define TEST_C_GLOBAL (0)
 #define DO_PRINT_EXTRA_GLOBAL (1)
 
 #define UNITY_SET_FILE() Unity.TestFile = __FILE__
-
-#ifdef __xcore__
-#define WORD_ALIGNED __attribute__((aligned(4)))
-#else
-#define WORD_ALIGNED
-#endif
 
 #define PRINTF(...)        \
   do {                     \
