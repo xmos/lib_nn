@@ -10,6 +10,8 @@
 #include "nn_operator.h"
 #include "vpu_sim.h"
 
+#ifndef NN_USE_REF
+
 extern int8_t round8(float r);
 
 extern void vect_mat_mul_int8_asm(
@@ -65,6 +67,7 @@ void mat_mul_real_int8_vpu(
     }
   }
 }
+#endif // NN_USE_REF
 
 void mat_mul_real_int8_ref(
     nn_mat_mul_real_params_t *p,
