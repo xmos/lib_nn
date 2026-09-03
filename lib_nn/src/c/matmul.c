@@ -10,7 +10,9 @@
 #include "nn_operator.h"
 #include "vpu_sim.h"
 
-void vect_mat_mul_int8_asm(
+extern int8_t round8(float r);
+
+extern void vect_mat_mul_int8_asm(
   const int8_t *lhs, 
   const int8_t *rhs, 
   int8_t *vpu_buffer, 
@@ -18,7 +20,6 @@ void vect_mat_mul_int8_asm(
   uint32_t rhs_col_size
 );
 
-#if !defined(NN_USE_REF) && defined(__XS3A__)
 void mat_mul_real_int8_vpu(
   nn_mat_mul_real_params_t *p,
   int8_t *vpu_buf0, int8_t *vpu_buf1, int8_t *vpu_buf2,
@@ -39,7 +40,7 @@ void mat_mul_real_int8_vpu(
         lhs_temp, rhs_temp, vpu_buf0, p->channel_size, process_col);
 
       // TODO: optimize it with vpu
-      int32_t *buff_temp = vpu_buf1; // cheating here, treating vD:vR as continue space
+      int32_t *buff_temp = (int32_t*)vpu_buf1; // cheating here, treating vD:vR as continue space
       for (int i = 0; i < process_col; ++i) {
         buff_temp[i] = 0;
         for (int j = 0; j < p->channel_size; ++j) {
@@ -58,17 +59,12 @@ void mat_mul_real_int8_vpu(
           +p->in_zp_sum;
         accf *= p->scale;
         accf += p->out_zp;
-        if (accf > 127.0f)
-            accf = 127.0f;
-        else if (accf < -128.0f)
-            accf = -128.0f;
-        output[i] = roundf(accf);
+        output[i] = round8(accf);
       }
       output = &output[process_col];
     }
   }
 }
-#endif // NN_USE_REF
 
 void mat_mul_real_int8_ref(
     nn_mat_mul_real_params_t *p,
@@ -85,9 +81,6 @@ void mat_mul_real_int8_ref(
                 double x = ((double)(lhs[lhs_idx]) - p->lhs_zp);
                 double y = ((double)(rhs[rhs_idx]) - p->rhs_zp);
                 acc += x * y;
-            }
-            if (p->rhs_col_size == 6 && out_index == 6 && p->channel_size == 4) {
-                printf("acc before scale: %.10f\n", acc);
             }
             float quantized_value = (float)acc * p->scale + p->out_zp;
             // Clamp the quantized value to int8 range
@@ -106,9 +99,9 @@ void mat_mul_real_int8(
   int8_t *vpu_buf0, int8_t *vpu_buf1, int8_t *vpu_buf2,
   int8_t *lhs, int8_t* rhs, int8_t *output) {
   
-#if !defined(NN_USE_REF) && defined(__XS3A__)
-  mat_mul_real_int8_vpu(p, vpu_buf0, vpu_buf1, vpu_buf2, lhs, rhs, output);
-#else
+#ifdef NN_USE_REF
   mat_mul_real_int8_ref(p, vpu_buf0, vpu_buf1, vpu_buf2, lhs, rhs, output);
+#else
+  mat_mul_real_int8_vpu(p, vpu_buf0, vpu_buf1, vpu_buf2, lhs, rhs, output);
 #endif
 }
