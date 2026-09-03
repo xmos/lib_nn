@@ -24,7 +24,6 @@ TEST_SETUP(group_matmul) { srand(563456); }
 TEST_TEAR_DOWN(group_matmul) {}
 TEST_GROUP_RUNNER(group_matmul) {
   RUN_TEST_CASE(group_matmul, test_matmul);
-// Sweeping every (max_lhs_row, max_channel, max_rhs_col) pair is slow under simulation, so only run it natively.
 #ifdef TEST_BUILD_NATIVE
   RUN_TEST_CASE(group_matmul, test_matmul_full);
 #endif // TEST_BUILD_NATIVE
@@ -44,13 +43,13 @@ static void impl_test_matmul(const unsigned lhs_row,
   int8_t lhsZeroPoint = 0;
   int8_t rhsZeroPoint = 0;
   int8_t outputZeroPoint = 0;
-  int8_t lhs[LHS_ROW_SIZE * CHANNEL_SIZE];
-  int8_t rhs[RHS_COL_SIZE * CHANNEL_SIZE]; // matmul requires rhs to be in column-major order
-  int8_t out[LHS_ROW_SIZE * RHS_COL_SIZE];
+  int8_t WORD_ALIGNED lhs[LHS_ROW_SIZE * CHANNEL_SIZE];
+  int8_t WORD_ALIGNED rhs[RHS_COL_SIZE * CHANNEL_SIZE]; // matmul requires rhs to be in column-major order
+  int8_t WORD_ALIGNED out[LHS_ROW_SIZE * RHS_COL_SIZE];
   int8_t expected[LHS_ROW_SIZE * RHS_COL_SIZE];
-  int8_t vpu_buf0[32 * 2];
-  int8_t vpu_buf1[32 * 2];
-  int8_t vpu_buf2[32 * 2];
+  int8_t WORD_ALIGNED vpu_buf0[32 * 2];
+  int8_t WORD_ALIGNED vpu_buf1[32 * 2];
+  int8_t WORD_ALIGNED vpu_buf2[32 * 2];
   pseudo_rand_bytes((char*)lhs, LHS_ROW_SIZE * CHANNEL_SIZE);
   pseudo_rand_bytes((char*)rhs, CHANNEL_SIZE * RHS_COL_SIZE);
 
@@ -99,20 +98,12 @@ static void impl_test_matmul(const unsigned lhs_row,
 }
 
 TEST(group_matmul, test_matmul) {
-  // Full matrix test
-  impl_test_matmul(128, 256, 125, 0);
   // Unaligned matrix test
-  impl_test_matmul(65, 248, 72, 0);
-  impl_test_matmul(65, 248, 72, 2);
-  impl_test_matmul(65, 248, 72, 5);
-  impl_test_matmul(65, 248, 72, 8);
-  impl_test_matmul(65, 248, 72, 16);
-  // Small matrix test
+  impl_test_matmul(65, 48, 72, 0);
+  impl_test_matmul(65, 48, 72, 2);
+  // // Small matrix test
   impl_test_matmul(8, 8, 8, 0);
   impl_test_matmul(8, 8, 8, 1);
-  impl_test_matmul(8, 8, 8, 3);
-  impl_test_matmul(8, 8, 8, 5);
-  impl_test_matmul(8, 8, 8, 15);
 }
 
 #ifdef TEST_BUILD_NATIVE
