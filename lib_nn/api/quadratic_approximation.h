@@ -3,7 +3,7 @@
 #ifndef _quadratic_approximation_h_
 #define _quadratic_approximation_h_
 
-#ifdef __xcore__
+#if defined(__xcore__) || defined(__riscv_xxcore)
 #define ACTIVATION_FUNCTION __attribute__(( fptrgroup("activation_functions") ))
 #else
 #define ACTIVATION_FUNCTION /**/

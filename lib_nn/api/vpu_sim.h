@@ -39,6 +39,8 @@ typedef struct {
   vpu_vector_t vC;
 } xs3_vpu;
 
+typedef xs3_vpu vpu_t;
+
 C_API void VSETC(xs3_vpu* vpu, const vector_mode mode);
 C_API void VCLRDR(xs3_vpu* vpu);
 C_API void VLDR(xs3_vpu* vpu, const void* addr);

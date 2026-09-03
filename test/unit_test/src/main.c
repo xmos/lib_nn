@@ -24,6 +24,7 @@ int main(int argc, const char* argv[]) {
   RUN_TEST_GROUP(group_quadratic_interpolation);
   RUN_TEST_GROUP(group_softmax);
   RUN_TEST_GROUP(group_vpu);
+  RUN_TEST_GROUP(group_vpu_sim);
 
   // -------- Native only --------------
   #ifdef TEST_BUILD_NATIVE

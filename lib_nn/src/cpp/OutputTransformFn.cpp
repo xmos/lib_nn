@@ -76,19 +76,19 @@ static bool check_val_fits(int64_t v, int bit_count) {
 }
 
 template <class T>
-void recitfy_min_max(T &v_min, T &v_max) {
+static void recitfy_min_max(T &v_min, T &v_max) {
   T actual_max = std::max(v_min, v_max);
   v_min = std::min(v_min, v_max);
   v_max = actual_max;
 }
 
 template <class T>
-int64_t float_to_int(T f, int e) {
+static int64_t float_to_int(T f, int e) {
   return (int64_t)std::rint(ldexp(f, e));
 }
 
 template <class T>
-int16_t float_to_int16(T f, int e) {
+static int16_t float_to_int16(T f, int e) {
   int64_t v = float_to_int(f, e);
   v = std::min((int64_t)INT16_MAX, v);
   v = std::max((int64_t)INT16_MIN, v);
@@ -97,7 +97,7 @@ int16_t float_to_int16(T f, int e) {
 
 //this is to account for the double rounding in VLASHR+VDEPTH8
 template <class T>
-int16_t float_to_int16_with_bias(T f, int e) {
+static int16_t float_to_int16_with_bias(T f, int e) {
   return float_to_int16(f - (1.0 / (1<<(e))), e);
 }
 
@@ -505,9 +505,9 @@ OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
   return std::make_tuple(As, Ms);
 }
 
-int64_t round_up(float x) { return std::ceil(x); }
+static int64_t round_up(float x) { return std::ceil(x); }
 
-int64_t round_down(float x) { return std::floor(x); }
+static int64_t round_down(float x) { return std::floor(x); }
  
 void nn::OutputTransformFn::ActivationParams::
     backprop_output_clamps_to_accu_limits(bool verbose, bool debug) {

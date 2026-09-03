@@ -97,11 +97,21 @@ void requantize_16_to_8(int8_t *y, const int16_t *x, const unsigned elm_start,
 }
 #endif // NN_USE_REF
 
-extern void lookup8_asm(uint8_t *Y, const uint8_t *X, const uint8_t *lut,
-             const unsigned elm_start, const unsigned elm_count);
+extern void lookup8_asm(
+  uint8_t *Y, 
+  const uint8_t *X, 
+  const uint8_t *lut,
+  const unsigned elm_start, 
+  const unsigned elm_count
+);
 
-void lookup8_ref(uint8_t *Y, const uint8_t *X, const uint8_t *lut,
-                 const unsigned elm_start, const unsigned elm_count) {
+void lookup8_ref(
+  uint8_t *Y, 
+  const uint8_t *X, 
+  const uint8_t *lut,
+  const unsigned elm_start, 
+  const unsigned elm_count) 
+{
   for (unsigned i = elm_start; i < elm_start + elm_count; i++) {
     Y[i] = lut[X[i]];
   }
