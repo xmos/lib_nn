@@ -63,15 +63,33 @@ magic_constant:
 #if defined(__VX4A__) || defined(__VX4B__)
 
 #define FUNCTION_NAME dequantize_int16_tensor_asm
+    // a0: output array
+    // a1: input array
+    // a2: number of elements
+    // a3: blob, floating point multiple and floating point addition
+    //     0x40008000 afterwards (constant to make int16_t a float)
+    // a4: floating point multipler
+    // a5: floating point addition
+    // t3: temp value
 
 .p2align 1
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
 FUNCTION_NAME:
-    xm.entsp 0
-    xm.ldcu x10, 0
-    xm.assert x10 //NOT IMPLEMENTED
-    xm.retsp 0
+    lw a4, 0(a3)
+    lw a5, 4(a3)
+    li t3, 0x40008000
+    addi a2, a2, -1
+
+.loop:
+    xm.ld16s a3, a2(a1)
+    add a3, a3, t3
+    xm.fadd a3, a3, a5
+    xm.fmul a3, a3, a4
+    xm.stw a3, a2(a0)
+    { addi a2, a2, -1 ; xm.bt a2, .loop }
+
+    ret
 .size FUNCTION_NAME, . -FUNCTION_NAME
 .resource_const FUNCTION_NAME, "stack_frame_bytes",  0
 .resource_list_empty FUNCTION_NAME, "callees"
