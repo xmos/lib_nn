@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "pad.h"
-
 
 /** Function that pads an image with 1-byte values with a padding value
  * This functions is highly optimised, and expects the two pointers to be word aligned.

@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <stdint.h>
 
-#include "add_elementwise.h"
+#include "nn_api.h"
 #include "nn_op_helper.h"
 #include "nn_operator.h"
 #include "xs3_vpu.h"

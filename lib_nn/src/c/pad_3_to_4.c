@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include "nn_op_utils.h"
-#include "pad.h"
+#include "nn_operator.h"
 
 /** Function that pads an image with 3-byte values with a 0.
  * This functions is highly optimised, but has constraints on the

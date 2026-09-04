@@ -2,7 +2,7 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include "math.h"
 #include "nn_op_helper.h"
-#include "softmax.h"
+#include "nn_operator.h"
 #include <stdint.h>
 
 static int clamp8(double x) {

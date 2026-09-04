@@ -3,8 +3,6 @@
 
 #include <stdint.h>
 
-#include "lookup8.h"
-
 #ifdef NN_USE_REF
 void lookup8_ref(
   uint8_t *Y,

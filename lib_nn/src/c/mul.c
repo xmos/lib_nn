@@ -9,7 +9,7 @@
 #include <string.h>
 
 #include "nn_op_helper.h"
-#include "mul.h"
+#include "nn_operator.h"
 #include "vpu_sim.h"
 
 #ifdef NN_USE_REF

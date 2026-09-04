@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "nn_op_helper.h"
-#include "bsign.h"
+#include "nn_operator.h"
 #include "xs3_vpu.h"
 
 void bsign_8_prepare(nn_bsign_8_job_t* jobs, int8_t* zero_point_vect,

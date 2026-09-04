@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "requantize.h"
+#include "multiply_int16.h"
 #include "multiply_int16.h"
 #include "nn_op_helper.h"
 
