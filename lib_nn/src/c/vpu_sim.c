@@ -55,6 +55,8 @@ static int64_t GetAccumulator(const xs3_vpu *vpu, unsigned index) {
     acc.s16[0] = vpu->vR.s16[index];
 
     return acc.s32;
+  } else if (vpu->mode == MODE_S32) {
+    return vpu->vR.s32[index];
   } else {
     assert(0);  // TODO
   }
@@ -70,6 +72,8 @@ static void SetAccumulator(xs3_vpu *vpu, unsigned index, int64_t acc) {
     mask = mask << VPU_INT8_ACC_VR_BITS;
     vpu->vD.s16[index] =
         (int16_t)(((unsigned)acc & mask) >> VPU_INT8_ACC_VR_BITS);
+  } else if (vpu->mode == MODE_S32) {
+    vpu->vR.s32[index] = (int32_t)acc;
   } else {
     assert(0);  // TODO
   }

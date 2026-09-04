@@ -5,9 +5,9 @@
 .issue_mode  dual
 
 
-// extern void expand_8_to_16_ref_asm(int16_t *out, int8_t *in, int N);
+// extern void expand_8_to_16_asm(int16_t *out, int8_t *in, int N);
 
-#define FUNCTION_NAME expand_8_to_16_ref_asm
+#define FUNCTION_NAME expand_8_to_16_asm
 
 #define NSTACKWORDS  0
     
@@ -64,7 +64,7 @@ ones:
 
 #if (defined(__VX4A__) || defined(__VX4B__))
 
-#define FUNCTION_NAME expand_8_to_16_ref_asm
+#define FUNCTION_NAME expand_8_to_16_asm
 
 .p2align 1
 .globl FUNCTION_NAME

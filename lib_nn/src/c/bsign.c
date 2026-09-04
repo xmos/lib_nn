@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "nn_op_helper.h"
-#include "nn_operator.h"
+#include "bsign.h"
 #include "xs3_vpu.h"
 
 void bsign_8_prepare(nn_bsign_8_job_t* jobs, int8_t* zero_point_vect,
@@ -31,6 +31,7 @@ void bsign_8_prepare(nn_bsign_8_job_t* jobs, int8_t* zero_point_vect,
   jobs[job_count - 1].length += r;
 }
 
+#ifdef NN_USE_REF
 void bsign_8_ref(bnn_b32_t* y, const int8_t* x, const int8_t* zero_point_vect,
                  const nn_bsign_8_job_t* job) {
   y = ADDR(y, job->start / VPU_INT8_EPV);
@@ -49,14 +50,17 @@ void bsign_8_ref(bnn_b32_t* y, const int8_t* x, const int8_t* zero_point_vect,
   }
 }
 
+#else // __XS3A__ || __VX4B__
+
 extern void bsign_8_asm(
   bnn_b32_t* y, const int8_t* x,
   const int8_t* zero_point_vect,
   const nn_bsign_8_job_t* job);
 
+#endif // NN_USE_REF
 
 void bsign_8(
-  bnn_b32_t* y, const int8_t* x, 
+  bnn_b32_t* y, const int8_t* x,
   const int8_t* zero_point_vect,
   const nn_bsign_8_job_t* job) {
 #ifdef NN_USE_REF

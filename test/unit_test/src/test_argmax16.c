@@ -20,9 +20,7 @@ TEST(group_argmax16, test_simple) {
   // find the largest value and keep the first index on a tie
   int16_t input[] = {4, -7, 12, 12, 3};
   int32_t output = -1;
-
   argmax_16(&output, input, 5);
-
   TEST_ASSERT_EQUAL_INT32(2, output);
 }
 
@@ -45,9 +43,7 @@ TEST(group_argmax16, test_random) {
         expected = i;
       }
     }
-
     argmax_16(&output, input, count);
-
     TEST_ASSERT_EQUAL_INT32(expected, output);
   }
 }

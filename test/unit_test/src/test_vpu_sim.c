@@ -15,17 +15,21 @@
 #ifndef TEST_BUILD_NATIVE
 #include "etc/test_vpu_sim.h"
 
-TEST_GROUP(group_vpu_sim);
-TEST_SETUP(group_vpu_sim) {
-#if defined(__VX4A__) || defined(__VX4B__)
+static void set_target(void){
+#if defined(__VX4B__)
   SetNNTargetArch(TARGET_ARCH_VX4A);
 #else
   SetNNTargetArch(TARGET_ARCH_XS3A);
 #endif
 }
+
+TEST_GROUP(group_vpu_sim);
+TEST_SETUP(group_vpu_sim) {set_target();}
 TEST_TEAR_DOWN(group_vpu_sim) {}
+
 TEST_GROUP_RUNNER(group_vpu_sim) {
   RUN_TEST_CASE(group_vpu_sim, test_basic);
+  RUN_TEST_CASE(group_vpu_sim, test_vldd_vstc_vstd);
   RUN_TEST_CASE(group_vpu_sim, test_vstrpv);
   
   RUN_TEST_CASE(group_vpu_sim, test_vlmacc);
@@ -33,11 +37,13 @@ TEST_GROUP_RUNNER(group_vpu_sim) {
 
   RUN_TEST_CASE(group_vpu_sim, test_vl_add_sub_mul);
   
-  RUN_TEST_CASE(group_vpu_sim, test_vpos);
-  RUN_TEST_CASE(group_vpu_sim, test_vlashr);
   RUN_TEST_CASE(group_vpu_sim, test_vdepth1);
   RUN_TEST_CASE(group_vpu_sim, test_vdepth8);
   RUN_TEST_CASE(group_vpu_sim, test_vdepth16);
+
+  RUN_TEST_CASE(group_vpu_sim, test_vlashr);
+  RUN_TEST_CASE(group_vpu_sim, test_vpos);
+  RUN_TEST_CASE(group_vpu_sim, test_vlsat_fixed);
 }
 
 TEST(group_vpu_sim, test_basic) {
@@ -58,6 +64,23 @@ TEST(group_vpu_sim, test_basic) {
     TEST_ASSERT_EQUAL_INT8_ARRAY(expected, vr, VPU_INT8_EPV);
     TEST_ASSERT_EQUAL_INT8_ARRAY(expected, vd, VPU_INT8_EPV);
     TEST_ASSERT_EQUAL_INT8_ARRAY(expected_vc, vc, VPU_INT8_EPV);
+}
+
+TEST(group_vpu_sim, test_vldd_vstc_vstd) {
+  int8_t WORD_ALIGNED d_input[VPU_INT8_EPV] = {1};
+  int8_t WORD_ALIGNED c_input[VPU_INT8_EPV] = {2};
+  int8_t WORD_ALIGNED d_output[VPU_INT8_EPV] = {0};
+  int8_t WORD_ALIGNED c_output[VPU_INT8_EPV] = {0};
+  vpu_t sim = {0};
+
+  VSETC(&sim, MODE_S8);
+  VLDD(&sim, d_input);
+  VLDC(&sim, c_input);
+  VSTD(&sim, d_output);
+  VSTC(&sim, c_output);
+
+  TEST_ASSERT_EQUAL_INT8_ARRAY(d_input, d_output, VPU_INT8_EPV);
+  TEST_ASSERT_EQUAL_INT8_ARRAY(c_input, c_output, VPU_INT8_EPV);
 }
 
 TEST(group_vpu_sim, test_vstrpv) {
@@ -189,8 +212,7 @@ TEST(group_vpu_sim, test_vlmaccr) {
   TEST_ASSERT_EQUAL_INT16_ARRAY(expected, out_sim, VPU_INT16_EPV);
   TEST_ASSERT_EQUAL_INT16_ARRAY(out_sim, out_asm, VPU_INT16_EPV);
 }
-TEST(group_vpu_sim, test_vpos) {}
-TEST(group_vpu_sim, test_vlashr) {}
+
 TEST(group_vpu_sim, test_vl_add_sub_mul) {
   // apply add, subtract, and multiply as one instruction sequence
   // hw and sim are expected to match
@@ -306,6 +328,74 @@ TEST(group_vpu_sim, test_vdepth16) {
   VDEPTH16(&sim);
   VSTR(&sim, out_sim);
   TEST_ASSERT_EQUAL_INT8_ARRAY(out_sim, out_asm, sizeof(out_asm));
+}
+
+
+TEST(group_vpu_sim, test_vlashr) {
+  // simple test: 0x55 RSH 4 = 0x05
+  int8_t WORD_ALIGNED input[VPU_INT8_EPV];
+  int8_t WORD_ALIGNED out_asm[VPU_INT8_EPV];
+  int8_t WORD_ALIGNED out_sim[VPU_INT8_EPV];
+  int8_t WORD_ALIGNED expected[VPU_INT8_EPV];
+  vpu_t sim = {0};
+
+  memset(input, 0x55, sizeof(input));
+  memset(expected, 0x05, sizeof(expected));
+  const unsigned rsh = 4;
+
+  vsetc(MODE_S8);
+  vlashr(input, rsh);
+  vstr(out_asm);
+
+  VSETC(&sim, MODE_S8);
+  VLASHR(&sim, &input, rsh);
+  VSTR(&sim, &out_sim);
+
+  // Both should be the same and equal to expected
+  TEST_ASSERT_EQUAL_INT8_ARRAY(out_sim, out_asm, sizeof(out_asm));
+  TEST_ASSERT_EQUAL_INT8_ARRAY(expected, out_sim, sizeof(expected));
+}
+
+TEST(group_vpu_sim, test_vpos) {
+  // simple test: -10 -> 0
+  int32_t WORD_ALIGNED input[VPU_INT32_EPV] = {
+    -10,10,-10,10,-10,10,-10,10
+  };
+  int32_t WORD_ALIGNED expected[VPU_INT32_EPV]= {
+    0,10,0,10,0,10,0,10
+  };
+
+  int32_t WORD_ALIGNED out_asm[VPU_INT32_EPV];
+  int32_t WORD_ALIGNED out_sim[VPU_INT32_EPV];
+  vpu_t sim;
+
+  vsetc(MODE_S32); vldr((const int8_t *)input);
+  vpos(); vstr((int8_t *)out_asm);
+
+  VSETC(&sim, MODE_S32); VLDR(&sim, input);
+  VPOS(&sim); VSTR(&sim, &out_sim);
+
+  // Both should be the same and equal to expected
+  TEST_ASSERT_EQUAL_INT8_ARRAY(out_sim, out_asm, sizeof(out_asm));
+  TEST_ASSERT_EQUAL_INT8_ARRAY(expected, out_sim, sizeof(expected));
+}
+
+TEST(group_vpu_sim, test_vlsat_fixed) {
+  int16_t WORD_ALIGNED acc_low[VPU_INT16_EPV] = {-128};
+  int16_t WORD_ALIGNED acc_high[VPU_INT16_EPV] = {-1};
+  uint16_t WORD_ALIGNED shifts[VPU_INT8_ACC_PERIOD] = {0};
+  int8_t WORD_ALIGNED output[XS3_VPU_VREG_WIDTH_BYTES];
+  vpu_t sim = {0};
+  VSETC(&sim, MODE_S8);
+  VLDR(&sim, acc_low);
+  VLDD(&sim, acc_high);
+  VLSAT_FIXED(&sim, shifts);
+  VSTR(&sim, output);
+#if defined(__VX4B__)
+  TEST_ASSERT_EQUAL_INT8(-128, output[0]);
+#elif defined(__XS3A__)
+  TEST_ASSERT_EQUAL_INT8(-127, output[0]);
+#endif
 }
 
 #endif  // TEST_BUILD_NATIVE

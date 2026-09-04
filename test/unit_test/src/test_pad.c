@@ -11,9 +11,6 @@
 #include "unity.h"
 #include "unity_fixture.h"
 
-extern void pad_1_to_4_ref(int8_t * out, int8_t * in, uint32_t len, uint32_t pad_val);
-extern void pad_3_to_4_ref(int8_t * out, int8_t * in, uint32_t len, uint32_t pad_val);
-
 TEST_GROUP(group_pad);
 TEST_SETUP(group_pad) {}
 TEST_TEAR_DOWN(group_pad) {}
@@ -58,11 +55,19 @@ void impl_pad_x_to_4_param_space(
             uint32_t n_3;
             pad_3_to_4_prepare(&n_3, x_height, x_width);
 
-            pad_3_to_4_ref(Y_ref, X, n_3, pad_value);
+            for (uint32_t pixel = 0; pixel < n_3; pixel++) {
+              memcpy(Y_ref + pixel * 4, X + pixel * 3, 3);
+              Y_ref[pixel * 4 + 3] = (int8_t)(pad_value >> 24);
+            }
             pad_3_to_4_run(Y, X, n_3, pad_value);
           }
           else if (x_chan_words == 1) {
-            pad_1_to_4_ref(Y_ref, X, N_groups, pad_value);
+            for (size_t group = 0; group < N_groups; group++) {
+              Y_ref[group * 4] = X[group];
+              Y_ref[group * 4 + 1] = (int8_t)(pad_value >> 8);
+              Y_ref[group * 4 + 2] = (int8_t)(pad_value >> 16);
+              Y_ref[group * 4 + 3] = (int8_t)(pad_value >> 24);
+            }
             pad_1_to_4_run(Y, X, N_groups, pad_value);
           }
           else {

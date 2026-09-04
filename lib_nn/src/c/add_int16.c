@@ -11,8 +11,7 @@
 
 // Element multiplication between two tensors
 
-extern void add_int16_tensor_asm(int16_t *output, int16_t *input1, int16_t *input2, int tensor_length, void *blob);
-
+#ifdef NN_USE_REF
 void add_int16_tensor_ref(int16_t *output, int16_t *input1, int16_t *input2, int tensor_length, void *blob) {
     int16_t *multipliers = (int16_t *) blob;
     for(int i = 0; i < tensor_length; i++) {
@@ -26,8 +25,13 @@ void add_int16_tensor_ref(int16_t *output, int16_t *input1, int16_t *input2, int
     }
 }
 
+#else
+
+extern void add_int16_tensor_asm(int16_t *output, int16_t *input1, int16_t *input2, int tensor_length, void *blob);
+
+#endif
+
 void add_int16_tensor(int16_t *output, int16_t *input1, int16_t *input2, int tensor_length, void *blob) {
-// TODO: ADD asm is broken at the moment
 #ifdef NN_USE_REF
     add_int16_tensor_ref(output, input1, input2, tensor_length, blob);
 #else
