@@ -27,15 +27,16 @@ int64_t vpu_saturate(const int64_t input, const unsigned bits) {
 }
 
 /**
- * vpu_saturate to the relevant bounds. Fixed 8-bit saturation.
+ * vpu_saturate to the relevant bounds using the active target's minimum.
  */
 int64_t vpu_saturate_fixed(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
-  int64_t min_val = -max_val;
-  if(bits == 8){
-    min_val = INT8_MIN;
-  }
-
+  int64_t min_val;
+  #if (defined(__VX4B__) || defined(NN_USE_REF))
+    min_val = -(1LL << (bits - 1));
+  #else
+    min_val = -max_val;
+  #endif
   return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
 }
 
@@ -52,6 +53,9 @@ static int64_t GetAccumulator(const xs3_vpu *vpu, unsigned index) {
     acc.s16[0] = vpu->vR.s16[index];
 
     return acc.s32;
+  } else if (vpu->mode == MODE_S32) {
+    assert(index < VPU_INT32_EPV);
+    return vpu->vR.s32[index];
   } else {
     assert(0);  // TODO
   }
@@ -67,6 +71,9 @@ static void SetAccumulator(xs3_vpu *vpu, unsigned index, int64_t acc) {
     mask = mask << VPU_INT8_ACC_VR_BITS;
     vpu->vD.s16[index] =
         (int16_t)(((unsigned)acc & mask) >> VPU_INT8_ACC_VR_BITS);
+  } else if (vpu->mode == MODE_S32) {
+    assert(index < VPU_INT32_EPV);
+    vpu->vR.s32[index] = (int32_t)acc;
   } else {
     assert(0);  // TODO
   }
@@ -296,6 +303,7 @@ void VLMACCR1(xs3_vpu *vpu, const void *addr) {
   SetAccumulator(vpu, 0, acc);
 }
 
+static
 void _VLSAT_IMPL(xs3_vpu *vpu, const void *addr, bool fixed_saturation) {
   #ifdef __XS3A__
   assert_word_aligned(addr);
@@ -351,11 +359,11 @@ void _VLSAT_IMPL(xs3_vpu *vpu, const void *addr, bool fixed_saturation) {
 }
 
 void VLSAT(xs3_vpu *vpu, const void *addr) {
-  _VLSAT_IMPL(vpu, addr, /*fixed_saturation=*/false);
+  _VLSAT_IMPL(vpu, addr, false);
 }
 
 void VLSAT_FIXED(xs3_vpu *vpu, const void *addr) {
-  _VLSAT_IMPL(vpu, addr, /*fixed_saturation=*/true);
+  _VLSAT_IMPL(vpu, addr, true);
 }
 
 void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
@@ -552,12 +560,12 @@ void VDEPTH8(xs3_vpu *vpu) {
   if (vpu->mode == MODE_S16) {
     for (int i = 0; i < VPU_INT16_EPV; i++) {
       int32_t elm = ((int32_t)vec_tmp.s16[i]) + (1 << 7);
-      vpu->vR.s8[i] = vpu_saturate(elm >> 8, 8);
+      vpu->vR.s8[i] = vpu_saturate_fixed(elm >> 8, 8);
     }
   } else if (vpu->mode == MODE_S32) {
     for (int i = 0; i < VPU_INT32_EPV; i++) {
       int64_t elm = ((int64_t)vec_tmp.s32[i]) + (1 << 23);
-      vpu->vR.s8[i] = vpu_saturate(elm >> 24, 8);
+      vpu->vR.s8[i] = vpu_saturate_fixed(elm >> 24, 8);
     }
   } else {
     assert(0);
@@ -568,7 +576,7 @@ void VDEPTH16(xs3_vpu *vpu) {
   if (vpu->mode == MODE_S32) {
     for (int i = 0; i < VPU_INT32_EPV; i++) {
       int64_t elm = ((int64_t)vpu->vR.s32[i]) + (1 << 15);
-      vpu->vR.s16[i] = vpu_saturate(elm >> 16, 16);
+      vpu->vR.s16[i] = vpu_saturate_fixed(elm >> 16, 16);
     }
 
     for (int i = VPU_INT32_EPV; i < VPU_INT16_EPV; i++) {

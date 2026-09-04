@@ -147,16 +147,8 @@ VPU constraints that apply across the library.
 API Reference
 *************
 
-nn_pooling.h
-============
-
-.. doxygenfile:: nn_pooling.h
-   :project: lib_nn
-
 nn_layers.h
 ===========
 
 .. doxygenfile:: nn_layers.h
    :project: lib_nn
-
-Where the number of output (input) channels is not a multiple of 16 (32) -- and where the function allows this -- there will be an output (input) channel tail. The tail is the last channels which do not form a complete group. Some tensors, in particular the bias-shift-scale tensors, require that tails be padded. Whether padding must be zeros, or if it is safe to use arbitrary values, is specified by the function.

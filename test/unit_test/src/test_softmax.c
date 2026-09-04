@@ -20,21 +20,16 @@ TEST_TEAR_DOWN(group_softmax) {}
 TEST(group_softmax, case0) {
   int8_t WORD_ALIGNED Y[LENGTH];
   int8_t WORD_ALIGNED X[LENGTH];
-  int8_t Y_expected[LENGTH];
+  const int8_t Y_expected[LENGTH] = {
+      -112, -112, -112, -112, -112, -112, -112, -112,
+      -112, -112, -112, -112, -112, -112, -112, -112};
 
   for (int i = 0; i < LENGTH; i++) {
     X[i] = i;
   }
 
-  float lut[256];
   const int8_t zero_point = -128;
   const float scale = 0.00390625;
-  softmax_ref(Y_expected, X, zero_point, scale, LENGTH);
-  softmax_generate_exp_lut(zero_point, scale, lut);
-  float sums[5] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-  softmax_exp_sum(&sums[0], X, lut, 0, LENGTH);
-  float inv_sum;
-  softmax_calculate_inv_sum(&inv_sum, sums);
-  softmax_exp_div(Y, X, lut, inv_sum, 0, LENGTH);
+  softmax(Y, X, zero_point, scale, LENGTH);
   TEST_ASSERT_EQUAL_INT8_ARRAY(Y_expected, Y, LENGTH);
 }

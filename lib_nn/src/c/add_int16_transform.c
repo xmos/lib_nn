@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
-#include "add_int16_transform.h"
+#include "nn_layers.h"
 
 #define SHIFT  14
 

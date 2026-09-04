@@ -4,9 +4,7 @@
 #include <stdint.h>
 #include <math.h>
 
-#include "output_transform_fn_int16.h"
-#include "output_transform_fn_int16_kernel_transform.h"
-#include "output_transform_fn_int16_mappings.h"
+#include "nn_layers.h"
 
 #define VPU_INT16_EPV 16
 #define VPU_INT32_EPV 8
@@ -15,7 +13,8 @@ static int min(int a, int b) {
     return a < b ? a : b;
 }
 
-int16_t *output_transform_fn_int16_impl(int16_t *vDvR,
+#ifdef NN_USE_REF
+inline int16_t *output_transform_fn_int16_impl(int16_t *vDvR,
                                         int32_t *mul_add,
                                         int16_t *output,
                                         uint32_t N) {
@@ -39,10 +38,14 @@ int16_t *output_transform_fn_int16_impl(int16_t *vDvR,
     return &output[N];
 }
 
+#else
+
 extern void output_transform_fn_int16_impl_asm(int16_t *vDvR,
                                                int32_t *mul_add,
                                                int16_t *output,
                                                uint32_t N);
+
+#endif
 
 int16_t *output_transform_fn_int16(otfn_int16_params_t *params,
                                    int16_t *Y,

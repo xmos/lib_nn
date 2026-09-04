@@ -3,8 +3,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#include "output_transform_fn_int16_kernel_transform.h"
-#include "output_transform_fn_int16_mappings.h"
+#include "nn_layers.h"
 
 void output_transform_fn_int16_kernel_transform(
     const int8_t *kernel_weights_in, const float *channel_multipliers_in, const int *channel_bias_terms_in,

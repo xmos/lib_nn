@@ -5,8 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "quadratic_approximation.h"
-#include "quadratic_interpolation.h"
+#include "nn_layers.h"
 
 /*
  * Algorithm for interpolation of activation functions

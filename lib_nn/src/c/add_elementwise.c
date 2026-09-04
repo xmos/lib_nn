@@ -32,6 +32,7 @@
 #define MAX(A, B) (((A) >= (B)) ? (A) : (B))
 #define MIN(A, B) (((A) <= (B)) ? (A) : (B))
 
+#ifdef NN_USE_REF
 static unsigned mkmsk(int num) {
   assert((num >= 0 && num <= 32) &&
          "Number to be made into a mask has to be in this range!");
@@ -41,10 +42,6 @@ static unsigned mkmsk(int num) {
   }
   return mask;
 }
-
-extern void add_elementwise_asm(int8_t y[], const int8_t x1[],
-                                const int8_t x2[], nn_add_params_t *params,
-                                const int output_start, const int output_count);
 
 void add_elementwise_ref(int8_t y[], const int8_t x1[], const int8_t x2[],
                          nn_add_params_t *params, const int output_start,
@@ -117,13 +114,20 @@ void add_elementwise_ref(int8_t y[], const int8_t x1[], const int8_t x2[],
 
     acc = ROUND_SHR(acc, params->shift[0]);
 
-    acc = MIN(acc, VPU_INT8_MAX);
-    acc = MAX(acc, NEG_SAT_VAL);
+    acc = vpu_saturate_fixed(acc, 8);
 
     y[index] = (int8_t)acc;
     index++;
   }
 }
+
+#else
+
+extern void add_elementwise_asm(int8_t y[], const int8_t x1[],
+                                const int8_t x2[], nn_add_params_t *params,
+                                const int output_start, const int output_count);
+
+#endif
 
 void add_elementwise(int8_t Y[], const int8_t X0[], const int8_t X1[],
                      nn_add_params_t *p, const int output_start,
