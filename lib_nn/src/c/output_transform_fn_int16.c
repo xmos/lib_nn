@@ -4,9 +4,7 @@
 #include <stdint.h>
 #include <math.h>
 
-#include "output_transform_fn_int16.h"
-#include "output_transform_fn_int16_kernel_transform.h"
-#include "output_transform_fn_int16_mappings.h"
+#include "nn_layers.h"
 
 #define VPU_INT16_EPV 16
 #define VPU_INT32_EPV 8

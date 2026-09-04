@@ -6,8 +6,7 @@
 #include <string.h>
 #include "math.h"
 
-#include "add_int16.h"
-#include "add_int16_transform.h"
+#include "nn_layers.h"
 
 #include "tst_common.h"
 #include "unity.h"

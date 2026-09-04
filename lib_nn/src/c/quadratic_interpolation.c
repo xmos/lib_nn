@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "quadratic_interpolation.h"
+#include "nn_layers.h"
 
 #ifdef NN_USE_REF
 static int clamp(int64_t x) {

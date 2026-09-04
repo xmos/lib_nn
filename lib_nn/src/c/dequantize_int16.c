@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "dequantize_int16.h"
+#include "nn_layers.h"
 
 // Element dequantisaition
 // Convert an int to a float without a cast, by adding 0x40008000

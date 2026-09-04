@@ -3,8 +3,7 @@
 
 #include <stdint.h>
 
-#include "multiply_int16.h"
-#include "multiply_int16.h"
+#include "nn_layers.h"
 #include "nn_op_helper.h"
 
 const int16_t eight_thousand[16] = {

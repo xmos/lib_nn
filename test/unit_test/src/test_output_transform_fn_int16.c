@@ -6,8 +6,7 @@
 #include <string.h>
 #include "math.h"
 
-#include "output_transform_fn_int16.h"
-#include "output_transform_fn_int16_kernel_transform.h"
+#include "nn_layers.h"
 
 #include "tst_common.h"
 #include "unity.h"

@@ -5,8 +5,7 @@
 #include <assert.h>
 
 #include "nn_api.h"
-#include "add_int16.h"
-#include "add_int16_transform.h"
+#include "nn_layers.h"
 
 #define SIZE 12
 

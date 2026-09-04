@@ -6,7 +6,7 @@
 #include <string.h>
 #include "math.h"
 
-#include "expand_8_to_16.h"
+#include "nn_layers.h"
 
 #include "tst_common.h"
 #include "unity.h"

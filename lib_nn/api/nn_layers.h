@@ -1,94 +1,37 @@
 // Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
-#ifndef LAYERS_H_
-#define LAYERS_H_
+#pragma once
+
+#include <stdint.h>
+
 #include "nn_api.h"
 #include "nn_bin_types.h"
 #include "nn_image.h"
-#include <string.h>
 
-/**
- * Struct represents the parameters needed by each `bsign_8()` job.
- *
- * Values are set by `bsign_8_prepare()`.
- *
- * @note This struct is intended to be opaque.
- */
+// ---------- defines ----------
+
+#if defined(__xcore__) || defined(__riscv_xxcore)
+#define ACTIVATION_FUNCTION __attribute__((fptrgroup("activation_functions")))
+#else
+#define ACTIVATION_FUNCTION
+#endif
+
+#define QUADRATIC_APPROXIMATION_MAX_CHUNKS      (2048)
+#define ADD_INT16_TENSOR_BYTES()                (2 * 16 * sizeof(int16_t))
+#define DEQUANTIZE_INT16_TENSOR_BYTES()         (2 * sizeof(float))
+#define QUANTIZE_INT16_TENSOR_BYTES()           (sizeof(float))
+#define REQUANTIZE_INT16_TENSOR_BYTES()         (16 * sizeof(int16_t))
+#define MULTIPLY_INT16_TENSOR_BYTES()           (2 * sizeof(int16_t))
+
+// ---------- structs ----------
+
+/** Parameters for one bsign_8 job. */
 typedef struct {
   mem_stride_t start;
   int32_t length;
 } nn_bsign_8_job_t;
 
-/**
- * @brief Initialize one or more jobs for bsign_8().
- *
- * `jobs` points to an array of `job_count` jobs to be initialized; each job computes a range of the output vector, and together they automatically divide the work as evenly as possible.
- *
- * `N` is the number of scalar elements in the input vector `X`; the bit-packed output `Y` requires `ceil(N / 32)` `bnn_b32_t` elements.
- *
- * `zero_point` is the value used for padding (for all channels).
- *
- * @param jobs        [out]  Array of jobs to be initialized
- * @param zero_point_vect [out] Padding value vector derived from `zero_point`
- * @param N           [in]   The number of elements in the input
- * @param zero_point  [in]   The value used for padding
- * @param job_count   [in]   The number of jobs to be initialized
- */
-void bsign_8_prepare(nn_bsign_8_job_t *jobs, int8_t *zero_point_vect,
-                     const uint32_t N, const int8_t zero_point,
-                     const int32_t job_count);
-
-/**
- * @brief Compute the bit-packed sign of each element of a vector.
- *
- * For each input element, writes a `1` bit to `Y` if the (zero-point adjusted) value is negative, else a `0` bit. No plan is required; see bsign_8_prepare() for job initialization.
- *
- * `Y` and `X` must each point to the start of their respective vectors (regardless of which job is being processed), and must each be word-aligned.
- *
- * @param Y               [out]  The output bit-packed vector
- * @param X               [in]   The input vector
- * @param zero_point_vect [in]   Per-channel zero-point vector from bsign_8_prepare()
- * @param job             [in]   The job to be processed
- */
-void bsign_8(bnn_b32_t *Y, const int8_t *X, const int8_t *zero_point_vect,
-             const nn_bsign_8_job_t *job);
-
-/**
- * @brief Compute the number of 3-byte blocks to be copied by pad_3_to_4_run(), given an image's height and width.
- *
- * @param[out]  n_3     Number of 3-byte blocks
- * @param[in]   height  Image height, in pixels
- * @param[in]   width   Image width, in pixels
- */
-void pad_3_to_4_prepare(uint32_t *n_3, const unsigned height,
-                        const unsigned width);
-
-/**
- * @brief Pad an image of 3-byte pixels out to 4 bytes per pixel, setting the added byte to a specified value.
- *
- * The output image must be word-aligned. This function handles the general case and calls an optimized assembly routine for the bulk copy.
- *
- * @param outputs  [out]  Output values; every word contains 3 bytes and a zero
- * @param inputs   [in]   Input values, e.g. RGBRGBRGBRGB...
- * @param N_3      [in]   Number of 3-byte blocks to copy
- * @param pad_val  [in]   Value written to the padding byte
- */
-void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3,
-                           uint32_t pad_val);
-
-/**
- * @brief Pad a vector of bytes into 32-bit words, writing each input byte into the least-significant byte of an output word and filling the upper three bytes with the fixed padding value.
- *
- * The function processes `N * 4` input bytes and expands each byte into a 32-bit output word. `N` therefore counts 4-byte input chunks, not bytes.
- *
- * @param outputs  [out]  Output values; each word contains one input byte and three pad bytes
- * @param inputs   [in]   Input values
- * @param N        [in]   Number of 4-byte chunks to copy
- * @param pad_val  [in]   Value written to the upper three bytes of each output word
- */
-void pad_1_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N,
-                          uint32_t pad_val);
-
+/** Parameters used by mul_elementwise(). */
 typedef struct nn_mul_params_t {
   int8_t in1_zero_point;
   int8_t in2_zero_point;
@@ -97,36 +40,7 @@ typedef struct nn_mul_params_t {
   int16_t vlashr_shr;
 } nn_mul_params_t;
 
-/**
- * @brief Compute the quantization parameters for mul_elementwise() from the inputs' and output's zero-points and scales.
- *
- * @param[out]  params        The computed parameters
- * @param[in]   in1Scale      Quantization scale of the first input
- * @param[in]   in2Scale      Quantization scale of the second input
- * @param[in]   outputScale   Quantization scale of the output
- * @param[in]   in1ZeroPoint  Quantization zero-point of the first input
- * @param[in]   in2ZeroPoint  Quantization zero-point of the second input
- * @param[in]   outputZeroPoint  Quantization zero-point of the output
- */
-void mul_boggle(nn_mul_params_t *params, double in1Scale, double in2Scale,
-                double outputScale, int8_t in1ZeroPoint, int8_t in2ZeroPoint,
-                int8_t outputZeroPoint);
-
-/**
- * @brief Multiply two quantized 8-bit input vectors element-by-element to produce a quantized 8-bit output vector.
- *
- * `params` (from mul_boggle()) describes how to reconcile the input and output quantization parameters.
- *
- * @param[in]   in1_data       The first input vector
- * @param[in]   in2_data       The second input vector
- * @param[in]   element_count  Number of elements to compute
- * @param[in]   params         The quantization parameters
- * @param[out]  out_data       The output vector
- */
-void mul_elementwise(const int8_t *in1_data, const int8_t *in2_data,
-                     int element_count, nn_mul_params_t *params,
-                     int8_t *out_data);
-
+/** Parameters used by add_elementwise(). */
 typedef struct {
   int16_t m1[16];
   int16_t m2[16];
@@ -135,161 +49,435 @@ typedef struct {
   int16_t bias_lo[16];
 } nn_add_params_t;
 
-/**
- * @brief Add together two quantized 8-bit input vectors, element-by-element, to produce a quantized 8-bit output vector.
- *
- * This assumes the two input vectors and the output vector each require different quantization parameters; `params` describes how to reconcile them.
- *
- * `elm_start` and `elm_count` together specify which output elements `Y[k]` are computed by this invocation, namely those for which `elm_start <= k < elm_start + elm_count`.
- *
- * @param[out]  Y           The output vector
- * @param[in]   X1          The first input vector
- * @param[in]   X2          The second input vector
- * @param[in]   p           The scaling and bias parameters
- * @param[in]   elm_start   Index of first output element to be computed
- * @param[in]   elm_count   Number of output elements to be computed
- */
-void add_elementwise(int8_t Y[], const int8_t X1[], const int8_t X2[],
-                     nn_add_params_t *p, const int elm_start,
-                     const int elm_count);
+/** Parameters for the int16 output transform. */
+typedef struct {
+  int32_t output_slice_channel_count;
+} otfn_int16_params_t;
+
+typedef struct quadratic_function_table {
+  struct {
+    int32_t c;
+    int8_t a;
+    int8_t padding;
+    int16_t b;
+  } coefficients[QUADRATIC_APPROXIMATION_MAX_CHUNKS];
+  int data_bytes;
+} quadratic_function_table_t;
+
+typedef float (*float_function_t)(float x);
+
+// ---------- functions ----------
 
 /**
- * @brief Apply an 8-bit look-up table to a vector, element-by-element.
- *
- * No plan or job initialization is required for this operator.
- *
- * `elm_start` and `elm_count` together specify which output elements `Y[k]` are computed by this invocation, namely those for which `elm_start <= k < elm_start + elm_count`. `Y` and `X` must each point to the start of their respective vectors, and must each be word-aligned.
- *
- * @param Y      [out]  The output vector
- * @param X      [in]   The input vector
- * @param lut    [in]   Look-up table with 256 `int8` entries
- * @param elm_start [in] Index of first output element to be computed
- * @param elm_count [in] Number of output elements to be computed
+ * @brief Initialize jobs used by bsign_8().
+ * @param[out] jobs Array of jobs to initialize.
+ * @param[out] zero_point_vect Per-channel zero-point vector.
+ * @param[in] length Number of scalar input elements.
+ * @param[in] zero_point Input zero point used for padding.
+ * @param[in] job_count Number of jobs to initialize.
  */
-void lookup8(uint8_t *Y, const uint8_t *X, const uint8_t *lut,
-             const unsigned elm_start, const unsigned elm_count);
+C_API void bsign_8_prepare(nn_bsign_8_job_t *jobs, int8_t *zero_point_vect,
+                     uint32_t length, int8_t zero_point, int32_t job_count);
 
 /**
- * @brief Sum the exponentials of a range of elements of a softmax input vector.
- *
- * `lut` is a 256-entry `float32` look-up table mapping each possible 8-bit input value to its exponential (see softmax_generate_exp_lut()). `elm_start` and `elm_count` together specify which input elements are summed into the output scalar.
- *
- * @param Y   [out]  The output scalar (sum of exponentials)
- * @param X   [in]   The input vector
- * @param lut [in]   Look-up table of exponentials
- * @param elm_start [in] Index of first input element to be summed
- * @param elm_count [in] Number of input elements to be summed
+ * @brief Compute the bit-packed sign of each element in an int8 vector.
+ * @param[out] Y Bit-packed output vector; must be word-aligned.
+ * @param[in] X Input vector; must be word-aligned.
+ * @param[in] zero_point_vect Per-channel zero-point vector.
+ * @param[in] job Job describing the input range to process.
  */
-void softmax_exp_sum(float *Y, const int8_t *X, const float *lut,
-                     const unsigned elm_start, const unsigned elm_count);
+C_API void bsign_8(bnn_b32_t *Y, const int8_t *X, const int8_t *zero_point_vect,
+             const nn_bsign_8_job_t *job);
 
 /**
- * @brief Divide the exponential of each element of a softmax input vector by the sum of all exponentials, producing the final softmax output.
- *
- * `lut` is a 256-entry `float32` look-up table of exponentials (see softmax_generate_exp_lut()). `inv_sum` is 256 divided by the sum of the exponentials of the whole input vector (see softmax_calculate_inv_sum()). `elm_start` and `elm_count` together specify which output elements are computed by this invocation.
- *
- * @param Y       [out]  The output vector
- * @param X       [in]   The input vector
- * @param lut     [in]   Look-up table of exponentials
- * @param inv_sum [in]   Reciprocal of the sum of the exponentials of the inputs
- * @param elm_start [in] Index of first output element to be computed
- * @param elm_count [in] Number of output elements to be computed
+ * @brief Compute the number of 3-byte blocks required by pad_3_to_4_run().
+ * @param[out] n_3 Receives the number of 3-byte blocks.
+ * @param[in] height Image height in pixels.
+ * @param[in] width Image width in pixels.
  */
-void softmax_exp_div(int8_t *Y, const int8_t *X, const float *lut,
-                     const float inv_sum, const unsigned elm_start,
-                     const unsigned elm_count);
+C_API void pad_3_to_4_prepare(uint32_t *n_3, unsigned height, unsigned width);
 
 /**
- * @brief Compute the reciprocal of the sum of a set of partial sums.
- *
- * Used to combine the per-job outputs of softmax_exp_sum() into a single scaling
- * factor for use by softmax_exp_div().
- *
- * `sums` must point to exactly 5 `float32` values (`sums[0]` through `sums[4]`).
- * The implementation reads those 5 entries unconditionally and ignores any
- * additional elements. The output is computed as
- * `inv_sum = 256.0f / (sums[0] + sums[1] + sums[2] + sums[3] + sums[4])`.
- *
- * @param[out]  inv_sum  The reciprocal of the total sum
- * @param[in]   sums     Array of exactly 5 partial sums to be combined
+ * @brief Pad 3-byte pixels to 4 bytes per pixel.
+ * @param[out] outputs Word-aligned padded output image.
+ * @param[in] inputs Input image containing 3-byte pixels.
+ * @param[in] N_3 Number of 3-byte pixels to process.
+ * @param[in] pad_val Value used for the padding byte.
  */
-void softmax_calculate_inv_sum(float *inv_sum, const float sums[]);
+C_API void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3,
+                    uint32_t pad_val);
 
 /**
- * @brief Generate the 256-entry look-up table of exponentials used by softmax_exp_sum() and softmax_exp_div().
- *
- * @param[in]   zero_point  Quantization zero-point of the softmax input
- * @param[in]   scale       Quantization scale of the softmax input
- * @param[out]  lut         The generated look-up table, with 256 `float32` entries
+ * @brief Expand byte values into 32-bit words with three padding bytes.
+ * @param[out] outputs Padded output buffer.
+ * @param[in] inputs Input byte buffer.
+ * @param[in] N Number of four-byte input chunks.
+ * @param[in] pad_val Value used for the three padding bytes.
  */
-void softmax_generate_exp_lut(int zero_point, float scale, float *lut);
+C_API void pad_1_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N,
+                    uint32_t pad_val);
 
 /**
- * @brief Compute softmax for a single vector.
- *
- * @param[out]  Y           The output vector
- * @param[in]   X           The input vector
- * @param[in]   zero_point  Quantization zero-point of the input
- * @param[in]   scale       Quantization scale of the input
- * @param[in]   length      Number of elements in the input and output vectors
+ * @brief Compute parameters for mul_elementwise().
+ * @param[out] params Quantization parameters for the multiplication.
+ * @param[in] in1_scale First input scale.
+ * @param[in] in2_scale Second input scale.
+ * @param[in] output_scale Output scale.
+ * @param[in] in1_zero_point First input zero point.
+ * @param[in] in2_zero_point Second input zero point.
+ * @param[in] output_zero_point Output zero point.
  */
-void softmax(int8_t *Y, const int8_t *X, const float zero_point,
-             const float scale, const int length);
+C_API void mul_boggle(nn_mul_params_t *params, double in1_scale, double in2_scale,
+                double output_scale, int8_t in1_zero_point,
+                int8_t in2_zero_point, int8_t output_zero_point);
 
 /**
- * @brief Compute softmax for a single vector using a precomputed exponential look-up table.
- *
- * @param[out]  Y       The output vector
- * @param[in]   X       The input vector
- * @param[in]   lut     Look-up table of exponentials (see softmax_generate_exp_lut())
- * @param[in]   offset  Number of elements in the input and output vectors
+ * @brief Multiply two quantized int8 vectors element by element.
+ * @param[in] in1_data First input vector.
+ * @param[in] in2_data Second input vector.
+ * @param[in] element_count Number of elements to compute.
+ * @param[in] params Quantization parameters from mul_boggle().
+ * @param[out] out_data Output vector.
  */
-void softmax_single(int8_t *Y, const int8_t *X, const float *lut,
-                    const int offset);
+C_API void mul_elementwise(const int8_t *in1_data, const int8_t *in2_data,
+                     int element_count, nn_mul_params_t *params,
+                     int8_t *out_data);
 
 /**
- * @brief Compute the mean, over a middle dimension, of an 8-bit tensor.
- *
- * The input is treated as a 3D tensor of shape (`start_dim_size`, `mean_dim_size`, `end_dim_size`); the mean is computed over the middle (`mean_dim_size`) dimension, producing an output of shape (`start_dim_size`, `end_dim_size`).
- *
- * @param[in]   input           The input tensor
- * @param[out]  output          The output tensor
- * @param[in]   start_dim_size  Size of the outermost dimension
- * @param[in]   mean_dim_size   Size of the dimension being averaged over
- * @param[in]   end_dim_size    Size of the innermost dimension
- * @param[in]   in_zero_point   Quantization zero-point of the input
- * @param[in]   out_zero_point  Quantization zero-point of the output
- * @param[in]   scale_mul       Scale factor applied to the computed mean
+ * @brief Add two quantized int8 vectors element by element.
+ * @param[out] Y Output vector.
+ * @param[in] X1 First input vector.
+ * @param[in] X2 Second input vector.
+ * @param[in] params Scaling and bias parameters.
+ * @param[in] output_start First output element to compute.
+ * @param[in] output_count Number of output elements to compute.
  */
-void mean_int8(const int8_t *input, int8_t *output, const int start_dim_size,
-               const int mean_dim_size, const int end_dim_size,
-               const float in_zero_point, const float out_zero_point,
-               const float scale_mul);
+C_API void add_elementwise(int8_t Y[], const int8_t X1[], const int8_t X2[],
+                     nn_add_params_t *params, int output_start,
+                     int output_count);
 
 /**
- * @brief Compute the mean, over a middle dimension, of a 16-bit tensor.
- *
- * See mean_int8() for a description of how the input tensor's dimensions relate to the output.
- *
- * @param[in]   input           The input tensor
- * @param[out]  output          The output tensor
- * @param[in]   start_dim_size  Size of the outermost dimension
- * @param[in]   mean_dim_size   Size of the dimension being averaged over
- * @param[in]   end_dim_size    Size of the innermost dimension
- * @param[in]   scale_mul       Scale factor applied to the computed mean
+ * @brief Apply an 8-bit lookup table to a vector.
+ * @param[out] Y Output vector.
+ * @param[in] X Input vector.
+ * @param[in] lut 256-entry lookup table.
+ * @param[in] elm_start First element to process.
+ * @param[in] elm_count Number of elements to process.
  */
-void mean_int16(const int16_t *input, int16_t *output, const int start_dim_size,
-                const int mean_dim_size, const int end_dim_size,
-                const float scale_mul);
+C_API void lookup8(uint8_t *Y, const uint8_t *X, const uint8_t *lut,
+             unsigned elm_start, unsigned elm_count);
+
+/**
+ * @brief Generate the exponential lookup table used by the softmax helpers.
+ * @param[in] zero_point Quantization zero point.
+ * @param[in] scale Quantization scale.
+ * @param[out] lut Output 256-entry exponential table.
+ */
+C_API void softmax_generate_exp_lut(int zero_point, float scale, float *lut);
+
+/**
+ * @brief Sum exponentials for a range of softmax input elements.
+ * @param[out] Y Output partial sum.
+ * @param[in] X Input vector.
+ * @param[in] lut Exponential lookup table.
+ * @param[in] elm_start First input element to sum.
+ * @param[in] elm_count Number of input elements to sum.
+ */
+C_API void softmax_exp_sum(float *Y, const int8_t *X, const float *lut,
+                     unsigned elm_start, unsigned elm_count);
+
+/**
+ * @brief Divide exponentials by the complete softmax sum for a range of elements.
+ * @param[out] Y Output vector.
+ * @param[in] X Input vector.
+ * @param[in] lut Exponential lookup table.
+ * @param[in] inv_sum Reciprocal sum scaling factor.
+ * @param[in] elm_start First output element to compute.
+ * @param[in] elm_count Number of output elements to compute.
+ */
+C_API void softmax_exp_div(int8_t *Y, const int8_t *X, const float *lut,
+                     float inv_sum, unsigned elm_start, unsigned elm_count);
+
+/**
+ * @brief Combine five partial sums into the softmax scaling factor.
+ * @param[out] inv_sum Output reciprocal sum scaling factor.
+ * @param[in] sums Five partial sums.
+ */
+C_API void softmax_calculate_inv_sum(float *inv_sum, const float sums[]);
+
+/**
+ * @brief Compute softmax for one vector.
+ * @param[out] Y Output vector.
+ * @param[in] X Input vector.
+ * @param[in] zero_point Quantization zero point.
+ * @param[in] scale Quantization scale.
+ * @param[in] length Number of input and output elements.
+ */
+C_API void softmax(int8_t *Y, const int8_t *X, float zero_point, float scale,
+             int length);
+
+/**
+ * @brief Compute softmax using a precomputed exponential lookup table.
+ * @param[out] Y Output vector.
+ * @param[in] X Input vector.
+ * @param[in] lut Exponential lookup table.
+ * @param[in] offset Number of input and output elements.
+ */
+C_API void softmax_single(int8_t *Y, const int8_t *X, const float *lut, int offset);
+
+/**
+ * @brief Compute the mean over the middle dimension of an int8 tensor.
+ * @param[in] input Input tensor.
+ * @param[out] output Output tensor.
+ * @param[in] start_dim_size Size of the outer dimension.
+ * @param[in] mean_dim_size Size of the dimension to average.
+ * @param[in] end_dim_size Size of the inner dimension.
+ * @param[in] in_zero_point Input zero point.
+ * @param[in] out_zero_point Output zero point.
+ * @param[in] scale_mul Mean scaling factor.
+ */
+C_API void mean_int8(const int8_t *input, int8_t *output, int start_dim_size,
+              int mean_dim_size, int end_dim_size, float in_zero_point,
+              float out_zero_point, float scale_mul);
+
+/**
+ * @brief Compute the mean over the middle dimension of an int16 tensor.
+ * @param[in] input Input tensor.
+ * @param[out] output Output tensor.
+ * @param[in] start_dim_size Size of the outer dimension.
+ * @param[in] mean_dim_size Size of the dimension to average.
+ * @param[in] end_dim_size Size of the inner dimension.
+ * @param[in] scale_mul Mean scaling factor.
+ */
+C_API void mean_int16(const int16_t *input, int16_t *output, int start_dim_size,
+               int mean_dim_size, int end_dim_size, float scale_mul);
 
 /**
  * @brief Return the index of the maximum value in an int16 vector.
- *
- * @param[out]  output_index  The index of the maximum input value
- * @param[in]   input_values  The input int16 vector
- * @param[in]   element_count The number of input values
+ * @param[out] output_index Index of the maximum value.
+ * @param[in] input_values Input vector.
+ * @param[in] element_count Number of input elements.
  */
-void argmax_16(int32_t *output_index, const int16_t *input_values,
-               const int32_t element_count);
+C_API void argmax_16(int32_t *output_index, const int16_t *input_values,
+               int32_t element_count);
 
-#endif // LAYERS_H_
+/**
+ * @brief Transform an int16 accumulator into an int16 output vector.
+ * @param[in] params Output-transform parameters.
+ * @param[out] output Output vector.
+ * @param[in] vDvR Accumulator ring-buffer contents.
+ * @param[in] output_channel_group Output channel group index.
+ * @param[in] mul_add Serialized multipliers and biases.
+ * @return Pointer immediately after the written output.
+ */
+C_API int16_t *output_transform_fn_int16(otfn_int16_params_t *params,
+                                   int16_t *output, int16_t *vDvR,
+                                   int32_t output_channel_group,
+                                   int32_t *mul_add);
+
+/**
+ * @brief Transform int16 output-transform weights and parameters.
+ * @param[in] kernel_weights_in Input kernel weights.
+ * @param[in] channel_multipliers_in Per-channel floating-point multipliers.
+ * @param[in] channel_bias_terms_in Per-channel bias terms.
+ * @param[out] kernel_weights_out Reordered output weights.
+ * @param[out] mul_add_out Quantized multipliers and biases.
+ * @param[in] input_channels Number of input channels.
+ * @param[in] output_channels Number of output channels.
+ */
+C_API void output_transform_fn_int16_kernel_transform(
+    const int8_t *kernel_weights_in, const float *channel_multipliers_in,
+    const int *channel_bias_terms_in, int8_t *kernel_weights_out,
+    int32_t *mul_add_out, int input_channels, int output_channels);
+
+/** Output-transform channel mappings. */
+extern int ot_int16_mul_index_used_for_output[];
+extern int ot_int16_add_index_used_for_output[];
+extern int aggr_ot_int16_input_channel_used_for_output[];
+
+/**
+ * @brief Build a quadratic approximation table.
+ * @param[out] table Table to populate.
+ * @param[in] function Function to approximate.
+ * @param[in] input_scaler Scale applied to the input.
+ * @param[in] output_scaler Scale applied to the output.
+ * @param[in] chunks Number of interpolation chunks.
+ * @param[out] max_error Maximum approximation error.
+ * @param[out] error Sum-of-squared-error metric.
+ */
+C_API void quadratic_approximation_generator(
+    quadratic_function_table_t *table,
+    ACTIVATION_FUNCTION float_function_t function,
+    double input_scaler, double output_scaler, int chunks, int *max_error,
+    double *error);
+
+/**
+ * @brief Return the number of bytes used by a quadratic approximation table.
+ * @param[in] table Approximation table.
+ * @return Number of serialized table bytes.
+ */
+C_API uint32_t quadratic_function_table_number_bytes(
+    quadratic_function_table_t *table);
+
+/**
+ * @brief Return the serialized bytes of a quadratic approximation table.
+ * @param[in] table Approximation table.
+ * @return Pointer to the serialized table bytes.
+ */
+C_API uint8_t *quadratic_function_table_bytes(
+    quadratic_function_table_t *table);
+
+/**
+ * @brief Hyperbolic tangent activation function.
+ * @param[in] x Input value.
+ */
+C_API float approximation_function_tanh(float x);
+
+/**
+ * @brief Logistic activation function.
+ * @param[in] x Input value.
+ */
+C_API float approximation_function_logistics(float x);
+
+/**
+ * @brief Exponential linear unit activation function.
+ * @param[in] x Input value.
+ */
+C_API float approximation_function_elu(float x);
+
+/**
+ * @brief Rectified linear unit activation function.
+ * @param[in] x Input value.
+ */
+C_API float approximation_function_relu(float x);
+
+/**
+ * @brief ReLU6 activation function.
+ * @param[in] x Input value.
+ */
+C_API float approximation_function_relu6(float x);
+
+/**
+ * @brief Evaluate a quadratic approximation table for an int16 vector.
+ * @param[out] outputs Output vector.
+ * @param[in] inputs Input vector.
+ * @param[in] coeffs Serialized approximation coefficients.
+ * @param[in] length Number of elements to process.
+ */
+C_API void quadratic_interpolation_128(int16_t *outputs, int16_t *inputs,
+                                 uint8_t *coeffs, uint32_t length);
+
+/**
+ * @brief Add two int16 tensors using a transformed parameter blob.
+ * @param[out] output Output tensor.
+ * @param[in] input1 First input tensor.
+ * @param[in] input2 Second input tensor.
+ * @param[in] tensor_length Number of tensor elements.
+ * @param[in] blob Transformed parameter blob.
+ */
+C_API void add_int16_tensor(int16_t *output, int16_t *input1, int16_t *input2,
+                      int tensor_length, void *blob);
+
+/**
+ * @brief Create the transformed parameter blob for add_int16_tensor().
+ * @param[out] output Output blob.
+ * @param[in] input1_scaler First input scale.
+ * @param[in] input2_scaler Second input scale.
+ * @param[in] output_scaler Output scale.
+ * @param[out] err_msg Error message buffer.
+ * @return Nonzero on success.
+ */
+C_API int add_int16_tensor_blob(void *output, float input1_scaler,
+                                float input2_scaler, float output_scaler,
+                                char *err_msg);
+
+/**
+ * @brief Dequantize an int16 tensor into a float tensor.
+ * @param[out] output Output float tensor.
+ * @param[in] input Input int16 tensor.
+ * @param[in] tensor_length Number of tensor elements.
+ * @param[in] blob Transformed parameter blob.
+ */
+C_API void dequantize_int16_tensor(float *output, int16_t *input, int tensor_length,
+                             void *blob);
+
+/**
+ * @brief Create the transformed parameter blob for dequantize_int16_tensor().
+ * @param[out] output Output blob.
+ * @param[in] input_scaler Input scale.
+ * @param[out] err_msg Error message buffer.
+ * @return Nonzero on success.
+ */
+C_API int dequantize_int16_tensor_blob(void *output, float input_scaler,
+                                       char *err_msg);
+
+/**
+ * @brief Quantize a float tensor into an int16 tensor.
+ * @param[out] output Output int16 tensor.
+ * @param[in] input Input float tensor.
+ * @param[in] tensor_length Number of tensor elements.
+ * @param[in] blob Transformed parameter blob.
+ */
+C_API void quantize_int16_tensor(int16_t *output, float *input, int tensor_length,
+                           void *blob);
+
+/**
+ * @brief Create the transformed parameter blob for quantize_int16_tensor().
+ * @param[out] output Output blob.
+ * @param[in] output_scaler Output scale.
+ * @return Nonzero on success.
+ */
+C_API int quantize_int16_tensor_blob(void *output, float output_scaler);
+
+/**
+ * @brief Expand an int8 tensor into an int16 tensor.
+ * @param[out] out Output int16 tensor.
+ * @param[in] in Input int8 tensor.
+ * @param[in] length Number of elements to process.
+ */
+C_API void expand_8_to_16(int16_t *out, int8_t *in, int length);
+
+/**
+ * @brief Create the transformed parameter blob for int16 requantization.
+ * @param[out] output Output blob.
+ * @param[in] input_scaler Input scale.
+ * @param[in] output_scaler Output scale.
+ * @param[out] err_msg Error message buffer.
+ * @return Nonzero on success.
+ */
+C_API int requantize_int16_tensor_blob(void *output, float input_scaler,
+                                       float output_scaler, char *err_msg);
+
+/**
+ * @brief Multiply two int16 tensors using a transformed parameter blob.
+ * @param[out] output Output tensor.
+ * @param[in] input1 First input tensor.
+ * @param[in] input2 Second input tensor.
+ * @param[in] tensor_length Number of tensor elements.
+ * @param[in] blob Transformed parameter blob.
+ */
+C_API void multiply_int16_tensor(int16_t *output, int16_t *input1, int16_t *input2,
+                           int tensor_length, void *blob);
+
+/**
+ * @brief Create the transformed parameter blob for multiply_int16_tensor().
+ * @param[out] output Output blob.
+ * @param[in] input1_scaler First input scale.
+ * @param[in] input2_scaler Second input scale.
+ * @param[in] output_scaler Output scale.
+ * @param[out] err_msg Error message buffer.
+ * @return Nonzero on success.
+ */
+C_API int multiply_int16_tensor_blob(void *output, float input1_scaler,
+                                     float input2_scaler, float output_scaler,
+                                     char *err_msg);
+
+/**
+ * @brief Requantize an int16 tensor using a transformed parameter blob.
+ * @param[out] output Output tensor.
+ * @param[in] input Input tensor.
+ * @param[in] tensor_length Number of tensor elements.
+ * @param[in] blob Transformed parameter blob.
+ */
+C_API void requantize_int16_tensor(int16_t *output, int16_t *input, int tensor_length,
+                             void *blob);

@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <math.h>
-#include "quantize_int16.h"
+#include "nn_layers.h"
 
 // Element quantization of float to int16_t tensor
 

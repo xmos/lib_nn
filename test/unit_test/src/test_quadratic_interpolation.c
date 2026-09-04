@@ -4,8 +4,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "quadratic_approximation.h"
-#include "quadratic_interpolation.h"
+#include "nn_layers.h"
 
 #include "unity.h"
 #include "unity_fixture.h"
