@@ -308,19 +308,38 @@ void mean_int16(const int16_t *input, int16_t *output, const int start_dim_size,
                 const int mean_dim_size, const int end_dim_size,
                 const float scale_mul);
 
+/**
+ * Struct represents the parameters needed by each `mat_mul_real_int8()` job.
+ *
+ * @param lhs_zp        Zero point of the left-hand side matrix
+ * @param rhs_zp        Zero point of the right-hand side matrix
+ * @param in_zp_sum     Precomputed sum of input zero points multiplied by channel size, `channel_size*lhs_zp*rhs_zp`
+ * @param out_zp        Zero point of the output matrix
+ * @param scale         Scale factor applied to the result of the matrix multiplication, `lhs_scale*rhs_scale/out_scale`
+ * @param lhs_row_size  Number of rows in the left-hand side matrix
+ * @param channel_size  Number of columns in the left-hand side matrix or rows in the right-hand side matrix
+ * @param rhs_col_size  Number of columns in the right-hand side matrix
+ */
 typedef struct {
   float lhs_zp;
   float rhs_zp;
-  float in_zp_sum; // channel_size * lhs_zp * rhs_zp
+  float in_zp_sum;
   float out_zp;
-  float scale;  // lhs_scale*rhs_scale/out_scale
+  float scale;
   uint32_t lhs_row_size;
-  uint32_t channel_size;  // lhs col size & rhs row size
+  uint32_t channel_size;
   uint32_t rhs_col_size;
 } nn_mat_mul_real_params_t;
 /**
  * @brief Execute real matrix multiplication
- * @param vpu_buf int8_t vpu_buf[64], need word align
+ * 
+ * @param[in]   p         The scaling and bias parameters
+ * @param[out]  vpu_buf0  Temporary VPU buffer, length 64
+ * @param[out]  vpu_buf1  Temporary VPU buffer, length 64
+ * @param[out]  vpu_buf2  Temporary VPU buffer, length 64
+ * @param[in]   lhs       The left-hand side matrix, row major
+ * @param[in]   rhs       The right-hand side matrix, column major
+ * @param[out]  output    The output matrix
  */
 void mat_mul_real_int8(
   nn_mat_mul_real_params_t *p, 

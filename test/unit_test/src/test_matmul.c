@@ -106,7 +106,6 @@ TEST(group_matmul, test_matmul) {
   impl_test_matmul(8, 8, 8, 1);
 }
 
-#ifdef TEST_BUILD_NATIVE
 TEST(group_matmul, test_matmul_full) {
   // Full matrix test
   impl_test_matmul(128, 256, 125, 0);
@@ -123,4 +122,3 @@ TEST(group_matmul, test_matmul_full) {
   impl_test_matmul(8, 8, 8, 5);
   impl_test_matmul(8, 8, 8, 15);
 }
-#endif // TEST_BUILD_NATIVE
