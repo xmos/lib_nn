@@ -1,4 +1,4 @@
-// Copyright 2020-2025 XMOS LIMITED.
+// Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if defined(__XS3A__)
 
@@ -23,14 +23,15 @@
   */ 
 
     #define NSTACKWORDS             (10+8)
-    .globl quadratic_interpolation_128
-    .globl quadratic_interpolation_128.nstackwords
-    .linkset quadratic_interpolation_128.nstackwords, NSTACKWORDS
-    .cc_top quadratic_interpolation_128.function,quadratic_interpolation_128
+    #define FUNCTION_NAME           quadratic_interpolation_128_asm
+    .globl FUNCTION_NAME
+    .globl FUNCTION_NAME.nstackwords
+    .linkset FUNCTION_NAME.nstackwords, NSTACKWORDS
+    .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
     .issue_mode dual
     .align 16
-quadratic_interpolation_128:
+FUNCTION_NAME:
     { dualentsp NSTACKWORDS     ; ldc r11, 0x1}
     std   r4, r5, sp[1] 
     std   r6, r7, sp[2]
@@ -93,5 +94,27 @@ zero_offset_9_bit:
     .word   0xFF00FF00, 0xFF00FF00, 0xFF00FF00, 0xFF00FF00
     .word   0xFF00FF00, 0xFF00FF00, 0xFF00FF00, 0xFF00FF00
     
-    .cc_bottom quadratic_interpolation_128.function
+    .cc_bottom FUNCTION_NAME.function
+#endif
+
+#if defined(__VX4A__) || defined(__VX4B__)
+
+#define FUNCTION_NAME quadratic_interpolation_128_asm
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+
+    xm.entsp 0
+    xm.ldcu x10, 0
+    xm.assert x10 //NOT IMPLEMENTED
+    xm.retsp 0
+
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  0
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
 #endif

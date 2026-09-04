@@ -1,3 +1,5 @@
+// Copyright 2024-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include "math.h"
 #include "nn_op_helper.h"
 #include "nn_operator.h"

@@ -25,13 +25,13 @@ if [ "$GIT_VERSION" != "$VERSION_H_STR" ]
 then printf "\nVersion mismatch!" && exit 1
 fi
 
-MODULE_BUILD_INFO="module_build_info"
-MODULE_BUILD_INFO_STR=$(grep 'VERSION' $MODULE_BUILD_INFO | awk '{print $3}')
+LIB_BUILD_INFO="lib_build_info.cmake"
+LIB_BUILD_INFO_STR=$(grep 'LIB_VERSION' "$LIB_BUILD_INFO" | awk '{print $2}' | sed 's/)//')
 
-printf "\nModule build info version = "$MODULE_BUILD_INFO_STR
+printf "\nLib build info version = "$LIB_BUILD_INFO_STR
 
-if [ "$VERSION_H_STR" != "$MODULE_BUILD_INFO_STR" ]
-then printf "\nVersion mismatch!" && exit 1
+if [ "$VERSION_H_STR" != "$LIB_BUILD_INFO_STR" ]
+then printf "\nVersion mismatch" && exit 1
 fi
 
 printf "\n"

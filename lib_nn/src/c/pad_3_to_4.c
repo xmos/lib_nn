@@ -1,3 +1,5 @@
+// Copyright 2023-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include <stdio.h>
 #include <stdint.h>
 
@@ -57,16 +59,8 @@ void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pa
 }
 
 void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val) {
-#if defined(__VX4A__) || defined(__VX4B__)
-    int shifted_pad_val = pad_val << 24;
-    int mask = 0x00ffffff;
-    for(int i = 0; i < N_3; i++) {
-        int data = *(int *)inputs;
-        data = (data & mask) | shifted_pad_val;
-        *(int *)outputs = data;
-        inputs += 3;
-        outputs += 4;
-    }
+#if NN_USE_REF
+    pad_3_to_4_ref(outputs, inputs, N_3, pad_val);
 #else
     // First copy single pixels until the input pointer is aligned
     // That will happen as it is incremented in steps of 3
@@ -83,21 +77,7 @@ void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pa
     // Now copy the bulk of the data in blocks of 24
     if (N_24 != 0) {
 
-#ifdef NN_USE_REF
-        int8_t * outputs_p = (int8_t *)outputs;
-        int8_t * inputs_p = inputs;
-        for(uint32_t l=0;l<N_24;l++){
-            for (unsigned i=0;i<8;i++){
-                memcpy(outputs_p, inputs_p, 3);
-                inputs_p += 3;
-                outputs_p += 3;
-                memcpy(outputs_p, &pad_val, 1);
-                outputs_p += 1;
-            }
-        }
-#else
         pad_3_to_4_asm((int32_t * )outputs, (int64_t *)inputs, N_24, pad_val);
-#endif
     }
 
     // Finally, if there is a remainder, copy them a pixel at a time

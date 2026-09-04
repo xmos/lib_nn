@@ -1,15 +1,9 @@
+// Copyright 2023-2026 XMOS LIMITED.
+// This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include <stdio.h>
 #include <assert.h>
 
 #include "quadratic_interpolation.h"
-
-/** 
- * Host version of quadratic_interpolation.
- * Used for testing and verification of built tables.
- * The __xcore__ version will be picked up from quadratic_interpolation.S
- */
-
-#ifndef __xcore__
 
 static int clamp(int64_t x) {
     if (x > 32767) return 32767;
@@ -17,8 +11,8 @@ static int clamp(int64_t x) {
     return x;
 }
 
-void quadratic_interpolation_128(int16_t *outputs, int16_t *inputs,
-                                 uint8_t *bytes, uint32_t N) {
+void quadratic_interpolation_128_ref(int16_t *outputs, int16_t *inputs,
+                                     uint8_t *bytes, uint32_t N) {
     for(int j = 0 ; j < N; j++) {
         int64_t input_val = inputs[j];
 
@@ -36,4 +30,14 @@ void quadratic_interpolation_128(int16_t *outputs, int16_t *inputs,
     }
 }
 
-#endif 
+extern void quadratic_interpolation_128_asm(int16_t *outputs, int16_t *inputs,
+                                            uint8_t *bytes, uint32_t N);
+
+void quadratic_interpolation_128(int16_t *outputs, int16_t *inputs,
+                                 uint8_t *bytes, uint32_t N) {
+#ifdef NN_USE_REF
+    quadratic_interpolation_128_ref(outputs, inputs, bytes, N);
+#else
+    quadratic_interpolation_128_asm(outputs, inputs, bytes, N);
+#endif
+}

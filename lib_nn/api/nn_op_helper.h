@@ -1,4 +1,4 @@
-// Copyright 2020-2021 XMOS LIMITED.
+// Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 #ifndef NN_OP_HELPER_H_
@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "xs3_vpu.h"
+#include "nn_arch.h"
 
 /** Get address of array element.
  *
@@ -61,9 +62,9 @@ static inline int16_t vlsat_single_s16(int32_t acc, uint16_t shr) {
   return sat_s16(acc >> shr);
 }
 
-static inline int16_t vlmul_single_s16(int16_t vR, int16_t mem) {
+static inline int16_t vlmul_single_s16(int16_t vR, int16_t mem, nn_vlmul_shr_t vlmul_shr) {
   int32_t p = ((int32_t)vR) * mem;
-  p = vlsat_single_s16(p, 14);
+  p = vlsat_single_s16(p, vlmul_shr);
   return (int16_t)p;
 }
 
