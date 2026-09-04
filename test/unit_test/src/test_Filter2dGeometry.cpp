@@ -26,30 +26,44 @@ TEST_GROUP_RUNNER(group_Filter2dGeometry) {
   RUN_TEST_CASE(group_Filter2dGeometry, Padding);
 }
 
-static const bool PRINT_CASE_COUNTS = true;
-
 static nn::ff::FilterGeometryIterator filter_sets[] = {
 
     // Dense
     test::unpadded::AllUnpadded(
-        nn::Filter2dGeometry({0, 0, 12}, {3, 3, 12},
-                             {{4, 4, 0}, {2, 2}, {2, 3}, {2, 3}}),
+        nn::Filter2dGeometry(
+            nn::ImageGeometry{0, 0, 12}, nn::ImageGeometry{3, 3, 12},
+            nn::WindowGeometry(std::array<int, 3>{{4, 4, 0}},
+                               std::array<int, 2>{{2, 2}},
+                               std::array<int, 3>{{2, 3, 0}},
+                               std::array<int, 2>{{2, 3}})),
         false, 1),
 
     test::padded::AllPadded(
-        nn::Filter2dGeometry({0, 0, 12}, {3, 3, 12},
-                             {{4, 4, 0}, {2, 2}, {2, 3}, {2, 3}}),
+        nn::Filter2dGeometry(
+            nn::ImageGeometry{0, 0, 12}, nn::ImageGeometry{3, 3, 12},
+            nn::WindowGeometry(std::array<int, 3>{{4, 4, 0}},
+                               std::array<int, 2>{{2, 2}},
+                               std::array<int, 3>{{2, 3, 0}},
+                               std::array<int, 2>{{2, 3}})),
         {2, 2, 2, 2}, false, 1),
 
     // Depthwise
     test::unpadded::AllUnpadded(
-        nn::Filter2dGeometry({0, 0, 0}, {3, 3, 12},
-                             {{4, 4, 1}, {2, 2}, {2, 3}, {2, 3}}),
+        nn::Filter2dGeometry(
+            nn::ImageGeometry{0, 0, 0}, nn::ImageGeometry{3, 3, 12},
+            nn::WindowGeometry(std::array<int, 3>{{4, 4, 1}},
+                               std::array<int, 2>{{2, 2}},
+                               std::array<int, 3>{{2, 3, 0}},
+                               std::array<int, 2>{{2, 3}})),
         true, 1),
 
     test::padded::AllPadded(
-        nn::Filter2dGeometry({0, 0, 0}, {3, 3, 12},
-                             {{4, 4, 1}, {2, 2}, {2, 3}, {2, 3}}),
+        nn::Filter2dGeometry(
+            nn::ImageGeometry{0, 0, 0}, nn::ImageGeometry{3, 3, 12},
+            nn::WindowGeometry(std::array<int, 3>{{4, 4, 1}},
+                               std::array<int, 2>{{2, 2}},
+                               std::array<int, 3>{{2, 3, 0}},
+                               std::array<int, 2>{{2, 3}})),
         {2, 2, 2, 2}, true, 1),
 };
 

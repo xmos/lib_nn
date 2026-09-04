@@ -64,7 +64,7 @@ pipeline {
                                     dir("test") {
                                         xcoreBuild(
                                             buildDir: 'build_native',
-                                            cmakeOpts: '-DBUILD_NATIVE=ON'
+                                            cmakeOpts: "-DBUILD_NATIVE=ON -DTEST_LEVEL=${params.TEST_LEVEL}"
                                         )
                                     }
                                 }

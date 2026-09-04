@@ -21,7 +21,7 @@ void pad_1_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N, uint32_t pad_
     uint32_t * output_p = (uint32_t *)outputs;
     uint8_t * input_p = (uint8_t *)inputs;
 
-    for(int i=0;i<N*4;i++){
+    for(uint32_t i=0;i<N*4;i++){
         *output_p = *input_p | (pad_val & 0xffffff00);
         output_p += 1;
         input_p += 1;

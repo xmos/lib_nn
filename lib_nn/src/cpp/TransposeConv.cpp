@@ -53,7 +53,7 @@ std::vector<ConvParams>  transpose_conv_reorder_kernel_weights(
         }
       }
 
-      std::array<int, 4> sub_shape = {kernel_output_channels, sub_kernel_height, sub_kernel_width, kernel_input_channels};
+      std::array<int, 4> sub_shape = {{kernel_output_channels, sub_kernel_height, sub_kernel_width, kernel_input_channels}};
       ConvParams c(sub_shape, sub_kernel, h_idx, w_idx);
       results.push_back(c);
     }

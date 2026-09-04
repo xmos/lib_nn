@@ -4,9 +4,9 @@
 
 #include <xs1.h>
 
-// void vpu_memset_256(void * dst, const void * src, unsigned byte_count);
+// void vpu_memset_256_asm(void * dst, const void * src, unsigned byte_count);
 
-#define FUNCTION_NAME vpu_memset_256
+#define FUNCTION_NAME vpu_memset_256_asm
     
 #define NSTACKWORDS     0
 
@@ -65,9 +65,9 @@ FUNCTION_NAME:
 
 
 #if defined(__VX4A__) || defined(__VX4B__)
-// void vpu_memset_256(void * dst, const void * src, unsigned byte_count);
+// void vpu_memset_256_asm(void * dst, const void * src, unsigned byte_count);
 
-#define FUNCTION_NAME vpu_memset_256
+#define FUNCTION_NAME vpu_memset_256_asm
 
 #define NSTACKWORDS 4
 #define ROUND_UP(X, Y) (((X+Y-1)/Y)*Y)

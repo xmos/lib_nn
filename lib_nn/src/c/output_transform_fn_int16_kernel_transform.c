@@ -24,5 +24,7 @@ void output_transform_fn_int16_kernel_transform(
         mul_add_out[add_index] = channel_bias_terms_in[ochannel];
         mul_add_out[mul_index] = round(0x40000000 * channel_multipliers_in[ochannel]);
     }
+    (void)kernel_weights_out;
+    (void)kernel_weights_in;
+    (void)input_channels;
 }
-

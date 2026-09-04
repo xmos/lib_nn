@@ -97,10 +97,10 @@ void mul_elementwise_ref(const int8_t* in1_data, const int8_t* in2_data, int ele
 
     int32_t vlsat_output = (accu + (1 << (vlsat_shr - 1))) >> vlsat_shr;  //no saturation could have happened
 
-    if ((int16_t)vlsat_output != vlsat_output) printf("Error vlsat_output %d %d\n", (int16_t)vlsat_output, vlsat_output);
+    if ((int16_t)vlsat_output != vlsat_output) printf("Error vlsat_output %d %d\n", (int16_t)vlsat_output, (int)vlsat_output);
     int32_t vlmul_output = ((int32_t)params->scalar * vlsat_output + (1 << (vlmul_shr - 1))) >> vlmul_shr; //no saturation could have happened
 
-    if ((int16_t)vlmul_output != vlmul_output) printf("Error vlmul_output %d %d -> %d\n", (int16_t)vlmul_output, vlmul_output, i);
+    if ((int16_t)vlmul_output != vlmul_output) printf("Error vlmul_output %d %d -> %d\n", (int16_t)vlmul_output, (int)vlmul_output, i);
     int32_t vladd_output =  clamp(vlmul_output + (int32_t)params->bias, INT16_MIN+1, INT16_MAX);
     int32_t vlashr_output;
 
