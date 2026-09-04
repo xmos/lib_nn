@@ -140,26 +140,25 @@ void quadratic_approximation_generator(
     double output_scaler, int chunks,
     int *max_error,
     double *error) {
-    assert(chunks <= QUADRATIC_APPROXIMATION_MAX_CHUNKS);
-    const int datapoints = 65536 / chunks;
-    const int degree = 3;
-    double (*A)[DEGREE] = malloc(sizeof(*A) * DATAPOINTS);
-    double *B = malloc(sizeof(*B) * DATAPOINTS);
+    assert(chunks > 0 && chunks <= QUADRATIC_APPROXIMATION_MAX_CHUNKS);
+    const int datapoints = DATAPOINTS / chunks;
+    double A[datapoints][DEGREE];
+    double B[datapoints];
     double ATA[DEGREE][DEGREE] ;
     double ATB[DEGREE] ;
     int zeropoint = 32768;
     int avg2error_i = 0;
     int max_error_i = 0;
-    output->data_bytes = 2 * (chunks) * (degree+1);
+    output->data_bytes = 2 * chunks * (DEGREE + 1);
     int output_index = 0;
-    for(int mid = datapoints/2; mid <= 65536; mid += datapoints) {
+    for(int mid = datapoints/2; mid <= DATAPOINTS; mid += datapoints) {
         int start = mid - datapoints / 2;
-        int16_t inputs_16bit[DATAPOINTS];
-        int16_t outputs_16bit[DATAPOINTS];
+        int16_t inputs_16bit[datapoints];
+        int16_t outputs_16bit[datapoints];
         for(int i = 0; i < datapoints; i++) {
             int input_val = i - datapoints / 2;
             A[i][0] = 1;
-            for(int d = 1; d < degree; d++) {
+            for(int d = 1; d < DEGREE; d++) {
                 A[i][d] = A[i][d-1] * input_val;
             }
             int real_input_val = i + start - zeropoint;
@@ -167,33 +166,33 @@ void quadratic_approximation_generator(
             float f_real_input_val = real_input_val * input_scaler;
             B[i] = av(f_real_input_val) / output_scaler;
         }
-        for(int i=0 ; i<degree ; i++ ) {
-            for(int j=0 ; j<degree ; j++ ) {
+        for(int i=0 ; i<DEGREE ; i++ ) {
+            for(int j=0 ; j<DEGREE ; j++ ) {
                 ATA[i][j] = 0.0 ;
                 for(int k=0 ; k<datapoints ; k++ ) {
                     ATA[i][j] += A[k][i] * A[k][j] ;
                 }
             }
         }
-        for(int i=0 ; i<degree ; i++ ) {
+        for(int i=0 ; i<DEGREE ; i++ ) {
             ATB[i] = 0.0 ;
             for(int k=0 ; k<datapoints ; k++ ) {
                 ATB[i] += A[k][i] * B[k] ;
             }
         }
-        for(int i=0 ; i<degree ; i++ ) {
+        for(int i=0 ; i<DEGREE ; i++ ) {
             assert(ATA[i][i] != 0.0);
-            for(int j=i+1 ; j<degree ; j++ ) {
+            for(int j=i+1 ; j<DEGREE ; j++ ) {
                 if( ATA[j][i] != 0 ) {
                     double fac = ATA[j][i] / ATA[i][i] ;
-                    for(int k=i ; k<degree ; k++ ) {
+                    for(int k=i ; k<DEGREE ; k++ ) {
                         ATA[j][k] -= fac * ATA[i][k] ;
                     }
                     ATB[j] -= fac * ATB[i] ;
                 }
             }
         }
-        for(int i=degree-1 ; i>=0 ; i-- ) {
+        for(int i=DEGREE-1 ; i>=0 ; i-- ) {
             assert(ATA[i][i] != 0.0);
             for(int j=0 ; j<i ; j++ ) {
                 if( ATA[j][i] != 0 ) {
@@ -205,7 +204,7 @@ void quadratic_approximation_generator(
                 }
             }
         }
-        for(int i=0 ; i<degree ; i++ ) {
+        for(int i=0 ; i<DEGREE ; i++ ) {
             ATB[i] /= ATA[i][i] ;
         }
 
@@ -241,10 +240,8 @@ void quadratic_approximation_generator(
         }
         output_index++;
     }
-    *error = sqrt(avg2error_i / 65536.0);
+    *error = sqrt(avg2error_i / (double)DATAPOINTS);
     *max_error = max_error_i;
-    free(A);
-    free(B);
 }
 
 uint32_t quadratic_function_table_number_bytes(quadratic_function_table_t *x) {
