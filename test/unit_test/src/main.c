@@ -16,6 +16,7 @@ int main(int argc, const char* argv[]) {
   RUN_TEST_GROUP(group_dequantize_int16);
   RUN_TEST_GROUP(group_expand_8_to_16);
   RUN_TEST_GROUP(group_lookup8);
+  RUN_TEST_GROUP(group_mean_int8);
   RUN_TEST_GROUP(group_mul_elementwise);
   RUN_TEST_GROUP(group_multiply_int16);
   RUN_TEST_GROUP(group_output_transform_fn_int16);
