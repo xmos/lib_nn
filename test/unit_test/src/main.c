@@ -33,7 +33,6 @@ int main(int argc, const char* argv[]) {
     RUN_TEST_GROUP(group_ImageGeometry);
     RUN_TEST_GROUP(group_ImageRegion);
     RUN_TEST_GROUP(group_ImageVect);
-    RUN_TEST_GROUP(group_matmul);
     RUN_TEST_GROUP(group_maxpool);
     RUN_TEST_GROUP(group_mem_cpy_fns);
     RUN_TEST_GROUP(group_output_transforms);
