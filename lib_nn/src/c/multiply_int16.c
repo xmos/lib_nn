@@ -5,14 +5,13 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <math.h>
-#include "multiply_int16.h"
+#include "nn_layers.h"
 
 
 
 // Element multiplication between two tensors
 
-extern void multiply_int16_tensor_asm(int16_t *output, int16_t *input1, int16_t *input2, int tensor_length, void *blob);
-
+#ifdef NN_USE_REF
 void multiply_int16_tensor_ref(int16_t *output, int16_t *input1, int16_t *input2, int tensor_length, void *blob) {
     int16_t *multipliers = (int16_t *) blob;
     int shift = multipliers[1];
@@ -26,6 +25,12 @@ void multiply_int16_tensor_ref(int16_t *output, int16_t *input1, int16_t *input2
     }
 }
 
+#else
+
+extern void multiply_int16_tensor_asm(int16_t *output, int16_t *input1, int16_t *input2, int tensor_length, void *blob);
+
+#endif
+
 void multiply_int16_tensor(int16_t *output, int16_t *input1, int16_t *input2, int tensor_length, void *blob) {
 #ifdef NN_USE_REF
     multiply_int16_tensor_ref(output, input1, input2, tensor_length, blob);
@@ -33,52 +38,3 @@ void multiply_int16_tensor(int16_t *output, int16_t *input1, int16_t *input2, in
     multiply_int16_tensor_asm(output, input1, input2, tensor_length, blob);
 #endif
 }
-
-
-const int16_t eight_thousand[16] = {
-    0x8000,
-    0x8000,
-    0x8000,
-    0x8000,
-    0x8000,
-    0x8000,
-    0x8000,
-    0x8000,
-    0x8000,
-    0x8000,
-    0x8000,
-    0x8000,
-    0x8000,
-    0x8000,
-    0x8000,
-    0x8000,
-};
-
-
-
-// Element multiplication between two tensors
-
-extern void requantize_int16_tensor_asm(int16_t *output, int16_t *input1, int tensor_length, void *blob);
-
-void requantize_int16_tensor_ref(int16_t *output, int16_t *input1, int tensor_length, void *blob) {
-    int16_t *multipliers = (int16_t *) blob;
-    for(int i = 0; i < tensor_length; i++) {
-        int64_t mult = (((int)input1[i]) << 16) + input1[i] * (int64_t) multipliers[i & 15] * 2;
-        mult = mult + (1 << 15);
-        mult = mult >> 16;
-
-        if (mult > 32767) mult = 32767;
-        if (mult < -32768) mult = -32768;
-        output[i] = mult;
-    }
-}
-
-void requantize_int16_tensor(int16_t *output, int16_t *input1, int tensor_length, void *blob) {
-#ifdef NN_USE_REF
-    requantize_int16_tensor_ref(output, input1, tensor_length, blob);
-#else
-    requantize_int16_tensor_asm(output, input1, tensor_length, blob);
-#endif
-}
-
-

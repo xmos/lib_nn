@@ -35,7 +35,7 @@
 
 
 /*
-void mat_mul_dw_direct_impl_asm(MatMulDirectFn_DW::Params *params,
+void mat_mul_dw_direct_int16_impl_asm(MatMulDirectFn_DW::Params *params,
                                       VPURingBuffer *A, int16_t *X,
                                       int32_t output_channel_group);
 */
@@ -111,3 +111,22 @@ FUNCTION_NAME:
 
 
 
+#if defined(__VX4A__) || defined(__VX4B__)
+
+#define FUNCTION_NAME mat_mul_dw_direct_int16_impl_asm
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+    xm.entsp 0
+    xm.ldcu x10, 0
+    xm.assert x10 //NOT IMPLEMENTED
+    xm.retsp 0
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  0
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
+#endif

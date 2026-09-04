@@ -3,8 +3,9 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "quadratic_interpolation.h"
+#include "nn_layers.h"
 
+#ifdef NN_USE_REF
 static int clamp(int64_t x) {
     if (x > 32767) return 32767;
     if (x < -32768) return -32768;
@@ -30,8 +31,12 @@ void quadratic_interpolation_128_ref(int16_t *outputs, int16_t *inputs,
     }
 }
 
+#else
+
 extern void quadratic_interpolation_128_asm(int16_t *outputs, int16_t *inputs,
                                             uint8_t *bytes, uint32_t N);
+
+#endif
 
 void quadratic_interpolation_128(int16_t *outputs, int16_t *inputs,
                                  uint8_t *bytes, uint32_t N) {

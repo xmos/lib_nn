@@ -4,16 +4,10 @@
 #include <stdint.h>
 #include <assert.h>
 
-#include "add_int16.h"
-#include "add_int16_transform.h"
+#include "nn_api.h"
+#include "nn_layers.h"
 
 #define SIZE 12
-
-#ifdef __xcore__
-#define WORD_ALIGNED __attribute__((aligned(4)))
-#else
-#define WORD_ALIGNED
-#endif
 
 static 
 void print_array(const char *name, int16_t *array, unsigned length) {

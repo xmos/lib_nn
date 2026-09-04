@@ -5,7 +5,9 @@
 
 #include "vpu_memmove.h"
 
+#ifndef NN_USE_REF
 extern void vpu_memmove_word_aligned_asm(void * dst, const void * src, unsigned byte_count);
+#endif
 
 void vpu_memmove_word_aligned(void * dst, const void * src, unsigned byte_count) {
 #ifdef NN_USE_REF

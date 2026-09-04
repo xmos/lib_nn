@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
-#include "multiply_int16_transform.h"
+#include "nn_layers.h"
 
 /*
  * Representative example:

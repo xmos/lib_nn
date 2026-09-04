@@ -10,12 +10,15 @@ int main(int argc, const char* argv[]) {
   UnityGetCommandLineOptions(argc, argv);
   UnityBegin(argv[0]);
 
+  // ---------- Common tests --------------
   RUN_TEST_GROUP(group_add_elementwise);
   RUN_TEST_GROUP(group_add_int16);
+  RUN_TEST_GROUP(group_argmax16);
   RUN_TEST_GROUP(group_bsign_8);
   RUN_TEST_GROUP(group_dequantize_int16);
   RUN_TEST_GROUP(group_expand_8_to_16);
   RUN_TEST_GROUP(group_lookup8);
+  RUN_TEST_GROUP(group_mean);
   RUN_TEST_GROUP(group_mul_elementwise);
   RUN_TEST_GROUP(group_multiply_int16);
   RUN_TEST_GROUP(group_output_transform_fn_int16);
@@ -24,6 +27,11 @@ int main(int argc, const char* argv[]) {
   RUN_TEST_GROUP(group_quadratic_interpolation);
   RUN_TEST_GROUP(group_softmax);
   RUN_TEST_GROUP(group_vpu);
+
+  // ---------- Device only --------------
+#ifndef TEST_BUILD_NATIVE
+  RUN_TEST_GROUP(group_vpu_sim);
+#endif
 
   // -------- Native only --------------
   #ifdef TEST_BUILD_NATIVE

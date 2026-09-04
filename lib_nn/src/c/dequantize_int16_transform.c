@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
-#include "dequantize_int16_transform.h"
+#include "nn_layers.h"
 
 int dequantize_int16_tensor_blob(void *output,
                                  float input_scaler,

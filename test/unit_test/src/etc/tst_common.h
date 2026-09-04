@@ -7,18 +7,6 @@
 #include <stdint.h>
 #include <nn_api.h>
 
-#define TEST_C_GLOBAL (0)
-#define DO_PRINT_EXTRA_GLOBAL (1)
-
-#define UNITY_SET_FILE() Unity.TestFile = __FILE__
-
-#define PRINTF(...)        \
-  do {                     \
-    if (DO_PRINT_EXTRA) {  \
-      printf(__VA_ARGS__); \
-    }                      \
-  } while (0)
-
 #ifdef __XC__
 extern "C" {
 #endif

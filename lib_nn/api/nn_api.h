@@ -16,7 +16,7 @@
 #define __has_builtin(x) 0
 #endif
 
-#if defined(__xcore__) || defined(__riscv_xxcore)
+#if defined(__xcore__)
 #define WORD_ALIGNED __attribute__((aligned(4)))
 #else
 #define WORD_ALIGNED

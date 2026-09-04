@@ -21,8 +21,6 @@
  *
  * @returns  The inner product
  */
-extern void pad_3_to_4_asm(int32_t outputs[], int64_t inputs[], uint32_t N_24, uint32_t pad_val);
-
 void pad_3_to_4_prepare(uint32_t * n_3, 
     const unsigned height, 
     const unsigned width) {
@@ -34,6 +32,7 @@ void pad_3_to_4_prepare(uint32_t * n_3,
  * @param inputs   pointer to the input array - incremented by 3 bytes
  * @param N_3      number of pixels will be decremented by 1.
  */
+#ifndef NN_USE_REF
 static inline void pad_3_to_4_single(int8_t **outputs, int8_t **inputs, uint32_t *N_3, uint32_t pad_val) {
     for(uint32_t i = 0; i < 3; i++) {
         (*(int8_t**)outputs)[i] = (*inputs)[i];
@@ -43,7 +42,9 @@ static inline void pad_3_to_4_single(int8_t **outputs, int8_t **inputs, uint32_t
     *outputs += 4;
     *N_3 -= 1;
 }
+#endif
 
+#ifdef NN_USE_REF
 void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val){
 
     int8_t * output_p = (int8_t *)outputs;
@@ -57,6 +58,12 @@ void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pa
         output_p += 1;
     }
 }
+
+#else
+
+extern void pad_3_to_4_asm(int32_t outputs[], int64_t inputs[], uint32_t N_24, uint32_t pad_val);
+
+#endif
 
 void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val) {
 #if NN_USE_REF

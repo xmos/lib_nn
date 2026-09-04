@@ -114,8 +114,7 @@ TEST(group_mul_elementwise, test_mul_elementwise_case1)
             test_count++;
         }
     }
-    printf("test_count %d sum_error %d abs_error %d \n", test_count, sum_error, abs_error);
-
+    // printf("test_count %d sum_error %d abs_error %d \n", test_count, sum_error, abs_error);
 }
 #undef LENGTH
 
@@ -165,7 +164,7 @@ TEST(group_mul_elementwise, test_mul_elementwise_case2)
             test_count++;
         }
     }
-    printf("test_count %d sum_error %d abs_error %d \n", test_count, sum_error, abs_error);
+    // printf("test_count %d sum_error %d abs_error %d \n", test_count, sum_error, abs_error);
 }
 #undef LENGTH
 
@@ -233,7 +232,7 @@ TEST(group_mul_elementwise, test_mul_elementwise_case3)
             TEST_ASSERT_INT8_WITHIN(1, expected[i], out[i]);
         }
     }
-    printf("test_count %d sum_error %d abs_error %d \n", test_count, sum_error, abs_error);
+    // printf("test_count %d sum_error %d abs_error %d \n", test_count, sum_error, abs_error);
 
 }
 #undef LENGTH
@@ -308,7 +307,6 @@ TEST(group_mul_elementwise, test_mul_elementwise_case4)
             TEST_ASSERT_INT8_WITHIN(1, expected[i], out[i]);
         }
     }
-    printf("test_count %d sum_error %d abs_error %d \n", test_count, sum_error, abs_error);
-
+    // printf("test_count %d sum_error %d abs_error %d \n", test_count, sum_error, abs_error);
 }
 #undef LENGTH
