@@ -87,11 +87,13 @@ void mat_mul_real_int8_ref(
             }
             float quantized_value = (float)acc * p->scale + p->out_zp;
             // Clamp the quantized value to int8 range
-            if (quantized_value > 127.0f)
-                quantized_value = 127.0f;
-            else if (quantized_value < -128.0f)
-                quantized_value = -128.0f;
-            output[out_index++] = (int8_t)(roundf(quantized_value));
+if (quantized_value > 127.0f) {
+    output[out_index++] = 127;
+} else if (quantized_value < -128.0f) {
+    output[out_index++] = -128;
+} else {
+    output[out_index++] = (int8_t)roundf(quantized_value);
+}
         }
     }
 }
