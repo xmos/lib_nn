@@ -63,3 +63,49 @@ exit:
     .size FUNCTION_NAME, .Ltmp1-FUNCTION_NAME
 
 #endif
+
+#if defined(__VX4A__) || defined(__VX4B__)
+
+#define FUNCTION_NAME round8
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+    xm.entsp 0
+
+    li a1, 0x42fe
+    li a2, 0xc300
+    { xm.shli a1, a1, 16            ; xm.shli a2, a2, 16    }   // a1: 127.0, a2: -128.0
+    xm.flt a1, a0, a1                                           // a1: r < 127.0
+    { xm.brff a1, overflow127       ; li a3, 22             }   // a3: 22
+    xm.fgt a2, a0, a2                                           // a2: r > -128.0
+    { xm.brff a2, underflow_neg_128 ; addi a2, a0, 0        }   // a2: r
+
+    xm.fmant a0, a2
+    xm.fsexp a1, a2, a2 // a1: sign, a2: exp, a0: mantissa
+
+    sub a2, a3, a2                                      // a2: 22-exp
+    { xm.shr a0, a0, a2         ; li a3, 1          }   // a0: %.1f(r)
+    { and a3, a3, a0            ; srli a0, a0, 1    }   // a3: rounding bit, a0: integer_part
+    { add a0, a0, a3            ; xm.brff a1, exit  }   // a0: rounded integer
+    neg a0, a0
+    xm.retsp 0
+
+overflow127:
+    li a0, 127
+    xm.retsp 0
+
+underflow_neg_128:
+    li a0, 128
+    neg a0, a0          // a0: -128
+exit:
+    xm.retsp 0
+    
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  0
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
+#endif

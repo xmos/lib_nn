@@ -26,15 +26,21 @@ void mean_int8(const int8_t *input, int8_t *output, const int start_dim_size,
                const float in_zero_point, const float out_zero_point,
                const float scale_mul) {
 
-#if !defined(NN_USE_REF) && defined(__XS3A__)
-  if ((end_dim_size == 1) && (mean_dim_size % 4 == 0)) {
-    int8_t vpu_buffer[64];
-    float in_zero_point_sum = (float)((int32_t)(in_zero_point*mean_dim_size));  // rounding it to keep the same performance as ref
-    mean_int8_asm(
-      input, output, start_dim_size, mean_dim_size, 
-      vpu_buffer, 
-      in_zero_point_sum, out_zero_point, scale_mul);
-    return;
+#ifndef NN_USE_REF
+  if (end_dim_size == 1) {
+#ifdef __XS3A__
+    if (mean_dim_size % 4 == 0) {
+#endif
+      int8_t vpu_buffer[64];
+      float in_zero_point_sum = (float)((int32_t)(in_zero_point*mean_dim_size));  // rounding it to keep the same performance as ref
+      mean_int8_asm(
+        input, output, start_dim_size, mean_dim_size, 
+        vpu_buffer, 
+        in_zero_point_sum, out_zero_point, scale_mul);
+      return;
+#ifdef __XS3A__
+    }
+#endif
   }
 #endif
 
