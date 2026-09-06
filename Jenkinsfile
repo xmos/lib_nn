@@ -75,6 +75,10 @@ pipeline {
                                             cmakeOpts: "-DBUILD_NATIVE=ON -DTEST_LEVEL=${params.TEST_LEVEL}"
                                         )
                                     }
+                                    dir("test/custom_cmake_build") {
+                                        sh "cmake -B build_custom_cmake"
+                                        sh "cmake --build build_custom_cmake"
+                                    }
                                 }
                             }
                         } // Setup
@@ -86,6 +90,9 @@ pipeline {
                                 }
                                 dir("${REPO}/test/integration") {
                                     UnityJunit("./bin/integration_test -v", "NativeIntegration.log", "NativeIntegration")
+                                }
+                                dir("${REPO}/test/custom_cmake_build") {
+                                    sh "./bin/add_tensor"
                                 }
                             }
                         } // Test
