@@ -47,10 +47,10 @@ int16_t wgt_i16[i16_wgt_n] WORD_ALIGNED;
 VPURingBuffer A WORD_ALIGNED;
 
 static int32_t accumulator_value(const VPURingBuffer &accumulator, int channel) {
-  int32_t value;
-  ((int16_t *)&value)[0] = accumulator.vR[channel];
-  ((int16_t *)&value)[1] = accumulator.vD[channel];
-  return value;
+  const uint16_t lower_half = accumulator.vR[channel];
+  const uint32_t upper_half = static_cast<uint32_t>(
+      static_cast<uint16_t>(accumulator.vD[channel])) << 16;
+  return static_cast<int32_t>(lower_half | upper_half);
 }
 
 static void assert_accumulator_value(const VPURingBuffer &accumulator, int32_t expected) {

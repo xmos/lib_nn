@@ -378,8 +378,8 @@ TEST(group_vpu_sim, test_vlashr) {
   vstr(out_asm);
 
   VSETC(&sim, MODE_S8);
-  VLASHR(&sim, &input, rsh);
-  VSTR(&sim, &out_sim);
+  VLASHR(&sim, input, rsh);
+  VSTR(&sim, out_sim);
 
   // Both should be the same and equal to expected
   TEST_ASSERT_EQUAL_INT8_ARRAY(out_sim, out_asm, sizeof(out_asm));
@@ -397,13 +397,13 @@ TEST(group_vpu_sim, test_vpos) {
 
   int32_t WORD_ALIGNED out_asm[VPU_INT32_EPV];
   int32_t WORD_ALIGNED out_sim[VPU_INT32_EPV];
-  vpu_t sim;
+  vpu_t sim = {0};
 
   vsetc(MODE_S32); vldr(input);
   vpos(); vstr(out_asm);
 
   VSETC(&sim, MODE_S32); VLDR(&sim, input);
-  VPOS(&sim); VSTR(&sim, &out_sim);
+  VPOS(&sim); VSTR(&sim, out_sim);
 
   // Both should be the same and equal to expected
   TEST_ASSERT_EQUAL_INT32_ARRAY(out_sim, out_asm, VPU_INT32_EPV);
