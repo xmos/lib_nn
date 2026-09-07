@@ -7,6 +7,24 @@
 #include "nn_image.h"
 #include <string.h>
 
+// other layers
+#include "add_int16.h"
+#include "add_int16_transform.h"
+#include "dequantize_int16.h"
+#include "dequantize_int16_transform.h"
+#include "expand_8_to_16.h"
+#include "multiply_int16.h"
+#include "multiply_int16_transform.h"
+#include "output_transform_fn_int16.h"
+#include "output_transform_fn_int16_kernel_transform.h"
+#include "output_transform_fn_int16_mappings.h"
+#include "quadratic_approximation.h"
+#include "quadratic_interpolation.h"
+#include "quantize_int16.h"
+#include "quantize_int16_transform.h"
+
+void argmax_16(int32_t *Y, const int16_t *X, const int32_t N);
+
 /**
  * Struct represents the parameters needed by each `bsign_8()` job.
  *
@@ -225,7 +243,7 @@ void softmax_calculate_inv_sum(float *inv_sum, const float sums[]);
 void softmax_generate_exp_lut(int zero_point, float scale, float *lut);
 
 /**
- * @brief Reference (unoptimized) implementation of softmax for a single vector.
+ * @brief Implementation of softmax for a single vector.
  *
  * @param[out]  Y           The output vector
  * @param[in]   X           The input vector
@@ -233,7 +251,7 @@ void softmax_generate_exp_lut(int zero_point, float scale, float *lut);
  * @param[in]   scale       Quantization scale of the input
  * @param[in]   length      Number of elements in the input and output vectors
  */
-void softmax_ref(int8_t *Y, const int8_t *X, const float zero_point,
+void softmax(int8_t *Y, const int8_t *X, const float zero_point,
                  const float scale, const int length);
 
 /**

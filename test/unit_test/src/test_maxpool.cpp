@@ -7,6 +7,7 @@
 #include "OutputTransformFn.hpp"
 
 extern "C" {
+#include "nn_pooling.h"
 #include "tst_common.h"
 #include "unity.h"
 #include "unity_fixture.h"
@@ -22,6 +23,7 @@ TEST_TEAR_DOWN(group_maxpool) {}
 TEST_GROUP_RUNNER(group_maxpool) {
   RUN_TEST_CASE(group_maxpool, Test_Max_Pool_aggr);
   RUN_TEST_CASE(group_maxpool, Test_Max_Pool_ot);
+  RUN_TEST_CASE(group_maxpool, Test_AvgPool2D_Global);
 }
 
 /*
@@ -113,6 +115,16 @@ TEST(group_maxpool, Test_Max_Pool_ot) {
             }
         }
     }
+}
+
+TEST(group_maxpool, Test_AvgPool2D_Global) {
+  TEST_IGNORE_MESSAGE("avgpool2d_global has no implementation");
+#if 0
+  avgpool2d_global();
+  avgpool2d_global_ext();
+  maxpool2d();
+  maxpool2d_ext();
+#endif
 }
 
 }  // extern "C"
