@@ -24,6 +24,7 @@ TEST_SETUP(group_matmul) { srand(563456); }
 TEST_TEAR_DOWN(group_matmul) {}
 TEST_GROUP_RUNNER(group_matmul) {
   RUN_TEST_CASE(group_matmul, test_matmul);
+  RUN_TEST_CASE(group_matmul, test_matmul_zero_result);
 #ifdef TEST_BUILD_NATIVE
   RUN_TEST_CASE(group_matmul, test_matmul_full);
 #endif // TEST_BUILD_NATIVE
@@ -121,4 +122,39 @@ TEST(group_matmul, test_matmul_full) {
   impl_test_matmul(8, 8, 8, 3);
   impl_test_matmul(8, 8, 8, 5);
   impl_test_matmul(8, 8, 8, 15);
+}
+
+TEST(group_matmul, test_matmul_zero_result) {
+  int8_t WORD_ALIGNED lhs[LHS_ROW_SIZE * CHANNEL_SIZE];
+  int8_t WORD_ALIGNED rhs[RHS_COL_SIZE * CHANNEL_SIZE];
+  int8_t WORD_ALIGNED out[LHS_ROW_SIZE * RHS_COL_SIZE];
+  int8_t WORD_ALIGNED vpu_buf0[32 * 2];
+  int8_t WORD_ALIGNED vpu_buf1[32 * 2];
+  int8_t WORD_ALIGNED vpu_buf2[32 * 2];
+
+  nn_mat_mul_real_params_t params = {
+      .lhs_zp = 0.0f,
+      .rhs_zp = 0.0f,
+      .in_zp_sum = 0.0f,
+      .out_zp = 0.0f,
+      .scale = 1.0,
+      .lhs_row_size = LHS_ROW_SIZE,
+      .channel_size = CHANNEL_SIZE,
+      .rhs_col_size = RHS_COL_SIZE};
+
+  memset(lhs, INT8_MAX, LHS_ROW_SIZE * CHANNEL_SIZE);
+  for (int i = 0; i < RHS_COL_SIZE; ++i) {
+    memset(&rhs[i * CHANNEL_SIZE], 1, CHANNEL_SIZE / 2);
+    memset(&rhs[i * CHANNEL_SIZE + CHANNEL_SIZE / 2], -1, CHANNEL_SIZE / 2);
+  }
+  memset(out, GUARD_VALUE, LHS_ROW_SIZE * RHS_COL_SIZE);
+
+  mat_mul_real_int8(
+      &params,
+      vpu_buf0, vpu_buf1, vpu_buf2,
+      lhs, rhs, out);
+
+  for (int i = 0; i < LHS_ROW_SIZE * RHS_COL_SIZE; ++i) {
+    TEST_ASSERT_EQUAL_INT8(0, out[i]);
+  }
 }
