@@ -100,19 +100,76 @@ zero_offset_9_bit:
 #if defined(__VX4A__) || defined(__VX4B__)
 
 #define FUNCTION_NAME quadratic_interpolation_128_asm
+#define NSTACKWORDS 20
+
+.zero_offset_7_bit:
+    .word   0x00400040, 0x00400040, 0x00400040, 0x00400040
+    .word   0x00400040, 0x00400040, 0x00400040, 0x00400040
+.zero_offset_9_bit:
+    .word   0xFF00FF00, 0xFF00FF00, 0xFF00FF00, 0xFF00FF00
+    .word   0xFF00FF00, 0xFF00FF00, 0xFF00FF00, 0xFF00FF00
 
 .p2align 1
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
 FUNCTION_NAME:
+    xm.entsp (NSTACKWORDS * 4)
+    xm.stdsp s2, s3, 0
+    xm.stdsp s4, s5, 8
+    xm.stdsp s6, s7, 16
+    li t3, 0x100
+    li a4, 0
+    { li s7, 32 ; xm.vsetc t3 }
+    { xm.shr s3, a3, 4 ; xm.neg s7, s7 }
+    { xm.ldawsp s2, (8 * 4) ; xm.brff s3, .tail_end }
 
-    xm.entsp 0
-    xm.ldcu x10, 0
-    xm.assert x10 //NOT IMPLEMENTED
-    xm.retsp 0
+.vector_loop:
+    { xm.mkmsk s3, 32 ; li s4, 15 }
+.vector_loop_last:
+    li s6, 9
+    xm.stdsp a1, a3, 24
+    xm.vlashr a1, s6
+    xm.vstr s2
+    xm.neg s6, s6
+    xm.vlashr s2, s6
+    { xm.ldap t3, .zero_offset_9_bit ; xm.vlsub a1 }
+    { xm.ldap t3, .zero_offset_7_bit ; xm.vladd t3 }
+    xm.vstrpv a0, s3
+    xm.vldr t3
+    xm.vladd s2
+    xm.vstr s2
 
+.interpolation_loop:
+    xm.ld16s a3, s4(s2)
+    xm.ldd s3, a3, a3(a2)
+    { xm.sext a3, 8 ; xm.shr s5, a3, 8 }
+    xm.ld16s t3, s4(a0)
+    { li s6, 0 ; xm.shl a1, s3, s7 }
+    xm.maccs s6, s5, a3, t3
+    xm.maccs a1, s3, s5, t3
+    xm.lsats a1, s3, a4
+    xm.shr s3, s3, 16
+    xm.st16 s3, s4(a0)
+    { addi s4, s4, -1 ; xm.bt s4, .interpolation_loop }
+
+    li s3, 16
+    xm.lddsp a1, a3, 24
+    { sub a3, a3, s3 ; sub a0, a0, s7 }
+    { xm.shr s3, a3, 4 ; sub a1, a1, s7 }
+    xm.bt s3, .vector_loop
+
+.tail_end:
+    { xm.shl s3, a3, 1 ; xm.brff a3, .done }
+    { xm.mkmsk s3, s3 ; addi s4, a3, -1 }
+    { li a3, 16 ; xm.bu .vector_loop_last }
+
+.done:
+    xm.lddsp s2, s3, 0
+    xm.lddsp s4, s5, 8
+    xm.lddsp s6, s7, 16
+    xm.retsp (NSTACKWORDS * 4)
 .size FUNCTION_NAME, . -FUNCTION_NAME
-.resource_const FUNCTION_NAME, "stack_frame_bytes",  0
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  (NSTACKWORDS * 4)
 .resource_list_empty FUNCTION_NAME, "callees"
 .resource_list_empty FUNCTION_NAME, "tail_callees"
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
