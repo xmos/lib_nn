@@ -434,7 +434,7 @@ OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
 
   // Check A is zero or negative
   int Amax = 0;
-  for (int ch = 0; ch < activationParams.size(); ch++) {
+  for (unsigned ch = 0; ch < activationParams.size(); ch++) {
     bool trying = true;
     while (trying) {
       trying = false;
@@ -447,7 +447,7 @@ OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
   }
 
   // Reduce B to fit smallest A and M
-  for (int ch = 0; ch < activationParams.size(); ch++) {
+  for (unsigned ch = 0; ch < activationParams.size(); ch++) {
     bool trying = true;
     while (trying) {
       trying = false;
@@ -458,7 +458,7 @@ OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
     }
   }
 
-  for (int ch = 0; ch < activationParams.size(); ch++) {
+  for (unsigned ch = 0; ch < activationParams.size(); ch++) {
     int mul_sig_bits = 0, accu_sig_bits = 0;
 
     // multiplier raised to exponent M
@@ -522,7 +522,7 @@ void nn::OutputTransformFn::ActivationParams::
     if(verbose){
       printf("bias: %f -> %f ", original_bias, bias);
       printf("mult: %f -> %f\n", original_multiplier, multiplier);
-      printf("accu: [%d, %d] ", accu_min_val, accu_max_val);
+      printf("accu: [%d, %d] ", (int)accu_min_val, (int)accu_max_val);
       printf("output: [%d, %d]\n", output_min_val, output_max_val);
     }
     return;
@@ -541,10 +541,10 @@ void nn::OutputTransformFn::ActivationParams::
 
   if (debug) {
     printf("accu_out_clamp_min: %lld accu_out_clamp_max: %lld\n",
-           accu_out_clamp_min, accu_out_clamp_max);
+           (long long)accu_out_clamp_min, (long long)accu_out_clamp_max);
     printf(
         "activationParam.accu_min_val: %d activationParam.accu_max_val: %d\n",
-        accu_min_val, accu_max_val);
+        (int)accu_min_val, (int)accu_max_val);
   }
 
   int64_t union_max = std::min(accu_out_clamp_max, (int64_t)accu_max_val);
@@ -575,7 +575,7 @@ void nn::OutputTransformFn::ActivationParams::
   if (verbose) {
       printf("bias: %f -> %f ", original_bias, bias);
       printf("mult: %f -> %f ", original_multiplier, multiplier);
-      printf("accu:  [%d, %d] -> [%d, %d] %f ",original_accu_max_val, original_accu_min_val,  accu_min_val, accu_max_val, (float)(accu_max_val - accu_min_val) /(original_accu_max_val - original_accu_min_val) );
+      printf("accu:  [%d, %d] -> [%d, %d] %f ",(int)original_accu_max_val, (int)original_accu_min_val,  (int)accu_min_val, (int)accu_max_val, (float)(accu_max_val - accu_min_val) /(original_accu_max_val - original_accu_min_val) );
       printf("output: [%d, %d]\n", output_min_val, output_max_val);
   }
 }
@@ -609,7 +609,7 @@ OutputTransformFnInt8_Group::Quantizer::quantise_activation(
   }
 
   // Quantise the multiplier and bias
-  for (int ch = 0; ch < activationParams.size(); ++ch) {
+  for (unsigned ch = 0; ch < activationParams.size(); ++ch) {
     int16_t m = float_to_int16(activationParams[ch].multiplier, M);
     q.multipliers.push_back(m);
     int16_t b = float_to_int16_with_bias(activationParams[ch].bias, B);
@@ -645,7 +645,7 @@ OutputTransformFnInt8_Channelwise::Quantizer::quantise_activation(
   q.final_shr = B - 8;
 
   // Quantise the multiplier and bias
-  for (int ch = 0; ch < activationParams.size(); ++ch) {
+  for (unsigned ch = 0; ch < activationParams.size(); ++ch) {
     int A = As[ch];
     int M = Ms[ch];
 
@@ -922,8 +922,6 @@ int8_t *output_transform_fn_int_maxpool_impl_asm_stub(
 int8_t *output_transform_fn_int_maxpool_impl(
     const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
     int32_t output_channel_group, int16_t *multipliers_and_biases) {
-  xs3_vpu vpu_mem;
-  xs3_vpu *vpu = &vpu_mem;
 
   // we need to know how many we are processing
   int output_count = std::min(
@@ -933,6 +931,7 @@ int8_t *output_transform_fn_int_maxpool_impl(
   for(int i = 0; i < output_count; i++) {
       ((int8_t *)Y)[i] = ((int8_t *)&A->vR)[i];
   }
+  (void)multipliers_and_biases;
   return Y + output_count;
 }
 
@@ -1049,14 +1048,11 @@ extern "C" int8_t *output_transform_fn_binary_impl_asm(
     int8_t *Y, VPURingBuffer *A, int32_t output_channel_group,
     int16_t *thresholds);
 
-int8_t *nn::otfn_binary(void *p, int8_t *Y, VPURingBuffer *A,
-                                       int32_t output_channel_group, int16_t *thresholds) {
+int8_t *nn::otfn_binary(void *p, int8_t *Y, VPURingBuffer *A, int32_t output_channel_group, int16_t *thresholds) {
 #if defined(NN_USE_REF)
-  return output_transform_fn_binary_impl(Y, A, output_channel_group,
-                                         thresholds);
+  return output_transform_fn_binary_impl(Y, A, output_channel_group, thresholds);
 #else
-  return output_transform_fn_binary_impl_asm(Y, A, output_channel_group,
-                                             thresholds);
+  return output_transform_fn_binary_impl_asm(Y, A, output_channel_group, thresholds);
 #endif  // NN_USE_REF
+(void)p;
 }
-//-----------------------

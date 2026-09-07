@@ -47,8 +47,10 @@ TEST(group_ImageRegion, Constructor) {
     const auto width = rng.rand<int>(1, image.width - col);
     const auto depth = rng.rand<int>(1, image.depth - chan);
 
-    ImageRegion regionA(row, col, chan, height, width, depth);
-    ImageRegion regionB({row, col, chan}, {height, width, depth});
+    ImageRegion regionA(std::array<int, 3>{{row, col, chan}},
+                       std::array<int, 3>{{height, width, depth}});
+    ImageRegion regionB(std::array<int, 3>{{row, col, chan}},
+                       std::array<int, 3>{{height, width, depth}});
 
     TEST_ASSERT_EQUAL(row, regionA.start.row);
     TEST_ASSERT_EQUAL(col, regionA.start.col);
@@ -88,8 +90,8 @@ TEST(group_ImageRegion, StartVect) {
                           rng.rand<int>(1, image.width - start.col),
                           rng.rand<int>(1, image.depth - start.channel));
 
-    ImageRegion region({start.row, start.col, start.channel},
-                       {shape.row, shape.col, shape.channel});
+    ImageRegion region(std::array<int, 3>{{start.row, start.col, start.channel}},
+                       std::array<int, 3>{{shape.row, shape.col, shape.channel}});
 
     auto startVect = region.StartVect();
 
@@ -119,9 +121,10 @@ TEST(group_ImageRegion, EndVect) {
     const ImageVect end_inclusive = end;
     const ImageVect end_exclusive = end.add(1, 1, 1);
 
-    ImageRegion region({start.row, start.col, start.channel},
-                       {end.row - start.row + 1, end.col - start.col + 1,
-                        end.channel - start.channel + 1});
+    ImageRegion region(std::array<int, 3>{{start.row, start.col, start.channel}},
+                       std::array<int, 3>{{end.row - start.row + 1,
+                                          end.col - start.col + 1,
+                                          end.channel - start.channel + 1}});
 
     auto endVect_inclusive_true = region.EndVect(true);
     auto endVect_inclusive_false = region.EndVect(false);
@@ -151,8 +154,8 @@ TEST(group_ImageRegion, Within) {
                           rng.rand<int>(1, image.width - start.col),
                           rng.rand<int>(1, image.depth - start.channel));
 
-    ImageRegion region({start.row, start.col, start.channel},
-                       {shape.row, shape.col, shape.channel});
+    ImageRegion region(std::array<int, 3>{{start.row, start.col, start.channel}},
+                       std::array<int, 3>{{shape.row, shape.col, shape.channel}});
 
     int row = rng.rand<int>(0, image.height - 1);
     int col = rng.rand<int>(0, image.width - 1);
@@ -192,8 +195,8 @@ TEST(group_ImageRegion, Counts) {
                           rng.rand<int>(1, image.width - start.col),
                           rng.rand<int>(1, image.depth - start.channel));
 
-    ImageRegion region({start.row, start.col, start.channel},
-                       {shape.row, shape.col, shape.channel});
+    ImageRegion region(std::array<int, 3>{{start.row, start.col, start.channel}},
+                       std::array<int, 3>{{shape.row, shape.col, shape.channel}});
 
     const auto pixel_count = shape.row * shape.col;
     const auto element_count = pixel_count * shape.channel;
@@ -223,8 +226,8 @@ TEST(group_ImageRegion, ChannelOutputGroups) {
                           rng.rand<int>(1, image.width - start.col),
                           rng.rand<int>(1, image.depth - start.channel));
 
-    ImageRegion region({start.row, start.col, start.channel},
-                       {shape.row, shape.col, shape.channel});
+    ImageRegion region(std::array<int, 3>{{start.row, start.col, start.channel}},
+                       std::array<int, 3>{{shape.row, shape.col, shape.channel}});
 
     const auto chans_per_group = rng.rand<int>(1, 32);
 

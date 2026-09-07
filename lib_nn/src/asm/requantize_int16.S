@@ -13,7 +13,6 @@
     .issue_mode dual
 
 #define NSTACKWORDS     12
-#define ARGUMENT4       (NSTACKWORDS+1)
 
     .globl FUNCTION_NAME
     // r0: output
@@ -74,16 +73,49 @@ requantise_tensor_16_loop_entry:
 #if defined(__VX4A__) || defined(__VX4B__)
 
 #define FUNCTION_NAME requantize_int16_tensor_asm
+#define NSTACKWORDS 12
+    // a0: output
+    // a1: input1
+    // a2: number of elements, then mask of number of final elements
+    // a3: blob, 16 multipliers
+    // s2: 32
+    // s3: number of elements / 16
+    // t3: temp.
 .p2align 1
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
 FUNCTION_NAME:
-    xm.entsp 0
-    xm.ldcu x10, 0
-    xm.assert x10 //NOT IMPLEMENTED
-    xm.retsp 0
+    xm.entsp (NSTACKWORDS * 4)
+    xm.stdsp s2, s3, 0
+
+    { xm.shr s3, a2, 4 ; xm.zext a2, 4 }
+    li t3, 0x100
+    { xm.shl a2, a2, 1 ; xm.vsetc t3 }
+    lla t3, eight_thousand
+    { xm.mkmsk a2, a2 ; li s2, 32 }
+    xm.bu .loop_entry
+
+.loop:
+    { add a0, a0, s2 ; xm.vstd a0 }
+.loop_entry:
+    xm.vldd a1
+    xm.vldr t3
+    { add a1, a1, s2 ; xm.vldc a1 }
+    xm.vlmacc0 a3
+    xm.vlmacc1 a3
+    xm.vlmacc0 a3
+    xm.vlmacc1 a3
+    { addi s3, s3, -1 ; xm.bt s3, .loop }
+
+    add t3, sp, 8
+    xm.vstd t3
+    xm.vldr t3
+    xm.vstrpv a0, a2
+
+    xm.lddsp s2, s3, 0
+    xm.retsp (NSTACKWORDS * 4)
 .size FUNCTION_NAME, . -FUNCTION_NAME
-.resource_const FUNCTION_NAME, "stack_frame_bytes",  0
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  (NSTACKWORDS * 4)
 .resource_list_empty FUNCTION_NAME, "callees"
 .resource_list_empty FUNCTION_NAME, "tail_callees"
 .resource_list_empty FUNCTION_NAME, "parallel_callees"

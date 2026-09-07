@@ -19,7 +19,7 @@ int16_t *output_transform_fn_int16_impl(int16_t *vDvR,
                                         int32_t *mul_add,
                                         int16_t *output,
                                         uint32_t N) {
-    for(int i = 0; i < N; i++) {
+    for(uint32_t i = 0; i < N; i++) {
         int32_t multiplier = mul_add[ot_int16_mul_index_used_for_output[i]];
         int32_t adder      = mul_add[ot_int16_add_index_used_for_output[i]];
         int32_t accu_high  = vDvR[i+16];

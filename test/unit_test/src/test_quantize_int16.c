@@ -23,9 +23,6 @@ TEST_GROUP_RUNNER(group_quantize_int16) {
 }
 
 TEST(group_quantize_int16, test_quantize_tensor_int16) {
-#if defined(__VX4A__) || defined(__VX4B__)
-    TEST_IGNORE_MESSAGE("quantize_int16_tensor_asm not implemented on VX4");
-#endif
     float input1[N];
     int8_t blob[QUANTIZE_INT16_TENSOR_BYTES()];
     int16_t output[N+1];

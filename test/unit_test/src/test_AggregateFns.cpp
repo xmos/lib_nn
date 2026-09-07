@@ -2,6 +2,7 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include <list>
 #include <tuple>
+#include <vector>
 
 #include "AggregateFn.hpp"
 #include "Rand.hpp"
@@ -63,21 +64,21 @@ TEST(group_aggregate_fns, Test_SimpleMatMulInt8) {
         int kernel_bytes =
             MatMulInt8::get_weights_bytes(input_bytes, output_channel_count);
 
-        alignas(4) int8_t K[kernel_bytes];
-        alignas(4) int8_t T[scratch_bytes];
+        std::vector<int8_t> K(kernel_bytes);
+        std::vector<int8_t> T(scratch_bytes);
 
         MatMulInt8 mm(output_channel_count, input_bytes);
         mat_mul_generic_params_t p = mm.getParams();
 
-        std::fill_n(K, kernel_bytes, kernel_fill);
-        std::fill_n(T, scratch_bytes, scratch_fill);
+        std::fill_n(K.data(), kernel_bytes, kernel_fill);
+        std::fill_n(T.data(), scratch_bytes, scratch_fill);
 
         int ocg_count = (output_channel_count + vpu_ring_buffer_length - 1) /
                         vpu_ring_buffer_length;
 
         for (int ocg = 0; ocg < ocg_count; ++ocg) {
           alignas(4) VPURingBuffer A;
-          mat_mul_generic_int8(&p, &A, T, ocg, K);
+          mat_mul_generic_int8(&p, &A, T.data(), ocg, K.data());
 
           int c;
           if ((ocg + 1) * vpu_ring_buffer_length < output_channel_count)
@@ -126,21 +127,21 @@ TEST(group_aggregate_fns, Test_SimpleMatMulBinary) {
         int kernel_bytes =
             MatMulInt8::get_weights_bytes(input_bytes, output_channel_count);
 
-        alignas(4) int8_t K[kernel_bytes];
-        alignas(4) int8_t T[scratch_bytes];
+        std::vector<int8_t> K(kernel_bytes);
+        std::vector<int8_t> T(scratch_bytes);
 
         MatMulBinary mm(output_channel_count, input_bytes);
         mat_mul_generic_params_t p = mm.getParams();
 
-        std::fill_n(K, kernel_bytes, kernel_fill);
-        std::fill_n(T, scratch_bytes, scratch_fill);
+        std::fill_n(K.data(), kernel_bytes, kernel_fill);
+        std::fill_n(T.data(), scratch_bytes, scratch_fill);
 
         int ocg_count = (output_channel_count + vpu_ring_buffer_length - 1) /
                         vpu_ring_buffer_length;
 
         for (int ocg = 0; ocg < ocg_count; ++ocg) {
           alignas(4) VPURingBuffer A;
-          mat_mul_generic_binary(&p, &A, T, ocg, K);
+          mat_mul_generic_binary(&p, &A, T.data(), ocg, K.data());
 
           int c;
           if ((ocg + 1) * vpu_ring_buffer_length < output_channel_count)
@@ -178,27 +179,25 @@ TEST(group_aggregate_fns, Test_MatMulInt8) {
       int k_height = 1;
       int k_width = 1;  // to make things easy
 
-      std::array<int, 4> shape = {
-          {output_channel_count, k_height, k_width, input_bytes}};
-      alignas(4) int8_t raw_weights[output_channel_count][k_height][k_width]
-                                   [input_bytes];
-      assert(sizeof raw_weights == input_bytes * output_channel_count);
+      std::array<int, 4> shape = {{output_channel_count, k_height, k_width, input_bytes}};
+      // k_height == k_width == 1, so raw_weights[oc][0][0][b] == raw_weights[oc * input_bytes + b]
+      std::vector<int8_t> raw_weights(output_channel_count * k_height * k_width * input_bytes);
 
-      for (auto j = 0; j < sizeof raw_weights; ++j)
-        ((int8_t *)raw_weights)[j] = rng.rand<int8_t>();
+      for (size_t j = 0; j < raw_weights.size(); ++j)
+        raw_weights[j] = rng.rand<int8_t>();
 
       int scratch_bytes = MatMulInt8::get_scratch_mem_bytes(input_bytes);
 
       int8_t pad_val = rng.rand<int8_t>();
 
       Conv2dReorderedWeights rw = MatMulInt8::reorder_kernel_weights(
-          (int8_t *)raw_weights, shape, 8, pad_val);
+          raw_weights.data(), shape, 8, pad_val);
 
-      alignas(4) int8_t T[scratch_bytes];
+      std::vector<int8_t> T(scratch_bytes);
 
-      for (int j = 0; j < sizeof T; ++j) T[j] = rng.rand<int8_t>();
+      for (int j = 0; j < scratch_bytes; ++j) T[j] = rng.rand<int8_t>();
 
-      int accu_modifier[output_channel_count];  //=0
+      std::vector<int> accu_modifier(output_channel_count);  //=0
 
       // TODO make this into an int8 specific function
       for (int i = 0; i < output_channel_count; i++) {
@@ -215,8 +214,8 @@ TEST(group_aggregate_fns, Test_MatMulInt8) {
         accu_modifier[i] = s;
       }
 
-      alignas(4) int8_t reordered_weights[rw.weights.size()];
-      std::memcpy(reordered_weights, rw.weights.data(), rw.weights.size());
+      std::vector<int8_t> reordered_weights(rw.weights.size());
+      std::memcpy(reordered_weights.data(), rw.weights.data(), rw.weights.size());
 
       MatMulInt8 mm(output_channel_count,
                            input_bytes);  // reordered_weights
@@ -227,7 +226,7 @@ TEST(group_aggregate_fns, Test_MatMulInt8) {
 
       for (int ocg = 0; ocg < ocg_count; ++ocg) {
         alignas(4) VPURingBuffer A;
-        mat_mul_generic_int8(&p, &A, T, ocg, reordered_weights);
+        mat_mul_generic_int8(&p, &A, T.data(), ocg, reordered_weights.data());
 
         int chs_in_group =
             std::min(output_channel_count - output_channel_count * ocg,
@@ -240,7 +239,7 @@ TEST(group_aggregate_fns, Test_MatMulInt8) {
           int expected_sum = 0;
           for (int b = 0; b < input_bytes; b++)
             expected_sum +=
-                ((int)raw_weights[actual_output_channel][0][0][b] * (int)T[b]);
+                ((int)raw_weights[actual_output_channel * input_bytes + b] * (int)T[b]);
 
           int32_t v;
           ((int16_t *)&v)[0] = A.vR[output_chan];
@@ -269,34 +268,32 @@ TEST(group_aggregate_fns, Test_MatMulBinary) {
 
       std::array<int, 4> shape = {
           {output_channel_count, k_height, k_width, input_bytes}};
-      alignas(4) int8_t raw_weights[output_channel_count][k_height][k_width]
-                                   [input_bytes];
-      assert(sizeof raw_weights == input_bytes * output_channel_count);
+      // k_height == k_width == 1, so raw_weights[oc][0][0][b] == raw_weights[oc * input_bytes + b]
+      std::vector<int8_t> raw_weights(output_channel_count * k_height * k_width * input_bytes);
 
-      for (auto j = 0; j < sizeof raw_weights; ++j)
-        ((int8_t *)raw_weights)[j] = rng.rand<int8_t>();
+      for (size_t j = 0; j < raw_weights.size(); ++j)
+        raw_weights[j] = rng.rand<int8_t>();
 
       int scratch_bytes = MatMulInt8::get_scratch_mem_bytes(input_bytes);
 
       int8_t pad_val = rng.rand<int8_t>();
 
       Conv2dReorderedWeights rw = MatMulInt8::reorder_kernel_weights(
-          (int8_t *)raw_weights, shape, 8, pad_val);
+          raw_weights.data(), shape, 8, pad_val);
 
-      alignas(4) int8_t T[scratch_bytes];
+      std::vector<int8_t> T(scratch_bytes);
 
-      for (int j = 0; j < sizeof T; ++j) T[j] = rng.rand<int8_t>();
+      for (int j = 0; j < scratch_bytes; ++j) T[j] = rng.rand<int8_t>();
 
-      int expected[output_channel_count];
+      std::vector<int> expected(output_channel_count);
       for (int i = 0; i < output_channel_count; i++) {
         expected[i] = 0;
-        for (int j = 0; j < sizeof T; ++j) {
-          accumulate_binary_bytes(&(expected[i]), ((int8_t *)raw_weights)[j],
-                                  T[j]);
+        for (int j = 0; j < scratch_bytes; ++j) {
+          accumulate_binary_bytes(&(expected[i]), raw_weights[j], T[j]);
         }
       }
 
-      int accu_modifier[output_channel_count];  //=0
+      std::vector<int> accu_modifier(output_channel_count);  //=0
 
       // TODO make this into an int8 specific function
       for (int i = 0; i < output_channel_count; i++) {
@@ -313,8 +310,8 @@ TEST(group_aggregate_fns, Test_MatMulBinary) {
         accu_modifier[i] = s;
       }
 
-      alignas(4) int8_t reordered_weights[rw.weights.size()];
-      std::memcpy(reordered_weights, rw.weights.data(), rw.weights.size());
+      std::vector<int8_t> reordered_weights(rw.weights.size());
+      std::memcpy(reordered_weights.data(), rw.weights.data(), rw.weights.size());
 
       MatMulInt8 mm(output_channel_count,
                            input_bytes);  // reordered_weights
@@ -324,7 +321,7 @@ TEST(group_aggregate_fns, Test_MatMulBinary) {
 
       for (int ocg = 0; ocg < ocg_count; ++ocg) {
         alignas(4) VPURingBuffer A;
-        mat_mul_generic_int8(&p, &A, T, ocg, reordered_weights);
+        mat_mul_generic_int8(&p, &A, T.data(), ocg, reordered_weights.data());
 
         int chs_in_group =
             std::min(output_channel_count - output_channel_count * ocg,
@@ -337,7 +334,7 @@ TEST(group_aggregate_fns, Test_MatMulBinary) {
           int expected_sum = 0;
           for (int b = 0; b < input_bytes; b++)
             expected_sum +=
-                ((int)raw_weights[actual_output_channel][0][0][b] * (int)T[b]);
+                ((int)raw_weights[actual_output_channel * input_bytes + b] * (int)T[b]);
 
           int32_t v;
           ((int16_t *)&v)[0] = A.vR[output_chan];
@@ -376,11 +373,11 @@ TEST(group_aggregate_fns, Test_Simple_MatMulDirectFn) {
                 ImageGeometry X_params(x_height, x_width, x_channels);
                 WindowGeometry K_params(k_height, k_width, 1, 1, 1, 1);
 
-                alignas(4) int8_t K[y_channels][k_height][k_width][x_channels];
-                alignas(4) int8_t T[x_height][x_width][x_channels];
+                std::vector<int8_t> K(y_channels * k_height * k_width * x_channels);
+                std::vector<int8_t> T(x_height * x_width * x_channels);
 
                 int8_t *weights =
-                    (int8_t *)K;  // todo we will switch to usnig the boggler
+                    K.data();  // todo we will switch to usnig the boggler
 
                 MatMulDirectFn mmd(
                     X_params, K_params,
@@ -388,9 +385,8 @@ TEST(group_aggregate_fns, Test_Simple_MatMulDirectFn) {
                                   // k_width * x_channels)
                 mat_mul_direct_params_t p = mmd.getParams();
 
-                std::fill_n((int8_t *)K, sizeof K, kernel_fill);
-                std::fill_n((int8_t *)T, x_height * x_width * x_channels,
-                            scratch_fill);
+                std::fill_n(K.data(), K.size(), kernel_fill);
+                std::fill_n(T.data(), T.size(), scratch_fill);
 
                 int ocg_count = (y_channels + vpu_ring_buffer_length - 1) /
                                 vpu_ring_buffer_length;
@@ -399,7 +395,7 @@ TEST(group_aggregate_fns, Test_Simple_MatMulDirectFn) {
                   for (int y = 0; y < x_width - k_width + 1; ++y) {
                     for (int ocg = 0; ocg < ocg_count; ++ocg) {
                       alignas(4) VPURingBuffer A;
-                      mat_mul_direct_int8(&p, &A, (int8_t *)T, ocg, weights);
+                      mat_mul_direct_int8(&p, &A, T.data(), ocg, weights);
 
                       for (int output_chan = 0;
                            output_chan < vpu_ring_buffer_length;
@@ -450,19 +446,17 @@ TEST(group_aggregate_fns, Test_Simple_MatMulBinaryDirectFn) {
                 ImageGeometry X_params(x_height, x_width, x_channels, 1);
                 WindowGeometry K_params(k_height, k_width, 1, 1, 1, 1);
 
-                alignas(4)
-                    int8_t K[y_channels][k_height][k_width][x_channels / 8];
-                alignas(4) int8_t T[x_height][x_width][x_channels / 8];
+                std::vector<int8_t> K(y_channels * k_height * k_width * x_channels / 8);
+                std::vector<int8_t> T(x_height * x_width * x_channels / 8);
 
                 int8_t *weights =
-                    (int8_t *)K;  // todo we will switch to usnig the boggler
+                    K.data();  // todo we will switch to usnig the boggler
 
                 MatMulBinaryDirectFn mmd(X_params, K_params, x_channels);
                 mat_mul_direct_params_t p = mmd.getParams();
 
-                std::fill_n((int8_t *)K, sizeof K, kernel_fill);
-                std::fill_n((int8_t *)T, x_height * x_width * x_channels / 8,
-                            scratch_fill);
+                std::fill_n(K.data(), K.size(), kernel_fill);
+                std::fill_n(T.data(), T.size(), scratch_fill);
 
                 int expected = 0;
                 accumulate_binary_bytes(&(expected), kernel_fill, scratch_fill);
@@ -475,7 +469,7 @@ TEST(group_aggregate_fns, Test_Simple_MatMulBinaryDirectFn) {
                   for (int y = 0; y < x_width - k_width + 1; ++y) {
                     for (int ocg = 0; ocg < ocg_count; ++ocg) {
                       alignas(4) VPURingBuffer A;
-                      mat_mul_direct_binary(&p, &A, (int8_t *)T, ocg, weights);
+                      mat_mul_direct_binary(&p, &A, T.data(), ocg, weights);
 
                       for (int output_chan = 0;
                            output_chan < vpu_ring_buffer_length;
@@ -514,8 +508,7 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn) {
               for (int k_v_dilation = 1; k_v_dilation <= 3; ++k_v_dilation) {
                 for (int k_h_stride = 1; k_h_stride <= 3; ++k_h_stride) {
                   for (int k_v_stride = 1; k_v_stride <= 3; ++k_v_stride) {
-                    for (int output_channels = 16; output_channels <= 16 * 3;
-                         output_channels += 16) {
+                    for (int output_channels = 16; output_channels <= 16 * 3; output_channels += 16) {
                       for (int input_ch_per_output = x_channels;
                            input_ch_per_output <= x_channels;
                            input_ch_per_output += 32) {
@@ -533,16 +526,19 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn) {
 
                         std::array<int, 4> shape = {
                             {output_channels, k_height, k_width, x_channels}};
-                        alignas(4) int8_t raw_weights[output_channels][k_height]
-                                                     [k_width][x_channels];
+                        // flattened [output_channels][k_height][k_width][x_channels]
+                        std::vector<int8_t> raw_weights(
+                            (size_t)output_channels * k_height * k_width * x_channels);
 
-                        for (int j = 0; j < sizeof raw_weights; ++j)
-                          ((int8_t *)raw_weights)[j] = rng.rand<int8_t>();
+                        for (size_t j = 0; j < raw_weights.size(); ++j)
+                          raw_weights[j] = rng.rand<int8_t>();
 
-                        alignas(4) int8_t X_mem[x_height][x_width][x_channels];
+                        // flattened [x_height][x_width][x_channels]
+                        std::vector<int8_t> X_mem(
+                            (size_t)x_height * x_width * x_channels);
 
-                        for (int j = 0; j < sizeof X_mem; ++j)
-                          ((int8_t *)X_mem)[j] = rng.rand<int8_t>();
+                        for (size_t j = 0; j < X_mem.size(); ++j)
+                          X_mem[j] = rng.rand<int8_t>();
 
                         int8_t pad_val =
                             rng.rand<int8_t>();  // this should be unused in
@@ -550,7 +546,7 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn) {
 
                         Conv2dReorderedWeights rw =
                             MatMulInt8::reorder_kernel_weights(
-                                (int8_t *)raw_weights, shape, 8, pad_val);
+                                raw_weights.data(), shape, 8, pad_val);
 
                         MatMulDirectFn mmd(X, K, input_ch_per_output
                                                  //,
@@ -564,7 +560,7 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn) {
 
                         for (int ocg = 0; ocg < ocg_count; ++ocg) {
                           alignas(4) VPURingBuffer A;
-                          mat_mul_direct_int8(&p, &A, (int8_t *)X_mem, ocg, rw.weights.data());
+                          mat_mul_direct_int8(&p, &A, X_mem.data(), ocg, rw.weights.data());
 
                           int chs_in_group = std::min(
                               output_channels - vpu_ring_buffer_length * ocg,
@@ -580,10 +576,12 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn) {
                             for (int h = 0; h < k_height; ++h) {
                               for (int w = 0; w < k_width; ++w) {
                                 for (int c = 0; c < input_ch_per_output; ++c) {
-                                  int x = (int)X_mem[k_v_dilation * h]
-                                                    [k_h_dilation * w][c];
-                                  int t = raw_weights[actual_output_channel][h]
-                                                     [w][c];
+                                  int x = (int)X_mem[
+                                      ((size_t)(k_v_dilation * h) * x_width +
+                                       (k_h_dilation * w)) * x_channels + c];
+                                  int t = raw_weights[
+                                      (((size_t)actual_output_channel * k_height + h) *
+                                           k_width + w) * x_channels + c];
                                   expected_sum += x * t;
                                 }
                               }
@@ -623,18 +621,11 @@ TEST(group_aggregate_fns, Test_MatMulBinaryDirectFn) {
               for (int k_v_dilation = 1; k_v_dilation <= 3; ++k_v_dilation) {
                 for (int k_h_stride = 1; k_h_stride <= 3; ++k_h_stride) {
                   for (int k_v_stride = 1; k_v_stride <= 3; ++k_v_stride) {
-                    for (int output_channels = 256; output_channels <= 256 * 3;
-                         output_channels += 256) {
-                      for (int input_ch_per_output = x_channels;
-                           input_ch_per_output <= x_channels;
-                           input_ch_per_output += 256) {
-                        int output_height = CONV2D_OUTPUT_LENGTH(
-                            x_height, k_height, k_v_dilation, k_v_stride);
-                        int output_width = CONV2D_OUTPUT_LENGTH(
-                            x_width, k_width, k_h_dilation, k_h_stride);
-
+                    for (int output_channels = 256; output_channels <= 256 * 3; output_channels += 256) {
+                      for (int input_ch_per_output = x_channels; input_ch_per_output <= x_channels; input_ch_per_output += 256) {
+                        int output_height = CONV2D_OUTPUT_LENGTH(x_height, k_height, k_v_dilation, k_v_stride);
+                        int output_width = CONV2D_OUTPUT_LENGTH(x_width, k_width, k_h_dilation, k_h_stride);
                         if (output_height <= 0 || output_width <= 0) continue;
-
                         ImageGeometry X(x_height, x_width, x_channels, 1);
                         WindowGeometry K(k_height, k_width, 0, 0, 0, k_v_stride,
                                          k_h_stride, 0, k_v_dilation,
@@ -642,17 +633,20 @@ TEST(group_aggregate_fns, Test_MatMulBinaryDirectFn) {
 
                         std::array<int, 4> shape = {
                             {output_channels, k_height, k_width, x_channels}};
-                        alignas(4) int8_t raw_weights[output_channels][k_height]
-                                                     [k_width][x_channels / 8];
+                        // flattened [output_channels][k_height][k_width][x_channels/8]
+                        int x_bytes = x_channels / 8;
+                        std::vector<int8_t> raw_weights(
+                            (size_t)output_channels * k_height * k_width * x_bytes);
 
-                        for (int j = 0; j < sizeof raw_weights; ++j)
-                          ((int8_t *)raw_weights)[j] = rng.rand<int8_t>();
+                        for (size_t j = 0; j < raw_weights.size(); ++j)
+                          raw_weights[j] = rng.rand<int8_t>();
 
-                        alignas(4)
-                            int8_t X_mem[x_height][x_width][x_channels / 8];
+                        // flattened [x_height][x_width][x_channels/8]
+                        std::vector<int8_t> X_mem(
+                            (size_t)x_height * x_width * x_bytes);
 
-                        for (int j = 0; j < sizeof X_mem; ++j)
-                          ((int8_t *)X_mem)[j] = rng.rand<int8_t>();
+                        for (size_t j = 0; j < X_mem.size(); ++j)
+                          X_mem[j] = rng.rand<int8_t>();
 
                         int8_t pad_val =
                             rng.rand<int8_t>();  // this should be unused in
@@ -660,7 +654,7 @@ TEST(group_aggregate_fns, Test_MatMulBinaryDirectFn) {
 
                         Conv2dReorderedWeights rw =
                             MatMulInt8::reorder_kernel_weights(
-                                (int8_t *)raw_weights, shape, 1, pad_val);
+                                raw_weights.data(), shape, 1, pad_val);
 
                         MatMulBinaryDirectFn mmd(X, K, input_ch_per_output);
                         mat_mul_direct_params_t p = mmd.getParams();
@@ -671,7 +665,7 @@ TEST(group_aggregate_fns, Test_MatMulBinaryDirectFn) {
 
                         for (int ocg = 0; ocg < ocg_count; ++ocg) {
                           alignas(4) VPURingBuffer A;
-                          mat_mul_direct_binary(&p, &A, (int8_t *)X_mem, ocg, rw.weights.data());
+                          mat_mul_direct_binary(&p, &A, X_mem.data(), ocg, rw.weights.data());
 
                           int chs_in_group = std::min(
                               output_channels - vpu_ring_buffer_length * ocg,
@@ -690,12 +684,12 @@ TEST(group_aggregate_fns, Test_MatMulBinaryDirectFn) {
                                     input_ch_per_output / CHAR_BIT;
                                 for (int c = 0; c < input_bytes_per_output;
                                      ++c) {
-                                  int8_t x_byte =
-                                      (int8_t)X_mem[k_v_dilation * h]
-                                                   [k_h_dilation * w][c];
-                                  int8_t k_byte =
-                                      (int8_t)raw_weights[actual_output_channel]
-                                                         [h][w][c];
+                                  int8_t x_byte = (int8_t)X_mem[
+                                      ((size_t)(k_v_dilation * h) * x_width +
+                                       (k_h_dilation * w)) * x_bytes + c];
+                                  int8_t k_byte = (int8_t)raw_weights[
+                                      (((size_t)actual_output_channel * k_height + h) *
+                                           k_width + w) * x_bytes + c];
                                   accumulate_binary_bytes(&expected_sum, x_byte,
                                                           k_byte);
                                 }
@@ -726,16 +720,14 @@ TEST(group_aggregate_fns, Test_Kernel_Reordering) {
     for (int k_height = 1; k_height <= 6; ++k_height) {
       for (int k_width = 1; k_width <= 6; ++k_width) {
         for (int y_channels = 1; y_channels <= 6; ++y_channels) {
-          int8_t raw_weights[y_channels][k_height][k_width][x_channels];
+          std::vector<int8_t> raw_weights((size_t)y_channels * k_height * k_width * x_channels, 0);
 
           std::array<int, 4> shape = {
               {y_channels, k_height, k_width, x_channels}};
           int bits_per_element = 8;
 
-          memset(raw_weights, 0, sizeof raw_weights);
-
           Conv2dReorderedWeights rw = MatMulInt8::reorder_kernel_weights(
-              (int8_t *)raw_weights, shape, bits_per_element, 0);
+              raw_weights.data(), shape, bits_per_element, 0);
         }
       }
     }
@@ -769,18 +761,16 @@ TEST(group_aggregate_fns, Test_Simple_MatMulDirectFn_DW) {
 
               int weight_tensor_overread = 32;
               int input_tensor_overread = 32;
-              alignas(4) int8_t
-                  K[k_height * k_width * x_channels + weight_tensor_overread];
+              std::vector<int8_t> K(k_height * k_width * x_channels + weight_tensor_overread);
 
-              alignas(4) int8_t
-                  T[x_height * x_width * x_channels + input_tensor_overread];
+              std::vector<int8_t> T(x_height * x_width * x_channels + input_tensor_overread);
 
-              std::fill_n((int8_t *)K, sizeof K, kernel_fill);
-              std::fill_n((int8_t *)T, sizeof T, scratch_fill);
+              std::fill_n(K.data(), K.size(), kernel_fill);
+              std::fill_n(T.data(), T.size(), scratch_fill);
 
               int8_t pad_val = 0;
               Conv2dReorderedWeights rw =
-                  MatMulDirectFn_DW::reorder_kernel_weights((int8_t *)K, shape,
+                  MatMulDirectFn_DW::reorder_kernel_weights(K.data(), shape,
                                                             pad_val);
 
               int8_t *weights = rw.weights.data();
@@ -800,7 +790,7 @@ TEST(group_aggregate_fns, Test_Simple_MatMulDirectFn_DW) {
                 for (int y = 0; y < x_width - k_width + 1; ++y) {
                   for (int ocg = 0; ocg < ocg_count; ++ocg) {
                     alignas(4) VPURingBuffer A;
-                    int8_t *X_mem_ch_grp = T + ocg * 16;
+                    int8_t *X_mem_ch_grp = T.data() + ocg * 16;
                     mat_mul_dw_direct(&p, &A, X_mem_ch_grp, ocg, weights);
 
                     for (int output_chan = 0;
@@ -858,24 +848,25 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn_DW) {
                         {1, k_height, k_width, x_channels}};
 
                     int input_tensor_overread = 32;
-                    alignas(4)
-                        int8_t raw_weights[k_height][k_width][x_channels];
+                    // flattened [k_height][k_width][x_channels]
+                    std::vector<int8_t> raw_weights(
+                        (size_t)k_height * k_width * x_channels);
 
-                    for (int j = 0; j < sizeof raw_weights; ++j)
-                      ((int8_t *)raw_weights)[j] = rng.rand<int8_t>();
+                    for (size_t j = 0; j < raw_weights.size(); ++j)
+                      raw_weights[j] = rng.rand<int8_t>();
 
-                    alignas(4) int8_t X_mem[x_height * x_width * x_channels +
-                                            input_tensor_overread];
+                    std::vector<int8_t> X_mem(x_height * x_width * x_channels +
+                                            input_tensor_overread);
 
-                    for (int j = 0; j < sizeof X_mem; ++j)
-                      ((int8_t *)X_mem)[j] = rng.rand<int8_t>();
+                    for (size_t j = 0; j < X_mem.size(); ++j)
+                      X_mem[j] = rng.rand<int8_t>();
 
                     int8_t pad_val = rng.rand<int8_t>();  // this should be
                                                           // unused in this case
 
                     Conv2dReorderedWeights rw =
                         MatMulDirectFn_DW::reorder_kernel_weights(
-                            (int8_t *)raw_weights, shape, pad_val);
+                            raw_weights.data(), shape, pad_val);
 
                     MatMulDirectFn_DW mmd(X, K);
                     mat_mul_dw_direct_params_t p = mmd.getParams();
@@ -888,8 +879,8 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn_DW) {
 
                       // We need to dereference the pointer here so as to test
                       // the correct ocg
-                      int8_t *X_mem_ch_grp = X_mem + ocg * 16;
-                      mat_mul_dw_direct(&p, &A, (int8_t *)X_mem_ch_grp, ocg, rw.weights.data());
+                      int8_t *X_mem_ch_grp = X_mem.data() + ocg * 16;
+                      mat_mul_dw_direct(&p, &A, X_mem_ch_grp, ocg, rw.weights.data());
 
                       int chs_in_group =
                           std::min(x_channels - vpu_ring_buffer_length * ocg,
@@ -905,12 +896,13 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn_DW) {
                         for (int h = 0; h < k_height; ++h) {
                           for (int w = 0; w < k_width; ++w) {
                             int x =
-                                *(X_mem + actual_output_channel +
+                                *(X_mem.data() + actual_output_channel +
                                   (k_h_dilation * w * x_channels) +
                                   (k_v_dilation * h * x_channels * x_width));
 
-                            int t =
-                                (int)raw_weights[h][w][actual_output_channel];
+                            int t = (int)raw_weights[
+                                ((size_t)h * k_width + w) * x_channels +
+                                actual_output_channel];
                             expected_sum += x * t;
                           }
                         }
@@ -936,17 +928,15 @@ TEST(group_aggregate_fns, Test_Kernel_Reordering_DW) {
   for (int x_channels = 4; x_channels <= 32; x_channels += 4) {
     for (int k_height = 1; k_height <= 6; ++k_height) {
       for (int k_width = 1; k_width <= 6; ++k_width) {
-        int8_t raw_weights[x_channels][k_height][k_width][1];
+        std::vector<int8_t> raw_weights((size_t)x_channels * k_height * k_width);
 
         std::array<int, 4> shape = {{1, k_height, k_width, x_channels}};
 
-        memset(raw_weights, 0, sizeof raw_weights);
-
-        for (int i = 0; i < sizeof raw_weights; ++i)
-          ((int8_t *)raw_weights)[i] = rng.rand<int8_t>();
+        for (size_t i = 0; i < raw_weights.size(); ++i)
+          raw_weights[i] = rng.rand<int8_t>();
 
         Conv2dReorderedWeights rw = MatMulDirectFn_DW::reorder_kernel_weights(
-            (int8_t *)raw_weights, shape, 0);
+            raw_weights.data(), shape, 0);
       }
     }
   }
@@ -984,15 +974,18 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn_int16) {
 
                         std::array<int, 4> shape = {
                             {output_channels, k_height, k_width, x_channels}};
-                        alignas(4) int8_t raw_weights[output_channels][k_height]
-                                                     [k_width][x_channels];
-                        for (int j = 0; j < sizeof(raw_weights); ++j)
-                            ((int8_t *)raw_weights)[j] = rng.rand<int8_t>();
+                        // flattened [output_channels][k_height][k_width][x_channels]
+                        std::vector<int8_t> raw_weights(
+                            (size_t)output_channels * k_height * k_width * x_channels);
+                        for (size_t j = 0; j < raw_weights.size(); ++j)
+                            raw_weights[j] = rng.rand<int8_t>();
 
-                        alignas(4) int16_t X_mem[x_height][x_width][x_channels];
+                        // flattened [x_height][x_width][x_channels]
+                        std::vector<int16_t> X_mem(
+                            (size_t)x_height * x_width * x_channels);
 
-                        for (int j = 0; j < sizeof(X_mem)/2; ++j)
-                          ((int16_t *)X_mem)[j] = rng.rand<int16_t>();
+                        for (size_t j = 0; j < X_mem.size(); ++j)
+                          X_mem[j] = rng.rand<int16_t>();
 
                         int8_t pad_val =
                             rng.rand<int8_t>();  // this should be unused in
@@ -1000,12 +993,11 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn_int16) {
 
                         Conv2dReorderedWeights rw =
                             MatMulInt8::reorder_kernel_weights(
-                                (int8_t *)raw_weights, shape, 8, pad_val, true);
+                                raw_weights.data(), shape, 8, pad_val, true);
 
-                        alignas(4)
-                            int16_t expanded_weights[output_channels][k_height][k_width][x_channels];
+                        std::vector<int16_t> expanded_weights(raw_weights.size());
 
-                        expand_8_to_16((int16_t*)expanded_weights, (int8_t*)rw.weights.data(), sizeof(raw_weights));
+                        expand_8_to_16(expanded_weights.data(), rw.weights.data(), (int)raw_weights.size());
 
                         MatMulDirectFn mmd(X, K, input_ch_per_output
                                                  //,
@@ -1019,7 +1011,7 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn_int16) {
 
                         for (int ocg = 0; ocg < ocg_count; ++ocg) {
                           alignas(4) VPURingBuffer A;
-                          mat_mul_direct_int16(&p, &A, (int16_t *)X_mem, ocg, (int16_t*)expanded_weights);
+                          mat_mul_direct_int16(&p, &A, X_mem.data(), ocg, expanded_weights.data());
 
                           int chs_in_group = std::min(
                               output_channels - vpu_ring_buffer_length * ocg,
@@ -1035,10 +1027,12 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn_int16) {
                             for (int h = 0; h < k_height; ++h) {
                               for (int w = 0; w < k_width; ++w) {
                                 for (int c = 0; c < input_ch_per_output; ++c) {
-                                  int x = (int)X_mem[k_v_dilation * h]
-                                                    [k_h_dilation * w][c];
-                                  int t = raw_weights[actual_output_channel][h]
-                                                     [w][c];
+                                  int x = (int)X_mem[
+                                      ((size_t)(k_v_dilation * h) * x_width +
+                                       (k_h_dilation * w)) * x_channels + c];
+                                  int t = raw_weights[
+                                      (((size_t)actual_output_channel * k_height + h) *
+                                           k_width + w) * x_channels + c];
                                   expected_sum += x * t;
                                 }
                               }
@@ -1098,29 +1092,29 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn_int16_DW) {
                         {1, k_height, k_width, x_channels}};
 
                     int input_tensor_overread = 32;
-                    alignas(4)
-                        int8_t raw_weights[k_height][k_width][x_channels];
+                    // flattened [k_height][k_width][x_channels]
+                    std::vector<int8_t> raw_weights(
+                        (size_t)k_height * k_width * x_channels);
 
-                    for (int j = 0; j < sizeof(raw_weights); ++j)
-                        ((int8_t *)raw_weights)[j] = rng.rand<int8_t>();
+                    for (size_t j = 0; j < raw_weights.size(); ++j)
+                        raw_weights[j] = rng.rand<int8_t>();
 
-                    alignas(4) int16_t X_mem[x_height * x_width * x_channels +
-                                            input_tensor_overread];
+                    std::vector<int16_t> X_mem(x_height * x_width * x_channels +
+                                            input_tensor_overread);
 
-                    for (int j = 0; j < sizeof(X_mem)/2; ++j)
-                      ((int16_t *)X_mem)[j] = rng.rand<int16_t>();
+                    for (size_t j = 0; j < X_mem.size(); ++j)
+                      X_mem[j] = rng.rand<int16_t>();
 
                     int16_t pad_val = rng.rand<int16_t>();  // this should be
                                                           // unused in this case
 
                     Conv2dReorderedWeights rw =
                         MatMulDirectFn_DW::reorder_kernel_weights(
-                            (int8_t *)raw_weights, shape, pad_val);
+                            raw_weights.data(), shape, pad_val);
 
-                    alignas(4)
-                        int16_t expanded_weights[k_height][k_width][x_channels];
+                    std::vector<int16_t> expanded_weights(raw_weights.size());
 
-                    expand_8_to_16((int16_t*)expanded_weights, (int8_t*)raw_weights, sizeof(raw_weights));
+                    expand_8_to_16(expanded_weights.data(), raw_weights.data(), (int)raw_weights.size());
 
                     MatMulDirectFn_DW mmd(X, K);
                     mat_mul_dw_direct_params_t p = mmd.getParams();
@@ -1133,8 +1127,8 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn_int16_DW) {
 
                       // We need to dereference the pointer here so as to test
                       // the correct ocg
-                      int16_t *X_mem_ch_grp = X_mem + ocg * 16;
-                      mat_mul_dw_direct_int16(&p, &A, (int16_t *)X_mem_ch_grp, ocg, (int16_t*)expanded_weights);
+                      int16_t *X_mem_ch_grp = X_mem.data() + ocg * 16;
+                      mat_mul_dw_direct_int16(&p, &A, X_mem_ch_grp, ocg, expanded_weights.data());
 
                       int chs_in_group =
                           std::min(x_channels - vpu_ring_buffer_length * ocg,
@@ -1150,12 +1144,13 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn_int16_DW) {
                         for (int h = 0; h < k_height; ++h) {
                           for (int w = 0; w < k_width; ++w) {
                             int x =
-                                *(X_mem + actual_output_channel +
+                                *(X_mem.data() + actual_output_channel +
                                   (k_h_dilation * w * x_channels) +
                                   (k_v_dilation * h * x_channels * x_width));
 
-                            int t =
-                                (int)raw_weights[h][w][actual_output_channel];
+                            int t = (int)raw_weights[
+                                ((size_t)h * k_width + w) * x_channels +
+                                actual_output_channel];
                             expected_sum += x * t;
                           }
                         }

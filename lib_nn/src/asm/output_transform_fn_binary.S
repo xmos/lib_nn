@@ -66,7 +66,7 @@ FUNCTION_NAME:
     .size FUNCTION_NAME, .Ltmp0-FUNCTION_NAME
     .issue_mode  single
 
-#endif
+#endif // __XS3A__
 
 #if defined(__VX4A__) || defined(__VX4B__)
 

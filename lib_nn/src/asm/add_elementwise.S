@@ -221,17 +221,9 @@ FUNCTION_NAME:
 
 #endif
 
-#if defined(__VX4A__) || defined(__VX4B__)
-
-
-#define FUNCTION_NAME add_elementwise_asm
-
-#define NSTACKWORDS  0
-#define ROUND_UP(X, Y) (((X+Y-1)/Y)*Y)
+#if defined(__VX4B__)
 
 /*
-
-
 extern void add_elementwise_asm(
     int8_t y[], 
     const int8_t x1[],
@@ -239,29 +231,211 @@ extern void add_elementwise_asm(
     nn_add_params_t *params,
     const int output_start, 
     const int output_count);
+
+typedef struct {
+        int16_t m1[16];
+        int16_t m2[16];
+        int16_t shr[16];
+        int16_t bias_hi[16];
+        int16_t bias_lo[16];
+} nn_add_params_t;
 */
 
-.p2align 1
+#define FUNCTION_NAME add_elementwise_asm
+
+#define PARAMS_M1         0
+#define PARAMS_M2         32
+#define PARAMS_SHR        64
+#define PARAMS_BIAS_HI    96
+#define PARAMS_BIAS_LO    128
+
+#define STACK_S2          (0)
+#define STACK_S3          (STACK_S2 + 4)
+#define STACK_S4          (STACK_S3 + 4)
+#define STACK_S5          (STACK_S4 + 4)
+#define STACK_S6          (STACK_S5 + 4)
+#define STACK_S7          (STACK_S6 + 4)
+#define STACK_S8          (STACK_S7 + 4)
+#define STACK_ORIG_DP     (STACK_S8 + 4)
+#define STACK_VEC1_TMP    (STACK_ORIG_DP + 4)
+#define STACK_VEC2_TMP    (STACK_VEC1_TMP + 32)
+#define STACK_RA          (STACK_VEC2_TMP + 32)
+#define NSTACKBYTES       (STACK_RA + 4)
+#define ROUND_UP(X, Y)    (((X+Y-1)/Y)*Y)
+
+#define arg_y_p           a0
+#define arg_x1_p          a1
+#define arg_x2_p          a2
+#define arg_add_params_p  a3
+#define arg_out_start     a4
+#define arg_out_cnt       a5
+
+#define tmp1              s2
+#define tmp2              s3
+#define counter           arg_add_params_p
+
+#define bias_lo           s4
+#define bias_hi           s5
+#define m1                s6
+#define m2                s7
+#define shift             s8
+
+.p2align 2
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
+.p2align 2
+.vec_0x01:
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
+    .word 0x01010101
+
+.vec_0x007F:
+    .word 0x007F007F
+    .word 0x007F007F
+    .word 0x007F007F
+    .word 0x007F007F
+    .word 0x007F007F
+    .word 0x007F007F
+    .word 0x007F007F
+    .word 0x007F007F
+
+.vec_0x80:
+    .word 0x80808080
+    .word 0x80808080
+    .word 0x80808080
+    .word 0x80808080
+    .word 0x80808080
+    .word 0x80808080
+    .word 0x80808080
+    .word 0x80808080
+
 FUNCTION_NAME:
 
-    {xm.entsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
-    xm.stdsp x18, x19, 0*8
-    xm.stdsp x20, x21, 1*8
-    xm.stdsp x22, x23, 2*8
+    xm.entsp ROUND_UP(NSTACKBYTES, 16)
+    xm.stdsp s2, s3, 0*8
+    xm.stdsp s4, s5, 1*8
+    xm.stdsp s6, s7, 2*8
+	sw s8, 3*8(sp)
 
-    xm.ldcu x10, 0
-    xm.assert x10 //NOT IMPLEMENTED
+    // Load vectors from params struct
+    // Subtract 16 here from output pointer as an optmization
+    // to add 16 before use in loop_main
+    { xm.ldcu t3, 16                    ; xm.nop                        }
+    { sub arg_y_p, arg_y_p, t3          ; xm.shl t3, t3, 5              }
+    addi bias_hi, arg_add_params_p, PARAMS_BIAS_HI
+    addi bias_lo, arg_add_params_p, PARAMS_BIAS_LO
+    addi m1, arg_add_params_p, PARAMS_M1
+    addi m2, arg_add_params_p, PARAMS_M2
+    // Load and init start position
+    addi shift, arg_add_params_p, PARAMS_SHR
+    addi tmp1, arg_out_start, 0
+    // Set vector mode to 8 bit and set up loop counter
+    addi tmp2, arg_out_cnt, 0
+    add arg_x1_p, arg_x1_p, tmp1
+    { xm.vsetc t3                       ; xm.shri counter, tmp2, 4      }
+    { add arg_x2_p, arg_x2_p, tmp1      ; add arg_y_p, arg_y_p, tmp1    }
 
-    xm.lddsp x18, x19, 0*8
-    xm.lddsp x20, x21, 1*8
-    xm.lddsp x22, x23, 2*8
+  label_loop_main:
+    // x1 and x2 are 8 bit inputs
+    // We load them and macc with .vec_0x01
+    // to extend them into 16 bit
+    { xm.vclrdr                         ; xm.nop                        }
+    lla t3, .vec_0x01
+    addi tmp1, sp, STACK_VEC1_TMP
+    addi tmp2, sp, STACK_VEC2_TMP
+    { xm.vldc t3                        ; xm.ldcu t3, 16                }
+    { xm.vlmacc0 arg_x1_p               ; add arg_x1_p, arg_x1_p, t3    }
+    { xm.vstr tmp1                      ; add arg_y_p, arg_y_p, t3      }
+    { xm.vclrdr                         ; xm.nop                        }
+    { xm.vlmacc0 arg_x2_p               ; add arg_x2_p, arg_x2_p, t3    }
+    // Load bias into acc
+    // vldr - vR can only be loaded from t3
+    { xm.vstr tmp2                      ; mv t3, bias_lo                }
+    { xm.vldr t3                        ; xm.ldcu t3, 24                }
+    // Set vector mode to 16x8 bit
+    { xm.vldd bias_hi                   ; xm.shli t3, t3, 5             }
+    { xm.vsetc t3                       ; xm.ldcu t3, 32                }
+    // Macc inputs with multipliers
+    xm.vldc m1
+    xm.vlmacc0 tmp1
+    xm.vldc m2
+    { xm.vlmacc0 tmp2                   ; xm.shli t3, t3, 3             }
 
-    {xm.retsp ROUND_UP(NSTACKWORDS*4, 16); xm.nop}
+    // Saturation fix
+    // Save original 32-bit outputs
+    // We saturate the number to 16-bits.
+    // We then use the upper 16-bits to find out which numbers are
+    // going to be -128.
+    // -128's are written to output with a mask.
+    // The lower 16-bits are later saturated using vlsat and
+    // written with a mask to fill in remaining spaces.
+    xm.vsetc t3
+    xm.vstd tmp2
+    { xm.vstr tmp1                      ; xm.ldcu tmp1, 32              }
+    xm.vlsat shift                    
+    { xm.vldd tmp2                      ; xm.shl tmp1, tmp1, 4          }
+    
+    lla t3, .vec_0x007F
+    { xm.vladd t3                       ; mv t3, tmp1                   }
+    xm.vdepth1
+    // Switch to 8-bit mode
+    xm.vsetc t3
+#define saturated_mask    tmp2
+#define mask              tmp1
+    // Store saturated_mask and set default mask to 16 elements
+    { xm.vstr saturated_mask            ; xm.mkmski mask, 16            }
+
+    bnez counter, label_store_with_mask
+    // In last loop - make mask for remaining elements
+    addi tmp2, arg_out_cnt, 0
+    xm.zexti tmp2, 4
+    xm.mkmsk mask, tmp2
+
+  label_store_with_mask:
+    lw saturated_mask, STACK_VEC2_TMP(sp)
+    lla t3, .vec_0x80
+    and saturated_mask, saturated_mask, mask
+    { xm.vldr t3                        ; addi t3, sp, STACK_VEC1_TMP   }
+    // Store -128's
+    xm.vstrpv arg_y_p, saturated_mask
+
+    { xm.vldr t3                        ; xm.nop                        }
+    { xm.andnot mask, saturated_mask    ; xm.nop                        }
+    xm.vlsat shift
+    // Store the result
+    { xm.vstr t3                        ; xm.addi tmp2, t3, 0           }
+    // Set to 16bit mode
+    li t3, 256
+    xm.vsetc t3
+    li t3, -8
+    xm.vlashr tmp2, t3
+    xm.vdepth8
+    // Store other elements
+    xm.vstrpv arg_y_p, mask
+    // Set to 8bit mode
+    li t3, 512
+    xm.vsetc t3
+
+    addi t3, counter, 0
+    addi counter, counter, -1
+    bnez t3, label_loop_main
+
+.Lfunc_end:
+    // Restore stack
+    xm.lddsp s2, s3, 0*8
+    xm.lddsp s4, s5, 1*8
+    xm.lddsp s6, s7, 2*8
+	lw s8, 3*8(sp)
+
+    xm.retsp ROUND_UP(NSTACKBYTES, 16)
 
 .size FUNCTION_NAME, . -FUNCTION_NAME
-.resource_const FUNCTION_NAME, "stack_frame_bytes",  ROUND_UP(NSTACKWORDS*4, 16)
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  ROUND_UP(NSTACKBYTES, 16)
 .resource_list_empty FUNCTION_NAME, "callees"
 .resource_list_empty FUNCTION_NAME, "tail_callees"
 .resource_list_empty FUNCTION_NAME, "parallel_callees"

@@ -37,7 +37,7 @@ TEST_GROUP_RUNNER(group_WindowLocation) {
 }
 
 static nn::ff::FilterGeometryIterator filter_sets[] = {
-    test::unpadded::SimpleDepthwise({1, 8}, {1, 4}, {4, 66}),
+    test::unpadded::SimpleDepthwise({{1, 8}}, {{1, 4}}, {{4, 66}}),
 };
 
 /////////////////////////////////////////////////////////////////////////

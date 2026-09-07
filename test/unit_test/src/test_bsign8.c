@@ -9,9 +9,11 @@
 
 #include "nn_operator.h"
 #include "tst_common.h"
+#include "xs3_vpu.h"
+#include "vpu_memcpy.h"
+
 #include "unity.h"
 #include "unity_fixture.h"
-#include "xs3_vpu.h"
 
 // for sprintf() calls
 static char str_buff[200];

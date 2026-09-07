@@ -589,32 +589,28 @@ void vpu_sim_mem_print(void *address, vector_mode mode) {
     case MODE_S8:
       printf("8-bit:\n");
       for (int i = 0; i < VPU_INT8_EPV; i++) {
-        printf("%d\t%c0x%0.2X(%d)\n", i, signof(vC8[i]), abs(vC8[i]),
-               (int)vC8[i]);
+        printf("%d\t%c0x%.2X(%d)\n", i, signof(vC8[i]), abs(vC8[i]), (int)vC8[i]);
       }
       break;
 
-      case MODE_S16:
-        printf("16-bit:\n");
-        for (int i = 0; i < VPU_INT16_EPV; i++) {
-          printf("%d\t%c0x%0.4X(%d)\n", i, signof(vC16[i]), abs(vC16[i]),
-                  (int)vC16[i]);
-        }
-        break;
+    case MODE_S16:
+      printf("16-bit:\n");
+      for (int i = 0; i < VPU_INT16_EPV; i++) {
+        printf("%d\t%c0x%.4X(%d)\n", i, signof(vC16[i]), abs(vC16[i]),(int)vC16[i]);
+      }
+      break;
 
-        case MODE_S16x8:
-          printf("16x8-bit:\n");
-          for (int i = 0; i < VPU_INT16_EPV; i++) {
-            printf("%d\t%c0x%0.4X(%d)\n", i, signof(vC8[2*i]), abs(vC8[2*i]),
-                   (int)vC8[2*i]);
-          }
-          break;
+    case MODE_S16x8:
+      printf("16x8-bit:\n");
+      for (int i = 0; i < VPU_INT16_EPV; i++) {
+        printf("%d\t%c0x%.4X(%d)\n", i, signof(vC8[2*i]), abs(vC8[2*i]),(int)vC8[2*i]);
+      }
+      break;
 
     case MODE_S32:
       printf("32-bit:\n");
       for (int i = 0; i < VPU_INT32_EPV; i++) {
-        printf("%d\t%c0x%0.8X(%d)\n", i, signof(vC32[i]), abs(vC32[i]),
-               (int)vC32[i]);
+        printf("%d\t%c0x%.8X(%d)\n", i, signof(vC32[i]), abs(vC32[i]), (int)vC32[i]);
       }
       break;
 
@@ -622,7 +618,6 @@ void vpu_sim_mem_print(void *address, vector_mode mode) {
       printf("In the future this might print all possible interpretations...");
       break;
   }
-
   printf("\n");
 }
 
@@ -631,17 +626,17 @@ void vpu_accu_print(xs3_vpu *vpu) {
   if (vpu->mode == MODE_S8) {
     for (int i = 0; i < VPU_INT8_ACC_PERIOD; i++) {
       int32_t acc = GetAccumulator(vpu, i);
-      printf("%d %d\n", i, acc);
+      printf("%d %d\n", i, (int)acc);
     }
   } else if ((vpu->mode == MODE_S16)|| (vpu->mode == MODE_S16x8)) {
     for (int i = 0; i < VPU_INT16_ACC_PERIOD; i++) {
       int32_t acc = GetAccumulator(vpu, i);
-      printf("%d %d\n", i, acc);
+      printf("%d %d\n", i, (int)acc);
     }
   } else if (vpu->mode == MODE_S32) {
     for (int i = 0; i < VPU_INT32_ACC_PERIOD; i++) {
       int64_t acc = GetAccumulator(vpu, i);
-      printf("%d %lld\n", i, acc);
+      printf("%d %lld\n", i, (long long)acc);
     }
   } else {
     assert(0);  // How'd this happen?
@@ -664,7 +659,7 @@ void vpu_sim_print(xs3_vpu *vpu) {
     case MODE_S8:
       printf("8-bit:     vC     \t  vR     \t   vD\n");
       for (int i = 0; i < VPU_INT8_EPV; i++) {
-        printf("%d\t%c0x%0.2X(%d)\t%c0x%0.2X(%d)\t%c0x%0.2X(%d)\n", i,
+        printf("%d\t%c0x%.2X(%d)\t%c0x%.2X(%d)\t%c0x%.2X(%d)\n", i,
                signof(vC8[i]), abs(vC8[i]), (int)vC8[i], signof(vR8[i]),
                abs(vR8[i]), (int)vR8[i], signof(vD8[i]), abs(vD8[i]),
                (int)vD8[i]);
@@ -674,24 +669,16 @@ void vpu_sim_print(xs3_vpu *vpu) {
       case MODE_S16:
       printf("16-bit:  vC     \t    vR      \t    vD\n");
       for (int i = 0; i < VPU_INT16_EPV; i++) {
-#if 0
-
-        printf("%d\t%c0x%0.4X(%d)\t%c0x%0.4X(%d)\t%c0x%0.4X(%d)\n", i,
-               signof(vC16[i]), abs(vC16[i]), (int)vC16[i], signof(vR16[i]),
-               abs(vR16[i]), (int)vR16[i], signof(vD16[i]), abs(vD16[i]),
-               (int)vD16[i]);
-#else
-        printf("%d\t0x%0.4X(%d)\t0x%0.4X(%d)\t0x%0.4X(%d)\n", i, abs(vC16[i]),
+        printf("%d\t0x%.4X(%d)\t0x%.4X(%d)\t0x%.4X(%d)\n", i, abs(vC16[i]),
                (int)vC16[i], abs(vR16[i]), (int)vR16[i], abs(vD16[i]),
                (int)vD16[i]);
-#endif
       }
       break;
 
     case MODE_S32:
       printf("32-bit:  vC     \t\t    vR      \t\t    vD\n");
       for (int i = 0; i < VPU_INT32_EPV; i++) {
-        printf("%d\t%c0x%0.8X(%d)\t%c0x%0.8X(%d)\t%c0x%0.8X(%d)\n", i,
+        printf("%d\t%c0x%.8X(%d)\t%c0x%.8X(%d)\t%c0x%.8X(%d)\n", i,
                signof(vC32[i]), abs(vC32[i]), (int)vC32[i], signof(vR32[i]),
                abs(vR32[i]), (int)vR32[i], signof(vD32[i]), abs(vD32[i]),
                (int)vD32[i]);
