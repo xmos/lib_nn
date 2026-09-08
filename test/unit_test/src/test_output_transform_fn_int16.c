@@ -1,6 +1,5 @@
 // Copyright 2023-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
-#include <limits.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -15,15 +14,11 @@ TEST_SETUP(group_output_transform_fn_int16) {}
 TEST_TEAR_DOWN(group_output_transform_fn_int16) {}
 TEST_GROUP_RUNNER(group_output_transform_fn_int16) {
   RUN_TEST_CASE(group_output_transform_fn_int16, test_output_transform_fn_int16);
-  RUN_TEST_CASE(group_output_transform_fn_int16, test_output_transform_fn_int16_saturation);
+  RUN_TEST_CASE(group_output_transform_fn_int16, test_output_transform_fn_int16_sat);
   RUN_TEST_CASE(group_output_transform_fn_int16, test_output_transform_fn_int16_kernel_transform);
 }
 
 TEST(group_output_transform_fn_int16, test_output_transform_fn_int16) {
-#if defined(__VX4A__) || defined(__VX4B__)
-    // KNOWN ISSUE: output_transform_fn_int16_asm is not implemented on VX4 yet.
-    TEST_IGNORE_MESSAGE("output_transform_fn_int16_asm not implemented on VX4");
-#else
     const int16_t expected_output[16] = {
         0x1001, 0x2001, 0x3001, 0x4001, 0x5001, 0x6001, 0x7001, 0x7fff,
         -28673, -24577, -20481, -16385, -12289, -8193, -4097, -1
@@ -63,13 +58,9 @@ TEST(group_output_transform_fn_int16, test_output_transform_fn_int16) {
             TEST_ASSERT_EQUAL(output[i+4], expected_output[i]);
         }
     }
-#endif
 }
 
-TEST(group_output_transform_fn_int16, test_output_transform_fn_int16_saturation) {
-#if defined(__VX4A__) || defined(__VX4B__)
-    TEST_IGNORE_MESSAGE("output_transform_fn_int16_asm not implemented on VX4");
-#else
+TEST(group_output_transform_fn_int16, test_output_transform_fn_int16_sat) {
     otfn_int16_params_t otfn_params = {2};
     int16_t vDvR[32] __attribute__((aligned(8))) = {0};
     int32_t mul_add[32] = {0};
@@ -88,14 +79,9 @@ TEST(group_output_transform_fn_int16, test_output_transform_fn_int16_saturation)
 
     TEST_ASSERT_EQUAL_INT16(INT16_MAX, output[0]);
     TEST_ASSERT_EQUAL_INT16(INT16_MIN, output[1]);
-#endif
 }
 
 TEST(group_output_transform_fn_int16, test_output_transform_fn_int16_kernel_transform) {
-#if defined(__VX4A__) || defined(__VX4B__)
-    // KNOWN ISSUE: output_transform_fn_int16_asm is not implemented on VX4 yet.
-    TEST_IGNORE_MESSAGE("output_transform_fn_int16_asm not implemented on VX4");
-#else
     const int16_t expected_output[16] = {
         -22, 33, 95, 164, 239, 322, 410, 506,
         -616, -717, -825, -938, -1058, -1184, -1315, -1453
@@ -135,5 +121,4 @@ TEST(group_output_transform_fn_int16, test_output_transform_fn_int16_kernel_tran
     for(int i = 0; i < 16; i++) {
         TEST_ASSERT_EQUAL_INT16(expected_output[i], vDvRoutput[i]);
     }
-#endif
 }

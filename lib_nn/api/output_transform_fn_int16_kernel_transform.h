@@ -21,16 +21,16 @@
  * kernel_weights_in, kernel_weights_out, and input_channels are retained for
  * API compatibility but are not used.
  *
- * \param kernel_weights_in      Unused.
- * \param channel_multipliers_in Per-channel floating-point multipliers.
- * \param channel_bias_terms_in  Per-channel accumulator-domain biases.
- * \param kernel_weights_out     Unused.
- * \param mul_add_out            Output buffer of 32 elements per group of up
+ * @param kernel_weights_in      Unused.
+ * @param channel_multipliers_in Per-channel floating-point multipliers.
+ * @param channel_bias_terms_in  Per-channel accumulator-domain biases.
+ * @param kernel_weights_out     Unused.
+ * @param mul_add_out            Output buffer of 32 elements per group of up
  *                               to 16 output channels.
- * \param input_channels         Unused.
- * \param output_channels        Number of output channels to prepare.
+ * @param input_channels         Unused.
+ * @param output_channels        Number of output channels to prepare.
  */
-extern void output_transform_fn_int16_kernel_transform(
+void output_transform_fn_int16_kernel_transform(
     const int8_t *kernel_weights_in,
     const float *channel_multipliers_in, const int *channel_bias_terms_in,
     int8_t *kernel_weights_out, int32_t *mul_add_out,
