@@ -1,7 +1,7 @@
 // Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
-#ifndef LAYERS_H_
-#define LAYERS_H_
+#pragma once
+
 #include "nn_api.h"
 #include "nn_bin_types.h"
 #include "nn_image.h"
@@ -10,8 +10,6 @@
 // other layers
 #include "add_int16.h"
 #include "add_int16_transform.h"
-#include "dequantize_int16.h"
-#include "dequantize_int16_transform.h"
 #include "expand_8_to_16.h"
 #include "multiply_int16.h"
 #include "multiply_int16_transform.h"
@@ -23,6 +21,40 @@
 #include "quantize_int16.h"
 #include "quantize_int16_transform.h"
 
+#define DEQUANTIZE_INT16_TENSOR_BYTES()  (2 * sizeof(float))
+
+/**
+ * @brief Generate the constant parameters used to dequantize an int16 tensor.
+ * Call this at build time and pass the output blob to
+ * ``dequantize_int16_tensor()`` at run time.
+ * @param[out] output Output blob of ``DEQUANTIZE_INT16_TENSOR_BYTES()`` bytes; must be word-aligned.
+ * @param[in] input_scaler Quantization scale of the input tensor.
+ * @param[out] err_msg Error message populated when the transformation fails.
+ * @return 1 on success, or 0 when a fallback implementation is required.
+ */
+C_API int dequantize_int16_tensor_blob(void *output, float input_scaler,
+                                       char *err_msg);
+
+/**
+ * Function that implements dequantization of a 16-bit tensor to a 32-bit tensor.
+ * The blob must have been created by a call to ``dequantize_int16_tensor_blob()``
+ * 
+ * @param output         Output tensor
+ * @param input          Input tensor
+ * @param blob           Transformed constant input tensor
+ * @param tensor_length  Number of elements in the tensor (product of all dimensions)
+ * @note output and input must be word-aligned in xs3.
+ */
+void dequantize_int16_tensor(float *output, int16_t *input,
+                             int tensor_length, void *blob);
+
+/**
+ * @brief Find the index of the maximum value in an int16 vector.
+ *
+ * @param[out] Y Output index of the maximum value.
+ * @param[in]  X Input int16 vector.
+ * @param[in]  N Number of elements in the input vector.
+ */
 void argmax_16(int32_t *Y, const int16_t *X, const int32_t N);
 
 /**
@@ -299,5 +331,3 @@ void mean_int8(const int8_t *input, int8_t *output, const int start_dim_size,
 void mean_int16(const int16_t *input, int16_t *output, const int start_dim_size,
                 const int mean_dim_size, const int end_dim_size,
                 const float scale_mul);
-
-#endif // LAYERS_H_
