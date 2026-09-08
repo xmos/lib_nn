@@ -171,9 +171,9 @@ struct mat_mul_dw_direct_params_t{
   /** Number of bytes in one output-channel group of kernel weights. */
     int32_t bytes_per_kernel_channel_group;
 
-  /** Kernel-height loop bound, stored as height minus one. */
+  /** Outer kernel-traversal loop bound (inclusive), stored as (loop_count - 1). */
     int32_t k_height_loop_counter;
-  /** Kernel-width loop bound, stored as width minus one. */
+  /** Inner kernel-traversal loop bound (inclusive), stored as (loop_count - 1). */
     int32_t k_width_loop_counter;
 
   /** Input-pointer increment between adjacent kernel elements. */
