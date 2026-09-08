@@ -6,6 +6,12 @@
 #include "nn_op_utils.h"
 #include "nn_operator.h"
 
+void pad_3_to_4_prepare(uint32_t * n_3, 
+    const unsigned height, 
+    const unsigned width) {
+    *n_3 = height*width;
+}
+
 #if NN_USE_REF
 void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val){
 
@@ -54,12 +60,19 @@ static inline void pad_3_to_4_single(int8_t **outputs, int8_t **inputs, uint32_t
  */
 extern void pad_3_to_4_asm(int32_t outputs[], int64_t inputs[], uint32_t N_24, uint32_t pad_val);
 
-void pad_3_to_4_prepare(uint32_t * n_3, 
-    const unsigned height, 
-    const unsigned width) {
-    *n_3 = height*width;
-}
 
+/**
+ * Pad 3-byte pixels to 4 bytes using the optimized XS3 implementation.
+ *
+ * The input must be double-word aligned and the output must be word aligned.
+ * Unaligned pixels are copied individually before and after the assembly
+ * routine processes blocks of eight pixels.
+ *
+ * @param outputs  Output buffer containing 4 bytes per pixel.
+ * @param inputs   Input buffer containing 3 bytes per pixel.
+ * @param N_3      Number of 3-byte pixels to copy.
+ * @param pad_val  Value whose most significant byte is written as padding.
+ */
 void pad_3_to_4_run_impl(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val) {
     // First copy single pixels until the input pointer is aligned
     // That will happen as it is incremented in steps of 3
