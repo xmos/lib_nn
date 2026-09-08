@@ -134,11 +134,9 @@ pipeline {
                                 dir("${REPO}/test/custom_cmake_build") {
                                     sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch v1.0.0"
                                     withTools(params.TOOLS_VERSION_XS) {
-                                        withVenv {
-                                            sh 'cmake -B build_custom_cmake --toolchain=xmos_cmake_toolchain/xs3a.cmake'
-                                            sh 'make -C build_custom_cmake -j$(nproc)'
-                                            sh 'xsim bin/add_tensor.xe'
-                                        }
+                                        sh 'cmake -B build_custom_cmake --toolchain=xmos_cmake_toolchain/xs3a.cmake'
+                                        sh 'make -C build_custom_cmake -j$(nproc)'
+                                        sh 'xsim bin/add_tensor.xe'
                                     }
                                 }
                             }
