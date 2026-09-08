@@ -8,9 +8,6 @@
 #include <string.h>
 
 // other layers
-#include "add_int16.h"
-#include "add_int16_transform.h"
-#include "expand_8_to_16.h"
 #include "multiply_int16.h"
 #include "multiply_int16_transform.h"
 #include "output_transform_fn_int16.h"
@@ -21,7 +18,48 @@
 #include "quantize_int16.h"
 #include "quantize_int16_transform.h"
 
+// Definitions
+#define ADD_INT16_TENSOR_BYTES()  (2 * 16 * sizeof(int16_t))
 #define DEQUANTIZE_INT16_TENSOR_BYTES()  (2 * sizeof(float))
+
+/**
+ * @brief Expand a signed 8-bit vector into a signed 16-bit vector.
+ *
+ * Each input element is sign-extended to 16 bits and stored in the
+ * corresponding output element. Only the first `N` elements of `out` are
+ * written.
+ *
+ * @param[out] out Output vector with space for at least `N` int16_t elements.
+ * @param[in]  in  Input vector with at least `N` int8_t elements.
+ * @param[in]  N   Number of elements to expand.
+ */
+void expand_8_to_16(int16_t *out, int8_t *in, int N);
+
+/** Add two 16-bit tensors using transformed quantization parameters.
+ * @param output Output tensor; must be word-aligned.
+ * @param input1 First input tensor operand; must be word-aligned.
+ * @param input2 Second input tensor operand; must be word-aligned.
+ * @param tensor_length Number of elements in each tensor; there are no constraints on this value.
+ * @param blob Transformed parameters from add_int16_tensor_blob(); must be word-aligned.
+ */
+void add_int16_tensor(int16_t *output, int16_t *input1, int16_t *input2,
+                      int tensor_length, void *blob);
+
+
+
+/** Generate the transformed parameters used by add_int16_tensor().
+ * @param output Output blob of ADD_INT16_TENSOR_BYTES(); must be word-aligned.
+ * @param input1_scaler Quantization scale of the first input tensor.
+ * @param input2_scaler Quantization scale of the second input tensor.
+ * @param output_scaler Quantization scale of the output tensor.
+ * @param err_msg Buffer for an error message when the transformation fails.
+ * @return 1 on success, or 0 when a fallback implementation is required.
+ */
+C_API int add_int16_tensor_blob(void *output,
+                          float input1_scaler,
+                          float input2_scaler,
+                          float output_scaler,
+                          char *err_msg);
 
 /**
  * @brief Generate the constant parameters used to dequantize an int16 tensor.
