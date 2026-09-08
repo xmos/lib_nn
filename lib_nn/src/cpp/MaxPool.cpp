@@ -30,7 +30,7 @@ void maxpool_direct_ref(
     {
         for (int kw = params->k_width_loop_counter; kw >= 0; kw--)
         {
-            for (int i = 0; i < 16; i++)
+            for (int i = 0; i < VPU_INT16_EPV; ++i)
             {
                 int8_t val = x_ptr[i];
                 if (max[i] < val)
