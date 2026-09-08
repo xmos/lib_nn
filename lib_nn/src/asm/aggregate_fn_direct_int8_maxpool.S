@@ -2,7 +2,7 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 /*
-void maxpool_direct_asm(MatMulDirectFn_DW::Params *params,
+void maxpool_direct_asm(mat_mul_dw_direct_params_t *params,
                             VPURingBuffer *A, int8_t *X);
 */
 
