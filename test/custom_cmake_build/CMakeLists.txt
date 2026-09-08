@@ -27,14 +27,21 @@ target_link_libraries(add_tensor PRIVATE
     lib_nn
 )
 
-target_compile_options(add_tensor PRIVATE
+set(COMMON_OPTIONS
     -Os
     -g
     -Wall
 )
 
-if(NOT CMAKE_SYSTEM_NAME STREQUAL "XS3A"
-   AND NOT CMAKE_SYSTEM_NAME STREQUAL "VX4A")
-   # link <mat.h> 
-   target_link_libraries(add_tensor PRIVATE m)
+if(CMAKE_SYSTEM_NAME STREQUAL "XCORE_XS3A")
+    target_compile_options(add_tensor PRIVATE
+        -target=XK-EVK-XU316
+        ${COMMON_OPTIONS}
+    )
+    target_link_options(add_tensor PRIVATE
+        -target=XK-EVK-XU316
+        -report
+    )
+else()
+    target_compile_options(add_tensor PRIVATE ${COMMON_OPTIONS})
 endif()

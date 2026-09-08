@@ -907,9 +907,7 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn_DW) {
                           }
                         }
 
-                        int32_t v;
-                        ((int16_t *)&v)[0] = A.vR[output_chan];
-                        ((int16_t *)&v)[1] = A.vD[output_chan];
+                        int32_t v = A.GetAccu(output_chan);
                         TEST_ASSERT_EQUAL(expected_sum, v);
                       }
                     }
@@ -1006,8 +1004,8 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn_int16) {
                         );
                         mat_mul_direct_params_t p = mmd.getParams();
                         int ocg_count =
-                            (output_channels + vpu_ring_buffer_length - 1) /
-                            vpu_ring_buffer_length;
+                          (output_channels + vpu_ring_buffer_length - 1) /
+                          vpu_ring_buffer_length;
 
                         for (int ocg = 0; ocg < ocg_count; ++ocg) {
                           alignas(4) VPURingBuffer A;
@@ -1064,7 +1062,7 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn_int16) {
 TEST(group_aggregate_fns, Test_MatMulDirectFn_int16_DW) {
   // KNOWN ISSUE: fails on native (Expected -1529670 Was 466068094), not yet
   // root-caused.
-  TEST_IGNORE_MESSAGE("Test_MatMulDirectFn_int16_DW fails on native");
+  // TEST_IGNORE_MESSAGE("Test_MatMulDirectFn_int16_DW fails on native");
   const int vpu_ring_buffer_length = 16;
   int max_width = 3;
 
@@ -1112,9 +1110,10 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn_int16_DW) {
                         MatMulDirectFn_DW::reorder_kernel_weights(
                             raw_weights.data(), shape, pad_val);
 
-                    std::vector<int16_t> expanded_weights(raw_weights.size());
+                    std::vector<int16_t> expanded_weights(rw.weights.size());
 
-                    expand_8_to_16(expanded_weights.data(), raw_weights.data(), (int)raw_weights.size());
+                    expand_8_to_16(expanded_weights.data(), rw.weights.data(),
+                                   (int)rw.weights.size());
 
                     MatMulDirectFn_DW mmd(X, K);
                     mat_mul_dw_direct_params_t p = mmd.getParams();
@@ -1134,8 +1133,7 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn_int16_DW) {
                           std::min(x_channels - vpu_ring_buffer_length * ocg,
                                    vpu_ring_buffer_length);
 
-                      for (int output_chan = 0; output_chan < chs_in_group;
-                           ++output_chan) {
+                      for (int output_chan = 0; output_chan < chs_in_group; ++output_chan) {
                         int actual_output_channel =
                             output_chan + ocg * vpu_ring_buffer_length;
 
@@ -1155,9 +1153,7 @@ TEST(group_aggregate_fns, Test_MatMulDirectFn_int16_DW) {
                           }
                         }
 
-                        int32_t v;
-                        ((int16_t *)&v)[0] = A.vR[output_chan];
-                        ((int16_t *)&v)[1] = A.vD[output_chan];
+                        int32_t v = A.GetAccu(output_chan);
                         TEST_ASSERT_EQUAL(expected_sum, v);
                       }
                     }

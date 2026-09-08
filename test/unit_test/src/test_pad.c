@@ -86,21 +86,9 @@ void impl_pad_x_to_4_param_space(
 }
 
 TEST(group_pad, test_pad_3_to_4) {
-#ifdef TEST_BUILD_NATIVE
-  // This test on native will run reference against itself
-  // reference code is run against xs3a and vx4b
-  // so we know it must work
-  TEST_IGNORE_MESSAGE("pad_3_to_4 is not tested natively");
-#endif // TEST_BUILD_NATIVE
   impl_pad_x_to_4_param_space(3, 4);
 }
 
 TEST(group_pad, test_pad_1_to_4) {
-#ifdef TEST_BUILD_NATIVE
-  // This test on native will run reference against itself
-  // reference code is run against xs3a and vx4b
-  // so we know it must work
-  TEST_IGNORE_MESSAGE("pad_1_to_4 is not tested natively");
-#endif // TEST_BUILD_NATIVE
   impl_pad_x_to_4_param_space(1, 4);
 }
