@@ -17,14 +17,27 @@ add_library(lib_nn STATIC ${LIB_NN_SOURCES})
 
 target_include_directories(lib_nn PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/api")
 
-target_compile_options(
-  lib_nn PRIVATE -g -O3 -Wno-unused-variable -Wno-missing-braces)
+if(BUILD_DDR_FIX)
+  target_compile_definitions(lib_nn PRIVATE USE_DDR_FIX)
+endif()
 
+# -------- target specific ----------
+
+# xs3
 if(CMAKE_SYSTEM_NAME STREQUAL "XS3A")
-  target_compile_options(lib_nn PRIVATE -Wno-xcore-fptrgroup)
-  if(BUILD_DDR_FIX)
-    target_compile_definitions(lib_nn PRIVATE USE_DDR_FIX)
-  endif()
-elseif(NOT CMAKE_SYSTEM_NAME STREQUAL "VX4A")
+  target_compile_options(lib_nn PRIVATE -O3 -Wall -Wno-xcore-fptrgroup -Werror -Wextra)
+# vx4
+elseif(CMAKE_SYSTEM_NAME STREQUAL "VX4A")
+  target_compile_options(lib_nn PRIVATE -O3 -Wall -Wno-fptrgroup -Werror -Wextra)
+  target_compile_options(lib_nn PRIVATE -ffunction-sections -fdata-sections)
+  target_link_options(lib_nn PRIVATE -Wl,--gc-sections)
+# Native MSVC
+elseif(MSVC) 
+  target_compile_options(lib_nn PRIVATE /O2)
   target_compile_definitions(lib_nn PRIVATE NN_USE_REF)
+# Native GCC/Clang
+else()
+  target_compile_options(lib_nn PRIVATE -O3 -Wall -Werror -Wextra)
+  target_compile_definitions(lib_nn PRIVATE NN_USE_REF)
+  target_link_libraries(lib_nn PRIVATE m)
 endif()

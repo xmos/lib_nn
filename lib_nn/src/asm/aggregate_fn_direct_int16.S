@@ -250,4 +250,3 @@ FUNCTION_NAME:
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
 
 #endif
-

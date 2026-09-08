@@ -83,12 +83,12 @@ void recitfy_min_max(T &v_min, T &v_max) {
 }
 
 template <class T>
-int64_t float_to_int(T f, int e) {
+static int64_t float_to_int(T f, int e) {
   return (int64_t)std::rint(ldexp(f, e));
 }
 
 template <class T>
-int16_t float_to_int16(T f, int e) {
+static int16_t float_to_int16(T f, int e) {
   int64_t v = float_to_int(f, e);
   v = std::min((int64_t)INT16_MAX, v);
   v = std::max((int64_t)INT16_MIN, v);
@@ -97,7 +97,7 @@ int16_t float_to_int16(T f, int e) {
 
 //this is to account for the double rounding in VLASHR+VDEPTH8
 template <class T>
-int16_t float_to_int16_with_bias(T f, int e) {
+static int16_t float_to_int16_with_bias(T f, int e) {
   return float_to_int16(f - (1.0 / (1<<(e))), e);
 }
 

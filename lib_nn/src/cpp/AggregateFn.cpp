@@ -454,20 +454,19 @@ void mat_mul_direct16x8_impl(const mat_mul_direct_params_t *params, VPURingBuffe
   VSTD(vpu, &A->vD);
 }
 
-void mat_mul_direct_int16x8_impl(const mat_mul_direct_params_t *params,
-                               VPURingBuffer *A,
-                               int16_t *X, int32_t output_channel_group,
-                               int8_t *weights) {
+C_API void mat_mul_direct_int16x8_ref(const mat_mul_direct_params_t *params,
+                    VPURingBuffer *A,
+                    int16_t *X, int32_t output_channel_group,
+                    int8_t *weights) {
     mat_mul_direct16x8_impl(params, A, X, output_channel_group, weights, VLMACCR);
 }
 
 void nn::mat_mul_direct_int16x8(const mat_mul_direct_params_t *params,
                           VPURingBuffer *A, int16_t *T,
                           int32_t output_channel_group, int8_t *weights) {
-// #ifdef NN_USE_REF
-    mat_mul_direct_int16x8_impl(params, A, T, output_channel_group, weights);
-// #else
-//     mat_mul_direct_int16x8_impl_asm(params, A, T, output_channel_group,
-//                                   weights);
-// #endif  // NN_USE_REF
+#ifdef NN_USE_REF
+  mat_mul_direct_int16x8_ref(params, A, T, output_channel_group, weights);
+#else
+  mat_mul_direct_int16x8_impl_asm(params, A, T, output_channel_group, weights);
+#endif  // NN_USE_REF
 }

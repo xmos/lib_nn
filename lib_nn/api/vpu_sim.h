@@ -39,6 +39,8 @@ typedef struct {
   vpu_vector_t vC;
 } xs3_vpu;
 
+typedef xs3_vpu vpu_t;
+
 C_API void VSETC(xs3_vpu* vpu, const vector_mode mode);
 C_API void VCLRDR(xs3_vpu* vpu);
 C_API void VLDR(xs3_vpu* vpu, const void* addr);
@@ -51,6 +53,7 @@ C_API void VSTRPV(const xs3_vpu* vpu, void* addr, unsigned mask);
 C_API void VLMACC(xs3_vpu* vpu, const void* addr);
 C_API void VLMACCR(xs3_vpu* vpu, const void* addr);
 C_API void VLMACCR1(xs3_vpu* vpu, const void* addr);
+C_API void VLMACCRB(xs3_vpu* vpu, const void* addr);
 C_API void VPOS(xs3_vpu* vpu);
 C_API void VLSAT(xs3_vpu* vpu, const void* addr);
 C_API void VLSAT_FIXED(xs3_vpu* vpu, const void* addr);
@@ -69,6 +72,7 @@ C_API void vpu_sim_mem_print(void* address, vector_mode mode);
 
 // Function for implementing the saturation logic within the VPU.
 C_API int64_t vpu_saturate(const int64_t input, const unsigned bits);
+C_API int64_t vpu_saturate_fixed(const int64_t input, const unsigned bits);
 
 // Assert if the memory access is non-word aligned
 // void assert_word_aligned(const void* address);
