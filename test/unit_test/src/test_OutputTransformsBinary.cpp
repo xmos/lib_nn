@@ -14,6 +14,11 @@ Each invocation processes 16 accumulator values and packs their additive
 threshold results into two output bytes:
 
 output_bit[i] = (accumulator[i] + threshold[i] < 0) ? 1 : 0;
+
+Test logic:
+- two simple tests
+- two random tests
+
 */
 
 #include "etc/helpers.h"
@@ -28,7 +33,9 @@ TEST_GROUP_RUNNER(group_output_transforms_binary)
 {
     RUN_TEST_CASE(group_output_transforms_binary, Test_otfn_binary_negative_sum);
     RUN_TEST_CASE(group_output_transforms_binary, Test_otfn_binary_positive_sum);
+
     RUN_TEST_CASE(group_output_transforms_binary, Test_otfn_binary_random_values);
+    RUN_TEST_CASE(group_output_transforms_binary, Test_otfn_binary_large_accumulators_multiple_groups);
 }
 
 static int8_t *_test_ot_binnary_helper(
@@ -102,6 +109,39 @@ TEST(group_output_transforms_binary, Test_otfn_binary_random_values)
     for (unsigned i = 0; i < VPU_INT16_EPV; i++) {
         const uint8_t actual = ((uint8_t)out[i / 8] >> (i % 8)) & 1;
         TEST_ASSERT_EQUAL_UINT8(expected[i], actual);
+    }
+}
+
+TEST(group_output_transforms_binary,
+     Test_otfn_binary_large_accumulators_multiple_groups)
+{
+    int seed = 0x4F1BBCDC;
+    int16_t th[2 * VPU_INT16_EPV];
+    VPURingBuffer acc{};
+    int8_t out[2];
+
+    // Generate full-width accumulators and two threshold groups.
+    for (unsigned i = 0; i < VPU_INT16_EPV; i++) {
+        acc.SetAccu(i, pseudo_rand(&seed));
+        th[i] = (int16_t)pseudo_rand(&seed);
+        th[VPU_INT16_EPV + i] = (int16_t)pseudo_rand(&seed);
+    }
+
+    // Check the output for each threshold group.
+    for (int32_t output_channel_group = 0;
+         output_channel_group < 2;
+         output_channel_group++) {
+        int8_t *out_end =
+            nn::otfn_binary(nullptr, out, &acc, output_channel_group, th);
+
+        TEST_ASSERT_EQUAL_PTR(out + sizeof(out), out_end);
+        for (unsigned i = 0; i < VPU_INT16_EPV; i++) {
+            const bool expected =
+                ((int16_t)acc.GetAccu(i) +
+                 th[output_channel_group * VPU_INT16_EPV + i]) < 0;
+            const uint8_t actual = ((uint8_t)out[i / 8] >> (i % 8)) & 1;
+            TEST_ASSERT_EQUAL_UINT8(expected, actual);
+        }
     }
 }
 
