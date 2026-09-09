@@ -1014,45 +1014,48 @@ int8_t *nn::otfn_int8_clamped(const otfn_int8_clamped_params_t *params, int8_t *
 //-----------------------
 
 // BINARY
-int8_t *output_transform_fn_binary_impl(int8_t *Y, VPURingBuffer *A,
-                                        int32_t output_channel_group,
-                                        threshold_t *thresholds) {
-  xs3_vpu vpu_mem;
-  xs3_vpu *vpu = &vpu_mem;
+#ifdef NN_USE_REF
+int8_t *output_transform_fn_binary_ref(
+  int8_t *Y, 
+  VPURingBuffer *A,
+  int32_t output_channel_group,
+  threshold_t *thresholds) 
+{
+  // allocate vpu and set up the pointer
+  vpu_t vpu;
+  threshold_t *cur_thresholds = (thresholds + output_channel_group * VPU_INT16_EPV);
 
-  threshold_t *cur_thresholds =
-      thresholds + output_channel_group * VPU_INT16_EPV;
+  // set vpu mode 16
+  VSETC(&vpu, MODE_S16);
 
-  // do we need this?
-  VSETC(vpu, MODE_S16);
-
-  // dont need D as we will assume that the sum is 16 bit - else we will use the
-  // reference.
-  VLDR(vpu, &A->vR);
-  VLADD(vpu, cur_thresholds);
-  VDEPTH1(vpu);
+  // no need VD as int16 assumed
+  VLDR(&vpu, &A->vR);
+  VLADD(&vpu, cur_thresholds);
+  VDEPTH1(&vpu);
 
   // This can only process 16 channels at a time
-  int output_bytes = VPU_INT16_EPV / CHAR_BIT;
-
-  alignas(4) int32_t temp_mem;
-  VSTRPV(vpu, &temp_mem, (1 << output_bytes) - 1);
+  unsigned output_bytes = VPU_INT16_EPV / CHAR_BIT;
+  int32_t temp_mem;
+  VSTRPV(&vpu, &temp_mem, (1 << output_bytes) - 1);
   memcpy(Y, &temp_mem, output_bytes);
-
   Y += output_bytes;
-
   return Y;
 }
 
-extern "C" int8_t *output_transform_fn_binary_impl_asm(
-    int8_t *Y, VPURingBuffer *A, int32_t output_channel_group,
-    int16_t *thresholds);
+#else
+extern "C" int8_t *output_transform_fn_binary_asm(
+  int8_t *Y, 
+  VPURingBuffer *A, 
+  int32_t output_channel_group,
+  int16_t *thresholds
+);
+#endif
 
 int8_t *nn::otfn_binary(void *p, int8_t *Y, VPURingBuffer *A, int32_t output_channel_group, int16_t *thresholds) {
-#if defined(NN_USE_REF)
-  return output_transform_fn_binary_impl(Y, A, output_channel_group, thresholds);
+#ifdef NN_USE_REF
+  return output_transform_fn_binary_ref(Y, A, output_channel_group, thresholds);
 #else
-  return output_transform_fn_binary_impl_asm(Y, A, output_channel_group, thresholds);
+  return output_transform_fn_binary_asm(Y, A, output_channel_group, thresholds);
 #endif  // NN_USE_REF
 (void)p;
 }

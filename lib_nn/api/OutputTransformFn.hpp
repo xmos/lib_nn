@@ -764,8 +764,7 @@ class OT_binary : public OutputTransformFn {
   }
 };
 
-int8_t *otfn_binary(void *p, int8_t *Y, VPURingBuffer *A,
-                                       int32_t output_channel_group, int16_t *thresholds);
+int8_t *otfn_binary(void *p, int8_t *Y, VPURingBuffer *A, int32_t output_channel_group, int16_t *thresholds);
 
 }  // namespace nn
 #endif  // LIB_NN_OUTPUT_TRANSFORM_FN_H_

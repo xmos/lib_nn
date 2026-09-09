@@ -2,7 +2,7 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if defined(__XS3A__)
 
-#define FUNCTION_NAME output_transform_fn_binary_impl_asm
+#define FUNCTION_NAME output_transform_fn_binary_asm
 
     .text
 	.cc_top FUNCTION_NAME.function,FUNCTION_NAME
@@ -10,7 +10,7 @@
 
 	.issue_mode  dual
 
-// int8_t *output_transform_fn_binary_impl_asm(int8_t *Y,
+// int8_t *output_transform_fn_binary_asm(int8_t *Y,
 //                                 VPURingBuffer *A, 
 //                                 int32_t output_channel_group,
 //                                 threshold_t *thresholds)
@@ -70,7 +70,7 @@ FUNCTION_NAME:
 
 #if defined(__VX4A__) || defined(__VX4B__)
 
-#define FUNCTION_NAME output_transform_fn_binary_impl_asm
+#define FUNCTION_NAME output_transform_fn_binary_asm
 .p2align 1
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
