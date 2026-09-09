@@ -43,10 +43,11 @@ int add_int16_tensor_blob(void *output,
 #if NN_USE_REF
 void add_int16_tensor_ref(int16_t *output, int16_t *input1, int16_t *input2, int tensor_length, void *blob) {
     int16_t *multipliers = (int16_t *) blob;
+    const unsigned shift = get_shift();
     for(int i = 0; i < tensor_length; i++) {
         int64_t mult1 = input1[i] * (int64_t) multipliers[(i & 15)     ];
         int64_t mult2 = input2[i] * (int64_t) multipliers[(i & 15) + 16];
-        int answer = (mult1 + mult2 + (1<<(SHIFT-1))) >> SHIFT;
+        int answer = (mult1 + mult2 + (1 << (shift - 1))) >> shift;
 
         if (answer > 32767) answer = 32767;
         if (answer < -32768) answer = -32768;
