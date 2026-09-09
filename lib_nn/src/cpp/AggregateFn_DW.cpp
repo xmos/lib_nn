@@ -217,7 +217,7 @@ void nn::mat_mul_dw_direct(const mat_mul_dw_direct_params_t *params, VPURingBuff
 
 void nn::mat_mul_dw_direct_int16(const mat_mul_dw_direct_params_t *params, VPURingBuffer *A, int16_t *T,
                                      int32_t output_channel_group, int16_t *weights) {
-#if defined(NN_USE_REF) || defined(__riscv_xxcore)
+#ifdef NN_USE_REF
   mat_mul_dw_direct_int16_impl(params, A, T, output_channel_group, weights);
 #else
   mat_mul_dw_direct_int16_impl_asm(params, A, T, output_channel_group, weights);

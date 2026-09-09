@@ -1,4 +1,4 @@
-@Library('xmos_jenkins_shared_library@v0.53.0') _
+@Library('xmos_jenkins_shared_library@v0.54.0') _
 
 // Runs a Unity test, publishes its JUnit report, and prints its log on failure.
 def UnityJunit(String command, String logFile, String suiteName) {
@@ -37,12 +37,12 @@ pipeline {
         )
         string(
             name: 'XMOSDOC_VERSION',
-            defaultValue: 'v7.4.0',
+            defaultValue: 'v8.1.2',
             description: 'xmosdoc version'
         )
         string(
             name: 'INFR_APPS_VERSION',
-            defaultValue: 'v3.1.1',
+            defaultValue: 'v3.6.0',
             description: 'The infr_apps version'
         )
         choice(
