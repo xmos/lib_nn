@@ -52,6 +52,10 @@ static int8_t *_test_ot_binnary_helper(
 
 TEST(group_output_transforms_binary, Test_otfn_binary_negative_sum)
 {
+#if defined(__VX4A__) || defined(__VX4B__)
+    TEST_IGNORE_MESSAGE("otfn_binary is not implemented on VX4");
+#endif
+
     // a + t = -1
     const int16_t accumulator = 3;
     const int16_t threshold = -4;
@@ -65,6 +69,10 @@ TEST(group_output_transforms_binary, Test_otfn_binary_negative_sum)
 
 TEST(group_output_transforms_binary, Test_otfn_binary_positive_sum)
 {
+#if defined(__VX4A__) || defined(__VX4B__)
+    TEST_IGNORE_MESSAGE("otfn_binary is not implemented on VX4");
+#endif
+
     // a + t = 5
     const int16_t accumulator = 2;
     const int16_t threshold = 3;
@@ -78,6 +86,10 @@ TEST(group_output_transforms_binary, Test_otfn_binary_positive_sum)
 
 TEST(group_output_transforms_binary, Test_otfn_binary_random_values)
 {
+#if defined(__VX4A__) || defined(__VX4B__)
+    TEST_IGNORE_MESSAGE("otfn_binary is not implemented on VX4");
+#endif
+
     int seed = 0x6D2B79F5;
     int16_t th[VPU_INT16_EPV];
     VPURingBuffer acc{};

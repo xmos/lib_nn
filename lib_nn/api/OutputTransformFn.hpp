@@ -764,6 +764,19 @@ class OT_binary : public OutputTransformFn {
   }
 };
 
+/**
+ * @brief Converts one accumulator group to two bytes of packed binary output.
+ *
+ * The low 16 bits of each accumulator are added to the corresponding
+ * threshold. A bit is set when the saturated 16-bit sum is negative.
+ *
+ * @param[in] p Unused parameter required by the output transform interface.
+ * @param[out] Y Buffer receiving @c VPU_INT16_EPV packed output bits.
+ * @param[in] A Ring buffer supplying the accumulator values.
+ * @param[in] output_channel_group Group index selecting 16 thresholds.
+ * @param[in] thresholds Threshold values, grouped in sets of 16.
+ * @return Pointer immediately after the two written output bytes.
+ */
 int8_t *otfn_binary(void *p, int8_t *Y, VPURingBuffer *A, int32_t output_channel_group, int16_t *thresholds);
 
 }  // namespace nn
