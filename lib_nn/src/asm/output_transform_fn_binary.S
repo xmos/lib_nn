@@ -10,8 +10,8 @@
 
 	.issue_mode  dual
 
-// int8_t *output_transform_fn_binary_asm(int8_t *Y,
-//                                 VPURingBuffer *A, 
+// int8_t *output_transform_fn_binary_asm(int8_t *out,
+//                                 VPURingBuffer *acc, 
 //                                 int32_t output_channel_group,
 //                                 threshold_t *thresholds)
 
@@ -46,7 +46,7 @@ FUNCTION_NAME:
     {vsetc t; shl t, output_channel_group, 5 }
     {add thresholds_p, thresholds_p, t; mov t, A_p}
     {vldr t[0]; nop}  // Don't bother loading D
-    {vladd thresholds_p[0]; ldaw t, sp[0]} //let's use sp[0] as a temp
+    {vladd thresholds_p[0]; ldaw t, sp[0]} //let's use sp[0] as acc temp
     {vdepth1; ldc r3, 0x3}
     vstrpv t[0], r3
     {ldc r3, 0; ldw t, t[0]}
@@ -70,17 +70,43 @@ FUNCTION_NAME:
 
 #if defined(__VX4A__) || defined(__VX4B__)
 
-#define FUNCTION_NAME output_transform_fn_binary_asm
+/*
+extern "C" int8_t *output_transform_fn_binary_asm(
+  int8_t *out, 
+  VPURingBuffer *acc, 
+  int32_t output_channel_group,
+  int16_t *thresholds
+);
+*/
+
+#define FUNCTION_NAME   output_transform_fn_binary_asm
+#define NSTACKWORDS     0
+
+#define out             a0
+#define acc             a1
+#define og              a2
+#define th              a3
+
+#define tmp             a3 
+
 .p2align 1
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
 FUNCTION_NAME:
-    xm.entsp 0
-    xm.ldcu x10, 0
-    xm.assert x10 //NOT IMPLEMENTED
-    xm.retsp 0
+    xm.entsp NSTACKWORDS
+    li x28, 0x100
+    xm.vsetc x28
+    slli og, og, 5
+    add th, th, og
+    xm.vldr acc
+    xm.vladd th
+    xm.vdepth1
+    xm.mkmsk tmp, 2
+    xm.vstrpv out, tmp
+    xm.addi out, out, 2
+    xm.retsp NSTACKWORDS
 .size FUNCTION_NAME, . -FUNCTION_NAME
-.resource_const FUNCTION_NAME, "stack_frame_bytes",  0
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  NSTACKWORDS
 .resource_list_empty FUNCTION_NAME, "callees"
 .resource_list_empty FUNCTION_NAME, "tail_callees"
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
