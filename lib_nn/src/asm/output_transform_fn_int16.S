@@ -12,7 +12,6 @@
 	.cc_top FUNCTION_NAME.function,FUNCTION_NAME
     
 #define NSTACKWORDS     10
-#define ARGUMENT4       (NSTACKWORDS+1)
     
     .align 4
     .issue_mode dual
@@ -85,6 +84,7 @@ output_transform_16_unzip_loop:
 #if (defined(__VX4A__) || defined(__VX4B__))
 
 #define FUNCTION_NAME output_transform_fn_int16_impl_asm
+#define NSTACKWORDS 8
 
 // output_transform_fn_int16_impl_asm(int32_t *vDvR, int32_t *mul_add, int32_t *output, int elements);
 
@@ -92,12 +92,50 @@ output_transform_16_unzip_loop:
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
 FUNCTION_NAME:
-    xm.entsp 0
-    xm.ldcu x10, 0
-    xm.assert x10 //NOT IMPLEMENTED
-    xm.retsp 0
+    { li t3, 0 ; xm.entsp (NSTACKWORDS * 4) }
+    { add t3, a0, 0 ; xm.vsetc t3 }
+    xm.stdsp s2, s3, 0
+    xm.stdsp s4, s5, 8
+    xm.stdsp s6, s7, 16
+
+    xm.shl s2, s3, 1
+    { li a3, 0 ; xm.mkmsk s3, 16 }
+    xm.zip s3, a3, 1
+    { li a0, 4 ; xm.mkmsk s2, s2 }
+    li a4, 16
+    li a5, -16
+
+.unzip_loop:
+    xm.ldd s4, s6, 32(t3)
+    xm.ldd s5, s7, 0(t3)
+    xm.unzip s4, s5, 4
+    xm.unzip s6, s7, 4
+    xm.std s4, s6, 32(t3)
+    xm.std s5, s7, 0(t3)
+    { add t3, t3, 8 ; addi a0, a0, -1 }
+    xm.bt a0, .unzip_loop
+
+    { li a0, 32 ; xm.vldr t3 }
+    { add a1, a1, a0 ; xm.vladd a1 }
+    { add a1, a1, a0 ; xm.vlmul0 a1 }
+    { and s3, s2, a3 ; xm.vstr t3 }
+    xm.vlashr t3, a5
+    { sub t3, t3, a0 ; xm.vstrpv a2, s3 }
+    { xm.shr a3, a3, 2 ; xm.vldr t3 }
+    { add a1, a1, a0 ; xm.vladd a1 }
+    { add a1, a1, a0 ; xm.vlmul0 a1 }
+    xm.vstr t3
+    xm.vlashr t3, a5
+    { and s3, s2, a3 ; xm.vstr t3 }
+    xm.vlashr t3, a4
+    xm.vstrpv a2, s3
+
+    xm.lddsp s2, s3, 0
+    xm.lddsp s4, s5, 8
+    xm.lddsp s6, s7, 16
+    xm.retsp (NSTACKWORDS * 4)
 .size FUNCTION_NAME, . -FUNCTION_NAME
-.resource_const FUNCTION_NAME, "stack_frame_bytes",  0
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  (NSTACKWORDS * 4)
 .resource_list_empty FUNCTION_NAME, "callees"
 .resource_list_empty FUNCTION_NAME, "tail_callees"
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
