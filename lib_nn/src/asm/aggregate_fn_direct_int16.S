@@ -132,10 +132,8 @@ void mat_mul_direct_int16_impl_asm(
 */
 
 #define FUNCTION_NAME   mat_mul_direct_int16_impl_asm
-#define NSTACKWORDS     (10)
-
-#define ROUND_UP(X, Y) (((X + Y - 1) / Y) * Y)
-#define NSTACKBYTES ROUND_UP(NSTACKWORDS * 4, 16)
+#define NSTACKWORDS     (8)
+#define NSTACKBYTES     (NSTACKWORDS * 4)
 
 #define PARAMS_bytes_per_kernel_channel 0
 #define PARAMS_k_height_loop_counter 1
@@ -172,11 +170,11 @@ FUNCTION_NAME:
     xm.stdsp s2, s3, 0*8
     xm.stdsp s4, s5, 1*8
     xm.stdsp s6, s7, 2*8
-    xm.stdsp s8, s9, 3*8
+    sw s8, 3*8(sp)
     
     {xm.vclrdr; xm.ldcu tmp, 32}
     {xm.ldwi kw, PARAMS_bytes_per_kernel_channel*4(params_p); xm.shli tmp, tmp, 3}
-    {xm.vsetc tmp; nop}
+    xm.vsetc tmp;
 
     mul out_ch_g, kw, out_ch_g
     mv kp, kp_init 
@@ -201,22 +199,21 @@ FUNCTION_NAME:
                 xm.vlmaccr1 kp2
                 .endr
                 
-                {xm.nop; xm.subi ic, ic, 1}
+                xm.subi ic, ic, 1
                 bnez ic, ic_loop_asm
 
-            {xm.nop; xm.subi kw, kw, 1}
+            xm.subi kw, kw, 1
             bnez kw, kw_loop_asm
 
-    {xm.nop; xm.subi kh, kh, 1}
+    xm.subi kh, kh, 1
     bnez kh, kh_loop_asm
 
     {xm.vstr A_p; xm.add A_p, A_p, thirty_two}
-    {xm.vstd A_p; xm.nop}
-
+    xm.vstd A_p
     xm.lddsp s2, s3, 0*8
     xm.lddsp s4, s5, 1*8
     xm.lddsp s6, s7, 2*8
-    xm.lddsp s8, s9, 3*8
+    lw s8, 3*8(sp)
     xm.retsp NSTACKBYTES
 
 .size FUNCTION_NAME, . -FUNCTION_NAME
