@@ -179,17 +179,16 @@ FUNCTION_NAME:
     {xm.vsetc tmp; nop}
 
     mul out_ch_g, kw, out_ch_g
-    add kp, kp_init, zero 
-    {xm.ldwi inner_x_v_step, PARAMS_inner_x_v_step*4(params_p); xm.add kp, out_ch_g, kp}
-    {xm.ldcu thirty_two, 32; xm.ldwi inner_x_h_step, PARAMS_inner_x_h_step*4(params_p)}
-    {xm.ldwi kh, PARAMS_k_height_loop_counter*4(params_p);xm.nop}
-    {xm.ldwi kw_init, PARAMS_k_width_loop_counter*4(params_p); xm.sub X_p, X_p, inner_x_h_step}
-    {xm.ldwi ic_init, PARAMS_input_channel_loop_counter*4(params_p); xm.sub X_p, X_p, inner_x_v_step}
+    mv kp, kp_init 
+    {xm.ldwi inner_x_v_step, PARAMS_inner_x_v_step*4(params_p);         xm.add kp, out_ch_g, kp}
+    {xm.ldwi inner_x_h_step, PARAMS_inner_x_h_step*4(params_p);         xm.ldcu thirty_two, 32}
+    {xm.ldwi kh, PARAMS_k_height_loop_counter*4(params_p);              xm.sub X_p, X_p, inner_x_h_step}
+    {xm.ldwi kw_init, PARAMS_k_width_loop_counter*4(params_p);          xm.sub X_p, X_p, inner_x_v_step}
+    {xm.ldwi ic_init, PARAMS_input_channel_loop_counter*4(params_p);    xm.add kh, kh, 1}
 
-    {xm.nop; xm.addi kw_init, kw_init, 1}
-    addi kh, kh, 1
+    
     kh_loop_asm:
-        {xm.addi kw, kw_init, 0; add X_p, X_p, inner_x_v_step}
+        {xm.addi kw, kw_init, 1; add X_p, X_p, inner_x_v_step}
         kw_loop_asm:
             {xm.addi ic, ic_init, 1; add X_p, X_p, inner_x_h_step}
             ic_loop_asm:
