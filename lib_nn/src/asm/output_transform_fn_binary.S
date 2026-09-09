@@ -87,7 +87,7 @@ extern "C" int8_t *output_transform_fn_binary_asm(
 #define og              a2
 #define th              a3
 
-#define tmp             a3 
+#define tmp             og
 
 .p2align 1
 .globl FUNCTION_NAME
@@ -95,15 +95,11 @@ extern "C" int8_t *output_transform_fn_binary_asm(
 FUNCTION_NAME:
     xm.entsp NSTACKWORDS
     li x28, 0x100
-    xm.vsetc x28
-    slli og, og, 5
-    add th, th, og
-    xm.vldr acc
-    xm.vladd th
-    xm.vdepth1
-    xm.mkmsk tmp, 2
-    xm.vstrpv out, tmp
-    xm.addi out, out, 2
+    { xm.vsetc x28      ; slli og, og, 5    }
+    { add th, th, og    ; xm.vldr acc       }
+    { xm.vladd th       ; xm.mkmsk tmp, 2   }
+    { xm.vdepth1        ; nop               }
+    { addi out, out, 2  ; xm.vstrpv out, tmp}
     xm.retsp NSTACKWORDS
 .size FUNCTION_NAME, . -FUNCTION_NAME
 .resource_const FUNCTION_NAME, "stack_frame_bytes",  NSTACKWORDS
