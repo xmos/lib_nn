@@ -2,6 +2,16 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if defined(__XS3A__)
 
+/*
+void mat_mul_direct_int16_impl_asm(
+    const mat_mul_direct_params_t *params,
+    VPURingBuffer *A, 
+    int16_t *X,
+    int32_t output_channel_group,
+    int16_t *kp
+);
+*/
+
 .issue_mode  dual
 
 #define PARAMS_bytes_per_kernel_channel 0
@@ -10,12 +20,8 @@
 #define PARAMS_input_channel_loop_counter 3
 #define PARAMS_inner_x_h_step 4
 #define PARAMS_inner_x_v_step 5
-#define PARAMS_weights_bytes 6
-#define PARAMS_weights 7
-
 
 //Registers
-
 #define params_p             r0
 #define A_p                  r1
 #define X_p                  r2
@@ -34,13 +40,7 @@
 #define t                    r11
 #define K_p                  t
 
-
-/*
-extern "C" void mat_mul_impl_asm(void *params, VPURingBuffer *A, int8_t *X, int32_t output_channel_group);
-*/
-
 #define FUNCTION_NAME mat_mul_direct_int16_impl_asm
-
 #define NSTACKWORDS  6
     
 .text
@@ -122,8 +122,20 @@ FUNCTION_NAME:
 #if defined(__VX4A__) || defined(__VX4B__)
 
 /*
-void mat_mul_impl_asm(void *params, VPURingBuffer *A, int8_t *X, int32_t output_channel_group);
+void mat_mul_direct_int16_impl_asm(
+    const mat_mul_direct_params_t *params,
+    VPURingBuffer *A, 
+    int16_t *X,
+    int32_t output_channel_group,
+    int16_t *kp
+);
 */
+
+#define FUNCTION_NAME   mat_mul_direct_int16_impl_asm
+#define NSTACKWORDS     (10)
+
+#define ROUND_UP(X, Y) (((X + Y - 1) / Y) * Y)
+#define NSTACKBYTES ROUND_UP(NSTACKWORDS * 4, 16)
 
 #define PARAMS_bytes_per_kernel_channel 0
 #define PARAMS_k_height_loop_counter 1
@@ -131,117 +143,82 @@ void mat_mul_impl_asm(void *params, VPURingBuffer *A, int8_t *X, int32_t output_
 #define PARAMS_input_channel_loop_counter 3
 #define PARAMS_inner_x_h_step 4
 #define PARAMS_inner_x_v_step 5
-#define PARAMS_weights_bytes 6
-#define PARAMS_weights 7
 
-#define FUNCTION_NAME mat_mul_direct_int16_impl_asm
+#define params_p             a0
+#define A_p                  a1
+#define X_p                  a2
+#define out_ch_g             a3 
+#define kp_init              a4
 
-#define NSTACKBYTES 0
+#define kw                   s2
+#define ic                   s3
+#define thirty_two           s4
+#define inner_x_h_step       s5
+#define inner_x_v_step       s6
+#define kw_init              s7
+#define kp2                  s8
 
-#define params_p             x10
-#define A_p                  x11
-#define X_p                  x12
-#define output_channel_group x13 
-#define kh output_channel_group 
+#define tmp                  x28
+#define kp                   tmp
 
-#define kw                   x18
-#define ic                   x19
-#define thirty_two           x20
-#define inner_x_h_step       x21
-#define inner_x_v_step       x22
-
-#define kw_init              x23
+#define kh                   out_ch_g 
 #define ic_init              params_p
-#define K_p2                 x24
-#define t                    x28
-#define K_p                  t
-
 
 .p2align 1
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
 FUNCTION_NAME:
-
-    xm.stdsp x18, x19, 0*8
-    xm.stdsp x20, x21, 1*8
-    xm.stdsp x22, x23, 2*8
+    xm.entsp NSTACKBYTES
+    xm.stdsp s2, s3, 0*8
+    xm.stdsp s4, s5, 1*8
+    xm.stdsp s6, s7, 2*8
+    xm.stdsp s8, s9, 3*8
     
-    {xm.vclrdr; xm.ldcu t, 32}
+    {xm.vclrdr; xm.ldcu tmp, 32}
+    {xm.ldwi kw, PARAMS_bytes_per_kernel_channel*4(params_p); xm.shli tmp, tmp, 3}
+    {xm.vsetc tmp; nop}
 
-    {xm.ldwi kw, PARAMS_bytes_per_kernel_channel*4(params_p); xm.shli t, t, 3}
-    {xm.vsetc x28; nop}
-
-
-    mul output_channel_group, kw, output_channel_group
-    {xm.ldwsp K_p, (NSTACKBYTES*4 + 4); xm.nop}
-    {xm.ldwi inner_x_v_step, PARAMS_inner_x_v_step*4(params_p); xm.add K_p, output_channel_group, K_p}
+    mul out_ch_g, kw, out_ch_g
+    add kp, kp_init, zero 
+    {xm.ldwi inner_x_v_step, PARAMS_inner_x_v_step*4(params_p); xm.add kp, out_ch_g, kp}
     {xm.ldcu thirty_two, 32; xm.ldwi inner_x_h_step, PARAMS_inner_x_h_step*4(params_p)}
     {xm.ldwi kh, PARAMS_k_height_loop_counter*4(params_p);xm.nop}
     {xm.ldwi kw_init, PARAMS_k_width_loop_counter*4(params_p); xm.sub X_p, X_p, inner_x_h_step}
     {xm.ldwi ic_init, PARAMS_input_channel_loop_counter*4(params_p); xm.sub X_p, X_p, inner_x_v_step}
 
-    {xm.addi ic, ic, 1; xm.addi kw, kw, 1}
+    {xm.nop; xm.addi kw_init, kw_init, 1}
     addi kh, kh, 1
     kh_loop_asm:
         {xm.addi kw, kw_init, 0; add X_p, X_p, inner_x_v_step}
         kw_loop_asm:
-            {xm.addi ic, ic_init, 0; add X_p, X_p, inner_x_h_step}
+            {xm.addi ic, ic_init, 1; add X_p, X_p, inner_x_h_step}
             ic_loop_asm:
-                {xm.vldc X_p; xm.add X_p, X_p, thirty_two}
-                {xm.vlmaccr0 K_p; xm.add K_p2, K_p, thirty_two}
-                xm.vlmaccr1 K_p
-                {xm.vlmaccr0 K_p2; xm.add K_p, K_p2, thirty_two}
-                xm.vlmaccr1 K_p2
-                {xm.vlmaccr0 K_p; xm.add K_p2, K_p, thirty_two}
-                xm.vlmaccr1 K_p
-                {xm.vlmaccr0 K_p2; xm.add K_p, K_p2, thirty_two}
-                xm.vlmaccr1 K_p2
-                {xm.vlmaccr0 K_p; xm.add K_p2, K_p, thirty_two}
-                xm.vlmaccr1 K_p
-                {xm.vlmaccr0 K_p2; xm.add K_p, K_p2, thirty_two}
-                xm.vlmaccr1 K_p2
-                {xm.vlmaccr0 K_p; xm.add K_p2, K_p, thirty_two}
-                xm.vlmaccr1 K_p
-                {xm.vlmaccr0 K_p2; xm.add K_p, K_p2, thirty_two}
-                xm.vlmaccr1 K_p2
-                {xm.vlmaccr0 K_p; xm.add K_p2, K_p, thirty_two}
-                xm.vlmaccr1 K_p
-                {xm.vlmaccr0 K_p2; xm.add K_p, K_p2, thirty_two}
-                xm.vlmaccr1 K_p2
-                {xm.vlmaccr0 K_p; xm.add K_p2, K_p, thirty_two}
-                xm.vlmaccr1 K_p
-                {xm.vlmaccr0 K_p2; xm.add K_p, K_p2, thirty_two}
-                xm.vlmaccr1 K_p2
-                {xm.vlmaccr0 K_p; xm.add K_p2, K_p, thirty_two}
-                xm.vlmaccr1 K_p
-                {xm.vlmaccr0 K_p2; xm.add K_p, K_p2, thirty_two}
-                xm.vlmaccr1 K_p2
-                {xm.vlmaccr0 K_p; xm.add K_p2, K_p, thirty_two}
-                xm.vlmaccr1 K_p
-                {xm.vlmaccr0 K_p2; xm.add K_p, K_p2, thirty_two}
-                xm.vlmaccr1 K_p2
+                {xm.vldc X_p; xm.add X_p, X_p, thirty_two}                
+
+                .rept 8
+                {xm.vlmaccr0 kp; xm.add kp2, kp, thirty_two}
+                xm.vlmaccr1 kp
+                {xm.vlmaccr0 kp2; xm.add kp, kp2, thirty_two}
+                xm.vlmaccr1 kp2
+                .endr
+                
                 {xm.nop; xm.subi ic, ic, 1}
                 bnez ic, ic_loop_asm
-         //   {xm.bt ic, ic_loop_asm; xm.subi ic, ic, 1}
-
 
             {xm.nop; xm.subi kw, kw, 1}
             bnez kw, kw_loop_asm
-      //  {xm.bt kw, kw_loop_asm; xm.subi kw, kw, 1}
-
 
     {xm.nop; xm.subi kh, kh, 1}
     bnez kh, kh_loop_asm
-//    {xm.bt kh, kh_loop_asm; xm.subi kh, kh, 1}
 
     {xm.vstr A_p; xm.add A_p, A_p, thirty_two}
     {xm.vstd A_p; xm.nop}
 
-    xm.lddsp x18, x19, 0*8
-    xm.lddsp x20, x21, 1*8
-    xm.lddsp x22, x23, 2*8
-
-    {xm.retsp ((NSTACKBYTES+3)>>3); xm.nop}
+    xm.lddsp s2, s3, 0*8
+    xm.lddsp s4, s5, 1*8
+    xm.lddsp s6, s7, 2*8
+    xm.lddsp s8, s9, 3*8
+    xm.retsp NSTACKBYTES
 
 .size FUNCTION_NAME, . -FUNCTION_NAME
 .resource_const FUNCTION_NAME, "stack_frame_bytes", NSTACKBYTES

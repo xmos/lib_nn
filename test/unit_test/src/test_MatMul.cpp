@@ -100,9 +100,6 @@ TEST(group_mat_mul, Test_DirectBinary) {
 }
 
 TEST(group_mat_mul, Test_DirectInt16) {
-#if defined(__VX4B__)
-  TEST_IGNORE_MESSAGE("mat_mul_direct_int16 assembly faults on VX4");
-#else
   MatMulDirectFn dir(img_i16, win, elm_n);
   mat_mul_direct_params_t prm = dir.getParams();
   std::fill_n(inp_i16, elm_n, 1);
@@ -111,7 +108,6 @@ TEST(group_mat_mul, Test_DirectInt16) {
 
   mat_mul_direct_int16(&prm, &A, inp_i16, ocg, wgt_i16);
   assert_accumulator_value(A, elm_n);
-#endif
 }
 
 TEST(group_mat_mul, Test_DirectInt16x8) {
