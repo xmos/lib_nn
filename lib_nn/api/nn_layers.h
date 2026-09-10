@@ -1,18 +1,13 @@
 // Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
-#ifndef LAYERS_H_
-#define LAYERS_H_
+#pragma once
+
 #include "nn_api.h"
 #include "nn_bin_types.h"
 #include "nn_image.h"
 #include <string.h>
 
 // other layers
-#include "add_int16.h"
-#include "add_int16_transform.h"
-#include "dequantize_int16.h"
-#include "dequantize_int16_transform.h"
-#include "expand_8_to_16.h"
 #include "multiply_int16.h"
 #include "multiply_int16_transform.h"
 #include "output_transform_fn_int16.h"
@@ -23,6 +18,189 @@
 #include "quantize_int16.h"
 #include "quantize_int16_transform.h"
 
+// Definitions
+#define ADD_INT16_TENSOR_BYTES()  (2 * 16 * sizeof(int16_t))
+#define DEQUANTIZE_INT16_TENSOR_BYTES()  (2 * sizeof(float))
+#define MULTIPLY_INT16_TENSOR_BYTES()  (2 * sizeof(int16_t))
+#define QUANTIZE_INT16_TENSOR_BYTES()  (1 * sizeof(float))
+#define REQUANTIZE_INT16_TENSOR_BYTES()  (16 * sizeof(int16_t))
+
+/**
+ * @brief Generate the transformed parameters used by quantize_int16_tensor().
+ *
+ * Call this at build time and pass the output blob to quantize_int16_tensor()
+ * at run time.
+ *
+ * @param[out] output        Output blob of QUANTIZE_INT16_TENSOR_BYTES() bytes;
+ *                           must be word-aligned.
+ * @param[in]  output_scaler Quantization scale of the output tensor
+ * @return 1 on success, or 0 when a fallback implementation is required.
+ */
+C_API int quantize_int16_tensor_blob(void *output, float output_scaler);
+
+/**
+ * @brief Quantize a float tensor into an int16 tensor.
+ *
+ * `blob` must have been created by quantize_int16_tensor_blob(). `output`,
+ * `input`, and `blob` must be word-aligned.
+ *
+ * @param[out] output        Output tensor
+ * @param[in]  input         Input tensor
+ * @param[in]  tensor_length Number of elements in the tensor (product of all dimensions)
+ * @param[in]  blob          Transformed quantization parameters
+ */
+C_API void quantize_int16_tensor(int16_t *output, float *input, int tensor_length, void *blob);
+
+/**
+ * @brief Generate the transformed parameters used by requantize_int16_tensor().
+ *
+ * Call this at build time and pass the output blob to requantize_int16_tensor()
+ * at run time.
+ *
+ * @param[out] output        Output blob of REQUANTIZE_INT16_TENSOR_BYTES() bytes;
+ *                           must be word-aligned.
+ * @param[in]  input_scaler  Quantization scale of the input tensor
+ * @param[in]  output_scaler Quantization scale of the output tensor
+ * @param[out] err_msg       Error message populated when the transformation fails
+ * @return 1 on success, or 0 when a fallback implementation is required.
+ */
+C_API int requantize_int16_tensor_blob(void *output, float input_scaler,
+                                       float output_scaler, char *err_msg);
+
+/**
+ * @brief Requantize an int16 tensor into an int16 tensor.
+ *
+ * `blob` must have been created by requantize_int16_tensor_blob(). `output`,
+ * `input`, and `blob` must be word-aligned.
+ *
+ * @param[out] output        Output tensor
+ * @param[in]  input         Input tensor
+ * @param[in]  tensor_length Number of elements in the tensor (product of all dimensions)
+ * @param[in]  blob          Transformed quantization parameters
+ */
+C_API void requantize_int16_tensor(int16_t *output, int16_t *input,
+                                   int tensor_length, void *blob);
+
+/**
+ * @brief Requantize a range of int16 elements into int8 elements.
+ *
+ * `elm_start` and `elm_count` together specify the output elements computed by
+ * this invocation, namely those for which `elm_start <= k < elm_start +
+ * elm_count`.
+ *
+ * @param[out] y         Output vector
+ * @param[in]  x         Input vector
+ * @param[in]  elm_start Index of the first output element to compute
+ * @param[in]  elm_count Number of output elements to compute
+ */
+void requantize_16_to_8(int8_t *y, const int16_t *x,
+                        const unsigned elm_start, const unsigned elm_count);
+
+/**
+ * @brief Generate the transformed parameters used by multiply_int16_tensor().
+ *
+ * Call this at build time and pass the output blob to multiply_int16_tensor()
+ * at run time.
+ *
+ * @param[out] output        Output blob of MULTIPLY_INT16_TENSOR_BYTES() bytes;
+ *                           must be word-aligned.
+ * @param[in]  input1_scaler Quantization scale of the first input tensor
+ * @param[in]  input2_scaler Quantization scale of the second input tensor
+ * @param[in]  output_scaler Quantization scale of the output tensor
+ * @param[out] err_msg       Error message populated when the transformation fails
+ * @return 1 on success, or 0 when a fallback implementation is required.
+ */
+C_API int multiply_int16_tensor_blob(void *output, float input1_scaler,
+                                     float input2_scaler, float output_scaler,
+                                     char *err_msg);
+
+/**
+ * @brief Multiply two int16 tensors into an int16 tensor.
+ *
+ * `blob` must have been created by multiply_int16_tensor_blob(). `output`,
+ * `input1`, `input2`, and `blob` must be word-aligned.
+ *
+ * @param[out] output        Output tensor
+ * @param[in]  input1        First input tensor
+ * @param[in]  input2        Second input tensor
+ * @param[in]  tensor_length Number of elements in each tensor
+ * @param[in]  blob          Transformed quantization parameters
+ */
+C_API void multiply_int16_tensor(int16_t *output, int16_t *input1,
+                                 int16_t *input2, int tensor_length,
+                                 void *blob);
+
+/**
+ * @brief Expand a signed 8-bit vector into a signed 16-bit vector.
+ *
+ * Each input element is sign-extended to 16 bits and stored in the
+ * corresponding output element. Only the first `N` elements of `out` are
+ * written.
+ *
+ * @param[out] out Output vector with space for at least `N` int16_t elements.
+ * @param[in]  in  Input vector with at least `N` int8_t elements.
+ * @param[in]  N   Number of elements to expand.
+ */
+void expand_8_to_16(int16_t *out, int8_t *in, int N);
+
+/** Add two 16-bit tensors using transformed quantization parameters.
+ * @param output Output tensor; must be word-aligned.
+ * @param input1 First input tensor operand; must be word-aligned.
+ * @param input2 Second input tensor operand; must be word-aligned.
+ * @param tensor_length Number of elements in each tensor; there are no constraints on this value.
+ * @param blob Transformed parameters from add_int16_tensor_blob(); must be word-aligned.
+ */
+void add_int16_tensor(int16_t *output, int16_t *input1, int16_t *input2,
+                      int tensor_length, void *blob);
+
+
+
+/** Generate the transformed parameters used by add_int16_tensor().
+ * @param output Output blob of ADD_INT16_TENSOR_BYTES(); must be word-aligned.
+ * @param input1_scaler Quantization scale of the first input tensor.
+ * @param input2_scaler Quantization scale of the second input tensor.
+ * @param output_scaler Quantization scale of the output tensor.
+ * @param err_msg Buffer for an error message when the transformation fails.
+ * @return 1 on success, or 0 when a fallback implementation is required.
+ */
+C_API int add_int16_tensor_blob(void *output,
+                          float input1_scaler,
+                          float input2_scaler,
+                          float output_scaler,
+                          char *err_msg);
+
+/**
+ * @brief Generate the constant parameters used to dequantize an int16 tensor.
+ * Call this at build time and pass the output blob to
+ * ``dequantize_int16_tensor()`` at run time.
+ * @param[out] output Output blob of ``DEQUANTIZE_INT16_TENSOR_BYTES()`` bytes; must be word-aligned.
+ * @param[in] input_scaler Quantization scale of the input tensor.
+ * @param[out] err_msg Error message populated when the transformation fails.
+ * @return 1 on success, or 0 when a fallback implementation is required.
+ */
+C_API int dequantize_int16_tensor_blob(void *output, float input_scaler,
+                                       char *err_msg);
+
+/**
+ * Function that implements dequantization of a 16-bit tensor to a 32-bit tensor.
+ * The blob must have been created by a call to ``dequantize_int16_tensor_blob()``
+ * 
+ * @param output         Output tensor
+ * @param input          Input tensor
+ * @param blob           Transformed constant input tensor
+ * @param tensor_length  Number of elements in the tensor (product of all dimensions)
+ * @note output and input must be word-aligned in xs3.
+ */
+void dequantize_int16_tensor(float *output, int16_t *input,
+                             int tensor_length, void *blob);
+
+/**
+ * @brief Find the index of the maximum value in an int16 vector.
+ *
+ * @param[out] Y Output index of the maximum value.
+ * @param[in]  X Input int16 vector.
+ * @param[in]  N Number of elements in the input vector.
+ */
 void argmax_16(int32_t *Y, const int16_t *X, const int32_t N);
 
 /**
@@ -82,11 +260,11 @@ void pad_3_to_4_prepare(uint32_t *n_3, const unsigned height,
                         const unsigned width);
 
 /**
- * @brief Pad an image of 3-byte pixels out to 4 bytes per pixel, setting the added byte to a specified value.
+ * @brief Pad 3-byte pixels to 4 bytes, setting the added byte to a specified value.
  *
  * The output image must be word-aligned. This function handles the general case and calls an optimized assembly routine for the bulk copy.
  *
- * @param outputs  [out]  Output values; every word contains 3 bytes and a zero
+ * @param outputs  [out]  Output values; each 4-byte pixel contains 3 input bytes and one pad byte
  * @param inputs   [in]   Input values, e.g. RGBRGBRGBRGB...
  * @param N_3      [in]   Number of 3-byte blocks to copy
  * @param pad_val  [in]   Value written to the padding byte
@@ -95,7 +273,7 @@ void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3,
                            uint32_t pad_val);
 
 /**
- * @brief Pad a vector of bytes into 32-bit words, writing each input byte into the least-significant byte of an output word and filling the upper three bytes with the fixed padding value.
+ * @brief Pad bytes into 32-bit words, writing each input byte into the least-significant byte of an output word and filling the upper three bytes with the fixed padding value.
  *
  * The function processes `N * 4` input bytes and expands each byte into a 32-bit output word. `N` therefore counts 4-byte input chunks, not bytes.
  *
@@ -299,5 +477,3 @@ void mean_int8(const int8_t *input, int8_t *output, const int start_dim_size,
 void mean_int16(const int16_t *input, int16_t *output, const int start_dim_size,
                 const int mean_dim_size, const int end_dim_size,
                 const float scale_mul);
-
-#endif // LAYERS_H_
