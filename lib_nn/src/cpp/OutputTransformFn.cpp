@@ -15,21 +15,26 @@ extern "C" {
 
 using namespace nn;
 
+/** @brief Round a floating-point value up to the next integer. */
+static int64_t round_up(float x) { return std::ceil(x); }
+
+/** @brief Round a floating-point value down to the previous integer. */
+static int64_t round_down(float x) { return std::floor(x); }
+
+/** @brief Saturate a signed value to a non-symmetric integer range. */
 static int64_t saturate_non_sym(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
   const int64_t min_val = -max_val - 1;
-
   return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
 }
 
+/** @brief Return the smaller of two signed 32-bit integers. */
 static inline int32_t min_int32(const int32_t lhs, const int32_t rhs) {
   return lhs < rhs ? lhs : rhs;
 }
 
-// This is an implementation of VDEPTH8 where the rounding is asymetric
-// The acutal asm implements the following but in a more convoluted way
-// in order to work around the rounds issue.
-static void VDEPTH8_FIXED(xs3_vpu *vpu) {
+/** @brief Implement VDEPTH8 with asymmetric rounding. */
+static void VDEPTH8_FIXED(vpu_t *vpu) {
   vpu_vector_t vec_tmp;
   memcpy(&vec_tmp, &(vpu->vR), sizeof(vpu_vector_t));
   memset(&(vpu->vR), 0, sizeof(vpu_vector_t));
@@ -40,6 +45,7 @@ static void VDEPTH8_FIXED(xs3_vpu *vpu) {
   }
 }
 
+/** @brief Count the leading redundant sign bits in a signed 64-bit value. */
 static int clrsbll(long long x) {
 #if __has_builtin(__builtin_clrsbll)
   return __builtin_clrsbll(x);
@@ -52,6 +58,7 @@ static int clrsbll(long long x) {
 #endif
 }
 
+/** @brief Shift a signed 64-bit value with rounding for right shifts. */
 static int64_t shl(int64_t v, int amount_to_shl) {
   if (amount_to_shl >= 0) {
     // work around  the undefined behaviour
@@ -63,10 +70,7 @@ static int64_t shl(int64_t v, int amount_to_shl) {
   }
 }
 
-/**
- * Return the number of bits required to hold v (round up to the next highest
- * integer).
- */
+/** @brief Return the number of bits required to represent a signed value. */
 static int count_bits(int64_t v) {
 #ifndef CHAR_BIT
 #define CHAR_BIT 8
@@ -74,7 +78,7 @@ static int count_bits(int64_t v) {
   return ((sizeof(int64_t) * CHAR_BIT) - clrsbll(v));
 }
 
-// Return true if v can be represented in bit_count bits
+/** @brief Return whether a signed value fits in the requested bit width. */
 static bool check_val_fits(int64_t v, int bit_count) {
   return count_bits(v) <= bit_count;
 }
@@ -86,11 +90,13 @@ void recitfy_min_max(T &v_min, T &v_max) {
   v_max = actual_max;
 }
 
+/** @brief Convert a floating-point value to a rounded scaled integer. */
 template <class T>
 static int64_t float_to_int(T f, int e) {
   return (int64_t)std::rint(ldexp(f, e));
 }
 
+/** @brief Convert a floating-point value to a saturated 16-bit integer. */
 template <class T>
 static int16_t float_to_int16(T f, int e) {
   int64_t v = float_to_int(f, e);
@@ -99,7 +105,7 @@ static int16_t float_to_int16(T f, int e) {
   return (int16_t)v;
 }
 
-//this is to account for the double rounding in VLASHR+VDEPTH8
+/** @brief Convert a scaled bias while compensating for double rounding. */
 template <class T>
 static int16_t float_to_int16_with_bias(T f, int e) {
   return float_to_int16(f - (1.0 / (1<<(e))), e);
@@ -113,6 +119,7 @@ static int16_t float_to_int16_with_bias(T f, int e) {
 std::tuple<int, int>
 OutputTransformFnInt8_Group::Quantizer::solve_for_constraints(
     MulsAndBias &activationParams, int vlmul_shr, bool verbose) {
+  (void)verbose;
   int accu_bits_max = 0;
   int max_multiplier_exponent = INT32_MIN;
 
@@ -256,11 +263,6 @@ OutputTransformFnInt8_Group::Quantizer::solve_for_constraints(
       }
     }
   }
-  if (verbose) {
-    printf(
-        "mul_sig_bits: %d\naccu_sig_bits: %d\n",
-        mul_sig_bits, accu_sig_bits);
-  }
   return std::make_tuple(A, M);
 }
 
@@ -270,6 +272,7 @@ OutputTransformFnInt8_Group::Quantizer::solve_for_constraints(
 std::tuple<std::vector<int>, std::vector<int>>
 OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
     MulsAndBias &activationParams, int vlmul_shr, bool verbose) {
+  (void)verbose;
   std::vector<int> As, Ms;
   int global_B = 0;
 
@@ -376,10 +379,6 @@ OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
           accu_sig_bits--;
           trying = true;
 
-          if (verbose) {
-            printf("Accu too big\n   accu_sig_bits: %d\n   A: %d\n",
-                   accu_sig_bits, A);
-          }
         }
 
         int64_t mul_16 = float_to_int(activationParam.multiplier, M);
@@ -388,10 +387,6 @@ OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
           mul_sig_bits--;
           trying = true;
 
-          if (verbose) {
-            printf("mul too big\n   mul_sig_bits: %d\n   M: %d\n", mul_sig_bits,
-                   M);
-          }
         }
 
         int64_t prod_max = shl(accu_max_16 * mul_16, -vlmul_shr);
@@ -411,19 +406,12 @@ OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
         // at least one of these must be true
         // one of them can saturate
         if (!check_val_fits(prod_max, 16) || !check_val_fits(prod_min, 16)) {
-          if (verbose) printf("overflow in prod or sum \n");
           if (A >= 0 || accu_sig_bits > mul_sig_bits) {
             A--;
             accu_sig_bits--;
-            if (verbose) {
-              printf("   accu_sig_bits: %d\n   A: %d\n", accu_sig_bits, A);
-            }
           } else {
             M--;
             mul_sig_bits--;
-            if (verbose) {
-              printf("   mul_sig_bits: %d\n   M: %d\n", mul_sig_bits, M);
-            }
           }
           trying = true;
         }
@@ -477,10 +465,6 @@ OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
     accu_sig_bits = std::max(accu_sig_bits, std::max(count_bits(accu_max_16),
                                                      count_bits(accu_min_16)));
 
-    if (verbose) {
-      printf("accu_sig_bits: %d\nmul_sig_bits: %d\nA: %d\n M: %d\n",
-             accu_sig_bits, mul_sig_bits, As[ch], Ms[ch]);
-    }
     bool trying = true;
     while (trying) {
       trying = false;
@@ -491,15 +475,9 @@ OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
         if (accu_sig_bits > mul_sig_bits) {
           As[ch]--;
           accu_sig_bits--;
-          if (verbose) {
-            printf("   accu_sig_bits: %d\n   A: %d\n", accu_sig_bits, As[ch]);
-          }
         } else {
           Ms[ch]--;
           mul_sig_bits--;
-          if (verbose) {
-            printf("   mul_sig_bits: %d\n   M: %d\n", mul_sig_bits, Ms[ch]);
-          }
         }
       }
     }
@@ -509,12 +487,10 @@ OutputTransformFnInt8_Channelwise::Quantizer::solve_for_constraints(
   return std::make_tuple(As, Ms);
 }
 
-int64_t round_up(float x) { return std::ceil(x); }
-
-int64_t round_down(float x) { return std::floor(x); }
- 
 void nn::OutputTransformFn::ActivationParams::
     backprop_output_clamps_to_accu_limits(bool verbose, bool debug) {
+  (void)verbose;
+  (void)debug;
   // adjust accu_min and max to account for the saturation on the output
   if (multiplier == 0.0) {
     multiplier = 0.0;
@@ -523,12 +499,6 @@ void nn::OutputTransformFn::ActivationParams::
     accu_max_val = 0;
     output_max_val = 0;
     output_min_val = 0;
-    if(verbose){
-      printf("bias: %f -> %f ", original_bias, bias);
-      printf("mult: %f -> %f\n", original_multiplier, multiplier);
-      printf("accu: [%d, %d] ", (int)accu_min_val, (int)accu_max_val);
-      printf("output: [%d, %d]\n", output_min_val, output_max_val);
-    }
     return;
   }
 
@@ -542,14 +512,6 @@ void nn::OutputTransformFn::ActivationParams::
   int64_t accu_out_clamp_min = round_down(lo);
 
   recitfy_min_max(accu_min_val, accu_max_val);
-
-  if (debug) {
-    printf("accu_out_clamp_min: %lld accu_out_clamp_max: %lld\n",
-           (long long)accu_out_clamp_min, (long long)accu_out_clamp_max);
-    printf(
-        "activationParam.accu_min_val: %d activationParam.accu_max_val: %d\n",
-        (int)accu_min_val, (int)accu_max_val);
-  }
 
   int64_t union_max = std::min(accu_out_clamp_max, (int64_t)accu_max_val);
   int64_t union_min = std::max(accu_out_clamp_min, (int64_t)accu_min_val);
@@ -576,17 +538,12 @@ void nn::OutputTransformFn::ActivationParams::
                    (int32_t)output_min_val);
   }
 
-  if (verbose) {
-      printf("bias: %f -> %f ", original_bias, bias);
-      printf("mult: %f -> %f ", original_multiplier, multiplier);
-      printf("accu:  [%d, %d] -> [%d, %d] %f ",(int)original_accu_max_val, (int)original_accu_min_val,  (int)accu_min_val, (int)accu_max_val, (float)(accu_max_val - accu_min_val) /(original_accu_max_val - original_accu_min_val) );
-      printf("output: [%d, %d]\n", output_min_val, output_max_val);
-  }
 }
 
 OutputTransformFnInt8_Group::QuantisationParams
 OutputTransformFnInt8_Group::Quantizer::quantise_activation(
     MulsAndBias &activationParams, nn_vlmul_shr_t vlmul_shr , bool verbose) {
+  (void)verbose;
   if (activationParams.size() == 0) {
     QuantisationParams q;
     q.initial_shr = 0;
@@ -600,17 +557,13 @@ OutputTransformFnInt8_Group::Quantizer::quantise_activation(
 
   int A, M;
 
-  std::tie(A, M) = solve_for_constraints(activationParams, vlmul_shr, verbose);
+  std::tie(A, M) = solve_for_constraints(activationParams, vlmul_shr, false);
   int B = A + M - vlmul_shr;
 
   QuantisationParams q;
 
   q.initial_shr = -A;
   q.final_shr = B - 8;
-
-  if (verbose) {
-    printf("final_shr: %d initial_shr: %d\n", q.final_shr, q.initial_shr);
-  }
 
   // Quantise the multiplier and bias
   for (unsigned ch = 0; ch < activationParams.size(); ++ch) {
@@ -619,12 +572,6 @@ OutputTransformFnInt8_Group::Quantizer::quantise_activation(
     int16_t b = float_to_int16_with_bias(activationParams[ch].bias, B);
     q.biases.push_back(b);
 
-    if (verbose)
-      printf("multiplier: %d(%f) original: %f\n", m, std::ldexp(m, -M),
-             activationParams[ch].original_multiplier);
-    if (verbose)
-      printf("bias: %d(%f) original: %f %f\n", b, std::ldexp(b, -B),
-             activationParams[ch].original_bias, activationParams[ch].bias);
   }
   return q;
 }
@@ -632,6 +579,7 @@ OutputTransformFnInt8_Group::Quantizer::quantise_activation(
 OutputTransformFnInt8_Channelwise::QuantisationParams
 OutputTransformFnInt8_Channelwise::Quantizer::quantise_activation(
     MulsAndBias &activationParams, nn_vlmul_shr_t vlmul_shr, bool verbose) {
+  (void)verbose;
   if (activationParams.size() == 0) {
     QuantisationParams q;
     q.initial_shr = 0;
@@ -661,26 +609,20 @@ OutputTransformFnInt8_Channelwise::Quantizer::quantise_activation(
     int16_t b = float_to_int16(activationParams[ch].bias, B);
     q.biases.push_back(b);
 
-    if (verbose)
-      printf("multiplier: %d(%f) original: %f\n", m, std::ldexp(m, -M),
-             activationParams[ch].original_multiplier);
-    if (verbose)
-      printf("bias: %d(%f) original: %f %f\n", b, std::ldexp(b, -B),
-             activationParams[ch].original_bias, activationParams[ch].bias);
   }
   q.initial_shr = q.initial_shifts[0];
 
   return q;
 }
 
-// INT8
+//----------------------- INT8 -----------------------
 #ifdef NN_USE_REF
 int8_t *output_transform_fn_ref(
   const otfn_int8_params_t *params,  int8_t *Y, VPURingBuffer *A, 
   int32_t output_channel_group, int16_t *multipliers_and_biases) 
 {
-  xs3_vpu vpu_mem;
-  xs3_vpu *vpu = &vpu_mem;
+  vpu_t vpu_mem;
+  vpu_t *vpu = &vpu_mem;
   vpu_vector_t temp_mem;
 
   // Determine how many output channels this group contains.
@@ -751,7 +693,8 @@ int8_t *nn::otfn_int8(
 #endif  // NN_USE_REF
 }
 
-// INT8 CHANNELWISE
+
+//----------------------- INT8 CHANNELWISE -----------------------
 extern "C" int8_t *output_transform_fn_int_channelwise_impl_asm(
     const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
     int16_t *multipliers_and_biases, int output_count);
@@ -771,85 +714,39 @@ int8_t *output_transform_fn_int_channelwise_impl_asm_stub(
 
 int8_t *output_transform_fn_int_channelwise_impl(
     const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
-    int32_t output_channel_group, int16_t *multipliers_and_biases) {
-  xs3_vpu vpu_mem;
-  xs3_vpu *vpu = &vpu_mem;
-  bool verbose = false;
+    int32_t output_channel_group, int16_t *multipliers_and_biases) 
+{
+  const int32_t output_slice_channel_count = params->output_slice_channel_count;
+  const int32_t output_channel_offset = output_channel_group * VPU_INT16_EPV;
+  const int output_count = std::min(output_slice_channel_count - output_channel_offset,(int32_t)VPU_INT16_EPV);
+  const unsigned mask = (1 << output_count) - 1;
 
-  // we need to know how many we are processing
-  int output_count = std::min(
-      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
-      (int32_t)VPU_INT16_EPV);
-
-  int16_t *cur_initial_shift =
-      multipliers_and_biases + output_channel_group * VPU_INT16_EPV * 3;
-
+  vpu_t vpu_mem;
+  vpu_t *vpu = &vpu_mem;
+  vpu_vector_t temp_mem;
+  int16_t *cur_initial_shift = multipliers_and_biases + output_channel_group * VPU_INT16_EPV * 3;
   int16_t *cur_post_activation_mul = cur_initial_shift + output_count;
-
   int16_t *cur_post_activation_bias = cur_post_activation_mul + output_count;
 
   VSETC(vpu, MODE_S16);
-
-  // Load accumulator into D and R Registers
   VLDR(vpu, &A->vR);
   VLDD(vpu, &A->vD);
-   
-  if(verbose){
-    printf("accu:\n");
-    vpu_sim_print(vpu);
-  }
-
-  vpu_vector_t temp_mem;
 
   // Set temp_mem to hold initial shifts up to output count
-  for (int i = 0; i < VPU_INT16_EPV; i++)
+  for (int i = 0; i < VPU_INT16_EPV; i++){
     temp_mem.s16[i] = cur_initial_shift[i];
-  for (int i = output_count; i < VPU_INT16_EPV; i++) temp_mem.s16[i] = 0;
+  }
+  for (int i = output_count; i < VPU_INT16_EPV; i++) {
+    temp_mem.s16[i] = 0;
+  }
   VLSAT(vpu, &temp_mem);
-   
-  if(verbose){
-    printf("post VLSAT:\n");
-    vpu_sim_print(vpu);
-  }
-
-  // multiply by multipliers
   VLMUL(vpu, cur_post_activation_mul);
-   
-  if(verbose){
-    printf("post VLMUL:\n");
-    vpu_sim_print(vpu);
-  }
-
-  // add biases
   VLADD(vpu, cur_post_activation_bias);
-   
-  if(verbose){
-    printf("post VLADD:\n");
-    vpu_sim_print(vpu);
-  }
-
-  // store, load then do final shift right
   VSTR(vpu, &temp_mem);
-
-  // fixed final shift
   VLASHR(vpu, &temp_mem, params->final_shr);
-   
-  if(verbose){
-    printf("post VLASHR:\n");
-    vpu_sim_print(vpu);
-  }
-
   VDEPTH8_FIXED(vpu);
-   
-  if(verbose){
-    printf("post VDEPTH8:\n");
-    vpu_sim_print(vpu);
-  }
-
-  int mask = (1 << output_count) - 1;
   VSTRPV(vpu, Y, mask);
   Y += output_count;
-
   return Y;
 }
 
@@ -863,9 +760,9 @@ int8_t *nn::otfn_int8_channelwise(const otfn_int8_channelwise_params_t *params, 
       params, Y, A, output_channel_group, multipliers_and_biases);
 #endif  // NN_USE_REF
 }
-//-----------------------
 
-// INT8 MAXPOOL
+
+//----------------------- INT8 MAXPOOL -----------------------
 extern "C" int8_t *output_transform_maxpool_impl_asm(
     const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
     int16_t *multipliers_and_biases, int output_count);
@@ -908,9 +805,9 @@ int8_t *nn::otfn_int8_maxpool(const otfn_int8_channelwise_params_t *params, int8
       params, Y, A, output_channel_group, multipliers_and_biases);
 #endif  // NN_USE_REF
 }
-//-----------------------
 
-// INT8 CLAMPED
+
+//----------------------- INT8 CLAMPED -----------------------
 #if defined(NN_USE_REF)
 int8_t *output_transform_fn_int_clamped_ref(
     const otfn_int8_clamped_params_t *params, int8_t *Y, VPURingBuffer *A,
@@ -982,7 +879,8 @@ int8_t *nn::otfn_int8_clamped(const otfn_int8_clamped_params_t *params, int8_t *
 #endif  // NN_USE_REF
 }
 
-// BINARY
+
+//----------------------- BINARY -----------------------
 #ifdef NN_USE_REF
 int8_t *output_transform_fn_binary_ref(
   int8_t *Y, 
