@@ -70,9 +70,6 @@ TEST(group_mat_mul, Test_GenericInt8) {
 }
 
 TEST(group_mat_mul, Test_GenericBinary) {
-#if defined(__VX4B__)
-  TEST_IGNORE_MESSAGE("mat_mul_generic_binary assembly faults on VX4");
-#else
   MatMulBinary gen(chn_n, elm_n);
   mat_mul_generic_params_t prm = gen.getParams();
   std::fill_n(inp_i8, elm_n, -1);
@@ -80,7 +77,6 @@ TEST(group_mat_mul, Test_GenericBinary) {
 
   mat_mul_generic_binary(&prm, &A, inp_i8, ocg, wgt_i8);
   assert_accumulator_value(A, elm_n * 4);
-#endif
 }
 
 TEST(group_mat_mul, Test_DirectInt8) {
@@ -94,9 +90,6 @@ TEST(group_mat_mul, Test_DirectInt8) {
 }
 
 TEST(group_mat_mul, Test_DirectBinary) {
-#if defined(__VX4B__)
-  TEST_IGNORE_MESSAGE("mat_mul_direct_binary assembly faults on VX4");
-#else
   MatMulBinaryDirectFn dir(img_i8, win, elm_n);
   mat_mul_direct_params_t prm = dir.getParams();
   std::fill_n(inp_i8, elm_n, -1);
@@ -104,7 +97,6 @@ TEST(group_mat_mul, Test_DirectBinary) {
 
   mat_mul_direct_binary(&prm, &A, inp_i8, ocg, wgt_i8);
   assert_accumulator_value(A, elm_n * 4);
-#endif
 }
 
 TEST(group_mat_mul, Test_DirectInt16) {
