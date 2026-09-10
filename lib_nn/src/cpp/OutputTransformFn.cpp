@@ -22,6 +22,10 @@ static int64_t saturate_non_sym(const int64_t input, const unsigned bits) {
   return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
 }
 
+static inline int32_t min_int32(const int32_t lhs, const int32_t rhs) {
+  return lhs < rhs ? lhs : rhs;
+}
+
 // This is an implementation of VDEPTH8 where the rounding is asymetric
 // The acutal asm implements the following but in a more convoluted way
 // in order to work around the rounds issue.
@@ -670,123 +674,82 @@ OutputTransformFnInt8_Channelwise::Quantizer::quantise_activation(
 }
 
 // INT8
-extern "C" int8_t *output_transform_fn_impl_asm(const otfn_int8_params_t *params,
-                                                int8_t *Y, VPURingBuffer *A,
-                                                int16_t *multipliers_and_biases,
-                                                int output_count);
-
-#ifndef NN_USE_REF
-int8_t *output_transform_fn_impl_asm_stub(const otfn_int8_params_t *params,
-                                          int8_t *Y, VPURingBuffer *A,
-                                          int32_t output_channel_group,
-                                          int16_t *multipliers_and_biases) {
-  int output_count = std::min(
-      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
-      (int32_t)VPU_INT16_EPV);
-  multipliers_and_biases += output_channel_group * VPU_INT16_EPV * 2;
-  return output_transform_fn_impl_asm(params, Y, A, multipliers_and_biases,
-                                      output_count);
-}
-#endif
-
-int8_t *output_transform_fn_impl(const otfn_int8_params_t *params, int8_t *Y,
-                                 VPURingBuffer *A, int32_t output_channel_group,
-                                 int16_t *multipliers_and_biases) {
+#ifdef NN_USE_REF
+int8_t *output_transform_fn_ref(
+  const otfn_int8_params_t *params,  int8_t *Y, VPURingBuffer *A, 
+  int32_t output_channel_group, int16_t *multipliers_and_biases) 
+{
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
-  bool verbose = false;
+  vpu_vector_t temp_mem;
 
-  // we need to know how many we are processing
+  // Determine how many output channels this group contains.
+  const int output_slice_channel_count = params->output_slice_channel_count;
+  const int group_channel_offset = output_channel_group * VPU_INT16_EPV;
+  const int remaining_channels = output_slice_channel_count - group_channel_offset;
+  const int output_count = std::min(remaining_channels, (int32_t)VPU_INT16_EPV);
+  const int mask = (1 << output_count) - 1;
+  const int16_t in_shift =  params->initial_shift;
+  const int16_t sat_shift = in_shift > 0 ? in_shift : 0;
 
-  int output_count = std::min(
-      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
-      (int32_t)VPU_INT16_EPV);
-
-  int16_t *cur_post_activation_mul =
-      multipliers_and_biases + output_channel_group * VPU_INT16_EPV * 2;
-
+  int16_t *cur_post_activation_mul = multipliers_and_biases + output_channel_group * VPU_INT16_EPV * 2;
   int16_t *cur_post_activation_bias = cur_post_activation_mul + output_count;
 
+  // Set VPU mode
   VSETC(vpu, MODE_S16);
 
   // Load accumulator into D and R Registers
   VLDR(vpu, &A->vR);
   VLDD(vpu, &A->vD);
-   
-  if(verbose){
-    printf("accu:\n");
-    vpu_sim_print(vpu);
+
+  // Saturate the accumulator to 16 bits before multiplication.
+  for (int i = 0; i < VPU_INT16_EPV; ++i) {
+    temp_mem.s16[i] = sat_shift;
   }
+  VLSAT(vpu, &temp_mem);
 
-  vpu_vector_t temp_mem;
-
-  // Saturate to fit in 16 bits?
-  if (params->initial_shift > 0) {
-    for (int i = 0; i < VPU_INT16_EPV; ++i)
-      temp_mem.s16[i] = params->initial_shift;
-
-    VLSAT(vpu, &temp_mem);
-  } else {
-    for (int i = 0; i < VPU_INT16_EPV; ++i) temp_mem.s16[i] = 0;
-    VLSAT(vpu, &temp_mem);
-
+  if (in_shift <= 0) {
     VSTR(vpu, &temp_mem);
-    VLASHR(vpu, &temp_mem, params->initial_shift);
+    VLASHR(vpu, &temp_mem, in_shift);
   }
-  if(verbose){
-    printf("post VLSAT:\n");
-    vpu_sim_print(vpu);
-  }
-
-
-  // multiply by set val
   VLMUL(vpu, cur_post_activation_mul);
-
-  if(verbose){
-    printf("post VLMUL:\n");
-    vpu_sim_print(vpu);
-  }
-  // add set bias
   VLADD(vpu, cur_post_activation_bias);
-
-  if(verbose){
-    printf("post VLADD:\n");
-    vpu_sim_print(vpu);
-  }
-  // store, load then do final shift right
   VSTR(vpu, &temp_mem);
   VLASHR(vpu, &temp_mem, params->final_shr);
-
-  if(verbose){
-    printf("post VLASHR:\n");
-    vpu_sim_print(vpu);
-  }
   VDEPTH8_FIXED(vpu);
-
-  if(verbose){
-    printf("post VDEPTH8:\n");
-    vpu_sim_print(vpu);
-    printf("output_count %d\n", output_count);
-  }
-  int mask = (1 << output_count) - 1;
-
   VSTRPV(vpu, Y, mask);
   Y += output_count;
-
   return Y;
 }
-
-int8_t *nn::otfn_int8(const otfn_int8_params_t *params, int8_t *Y, VPURingBuffer *A,
-                                     int32_t output_channel_group, int16_t *multipliers_and_biases) {
-#ifdef NN_USE_REF
-  return output_transform_fn_impl(params, Y, A, output_channel_group,
-                                  multipliers_and_biases);
 #else
-  return output_transform_fn_impl_asm_stub(
-      params, Y, A, output_channel_group, multipliers_and_biases);
+extern "C" int8_t *output_transform_fn_impl_asm(
+  const otfn_int8_params_t *params, int8_t *Y, VPURingBuffer *A,
+  int16_t *multipliers_and_biases, int output_count
+);
+
+int8_t *output_transform_fn_asm(
+  const otfn_int8_params_t *params, int8_t *Y, VPURingBuffer *A,
+  int32_t output_channel_group, int16_t *multipliers_and_biases) 
+{
+  const int32_t output_slice_channel_count = params->output_slice_channel_count;
+  const int32_t group_channel_offset = output_channel_group * VPU_INT16_EPV;
+  const int32_t remaining_channels = output_slice_channel_count - group_channel_offset;
+  const int32_t output_count = min_int32(remaining_channels, (const int32_t)VPU_INT16_EPV);
+  multipliers_and_biases += output_channel_group * VPU_INT16_EPV * 2;
+  return output_transform_fn_impl_asm(params, Y, A, multipliers_and_biases, output_count);
+}
+#endif
+
+int8_t *nn::otfn_int8(
+  const otfn_int8_params_t *params, int8_t *Y, VPURingBuffer *A,
+  int32_t output_channel_group, int16_t *multipliers_and_biases) 
+{
+#ifdef NN_USE_REF
+  return output_transform_fn_ref(params, Y, A, output_channel_group, multipliers_and_biases);
+#else
+  return output_transform_fn_asm(params, Y, A, output_channel_group, multipliers_and_biases);
 #endif  // NN_USE_REF
 }
-//-----------------------
 
 // INT8 CHANNELWISE
 extern "C" int8_t *output_transform_fn_int_channelwise_impl_asm(
@@ -948,70 +911,76 @@ int8_t *nn::otfn_int8_maxpool(const otfn_int8_channelwise_params_t *params, int8
 //-----------------------
 
 // INT8 CLAMPED
-int8_t *output_transform_fn_int_clamped_impl(
+#if defined(NN_USE_REF)
+int8_t *output_transform_fn_int_clamped_ref(
     const otfn_int8_clamped_params_t *params, int8_t *Y, VPURingBuffer *A,
     int32_t output_channel_group, int16_t *offsets_multipliers_and_biases) {
-  xs3_vpu vpu_mem;
-  xs3_vpu *vpu = &vpu_mem;
+  vpu_t vpu_mem;
+  vpu_t *vpu = &vpu_mem;
+  vpu_vector_t temp_mem;
+  const int32_t out_slice_count = params->output_slice_channel_count;
+  const int32_t out_ch_count = output_channel_group * VPU_INT16_EPV;
+  const int output_count = std::min(out_slice_count - out_ch_count, (int32_t)VPU_INT16_EPV);
+  const unsigned  mask = (1 << output_count) - 1;
 
-  // we need to know how many we are processing
-  int output_count = std::min(
-      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
-      (int32_t)VPU_INT16_EPV);
-
-  // The 3 is due to the serialisation of 3 arrays in chunks of VPU_INT16_EPV
-  // elements
-  int16_t *cur_post_activation_offset =
-      offsets_multipliers_and_biases + output_channel_group * VPU_INT16_EPV * 3;
-
+  // Prepare offset, multiplier, and bias pointers for the current output channel group
+  int16_t *cur_post_activation_offset = offsets_multipliers_and_biases + out_ch_count * 3;
   int16_t *cur_post_activation_mul = cur_post_activation_offset + output_count;
-
   int16_t *cur_post_activation_bias = cur_post_activation_mul + output_count;
 
   VSETC(vpu, MODE_S16);
   VLDR(vpu, &A->vR);
-
   VLADD(vpu, cur_post_activation_offset);
-
-  // Remove the kernel overlap
   VPOS(vpu);
-
-  vpu_vector_t temp_mem;
   VSTR(vpu, &temp_mem);
   VLASHR(vpu, &temp_mem, params->initial_shift);
-
   VLMUL(vpu, cur_post_activation_mul);
   VLADD(vpu, cur_post_activation_bias);
-
   VSTR(vpu, &temp_mem);
   VLASHR(vpu, &temp_mem, params->final_shr);
-
   VDEPTH8_FIXED(vpu);
-
-  int mask = (1 << output_count) - 1;
   VSTRPV(vpu, Y, mask);
   Y += output_count;
-
   return Y;
 }
-
-extern "C" int8_t *output_transform_fn_int_clamped_impl_asm(
+#elif defined(__XS3A__)
+extern "C" int8_t *output_transform_fn_int_clamped_asm(
     const otfn_int8_clamped_params_t *params, int8_t *Y, VPURingBuffer *A,
     int32_t output_channel_group, int16_t *offsets_multipliers_and_biases);
+
+#elif defined(__VX4A__) || defined(__VX4B__)
+extern "C" int8_t *output_transform_fn_int_clamped_asm_vpu(
+  int8_t *Y, VPURingBuffer *A, int16_t *offset, int16_t *multiplier,
+  int16_t *bias, int output_count, int initial_shift, int final_shr
+);
+
+int8_t *output_transform_fn_int_clamped_asm(
+    const otfn_int8_clamped_params_t *params, int8_t *Y, VPURingBuffer *A,
+    int32_t output_channel_group, int16_t *offsets_multipliers_and_biases) 
+{
+  const int32_t out_slice_count = params->output_slice_channel_count;
+  const int32_t out_ch_count = output_channel_group * VPU_INT16_EPV;
+  const int32_t out_count = min_int32(out_slice_count - out_ch_count, VPU_INT16_EPV);
+  int16_t *cur_offset = offsets_multipliers_and_biases + out_ch_count * 3;
+  int16_t *cur_mul = cur_offset + out_count;
+  int16_t *cur_bias = cur_mul + out_count;
+  const int ish = params->initial_shift;
+  const int fshr = params->final_shr;
+  return output_transform_fn_int_clamped_asm_vpu(Y, A, cur_offset, cur_mul, cur_bias, out_count, ish, fshr);
+}
+#else
+#error "Not supported"
+#endif
 
 int8_t *nn::otfn_int8_clamped(const otfn_int8_clamped_params_t *params, int8_t *Y, VPURingBuffer *A,
                                              int32_t output_channel_group, int16_t *offsets_multipliers_and_biases) {
 #if defined(NN_USE_REF)
-
-  return output_transform_fn_int_clamped_impl(
-      params, Y, A, output_channel_group, offsets_multipliers_and_biases);
+  return output_transform_fn_int_clamped_ref(params, Y, A, output_channel_group, offsets_multipliers_and_biases);
 #else
-
-  return output_transform_fn_int_clamped_impl_asm(
+  return output_transform_fn_int_clamped_asm(
       params, Y, A, output_channel_group, offsets_multipliers_and_biases);
 #endif  // NN_USE_REF
 }
-//-----------------------
 
 // BINARY
 #ifdef NN_USE_REF
