@@ -9,8 +9,6 @@
 #define PARAMS_k_width_loop_counter 2
 #define PARAMS_inner_x_h_step 3
 #define PARAMS_inner_x_v_step 4
-#define PARAMS_weights_bytes 5
-#define PARAMS_weights 6
 
 //Registers
 
@@ -35,7 +33,7 @@
 
 
 /*
-void mat_mul_dw_direct_impl_asm(MatMulDirectFn_DW::Params *params,
+void mat_mul_dw_direct_int16_impl_asm(MatMulDirectFn_DW::Params *params,
                                       VPURingBuffer *A, int16_t *X,
                                       int32_t output_channel_group);
 */
@@ -111,3 +109,73 @@ FUNCTION_NAME:
 
 
 
+#if defined(__VX4A__) || defined(__VX4B__)
+
+#define FUNCTION_NAME mat_mul_dw_direct_int16_impl_asm
+#define NSTACKWORDS 8
+
+#define PARAMS_bytes_per_kernel_channel 0
+#define PARAMS_k_height_loop_counter 1
+#define PARAMS_k_width_loop_counter 2
+#define PARAMS_inner_x_h_step 3
+#define PARAMS_inner_x_v_step 4
+
+//Registers
+
+#define params_p             a0
+#define A_p                  a1
+
+#define X_p                  a2
+#define out_ch_g             a3
+
+#define kw                   s2
+#define kh                   s3
+
+#define inner_x_h_step       s4
+#define inner_x_v_step       s5
+
+#define kp                   t3
+#define thirtytwo            out_ch_g
+#define kw_init              params_p
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+    { li t3, 32 ; xm.entsp (NSTACKWORDS * 4) }
+    xm.stdsp s2, s3, 0
+    xm.stdsp s4, s5, 8
+
+    { xm.shl t3, t3, 3 ; xm.vclrdr }
+    xm.vsetc t3
+    xm.ldd kw, kh, PARAMS_bytes_per_kernel_channel * 4 (params_p)
+    mul out_ch_g, kw, out_ch_g
+    mv kp, a4
+    { add kp, kp, out_ch_g ; lw inner_x_h_step, PARAMS_inner_x_h_step * 4 (params_p) }
+    { li thirtytwo, 32 ; lw inner_x_v_step, PARAMS_inner_x_v_step * 4 (params_p) }
+    { sub X_p, X_p, inner_x_v_step ; lw kw_init, PARAMS_k_width_loop_counter * 4 (params_p) }
+
+    kh_loop_asm:
+        { add kw, kw_init, 1 ; add X_p, X_p, inner_x_v_step }
+        kw_loop_asm:
+            { xm.vldc X_p ; add X_p, X_p, inner_x_h_step }
+
+            { xm.vlmacc0 kp ; add kw, kw, -1 }
+            xm.vlmacc1 kp
+
+        { add kp, kp, thirtytwo ; xm.bt kw, kw_loop_asm }
+    { add kh, kh, -1 ; xm.bt kh, kh_loop_asm }
+
+    { xm.vstr A_p ; add A_p, A_p, thirtytwo }
+    xm.vstd A_p
+
+    xm.lddsp s2, s3, 0
+    xm.lddsp s4, s5, 8
+    xm.retsp (NSTACKWORDS * 4)
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  (NSTACKWORDS * 4)
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
+#endif

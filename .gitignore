@@ -37,3 +37,4 @@ compile_commands.json
 
 # test cruft
 test/deps
+.github/copilot-instructions.md

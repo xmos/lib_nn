@@ -1,12 +1,20 @@
-@Library('xmos_jenkins_shared_library@v0.53.0') _
+@Library('xmos_jenkins_shared_library@v0.54.0') _
 
-// Converts a Unity fixture-verbose log file into JUnit XML via lib_unity's
-// parse_output.rb, writing "<suiteName>_results.xml" (relative to cwd), and
-// publishes it via the junit step.
-def UnityJunit(String logFile, String suiteName) {
+// Runs a Unity test, publishes its JUnit report, and prints its log on failure.
+def UnityJunit(String command, String logFile, String suiteName) {
+    def status = sh(
+        returnStatus: true,
+        script: "${command} > ${logFile} 2>&1"
+    )
+    if (status != 0) {
+        sh "cat ${logFile}"
+    }
     sh "ruby ${WORKSPACE}/lib_unity/lib_unity/Unity/auto/parse_output.rb -xml -suite${suiteName} ${logFile}"
     sh "mv report.xml ${suiteName}_results.xml"
     junit "${suiteName}_results.xml"
+    if (status != 0) {
+        error("${suiteName} tests failed")
+    }
 }
 
 getApproval()
@@ -29,12 +37,12 @@ pipeline {
         )
         string(
             name: 'XMOSDOC_VERSION',
-            defaultValue: 'v7.4.0',
+            defaultValue: 'v8.1.2',
             description: 'xmosdoc version'
         )
         string(
             name: 'INFR_APPS_VERSION',
-            defaultValue: 'v3.1.1',
+            defaultValue: 'v3.6.0',
             description: 'The infr_apps version'
         )
         choice(
@@ -71,18 +79,31 @@ pipeline {
                             }
                         } // Setup
 
-                        stage("Test") {
+                        stage("Unit test") {
                             steps {
                                 dir("${REPO}/test/unit_test") {
-                                    sh "./bin/unit_test -v > NativeUnit.log"
-                                    UnityJunit("NativeUnit.log", "NativeUnit")
-                                }
-                                dir("${REPO}/test/integration") {
-                                    sh "./bin/integration_test -v > NativeIntegration.log"
-                                    UnityJunit("NativeIntegration.log", "NativeIntegration")
+                                    UnityJunit("./bin/unit_test -v", "NativeUnit.log", "NativeUnit")
                                 }
                             }
-                        } // Test
+                        } // Unit test
+
+                        stage("Integration test") {
+                            steps {
+                                dir("${REPO}/test/integration") {
+                                    UnityJunit("./bin/integration_test -v", "NativeIntegration.log", "NativeIntegration")
+                                }
+                            }
+                        } // Integration test
+
+                        stage("Custom CMake") {
+                            steps {
+                                dir("${REPO}/test/custom_cmake_build") {
+                                    sh "cmake -B build_custom_cmake"
+                                    sh "cmake --build build_custom_cmake"
+                                    sh "./bin/add_tensor"
+                                }
+                            }
+                        } // Custom CMake
 
                     } // stages
                     post {cleanup {xcoreCleanSandbox()}}
@@ -108,14 +129,28 @@ pipeline {
                             }
                         } // Setup
 
-                        stage("Test") {
+                        stage("Custom CMake build") {
                             steps {
-                                dir("${REPO}/test/unit_test") {
-                                    withTools(params.TOOLS_VERSION_XS) {sh "xsim --args bin/unit_test.xe -v > XS3.log"}
-                                    UnityJunit("XS3.log", "XS3")
+                                dir("${REPO}/test/custom_cmake_build") {
+                                    sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch v1.0.0"
+                                    withTools(params.TOOLS_VERSION_XS) {
+                                        sh 'cmake -B build_custom_cmake --toolchain=xmos_cmake_toolchain/xs3a.cmake'
+                                        sh 'make -C build_custom_cmake -j$(nproc)'
+                                        sh 'xsim bin/add_tensor.xe'
+                                    }
                                 }
                             }
-                        } // Test
+                        } // Custom CMake build
+
+                        stage("Unit test") {
+                            steps {
+                                dir("${REPO}/test/unit_test") {
+                                    withTools(params.TOOLS_VERSION_XS) {
+                                        UnityJunit("xsim --args bin/unit_test.xe -v", "XS3.log", "XS3")
+                                    }
+                                }
+                            }
+                        } // Unit test
 
                     } // stages
                     post {cleanup {xcoreCleanSandbox()}}
@@ -141,14 +176,15 @@ pipeline {
                             }
                         } // Setup
 
-                        stage("Test") {
+                        stage("Unit test") {
                             steps {
                                 dir("${REPO}/test/unit_test") {
-                                    withTools(params.TOOLS_VERSION_VX) {sh "xsim --args bin/unit_test.xe -v > VX4.log"}
-                                    UnityJunit("VX4.log", "VX4")
+                                    withTools(params.TOOLS_VERSION_VX) {
+                                        UnityJunit("xsim --args bin/unit_test.xe -v", "VX4.log", "VX4")
+                                    }
                                 }
                             }
-                        } // Test
+                        } // Unit test
 
                     } // stages
                     post {cleanup {xcoreCleanSandbox()}}

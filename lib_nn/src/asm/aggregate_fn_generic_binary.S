@@ -6,8 +6,6 @@
 
 #define PARAMS_output_slice_channel_count 0
 #define PARAMS_bytes_per_kernel_channel 1
-#define PARAMS_weights 2
-
 
 //Registers
 
@@ -25,7 +23,7 @@
 #define t                 r11
 
 /*
-extern "C" void mat_mul_impl_asm(MatMulInt8::Params *params, VPURingBuffer *A, int8_t *X, int32_t output_channel_group);
+extern "C" void mat_mul_generic_binary_impl_asm(MatMulInt8::Params *params, VPURingBuffer *A, int8_t *X, int32_t output_channel_group);
 */
 
 #define FUNCTION_NAME mat_mul_generic_binary_impl_asm
@@ -38,7 +36,7 @@ extern "C" void mat_mul_impl_asm(MatMulInt8::Params *params, VPURingBuffer *A, i
 #define OPTIONAL_DDR_SPILL(x) /* */
 #endif
 
-#define NSTACKWORDS  40
+#define NSTACKWORDS  6
     
 .text
 .issue_mode  dual
@@ -49,7 +47,6 @@ extern "C" void mat_mul_impl_asm(MatMulInt8::Params *params, VPURingBuffer *A, i
 .cc_top FUNCTION_NAME.function,FUNCTION_NAME
 
 #define VPU_INT16_EPV 16
-#define XS3_VPU_VREG_WIDTH_BYTES 32
 
 FUNCTION_NAME:
     dualentsp NSTACKWORDS
@@ -57,7 +54,6 @@ FUNCTION_NAME:
     std r4, r5, sp[0]
     std r6, r7, sp[1]
     std r8, r9, sp[2]
-
 
     
     {vclrdr; ldc t, 32}
@@ -158,5 +154,98 @@ FUNCTION_NAME:
 
 #endif
 
+#if defined(__VX4A__) || defined(__VX4B__)
 
+#define FUNCTION_NAME mat_mul_generic_binary_impl_asm
+#define NSTACKWORDS 8
 
+#define PARAMS_output_slice_channel_count 0
+#define PARAMS_bytes_per_kernel_channel 1
+
+#define params_p          a0
+#define A_p               a1
+#define X_p               a2
+#define out_ch_gr         a3
+#define K_p               out_ch_gr
+#define step              s2
+#define K_p_adjust        s3
+#define ic_gr_count       s4
+#define thirty_two        a0
+
+#define VPU_INT16_EPV 16
+
+.p2align 1
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+FUNCTION_NAME:
+    { li t3, 32 ; xm.entsp (NSTACKWORDS * 4) }
+    xm.stdsp s2, s3, 0
+    xm.ldd step, K_p_adjust, PARAMS_output_slice_channel_count(params_p)
+    { li thirty_two, 15 ; xm.stwsp s4, 8 }
+
+    { xm.shl t3, t3, 4 ; xm.vclrdr }
+    { xm.shl out_ch_gr, out_ch_gr, 4 ; xm.vsetc t3 }
+
+    mul t3, K_p_adjust, out_ch_gr
+    xm.sub step, step, out_ch_gr
+    add K_p, a4, 0
+    { add K_p, K_p, t3 ; sub t3, step, thirty_two }
+
+    { xm.shr ic_gr_count, K_p_adjust, 5 ; xm.zext K_p_adjust, 5 }
+    { xm.bt K_p_adjust, .K_p_adjust; li thirty_two, 1 }
+    { li K_p_adjust, 32 ; addi ic_gr_count, ic_gr_count, -1 }
+
+.K_p_adjust:
+    li step, 32
+    bge t3, thirty_two, .step_adjust
+    mul step, step, t3
+
+.step_adjust:
+    li thirty_two, 32
+    { xm.brff ic_gr_count, .calc_step ; addi ic_gr_count, ic_gr_count, -1 }
+
+.input_channel_loop:
+    { xm.vldr X_p ; add X_p, X_p, thirty_two }
+
+    { xm.vlmaccrb K_p ; add K_p, K_p, thirty_two }
+    { xm.vlmaccrb K_p ; add K_p, K_p, thirty_two }
+    { xm.vlmaccrb K_p ; add K_p, K_p, thirty_two }
+    { xm.vlmaccrb K_p ; add K_p, K_p, thirty_two }
+    { xm.vlmaccrb K_p ; add K_p, K_p, thirty_two }
+    { xm.vlmaccrb K_p ; add K_p, K_p, thirty_two }
+    { xm.vlmaccrb K_p ; add K_p, K_p, thirty_two }
+    { xm.vlmaccrb K_p ; add K_p, K_p, thirty_two }
+    { xm.vlmaccrb K_p ; add K_p, K_p, thirty_two }
+    { xm.vlmaccrb K_p ; add K_p, K_p, thirty_two }
+    { xm.vlmaccrb K_p ; add K_p, K_p, thirty_two }
+    { xm.vlmaccrb K_p ; add K_p, K_p, thirty_two }
+    { xm.vlmaccrb K_p ; add K_p, K_p, thirty_two }
+    { xm.vlmaccrb K_p ; add K_p, K_p, thirty_two }
+    { xm.vlmaccrb K_p ; add K_p, K_p, thirty_two }
+
+    { xm.vlmaccrb K_p ; add K_p, K_p, step }
+
+    { xm.bt ic_gr_count, .input_channel_loop ; addi ic_gr_count, ic_gr_count, -1}
+
+.calc_step:
+    li t3, -5
+    { li t3, (VPU_INT16_EPV - 1 - 1) ; xm.shl step, step, t3 } // subtracting one more
+    { add step, step, t3 ; xm.vldc X_p }
+
+.tail_loop:
+    { xm.vlmaccrb K_p ; add K_p, K_p, K_p_adjust }
+    { xm.bt step, .tail_loop ; addi step, step, -1 }
+
+    { xm.vstr A_p ; add A_p, A_p, thirty_two }
+    xm.vstd A_p
+
+    xm.lddsp s2, s3, 0
+    xm.ldwsp s4, 8
+    xm.retsp (NSTACKWORDS * 4)
+.size FUNCTION_NAME, . -FUNCTION_NAME
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  (NSTACKWORDS * 4)
+.resource_list_empty FUNCTION_NAME, "callees"
+.resource_list_empty FUNCTION_NAME, "tail_callees"
+.resource_list_empty FUNCTION_NAME, "parallel_callees"
+
+#endif
