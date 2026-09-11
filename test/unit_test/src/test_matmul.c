@@ -50,7 +50,6 @@ static void impl_test_matmul(const unsigned lhs_row,
   int8_t expected[LHS_ROW_SIZE * RHS_COL_SIZE];
   int8_t WORD_ALIGNED vpu_buf0[32 * 2];
   int8_t WORD_ALIGNED vpu_buf1[32 * 2];
-  int8_t WORD_ALIGNED vpu_buf2[32 * 2];
   pseudo_rand_bytes((char*)lhs, LHS_ROW_SIZE * CHANNEL_SIZE);
   pseudo_rand_bytes((char*)rhs, CHANNEL_SIZE * RHS_COL_SIZE);
 
@@ -87,7 +86,7 @@ static void impl_test_matmul(const unsigned lhs_row,
 
   mat_mul_real_int8(
       &params,
-      vpu_buf0, vpu_buf1, vpu_buf2,
+      vpu_buf0, vpu_buf1,
       lhs, rhs, out + out_offset);
 
   TEST_ASSERT_EQUAL_INT8_ARRAY(expected, out+out_offset, lhs_row * rhs_col);
@@ -130,7 +129,6 @@ TEST(group_matmul, test_matmul_zero_result) {
   int8_t WORD_ALIGNED out[LHS_ROW_SIZE * RHS_COL_SIZE];
   int8_t WORD_ALIGNED vpu_buf0[32 * 2];
   int8_t WORD_ALIGNED vpu_buf1[32 * 2];
-  int8_t WORD_ALIGNED vpu_buf2[32 * 2];
 
   nn_mat_mul_real_params_t params = {
       .lhs_zp = 0.0f,
@@ -151,7 +149,7 @@ TEST(group_matmul, test_matmul_zero_result) {
 
   mat_mul_real_int8(
       &params,
-      vpu_buf0, vpu_buf1, vpu_buf2,
+      vpu_buf0, vpu_buf1,
       lhs, rhs, out);
 
   for (int i = 0; i < LHS_ROW_SIZE * RHS_COL_SIZE; ++i) {

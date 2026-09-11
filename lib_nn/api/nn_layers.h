@@ -328,14 +328,13 @@ typedef struct {
  * @param[in]   p         The scaling and bias parameters
  * @param[out]  vpu_buf0  Temporary VPU buffer, length 64
  * @param[out]  vpu_buf1  Temporary VPU buffer, length 64
- * @param[out]  vpu_buf2  Temporary VPU buffer, length 64
  * @param[in]   lhs       The left-hand side matrix, row major
  * @param[in]   rhs       The right-hand side matrix, column major
  * @param[out]  output    The output matrix
  */
 void mat_mul_real_int8(
   nn_mat_mul_real_params_t *p, 
-  int8_t *vpu_buf0, int8_t *vpu_buf1, int8_t *vpu_buf2,
+  int8_t *vpu_buf0, int8_t *vpu_buf1,
   int8_t *lhs, int8_t* rhs, int8_t *output);
 
 #endif // LAYERS_H_

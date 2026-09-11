@@ -24,15 +24,15 @@ extern void vect_mat_mul_int8_asm(
 
 void mat_mul_real_int8_vpu(
   nn_mat_mul_real_params_t *p,
-  int8_t *vpu_buf0, int8_t *vpu_buf1, int8_t *vpu_buf2,
+  int8_t *vpu_buf0, int8_t *vpu_buf1,
   int8_t *lhs, int8_t* rhs, int8_t *output) {
-  for (int lhs_row = 0; lhs_row < p->lhs_row_size; ++lhs_row) {
+  for (uint32_t lhs_row = 0; lhs_row < p->lhs_row_size; ++lhs_row) {
     // TODO: optimize it with vpu
     int32_t lhs_row_sum = 0;
-    for (int i = 0; i < p->channel_size; ++i) {
+    for (uint32_t i = 0; i < p->channel_size; ++i) {
       lhs_row_sum += lhs[lhs_row * p->channel_size + i];
     }
-    for (int rhs_col = 0; rhs_col < p->rhs_col_size; rhs_col+=16) {
+    for (uint32_t rhs_col = 0; rhs_col < p->rhs_col_size; rhs_col+=16) {
       int8_t* lhs_temp = &lhs[lhs_row * p->channel_size];
       int8_t* rhs_temp = &rhs[(rhs_col+16)*p->channel_size];
       int process_col = p->rhs_col_size - rhs_col;
@@ -45,7 +45,7 @@ void mat_mul_real_int8_vpu(
       int32_t *buff_temp = (int32_t*)vpu_buf1; // cheating here, treating vD:vR as continue space
       for (int i = 0; i < process_col; ++i) {
         buff_temp[i] = 0;
-        for (int j = 0; j < p->channel_size; ++j) {
+        for (uint32_t j = 0; j < p->channel_size; ++j) {
           buff_temp[i] += rhs[rhs_col*p->channel_size + i*p->channel_size + j];
         }
       }
@@ -71,42 +71,43 @@ void mat_mul_real_int8_vpu(
 
 void mat_mul_real_int8_ref(
     nn_mat_mul_real_params_t *p,
-    int8_t *vpu_buf0, int8_t *vpu_buf1, int8_t *vpu_buf2,
     int8_t *lhs, int8_t* rhs, int8_t *output)
 {
-    int out_index = 0;
-    for (int i = 0; i < p->lhs_row_size; ++i) {
-        for (int j = 0; j < p->rhs_col_size; ++j) {
-            double acc = 0.0;
-            for (int k = 0; k < p->channel_size; ++k) {
-                int lhs_idx = i*p->channel_size+k;
-                int rhs_idx = j*p->channel_size+k;
-                double x = ((double)(lhs[lhs_idx]) - p->lhs_zp);
-                double y = ((double)(rhs[rhs_idx]) - p->rhs_zp);
-                acc += x * y;
-            }
-            float quantized_value = (float)acc * p->scale + p->out_zp;
-            // Clamp the quantized value to int8 range
-if (quantized_value > 127.0f) {
-    output[out_index++] = 127;
-} else if (quantized_value < -128.0f) {
-    output[out_index++] = -128;
-} else {
-    output[out_index++] = (int8_t)roundf(quantized_value);
-}
-        }
+  int out_index = 0;
+  for (uint32_t i = 0; i < p->lhs_row_size; ++i) {
+    for (uint32_t j = 0; j < p->rhs_col_size; ++j) {
+      double acc = 0.0;
+      for (uint32_t k = 0; k < p->channel_size; ++k) {
+        int lhs_idx = i*p->channel_size+k;
+        int rhs_idx = j*p->channel_size+k;
+        double x = ((double)(lhs[lhs_idx]) - p->lhs_zp);
+        double y = ((double)(rhs[rhs_idx]) - p->rhs_zp);
+        acc += x * y;
+      }
+      float quantized_value = (float)acc * p->scale + p->out_zp;
+      // Clamp the quantized value to int8 range
+      if (quantized_value > 127.0f) {
+        output[out_index++] = 127;
+      } else if (quantized_value < -128.0f) {
+        output[out_index++] = -128;
+      } else {
+        output[out_index++] = (int8_t)roundf(quantized_value);
+      }
     }
+  }
 }
 
 // A real mat mul here
 void mat_mul_real_int8(
   nn_mat_mul_real_params_t *p,
-  int8_t *vpu_buf0, int8_t *vpu_buf1, int8_t *vpu_buf2,
+  int8_t *vpu_buf0, int8_t *vpu_buf1,
   int8_t *lhs, int8_t* rhs, int8_t *output) {
   
 #ifdef NN_USE_REF
-  mat_mul_real_int8_ref(p, vpu_buf0, vpu_buf1, vpu_buf2, lhs, rhs, output);
+  mat_mul_real_int8_ref(p, lhs, rhs, output);
+  (void) vpu_buf0;
+  (void) vpu_buf1;
 #else
-  mat_mul_real_int8_vpu(p, vpu_buf0, vpu_buf1, vpu_buf2, lhs, rhs, output);
+  mat_mul_real_int8_vpu(p, vpu_buf0, vpu_buf1, lhs, rhs, output);
 #endif
 }
