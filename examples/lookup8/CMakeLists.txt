@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 3.21)
 include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
 project(lookup8)
 
-set(APP_HW_TARGET          XK-EVK-XU316)
+if(NOT DEFINED APP_HW_TARGET AND NOT BUILD_NATIVE)
+    set(APP_HW_TARGET XK-EVK-XU316)
+endif()
 
 set(APP_DEPENDENT_MODULES  "lib_nn")
 

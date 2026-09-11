@@ -5,24 +5,7 @@
 #define TST_COMMON_H_
 
 #include <stdint.h>
-
-#define TEST_C_GLOBAL (0)
-#define DO_PRINT_EXTRA_GLOBAL (1)
-
-#define UNITY_SET_FILE() Unity.TestFile = __FILE__
-
-#ifdef __xcore__
-#define WORD_ALIGNED __attribute__((aligned(4)))
-#else
-#define WORD_ALIGNED
-#endif
-
-#define PRINTF(...)        \
-  do {                     \
-    if (DO_PRINT_EXTRA) {  \
-      printf(__VA_ARGS__); \
-    }                      \
-  } while (0)
+#include <nn_api.h>
 
 #ifdef __XC__
 extern "C" {

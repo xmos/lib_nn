@@ -7,6 +7,7 @@
 #include "OutputTransformFn.hpp"
 
 extern "C" {
+#include "nn_pooling.h"
 #include "tst_common.h"
 #include "unity.h"
 #include "unity_fixture.h"
@@ -22,6 +23,10 @@ TEST_TEAR_DOWN(group_maxpool) {}
 TEST_GROUP_RUNNER(group_maxpool) {
   RUN_TEST_CASE(group_maxpool, Test_Max_Pool_aggr);
   RUN_TEST_CASE(group_maxpool, Test_Max_Pool_ot);
+  RUN_TEST_CASE(group_maxpool, Test_AvgPool2D_Global);
+  RUN_TEST_CASE(group_maxpool, Test_MaxPool2D_Global);
+  RUN_TEST_CASE(group_maxpool, Test_MaxPool2D_Ext);
+  RUN_TEST_CASE(group_maxpool, Test_AvgPool2D_Ext);
 }
 
 /*
@@ -38,10 +43,9 @@ TEST(group_maxpool, Test_Max_Pool_aggr) {
             ImageGeometry X_params(x_height, x_width, x_channels);
             WindowGeometry K_params(k_height, k_width, 1, 1, 1, 1);
 
-            int input_tensor_overread = 32;
-
-            alignas(4) int8_t
-                T[x_height * x_width * x_channels + input_tensor_overread];
+            // Sized for the largest case swept by the loops above; a VLA
+            // isn't usable here since T must stay word-aligned.
+            alignas(4) int8_t T[4 * 4 * (32 * 3) + 32];
 
             for(int i = 0; i < x_height * x_width * x_channels; i++) {
                 T[i] = (i+13)*12345;
@@ -114,6 +118,22 @@ TEST(group_maxpool, Test_Max_Pool_ot) {
             }
         }
     }
+}
+
+TEST(group_maxpool, Test_AvgPool2D_Global) {
+  TEST_IGNORE_MESSAGE("avgpool2d_global has no implementation");
+}
+
+TEST(group_maxpool, Test_AvgPool2D_Ext) {
+  TEST_IGNORE_MESSAGE("avgpool2d_ext has no implementation");
+}
+
+TEST(group_maxpool, Test_MaxPool2D_Ext) {
+  TEST_IGNORE_MESSAGE("maxpool2d_ext has no implementation");
+}
+
+TEST(group_maxpool, Test_MaxPool2D_Global) {
+  TEST_IGNORE_MESSAGE("maxpool2d_global has no implementation");
 }
 
 }  // extern "C"

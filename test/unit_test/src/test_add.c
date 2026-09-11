@@ -6,16 +6,16 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-
+#include <math.h>
 
 #include "nn_operator.h"
 #include "nn_op_helper.h"
+#include "nn_arch.h"
 #include "tst_common.h"
 #include "unity.h"
 #include "unity_fixture.h"
 #include "xs3_vpu.h"
 
-#define DO_PRINT_EXTRA ((DO_PRINT_EXTRA_GLOBAL) && 0)
 
 #ifdef CONFIG_SYMMETRIC_SATURATION_GLOBAL
   #define CONFIG_SYMMETRIC_SATURATION_add_elementwise CONFIG_SYMMETRIC_SATURATION_GLOBAL
@@ -31,8 +31,6 @@
   #define NEG_SAT_VAL   (-128)
 #endif 
 
-char msg_buff[200];
-
 TEST_GROUP(group_add_elementwise);
 TEST_SETUP(group_add_elementwise) { srand(563456); }
 TEST_TEAR_DOWN(group_add_elementwise) {}
@@ -42,11 +40,16 @@ TEST_GROUP_RUNNER(group_add_elementwise) {
     RUN_TEST_CASE(group_add_elementwise, test_add_elementwise_case2);
 }
 
-#define LENGTH     (16)
+TEST_GROUP(group_add_int16);
+TEST_SETUP(group_add_int16) {}
+TEST_TEAR_DOWN(group_add_int16) {}
+TEST_GROUP_RUNNER(group_add_int16) {
+    RUN_TEST_CASE(group_add_int16, test_add_tensor_int16);
+}
+
 TEST(group_add_elementwise, test_add_elementwise_case0)
 {
-    PRINTF("%s...\n", __func__);
-
+    const unsigned LENGTH = 16;
     int8_t WORD_ALIGNED Y[LENGTH];
     int8_t WORD_ALIGNED X1[LENGTH];
     int8_t WORD_ALIGNED X2[LENGTH];
@@ -80,14 +83,10 @@ TEST(group_add_elementwise, test_add_elementwise_case0)
     add_elementwise(Y, X1, X2, &params, 0, LENGTH);
     TEST_ASSERT_EQUAL_INT8_ARRAY(Y_expected, Y, LENGTH);
 }
-#undef LENGTH
 
-
-#define LENGTH     (128)
 TEST(group_add_elementwise, test_add_elementwise_case1)
 {
-    PRINTF("%s...\n", __func__);
-
+    const unsigned LENGTH = 128;
     int8_t WORD_ALIGNED Y[LENGTH];
     int8_t WORD_ALIGNED X1[LENGTH];
     int8_t WORD_ALIGNED X2[LENGTH];
@@ -115,9 +114,9 @@ TEST(group_add_elementwise, test_add_elementwise_case1)
         params.bias_lo[i] = (int16_t) (bias & 0XFFFF);
     }
             
-    for(int i = 0; i < LENGTH; i++)
+    for(int i = 0; i < LENGTH; i++){
         Y_expected[i] = vlsat_single_s8(m1*X1[i] + m2*X2[i] + bias, shift, NEG_SAT_VAL, VPU_INT8_MAX);
-
+    }
     unsigned start = 0;
 
     { // 0 <= i < 16
@@ -158,15 +157,11 @@ TEST(group_add_elementwise, test_add_elementwise_case1)
     }
 
 }
-#undef LENGTH
 
-
-#define LEN     (100)
-#define REPS    (200)
 TEST(group_add_elementwise, test_add_elementwise_case2)
 {
-    PRINTF("%s...\n", __func__);
-
+    const unsigned LEN = 100;
+    const unsigned REPS = 200;
     int8_t WORD_ALIGNED Y[LEN];
     int8_t WORD_ALIGNED X0[LEN];
     int8_t WORD_ALIGNED X1[LEN];
@@ -176,9 +171,7 @@ TEST(group_add_elementwise, test_add_elementwise_case2)
 
         unsigned elm_start = (pseudo_rand_uint32() % LEN) & 0xFFFFFFFC;
         unsigned elm_count = pseudo_rand_uint32() % (LEN - elm_start);
-
-        PRINTF("  rep %u... (%u <= k < %u)\n", v, elm_start, elm_start+elm_count);
-
+        // printf("  rep %u... (%u <= k < %u)\n", v, elm_start, elm_start+elm_count);
         int32_t min = 0;
         int32_t max = 0;
 
@@ -230,28 +223,75 @@ TEST(group_add_elementwise, test_add_elementwise_case2)
         add_elementwise(Y, X0, X1, &params, elm_start, elm_count);
 
         if(v == -1){
-            PRINTF("    params.input[0].multiplier = %d   (0x%04X)\n", m[0], (unsigned) m[0]);
-            PRINTF("    params.input[1].multiplier = %d   (0x%04X)\n", m[1], (unsigned) m[1]);
+            printf("    params.input[0].multiplier = %d   (0x%04X)\n", m[0], (unsigned) m[0]);
+            printf("    params.input[1].multiplier = %d   (0x%04X)\n", m[1], (unsigned) m[1]);
 
-            PRINTF("    max = %ld\n", max);
-            PRINTF("    min = %ld\n", min);
-            PRINTF("    diff = %lu     (0x%08lX)\n", diff, diff);
-            PRINTF("    scale = %u\n", scale);
+            printf("    max = %d\n", (int)max);
+            printf("    min = %d\n", (int)min);
+            printf("    diff = %u     (0x%08X)\n", (unsigned)diff, (unsigned)diff);
+            printf("    scale = %u\n", scale);
 
-            PRINTF("    params.output.bias = %ld    (0x%08lX)\n", bias, (uint32_t)bias);
-            PRINTF("    params.output.shr = %d\n", shr);
+            printf("    params.output.bias = %d    (0x%08X)\n", bias, (unsigned)bias);
+            printf("    params.output.shr = %d\n", shr);
 
             unsigned m = 13;
-            PRINTF("      X0[%u] = %d\n", m, X0[m]);
-            PRINTF("      X1[%u] = %d\n", m, X1[m]);
-            PRINTF("      Y_expected[%u] = %d\n", m, Y_expected[m]);
-            PRINTF("      Y[%u] = %d\n", m, Y[m]);
+            printf("      X0[%u] = %d\n", m, X0[m]);
+            printf("      X1[%u] = %d\n", m, X1[m]);
+            printf("      Y_expected[%u] = %d\n", m, Y_expected[m]);
+            printf("      Y[%u] = %d\n", m, Y[m]);
         }
-
-
         TEST_ASSERT_EQUAL_INT8_ARRAY(Y_expected, Y, LEN);
-
     }
 }
-#undef LEN
-#undef REPS
+
+TEST(group_add_int16, test_add_tensor_int16)
+{
+    const unsigned N = 39;
+    int16_t input1[N];
+    int16_t input2[N];
+    int8_t blob[ADD_INT16_TENSOR_BYTES()];
+    int16_t output[N+1];
+    int16_t ref_output[N];
+    for(int j=1; j < N; j++) {
+    for(int i = 0; i < j; i++) {
+        input1[i] = 20000 - 2513 * i;
+        input2[i] = 417 * i + 82;
+    }
+    input2[3] = 30001;
+    input2[4] = 31003;
+    input2[5] = -32003;
+    input1[3] = 22767;
+    input1[4] = 21726;
+    input1[5] = -21998;
+    float scaler1 = 0.00004051757812;
+    float scaler2 = 0.00006123190654;
+    float scalero = 0.00006213;
+    for(int i = 0; i < j; i++) {
+        float oo = (input1[i] * scaler1 + input2[i] * scaler2) / scalero;
+        float o = round(oo);
+        if (o >  32767) o =  32767;
+        if (o < -32768) o = -32768;
+        ref_output[i] = o;
+    }
+    char err_msg[ERR_MSG_DESCRIPTOR_FAIL_BYTES()];
+    int success = add_int16_tensor_blob(blob,
+                                        scaler1,
+                                        scaler2,
+                                        scalero,
+                                        err_msg);
+    
+    TEST_ASSERT_EQUAL(1, success);
+   
+    output[j] = 0x5555;
+    add_int16_tensor(output, input1, input2, j, blob);
+    TEST_ASSERT_EQUAL(output[j], 0x5555);
+
+    int sqerr = 0;
+    for(int i = 0; i < j; i++) {
+        int err = ref_output[i] - output[i];
+        sqerr += err*err;
+        TEST_ASSERT_INT_WITHIN(1, ref_output[i], output[i]);
+    }
+    TEST_ASSERT_INT_WITHIN(8, sqerr, 0);
+    }
+}

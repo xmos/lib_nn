@@ -166,19 +166,19 @@ void mat_mul_direct_binary(const mat_mul_direct_params_t *params, VPURingBuffer 
 // Depthwise below here
 // ////////////////////////////////////////////////////////////////////////////
 
+/** Parameters describing a depthwise kernel traversal. */
 struct mat_mul_dw_direct_params_t{
-    /*
-     The count of bytes that a channel group contains. It is used to dereference
-     the weights pointer to the correct channel group start, i.e.
-      int8_t *K_p = params->weights + bytes_per_kernel_channel_group *
-     output_channel_group;
-    */
+  /** Number of bytes in one output-channel group of kernel weights. */
     int32_t bytes_per_kernel_channel_group;
 
+  /** Outer kernel-traversal loop bound (inclusive), stored as (loop_count - 1). */
     int32_t k_height_loop_counter;
+  /** Inner kernel-traversal loop bound (inclusive), stored as (loop_count - 1). */
     int32_t k_width_loop_counter;
 
+  /** Input-pointer increment between adjacent kernel elements. */
     int32_t inner_x_h_step;
+  /** Input-pointer increment between kernel rows. */
     int32_t inner_x_v_step;
 };
 
@@ -234,18 +234,32 @@ class MatMulDirectFn_DW {
   static int get_scratch_mem_bytes(std::array<int, 4> &kernel_shape);
 };
 
+/** Accumulate an int8 depthwise convolution into the VPU ring buffer.
+ * @param params Depthwise kernel traversal parameters.
+ * @param A Destination VPU ring buffer.
+ * @param T Input tensor data.
+ * @param output_channel_group Output channel group to compute.
+ * @param weights Reordered int8 kernel weights.
+ */
 void mat_mul_dw_direct(const mat_mul_dw_direct_params_t *params, VPURingBuffer *A, int8_t *T,
-                                     int32_t output_channel_group, int8_t *weights);
-/** Function that calculates a maxpool on an image. This operation works just like
- * the depthwise mat_mul_direct; in particular, it takes the same params_t descriptor
- * that contains the kernel size. There is no need for an output transform after this
- * instead the ringbuffer contains 16 answers. Note that 16 bytes will be overwritten,
- * requiring a memcpy if there is precious data stored in the higher elements.
+                       int32_t output_channel_group, int8_t *weights);
+
+/** Accumulate an int16 depthwise convolution into the VPU ring buffer.
+ * @param params Depthwise kernel traversal parameters.
+ * @param A Destination VPU ring buffer.
+ * @param T Input tensor data.
+ * @param output_channel_group Output channel group to compute.
+ * @param weights Reordered int16 kernel weights.
+ */
+void mat_mul_dw_direct_int16(const mat_mul_dw_direct_params_t *params, VPURingBuffer *A, int16_t *T,
+                             int32_t output_channel_group, int16_t *weights);
+
+/** Compute 16-channel int8 MaxPool results into the ring buffer's vR vector.
+ * @param params Pooling-window traversal parameters.
+ * @param A Destination VPU ring buffer; only vR is updated.
+ * @param T Input tensor data.
  */
 void maxpool_direct(const mat_mul_dw_direct_params_t *params, VPURingBuffer *A, int8_t *T);
-
-void mat_mul_dw_direct_int16(const mat_mul_dw_direct_params_t *params, VPURingBuffer *A, int16_t *T,
-                                     int32_t output_channel_group, int16_t *weights);
 
 }  // namespace nn
 

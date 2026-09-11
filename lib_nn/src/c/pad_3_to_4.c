@@ -6,6 +6,43 @@
 #include "nn_op_utils.h"
 #include "nn_operator.h"
 
+void pad_3_to_4_prepare(uint32_t * n_3, 
+    const unsigned height, 
+    const unsigned width) {
+    *n_3 = height*width;
+}
+
+#if NN_USE_REF
+void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val){
+
+    int8_t * output_p = (int8_t *)outputs;
+    int8_t * input_p = (int8_t *)inputs;
+
+    for(uint32_t i=0;i<N_3;i++){
+        memcpy(output_p, input_p, 3);
+        output_p += 3;
+        input_p += 3;
+        *output_p = (int8_t)(pad_val >> 24);
+        output_p += 1;
+    }
+}
+#else
+
+/** Function that copies a single pixel of 3 bytes
+ * @param outputs  pointer to the outputs array - incremented by 4 bytes
+ * @param inputs   pointer to the input array - incremented by 3 bytes
+ * @param N_3      number of pixels will be decremented by 1.
+ */
+static inline void pad_3_to_4_single(int8_t **outputs, int8_t **inputs, uint32_t *N_3, uint32_t pad_val) {
+    for(uint32_t i = 0; i < 3; i++) {
+        (*(int8_t**)outputs)[i] = (*inputs)[i];
+    }
+    (*(int8_t**)outputs)[3] = (int8_t)(pad_val >> 24);
+    *inputs += 3;
+    *outputs += 4;
+    *N_3 -= 1;
+}
+
 /** Function that pads an image with 3-byte values with a 0.
  * This functions is highly optimised, but has constraints on the
  * alignment of the input image and on the number of bytes to be copied
@@ -23,45 +60,20 @@
  */
 extern void pad_3_to_4_asm(int32_t outputs[], int64_t inputs[], uint32_t N_24, uint32_t pad_val);
 
-void pad_3_to_4_prepare(uint32_t * n_3, 
-    const unsigned height, 
-    const unsigned width) {
-    *n_3 = height*width;
-}
 
-/** Function that copies a single pixel of 3 bytes
- * @param outputs  pointer to the outputs array - incremented by 4 bytes
- * @param inputs   pointer to the input array - incremented by 3 bytes
- * @param N_3      number of pixels will be decremented by 1.
+/**
+ * Pad 3-byte pixels to 4 bytes using the optimized XS3 implementation.
+ *
+ * The input must be double-word aligned and the output must be word aligned.
+ * Unaligned pixels are copied individually before and after the assembly
+ * routine processes blocks of eight pixels.
+ *
+ * @param outputs  Output buffer containing 4 bytes per pixel.
+ * @param inputs   Input buffer containing 3 bytes per pixel.
+ * @param N_3      Number of 3-byte pixels to copy.
+ * @param pad_val  Value whose most significant byte is written as padding.
  */
-static inline void pad_3_to_4_single(int8_t **outputs, int8_t **inputs, uint32_t *N_3, uint32_t pad_val) {
-    for(uint32_t i = 0; i < 3; i++) {
-        (*(int8_t**)outputs)[i] = (*inputs)[i];
-    }
-    (*(int8_t**)outputs)[3] = (int8_t)pad_val;
-    *inputs += 3;
-    *outputs += 4;
-    *N_3 -= 1;
-}
-
-void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val){
-
-    int8_t * output_p = (int8_t *)outputs;
-    int8_t * input_p = (int8_t *)inputs;
-
-    for(int i=0;i<N_3;i++){
-        memcpy(output_p, input_p, 3);
-        output_p += 3;
-        input_p += 3;
-        memcpy(output_p, &pad_val, 1);
-        output_p += 1;
-    }
-}
-
-void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val) {
-#if NN_USE_REF
-    pad_3_to_4_ref(outputs, inputs, N_3, pad_val);
-#else
+void pad_3_to_4_run_impl(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val) {
     // First copy single pixels until the input pointer is aligned
     // That will happen as it is incremented in steps of 3
     // But we may run out of pixels before it happens
@@ -89,5 +101,14 @@ void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pa
             pad_3_to_4_single(&outputs, &inputs, &tail_N_3, pad_val);
         }
     }
+}
+#endif
+
+
+void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val) {
+#if NN_USE_REF
+    pad_3_to_4_ref(outputs, inputs, N_3, pad_val);
+#else
+    pad_3_to_4_run_impl(outputs, inputs, N_3, pad_val);
 #endif
 }

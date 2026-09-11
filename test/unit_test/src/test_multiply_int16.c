@@ -6,8 +6,7 @@
 #include <string.h>
 #include "math.h"
 
-#include "multiply_int16.h"
-#include "multiply_int16_transform.h"
+#include "nn_layers.h"
 
 #include "tst_common.h"
 #include "unity.h"
@@ -25,9 +24,6 @@ TEST_GROUP_RUNNER(group_multiply_int16) {
 
 #define N 25
 TEST(group_multiply_int16, test_multiply_tensor_int16) {
-#if defined(__VX4A__) || defined(__VX4B__)
-    TEST_IGNORE_MESSAGE("multiply_int16_tensor_asm not implemented on VX4");
-#endif
     int16_t input1[N];
     int16_t input2[N];
     int8_t blob[MULTIPLY_INT16_TENSOR_BYTES()];
@@ -75,9 +71,6 @@ TEST(group_multiply_int16, test_multiply_tensor_int16) {
 }
 
 TEST(group_multiply_int16, test_requantize_transform_int16) {
-#if defined(__VX4A__) || defined(__VX4B__)
-    TEST_IGNORE_MESSAGE("requantize_int16_tensor_asm not implemented on VX4");
-#endif
     int16_t input1[N];
     int8_t requantize_blob[REQUANTIZE_INT16_TENSOR_BYTES()];
     int16_t output[N+1];

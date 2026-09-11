@@ -13,12 +13,9 @@ using namespace nn;
 #define CHAR_BIT (sizeof(char) * 8)
 #endif
 
-static int8_t *deref2d(int8_t *p, int p_w, int h, int w) {
-  return p + h * p_w + w;
-}
-
-static int16_t *deref2d(int16_t *p, int p_w, int h, int w) {
-  return p + h * p_w + w;
+template <typename t_int>
+static t_int* deref2d(t_int* p, int p_w, int h, int w) {
+    return p + h * p_w + w;
 }
 
 Conv2dReorderedWeights MatMulBase::reorder_kernel_weights(
@@ -330,7 +327,7 @@ void nn::mat_mul_direct_int8(const mat_mul_direct_params_t *params, VPURingBuffe
 
 void nn::mat_mul_direct_binary(const mat_mul_direct_params_t *params, VPURingBuffer *A, int8_t *T,
                                         int32_t output_channel_group, int8_t *weights) {
-#if defined(NN_USE_REF) || defined(__riscv_xxcore)
+#ifdef NN_USE_REF
   mat_mul_direct_binary_impl(params, A, T, output_channel_group, weights);
 #else
   mat_mul_direct_binary_impl_asm(params, A, T, output_channel_group,
@@ -349,7 +346,7 @@ void nn::mat_mul_generic_int8(const mat_mul_generic_params_t *params, VPURingBuf
 }
 void nn::mat_mul_generic_binary(const mat_mul_generic_params_t *params, VPURingBuffer *A, int8_t *T,
                                 int32_t output_channel_group, int8_t *weights) {
-#if defined(NN_USE_REF) || defined(__riscv_xxcore)
+#ifdef NN_USE_REF
   mat_mul_generic_binary_impl(params, A, T, output_channel_group,
                               weights);
 #else
@@ -457,20 +454,19 @@ void mat_mul_direct16x8_impl(const mat_mul_direct_params_t *params, VPURingBuffe
   VSTD(vpu, &A->vD);
 }
 
-void mat_mul_direct_int16x8_impl(const mat_mul_direct_params_t *params,
-                               VPURingBuffer *A,
-                               int16_t *X, int32_t output_channel_group,
-                               int8_t *weights) {
+C_API void mat_mul_direct_int16x8_ref(const mat_mul_direct_params_t *params,
+                    VPURingBuffer *A,
+                    int16_t *X, int32_t output_channel_group,
+                    int8_t *weights) {
     mat_mul_direct16x8_impl(params, A, X, output_channel_group, weights, VLMACCR);
 }
 
 void nn::mat_mul_direct_int16x8(const mat_mul_direct_params_t *params,
                           VPURingBuffer *A, int16_t *T,
                           int32_t output_channel_group, int8_t *weights) {
-// #ifdef NN_USE_REF
-    mat_mul_direct_int16x8_impl(params, A, T, output_channel_group, weights);
-// #else
-//     mat_mul_direct_int16x8_impl_asm(params, A, T, output_channel_group,
-//                                   weights);
-// #endif  // NN_USE_REF
+#ifdef NN_USE_REF
+  mat_mul_direct_int16x8_ref(params, A, T, output_channel_group, weights);
+#else
+  mat_mul_direct_int16x8_impl_asm(params, A, T, output_channel_group, weights);
+#endif  // NN_USE_REF
 }

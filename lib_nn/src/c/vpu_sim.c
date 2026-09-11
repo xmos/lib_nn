@@ -27,15 +27,16 @@ int64_t vpu_saturate(const int64_t input, const unsigned bits) {
 }
 
 /**
- * vpu_saturate to the relevant bounds. Fixed 8-bit saturation.
+ * vpu_saturate to the relevant bounds using the active target's minimum.
  */
 int64_t vpu_saturate_fixed(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
-  int64_t min_val = -max_val;
-  if(bits == 8){
-    min_val = INT8_MIN;
-  }
-
+  int64_t min_val;
+  #if (defined(__VX4B__) || defined(NN_USE_REF))
+    min_val = -(1LL << (bits - 1));
+  #else
+    min_val = -max_val;
+  #endif
   return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
 }
 
@@ -52,6 +53,9 @@ static int64_t GetAccumulator(const xs3_vpu *vpu, unsigned index) {
     acc.s16[0] = vpu->vR.s16[index];
 
     return acc.s32;
+  } else if (vpu->mode == MODE_S32) {
+    assert(index < VPU_INT32_EPV);
+    return vpu->vR.s32[index];
   } else {
     assert(0);  // TODO
   }
@@ -67,6 +71,9 @@ static void SetAccumulator(xs3_vpu *vpu, unsigned index, int64_t acc) {
     mask = mask << VPU_INT8_ACC_VR_BITS;
     vpu->vD.s16[index] =
         (int16_t)(((unsigned)acc & mask) >> VPU_INT8_ACC_VR_BITS);
+  } else if (vpu->mode == MODE_S32) {
+    assert(index < VPU_INT32_EPV);
+    vpu->vR.s32[index] = (int32_t)acc;
   } else {
     assert(0);  // TODO
   }
@@ -296,6 +303,11 @@ void VLMACCR1(xs3_vpu *vpu, const void *addr) {
   SetAccumulator(vpu, 0, acc);
 }
 
+void VLMACCRB(xs3_vpu *vpu, const void *addr) {
+  VLMACCR1(vpu, addr);
+}
+
+static
 void _VLSAT_IMPL(xs3_vpu *vpu, const void *addr, bool fixed_saturation) {
   #ifdef __XS3A__
   assert_word_aligned(addr);
@@ -351,11 +363,11 @@ void _VLSAT_IMPL(xs3_vpu *vpu, const void *addr, bool fixed_saturation) {
 }
 
 void VLSAT(xs3_vpu *vpu, const void *addr) {
-  _VLSAT_IMPL(vpu, addr, /*fixed_saturation=*/false);
+  _VLSAT_IMPL(vpu, addr, false);
 }
 
 void VLSAT_FIXED(xs3_vpu *vpu, const void *addr) {
-  _VLSAT_IMPL(vpu, addr, /*fixed_saturation=*/true);
+  _VLSAT_IMPL(vpu, addr, true);
 }
 
 void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
@@ -552,12 +564,12 @@ void VDEPTH8(xs3_vpu *vpu) {
   if (vpu->mode == MODE_S16) {
     for (int i = 0; i < VPU_INT16_EPV; i++) {
       int32_t elm = ((int32_t)vec_tmp.s16[i]) + (1 << 7);
-      vpu->vR.s8[i] = vpu_saturate(elm >> 8, 8);
+      vpu->vR.s8[i] = vpu_saturate_fixed(elm >> 8, 8);
     }
   } else if (vpu->mode == MODE_S32) {
     for (int i = 0; i < VPU_INT32_EPV; i++) {
       int64_t elm = ((int64_t)vec_tmp.s32[i]) + (1 << 23);
-      vpu->vR.s8[i] = vpu_saturate(elm >> 24, 8);
+      vpu->vR.s8[i] = vpu_saturate_fixed(elm >> 24, 8);
     }
   } else {
     assert(0);
@@ -568,7 +580,7 @@ void VDEPTH16(xs3_vpu *vpu) {
   if (vpu->mode == MODE_S32) {
     for (int i = 0; i < VPU_INT32_EPV; i++) {
       int64_t elm = ((int64_t)vpu->vR.s32[i]) + (1 << 15);
-      vpu->vR.s16[i] = vpu_saturate(elm >> 16, 16);
+      vpu->vR.s16[i] = vpu_saturate_fixed(elm >> 16, 16);
     }
 
     for (int i = VPU_INT32_EPV; i < VPU_INT16_EPV; i++) {
@@ -589,32 +601,28 @@ void vpu_sim_mem_print(void *address, vector_mode mode) {
     case MODE_S8:
       printf("8-bit:\n");
       for (int i = 0; i < VPU_INT8_EPV; i++) {
-        printf("%d\t%c0x%0.2X(%d)\n", i, signof(vC8[i]), abs(vC8[i]),
-               (int)vC8[i]);
+        printf("%d\t%c0x%.2X(%d)\n", i, signof(vC8[i]), abs(vC8[i]), (int)vC8[i]);
       }
       break;
 
-      case MODE_S16:
-        printf("16-bit:\n");
-        for (int i = 0; i < VPU_INT16_EPV; i++) {
-          printf("%d\t%c0x%0.4X(%d)\n", i, signof(vC16[i]), abs(vC16[i]),
-                  (int)vC16[i]);
-        }
-        break;
+    case MODE_S16:
+      printf("16-bit:\n");
+      for (int i = 0; i < VPU_INT16_EPV; i++) {
+        printf("%d\t%c0x%.4X(%d)\n", i, signof(vC16[i]), abs(vC16[i]),(int)vC16[i]);
+      }
+      break;
 
-        case MODE_S16x8:
-          printf("16x8-bit:\n");
-          for (int i = 0; i < VPU_INT16_EPV; i++) {
-            printf("%d\t%c0x%0.4X(%d)\n", i, signof(vC8[2*i]), abs(vC8[2*i]),
-                   (int)vC8[2*i]);
-          }
-          break;
+    case MODE_S16x8:
+      printf("16x8-bit:\n");
+      for (int i = 0; i < VPU_INT16_EPV; i++) {
+        printf("%d\t%c0x%.4X(%d)\n", i, signof(vC8[2*i]), abs(vC8[2*i]),(int)vC8[2*i]);
+      }
+      break;
 
     case MODE_S32:
       printf("32-bit:\n");
       for (int i = 0; i < VPU_INT32_EPV; i++) {
-        printf("%d\t%c0x%0.8X(%d)\n", i, signof(vC32[i]), abs(vC32[i]),
-               (int)vC32[i]);
+        printf("%d\t%c0x%.8X(%d)\n", i, signof(vC32[i]), abs(vC32[i]), (int)vC32[i]);
       }
       break;
 
@@ -622,7 +630,6 @@ void vpu_sim_mem_print(void *address, vector_mode mode) {
       printf("In the future this might print all possible interpretations...");
       break;
   }
-
   printf("\n");
 }
 
@@ -631,17 +638,17 @@ void vpu_accu_print(xs3_vpu *vpu) {
   if (vpu->mode == MODE_S8) {
     for (int i = 0; i < VPU_INT8_ACC_PERIOD; i++) {
       int32_t acc = GetAccumulator(vpu, i);
-      printf("%d %d\n", i, acc);
+      printf("%d %d\n", i, (int)acc);
     }
   } else if ((vpu->mode == MODE_S16)|| (vpu->mode == MODE_S16x8)) {
     for (int i = 0; i < VPU_INT16_ACC_PERIOD; i++) {
       int32_t acc = GetAccumulator(vpu, i);
-      printf("%d %d\n", i, acc);
+      printf("%d %d\n", i, (int)acc);
     }
   } else if (vpu->mode == MODE_S32) {
     for (int i = 0; i < VPU_INT32_ACC_PERIOD; i++) {
       int64_t acc = GetAccumulator(vpu, i);
-      printf("%d %lld\n", i, acc);
+      printf("%d %lld\n", i, (long long)acc);
     }
   } else {
     assert(0);  // How'd this happen?
@@ -664,7 +671,7 @@ void vpu_sim_print(xs3_vpu *vpu) {
     case MODE_S8:
       printf("8-bit:     vC     \t  vR     \t   vD\n");
       for (int i = 0; i < VPU_INT8_EPV; i++) {
-        printf("%d\t%c0x%0.2X(%d)\t%c0x%0.2X(%d)\t%c0x%0.2X(%d)\n", i,
+        printf("%d\t%c0x%.2X(%d)\t%c0x%.2X(%d)\t%c0x%.2X(%d)\n", i,
                signof(vC8[i]), abs(vC8[i]), (int)vC8[i], signof(vR8[i]),
                abs(vR8[i]), (int)vR8[i], signof(vD8[i]), abs(vD8[i]),
                (int)vD8[i]);
@@ -674,24 +681,16 @@ void vpu_sim_print(xs3_vpu *vpu) {
       case MODE_S16:
       printf("16-bit:  vC     \t    vR      \t    vD\n");
       for (int i = 0; i < VPU_INT16_EPV; i++) {
-#if 0
-
-        printf("%d\t%c0x%0.4X(%d)\t%c0x%0.4X(%d)\t%c0x%0.4X(%d)\n", i,
-               signof(vC16[i]), abs(vC16[i]), (int)vC16[i], signof(vR16[i]),
-               abs(vR16[i]), (int)vR16[i], signof(vD16[i]), abs(vD16[i]),
-               (int)vD16[i]);
-#else
-        printf("%d\t0x%0.4X(%d)\t0x%0.4X(%d)\t0x%0.4X(%d)\n", i, abs(vC16[i]),
+        printf("%d\t0x%.4X(%d)\t0x%.4X(%d)\t0x%.4X(%d)\n", i, abs(vC16[i]),
                (int)vC16[i], abs(vR16[i]), (int)vR16[i], abs(vD16[i]),
                (int)vD16[i]);
-#endif
       }
       break;
 
     case MODE_S32:
       printf("32-bit:  vC     \t\t    vR      \t\t    vD\n");
       for (int i = 0; i < VPU_INT32_EPV; i++) {
-        printf("%d\t%c0x%0.8X(%d)\t%c0x%0.8X(%d)\t%c0x%0.8X(%d)\n", i,
+        printf("%d\t%c0x%.8X(%d)\t%c0x%.8X(%d)\t%c0x%.8X(%d)\n", i,
                signof(vC32[i]), abs(vC32[i]), (int)vC32[i], signof(vR32[i]),
                abs(vR32[i]), (int)vR32[i], signof(vD32[i]), abs(vD32[i]),
                (int)vD32[i]);

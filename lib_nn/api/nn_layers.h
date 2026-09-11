@@ -7,6 +7,24 @@
 #include "nn_image.h"
 #include <string.h>
 
+// other layers
+#include "add_int16.h"
+#include "add_int16_transform.h"
+#include "dequantize_int16.h"
+#include "dequantize_int16_transform.h"
+#include "expand_8_to_16.h"
+#include "multiply_int16.h"
+#include "multiply_int16_transform.h"
+#include "output_transform_fn_int16.h"
+#include "output_transform_fn_int16_kernel_transform.h"
+#include "output_transform_fn_int16_mappings.h"
+#include "quadratic_approximation.h"
+#include "quadratic_interpolation.h"
+#include "quantize_int16.h"
+#include "quantize_int16_transform.h"
+
+void argmax_16(int32_t *Y, const int16_t *X, const int32_t N);
+
 /**
  * Struct represents the parameters needed by each `bsign_8()` job.
  *
@@ -54,30 +72,7 @@ void bsign_8(bnn_b32_t *Y, const int8_t *X, const int8_t *zero_point_vect,
              const nn_bsign_8_job_t *job);
 
 /**
- * Struct represents the parameters needed by each `pad_run()` job.
- *
- * Values are set by `pad_prepare()`.
- *
- * @note This struct is intended to be opaque.
- */
-typedef struct nn_pad_plan_t {
-  unsigned top_pad_bytes;
-  unsigned mid_loop_count;
-  unsigned left_pad_bytes;
-  unsigned mid_copy_bytes;
-  unsigned right_pad_bytes;
-  unsigned bottom_pad_bytes;
-} nn_pad_plan_t;
-
-typedef struct padding_sizes_t {
-  int32_t top;
-  int32_t bottom;
-  int32_t left;
-  int32_t right;
-} padding_sizes_t;
-
-/**
- * @brief Compute the number of 3-byte blocks to be copied by pad_3_to_4_run()/pad_3_to_4_ref(), given an image's height and width.
+ * @brief Compute the number of 3-byte blocks to be copied by pad_3_to_4_run(), given an image's height and width.
  *
  * @param[out]  n_3     Number of 3-byte blocks
  * @param[in]   height  Image height, in pixels
@@ -96,10 +91,7 @@ void pad_3_to_4_prepare(uint32_t *n_3, const unsigned height,
  * @param N_3      [in]   Number of 3-byte blocks to copy
  * @param pad_val  [in]   Value written to the padding byte
  */
-extern void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3,
-                           uint32_t pad_val);
-/** Reference (C) implementation of pad_3_to_4_run(). */
-extern void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3,
+void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3,
                            uint32_t pad_val);
 
 /**
@@ -112,7 +104,7 @@ extern void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3,
  * @param N        [in]   Number of 4-byte chunks to copy
  * @param pad_val  [in]   Value written to the upper three bytes of each output word
  */
-extern void pad_1_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N,
+void pad_1_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N,
                           uint32_t pad_val);
 
 typedef struct nn_mul_params_t {
@@ -251,7 +243,7 @@ void softmax_calculate_inv_sum(float *inv_sum, const float sums[]);
 void softmax_generate_exp_lut(int zero_point, float scale, float *lut);
 
 /**
- * @brief Reference (unoptimized) implementation of softmax for a single vector.
+ * @brief Implementation of softmax for a single vector.
  *
  * @param[out]  Y           The output vector
  * @param[in]   X           The input vector
@@ -259,7 +251,7 @@ void softmax_generate_exp_lut(int zero_point, float scale, float *lut);
  * @param[in]   scale       Quantization scale of the input
  * @param[in]   length      Number of elements in the input and output vectors
  */
-void softmax_ref(int8_t *Y, const int8_t *X, const float zero_point,
+void softmax(int8_t *Y, const int8_t *X, const float zero_point,
                  const float scale, const int length);
 
 /**

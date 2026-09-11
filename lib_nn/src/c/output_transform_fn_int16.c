@@ -1,11 +1,9 @@
 // Copyright 2023-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
-#include <stdio.h>
 #include <stdint.h>
-#include <math.h>
 
+#include "nn_op_helper.h"
 #include "output_transform_fn_int16.h"
-#include "output_transform_fn_int16_kernel_transform.h"
 #include "output_transform_fn_int16_mappings.h"
 
 #define VPU_INT16_EPV 16
@@ -15,26 +13,32 @@ static int min(int a, int b) {
     return a < b ? a : b;
 }
 
+static int16_t saturate_to_int16(int32_t value) {
+    if (value > INT16_MAX) {
+        return INT16_MAX;
+    }
+    if (value < INT16_MIN) {
+        return INT16_MIN;
+    }
+    return value;
+}
+
+static int32_t accumulator_from_halves(int16_t low, int16_t high) {
+    return (int32_t)high * (1 << 16) + (uint16_t)low;
+}
+
 int16_t *output_transform_fn_int16_impl(int16_t *vDvR,
                                         int32_t *mul_add,
                                         int16_t *output,
                                         uint32_t N) {
-    for(int i = 0; i < N; i++) {
+    for(uint32_t i = 0; i < N; i++) {
         int32_t multiplier = mul_add[ot_int16_mul_index_used_for_output[i]];
         int32_t adder      = mul_add[ot_int16_add_index_used_for_output[i]];
-        int32_t accu_high  = vDvR[i+16];
-        int32_t accu_low   = vDvR[i];
-        int32_t accu       = (accu_low & 0xffff) | (accu_high << 16);
-        accu              += adder;
+        int32_t accu       = accumulator_from_halves(vDvR[i], vDvR[i+16]);
+        accu               = sat_s32((int64_t)accu + adder);
         int64_t answer     = multiplier * (int64_t) accu;
-        answer             = (answer + (1<<29)) >> 30;
-        if (answer > 32767) {
-            answer = 32767;
-        }
-        if (answer < -32768) {
-            answer = -32768;
-        }
-        output[i]          = answer;
+        answer             = (answer + (INT64_C(1) << 29)) >> 30;
+        output[i]          = saturate_to_int16(sat_s32(answer));
     }
     return &output[N];
 }

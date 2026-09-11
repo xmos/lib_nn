@@ -367,7 +367,7 @@ class OutputTransformFnInt8 : public OutputTransformFn {
     if (use_high_precision) {
       double max_avg_abs_error = 0.0;
 
-      for (int idx = 0; idx < mul_and_bias.size(); ++idx) {
+      for (unsigned idx = 0; idx < mul_and_bias.size(); ++idx) {
         int64_t abs_error_sum = 0;
 
         for (int accu = mul_and_bias[idx].accu_min_val;
@@ -485,7 +485,7 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
     if (use_high_precision) {
       double max_avg_abs_error = 0.0;
 
-      for (int idx = 0; idx < mul_and_bias.size(); ++idx) {
+      for (unsigned idx = 0; idx < mul_and_bias.size(); ++idx) {
         int64_t abs_error_sum = 0;
 
         for (int accu = mul_and_bias[idx].accu_min_val;
@@ -745,7 +745,7 @@ class OT_binary : public OutputTransformFn {
     if (final_load_bytes == 0) final_load_bytes = vpu_vector_byte_count;
 
     assert(final_load_bytes > 0);
-    for (int ch = 0; ch < thresholds.size(); ++ch) {
+    for (unsigned ch = 0; ch < thresholds.size(); ++ch) {
       int final_vpu_load_address =
           reordered_weights.final_vpu_load_addresses[ch];
       int8_t padding_byte = 0;
@@ -764,8 +764,20 @@ class OT_binary : public OutputTransformFn {
   }
 };
 
-int8_t *otfn_binary(void *p, int8_t *Y, VPURingBuffer *A,
-                                       int32_t output_channel_group, int16_t *thresholds);
+/**
+ * @brief Converts one accumulator group to two bytes of packed binary output.
+ *
+ * The low 16 bits of each accumulator are added to the corresponding
+ * threshold. A bit is set when the saturated 16-bit sum is negative.
+ *
+ * @param[in] p Unused parameter required by the output transform interface.
+ * @param[out] Y Buffer receiving @c VPU_INT16_EPV packed output bits.
+ * @param[in] A Ring buffer supplying the accumulator values.
+ * @param[in] output_channel_group Group index selecting 16 thresholds.
+ * @param[in] thresholds Threshold values, grouped in sets of 16.
+ * @return Pointer immediately after the two written output bytes.
+ */
+int8_t *otfn_binary(void *p, int8_t *Y, VPURingBuffer *A, int32_t output_channel_group, int16_t *thresholds);
 
 }  // namespace nn
 #endif  // LIB_NN_OUTPUT_TRANSFORM_FN_H_

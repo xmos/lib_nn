@@ -1,5 +1,34 @@
 // Copyright 2025-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
+#if defined(__XS3A__)
+
+#define FUNCTION_NAME mat_mul_direct_int16x8_impl_asm
+#define NSTACKWORDS  0
+
+.text
+.issue_mode  single
+.align 4
+.globl FUNCTION_NAME
+.type FUNCTION_NAME,@function
+.cc_top FUNCTION_NAME.function,FUNCTION_NAME
+
+FUNCTION_NAME:
+    entsp NSTACKWORDS
+    ldc r11, 1
+    ecallt r11 // NOT IMPLEMENTED
+    retsp NSTACKWORDS
+
+.cc_bottom FUNCTION_NAME.function
+.set FUNCTION_NAME.nstackwords,NSTACKWORDS
+.globl FUNCTION_NAME.nstackwords
+.Ltmp0:
+.size FUNCTION_NAME, .Ltmp0-FUNCTION_NAME
+
+#undef NSTACKWORDS
+#undef FUNCTION_NAME
+
+#endif // XS3A
+
 #if defined(__VX4A__) || defined(__VX4B__)
 
 /*
