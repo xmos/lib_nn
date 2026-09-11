@@ -124,6 +124,10 @@ TEST(group_matmul, test_matmul_full) {
 }
 
 TEST(group_matmul, test_matmul_zero_result) {
+#if defined(__VX4A__) || defined(__VX4B__)
+  TEST_IGNORE_MESSAGE("mat_mul_real_int8 not implemented on VX4");
+#endif
+
   int8_t WORD_ALIGNED lhs[LHS_ROW_SIZE * CHANNEL_SIZE];
   int8_t WORD_ALIGNED rhs[RHS_COL_SIZE * CHANNEL_SIZE];
   int8_t WORD_ALIGNED out[LHS_ROW_SIZE * RHS_COL_SIZE];
