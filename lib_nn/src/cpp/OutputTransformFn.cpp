@@ -943,33 +943,11 @@ int8_t *output_transform_fn_int_clamped_ref(
   Y += output_count;
   return Y;
 }
-#elif defined(__XS3A__)
+#else
 extern "C" int8_t *output_transform_fn_int_clamped_asm(
     const otfn_int8_clamped_params_t *params, int8_t *Y, VPURingBuffer *A,
     int32_t output_channel_group, int16_t *offsets_multipliers_and_biases);
 
-#elif defined(__VX4A__) || defined(__VX4B__)
-extern "C" int8_t *output_transform_fn_int_clamped_asm_vpu(
-  int8_t *Y, VPURingBuffer *A, int16_t *offset, int16_t *multiplier,
-  int16_t *bias, int output_count, int initial_shift, int final_shr
-);
-
-int8_t *output_transform_fn_int_clamped_asm(
-    const otfn_int8_clamped_params_t *params, int8_t *Y, VPURingBuffer *A,
-    int32_t output_channel_group, int16_t *offsets_multipliers_and_biases) 
-{
-  const int32_t out_slice_count = params->output_slice_channel_count;
-  const int32_t out_ch_count = output_channel_group * VPU_INT16_EPV;
-  const int32_t out_count = min_int32(out_slice_count - out_ch_count, VPU_INT16_EPV);
-  int16_t *cur_offset = offsets_multipliers_and_biases + out_ch_count * 3;
-  int16_t *cur_mul = cur_offset + out_count;
-  int16_t *cur_bias = cur_mul + out_count;
-  const int ish = params->initial_shift;
-  const int fshr = params->final_shr;
-  return output_transform_fn_int_clamped_asm_vpu(Y, A, cur_offset, cur_mul, cur_bias, out_count, ish, fshr);
-}
-#else
-#error "Not supported"
 #endif
 
 int8_t *nn::otfn_int8_clamped(const otfn_int8_clamped_params_t *params, int8_t *Y, VPURingBuffer *A,
