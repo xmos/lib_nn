@@ -147,45 +147,48 @@ FUNCTION_NAME:
 
 #if defined(__VX4A__) || defined(__VX4B__)
 
-/*
-extern "C" int8_t *output_transform_fn_int_clamped_asm_vpu(
-    int8_t *Y,
-    VPURingBuffer *A,
-    int16_t *offset,
-    int16_t *multiplier,
-    int16_t *bias,
-    int output_count,
-    int initial_shift,
-    int final_shr
-);
-*/
+#define FUNCTION_NAME   output_transform_fn_int_clamped_asm
+#define NSTACKWORDS     16
+#define S_TEMP_VECTOR   4
 
-#define FUNCTION_NAME   output_transform_fn_int_clamped_asm_vpu
-#define NSTACKWORDS     12
-#define S_TEMP_VECTOR   2
+#define params_p        a0
+#define out             a1
+#define acc             a2
+#define out_ch_g        a3
 
-#define out             a0
-#define acc             a1
-#define offset          a2
-#define multiplier      a3
-#define bias            a4
-#define output_count    a5
-#define initial_shift   a6
-#define final_shr       a7
+#define offset          s2
+#define output_count    s3
+#define initial_shift   s4
+#define final_shr       s5
 
-#define tmp             multiplier
+#define multiplier      out_ch_g
+#define bias            params_p
 
 .p2align 1
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
 FUNCTION_NAME:
-    xm.entsp (NSTACKWORDS * 4)
+    { li t3, 16 ; xm.entsp (NSTACKWORDS * 4) }
+    xm.stdsp s2, s3, 0
+    xm.stdsp s4, s5, 8
+
+    { xm.shl out_ch_g, out_ch_g, 4 ; lw output_count, 0(params_p) }
+    sub output_count, output_count, out_ch_g
+    mv offset, a4
+    blt output_count, t3, .output_count_ready
+    mv output_count, t3
+.output_count_ready:
+
+    { xm.shl initial_shift, out_ch_g, 1 ; xm.shl out_ch_g, out_ch_g, 2 }
+    { add out_ch_g, out_ch_g, initial_shift ; lw initial_shift, 4(params_p) }
+    { add offset, offset, out_ch_g ; xm.shr final_shr, initial_shift, 16 }
+    { xm.sext final_shr, 16 ; xm.sext initial_shift, 16 }
     li t3, 0x100
-    xm.vsetc t3
-    xm.vldr acc
-    xm.vladd offset
-    xm.vpos
-    xm.ldawsp t3, (S_TEMP_VECTOR * 4)
+    { xm.shl t3, output_count, 1 ; xm.vsetc t3 }
+
+    { add multiplier, offset, t3 ; xm.vldr acc }
+    { add bias, multiplier, t3 ; xm.vladd offset }
+    { xm.ldawsp t3, (S_TEMP_VECTOR * 4) ; xm.vpos }
     xm.vstr t3
     xm.vlashr t3, initial_shift
     xm.vlmul0 multiplier
@@ -195,11 +198,11 @@ FUNCTION_NAME:
     xm.vstr t3
     xm.vlashr t3, final_shr
     xm.vstr t3
-    xm.vdepth8
-    mv tmp, output_count
-    xm.mkmsk t3, tmp
-    xm.vstrpv out, t3
-    add a0, out, tmp
+    { xm.mkmsk t3, output_count ; xm.vdepth8 }
+    { add a0, out, output_count ; xm.vstrpv out, t3 }
+
+    xm.lddsp s2, s3, 0
+    xm.lddsp s4, s5, 8
     xm.retsp (NSTACKWORDS * 4)
 .size FUNCTION_NAME, . -FUNCTION_NAME
 .resource_const FUNCTION_NAME, "stack_frame_bytes",  (NSTACKWORDS * 4)
