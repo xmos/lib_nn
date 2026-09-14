@@ -140,16 +140,51 @@ FUNCTION_NAME:
 
 #define FUNCTION_NAME output_transform_fn_int_channelwise_asm
 
+#define PARAMS_output_slice_channel_count 0
+#define PARAMS_final_shr                  2       // int16
+
+//Registers
+
+//#define params_p             a0
+//#define Y_p                  a1
+//#define A_p                  a2
+//#define otv_p                A_p
+//#define out_ch_g             a3
+//#define output_count         out_ch_g
+//#define s                    a4
+
+#define NSTACKWORDS     12
+
 .p2align 1
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
 FUNCTION_NAME:
-    xm.entsp 0
-    xm.ldcu x10, 0
-    xm.assert x10 //NOT IMPLEMENTED
-    xm.retsp 0
+    { li t3, 32 ; xm.entsp (NSTACKWORDS * 4) }
+
+    { add a2, a2, t3 ; xm.vldr a2 }
+    { xm.shl t3, t3, 3 ; xm.vldd a2 }
+    mv a2, a4
+    { xm.shl t3, a2, 1 ; xm.vsetc t3 }
+
+    xm.vlsat a3
+    add a3, a3, t3
+    xm.vlmul0 a3
+    xm.vlmul1 a3
+
+    { add a3, a3, t3 ; xm.ldawsp t3, 0 * 4 }
+    xm.vladd a3
+
+    lh a4, PARAMS_final_shr * 2 (a0)
+    { add a0, a1, a2 ; xm.vstr t3 }
+
+    xm.vlashr t3, a4
+
+    { xm.mkmsk a2, a2 ; xm.vdepth8 }
+    xm.vstrpv a1, a2
+
+    xm.retsp (NSTACKWORDS * 4)
 .size FUNCTION_NAME, . -FUNCTION_NAME
-.resource_const FUNCTION_NAME, "stack_frame_bytes",  0
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  (NSTACKWORDS * 4)
 .resource_list_empty FUNCTION_NAME, "callees"
 .resource_list_empty FUNCTION_NAME, "tail_callees"
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
