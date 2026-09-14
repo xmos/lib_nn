@@ -5,11 +5,44 @@
 #include <math.h>
 #include <stdint.h>
 
+/**
+ * VPU optimized int8 mean calculation
+ * Only support mean axis be the last axis, which end_dim_size = 1
+ * mean_dim_size needs to be divided by 4
+ */
+extern void mean_int8_asm(
+  const int8_t *input,
+  int8_t *output,
+  const int start_dim_size,
+  const int mean_dim_size,
+  const int8_t *vpu_buffer, // 64 byte vpu buffer
+  const float in_zero_point_sum,
+  const float out_zero_point,
+  const float scale_mul);
+
 // scale_mul is in_scale / out_scale
 void mean_int8(const int8_t *input, int8_t *output, const int start_dim_size,
                const int mean_dim_size, const int end_dim_size,
                const float in_zero_point, const float out_zero_point,
                const float scale_mul) {
+
+#ifndef NN_USE_REF
+  if (end_dim_size == 1) {
+#ifdef __XS3A__
+    if (mean_dim_size % 4 == 0) {
+#endif
+      int8_t vpu_buffer[64];
+      float in_zero_point_sum = (float)((int32_t)(in_zero_point*mean_dim_size));  // rounding it to keep the same performance as ref
+      mean_int8_asm(
+        input, output, start_dim_size, mean_dim_size, 
+        vpu_buffer, 
+        in_zero_point_sum, out_zero_point, scale_mul);
+      return;
+#ifdef __XS3A__
+    }
+#endif
+  }
+#endif
 
   const int32_t start = -in_zero_point * mean_dim_size;
   for (int i = 0; i < start_dim_size; ++i) {
