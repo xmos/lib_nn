@@ -21,16 +21,18 @@ static int64_t round_up(float x) { return std::ceil(x); }
 /** @brief Round a floating-point value down to the previous integer. */
 static int64_t round_down(float x) { return std::floor(x); }
 
+/** @brief Return the smaller of two signed 32-bit integers. */
+static inline int32_t min_int32(const int32_t lhs, const int32_t rhs) {
+  return lhs < rhs ? lhs : rhs;
+}
+
+#ifdef NN_USE_REF
+
 /** @brief Saturate a signed value to a non-symmetric integer range. */
 static int64_t saturate_non_sym(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
   const int64_t min_val = -max_val - 1;
   return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
-}
-
-/** @brief Return the smaller of two signed 32-bit integers. */
-static inline int32_t min_int32(const int32_t lhs, const int32_t rhs) {
-  return lhs < rhs ? lhs : rhs;
 }
 
 /** @brief Implement VDEPTH8 with asymmetric rounding. */
@@ -44,6 +46,7 @@ static void VDEPTH8_FIXED(vpu_t *vpu) {
     vpu->vR.s8[i] = saturate_non_sym(elm >> 8, 8);
   }
 }
+#endif // NN_USE_REF
 
 /** @brief Count the leading redundant sign bits in a signed 64-bit value. */
 static int clrsbll(long long x) {
@@ -695,26 +698,10 @@ int8_t *nn::otfn_int8(
 
 
 //----------------------- INT8 CHANNELWISE -----------------------
-extern "C" int8_t *output_transform_fn_int_channelwise_impl_asm(
-    const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
-    int16_t *multipliers_and_biases, int output_count);
-
-#ifndef NN_USE_REF
-int8_t *output_transform_fn_int_channelwise_impl_asm_stub(
-    const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
-    int32_t output_channel_group, int16_t *multipliers_and_biases) {
-  int output_count = std::min(
-      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
-      (int32_t)VPU_INT16_EPV);
-  multipliers_and_biases += output_channel_group * VPU_INT16_EPV * 3;
-  return output_transform_fn_int_channelwise_impl_asm(
-      params, Y, A, multipliers_and_biases, output_count);
-}
-#endif
-
-int8_t *output_transform_fn_int_channelwise_impl(
-    const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
-    int32_t output_channel_group, int16_t *multipliers_and_biases) 
+#ifdef NN_USE_REF
+int8_t *output_transform_fn_int_channelwise_ref(
+  const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
+  int32_t output_channel_group, int16_t *multipliers_and_biases) 
 {
   const int32_t output_slice_channel_count = params->output_slice_channel_count;
   const int32_t output_channel_offset = output_channel_group * VPU_INT16_EPV;
@@ -733,11 +720,9 @@ int8_t *output_transform_fn_int_channelwise_impl(
   VLDD(vpu, &A->vD);
 
   // Set temp_mem to hold initial shifts up to output count
-  for (int i = 0; i < VPU_INT16_EPV; i++){
-    temp_mem.s16[i] = cur_initial_shift[i];
-  }
-  for (int i = output_count; i < VPU_INT16_EPV; i++) {
-    temp_mem.s16[i] = 0;
+  for (int i = 0; i < VPU_INT16_EPV; i++) {
+    int16_t tmp = (i < output_count) ? cur_initial_shift[i] : 0;
+    temp_mem.s16[i] = tmp;
   }
   VLSAT(vpu, &temp_mem);
   VLMUL(vpu, cur_post_activation_mul);
@@ -750,17 +735,34 @@ int8_t *output_transform_fn_int_channelwise_impl(
   return Y;
 }
 
-int8_t *nn::otfn_int8_channelwise(const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
-                                                 int32_t output_channel_group, int16_t *multipliers_and_biases) {
-#if defined(NN_USE_REF)
-  return output_transform_fn_int_channelwise_impl(
-      params, Y, A, output_channel_group, multipliers_and_biases);
 #else
-  return output_transform_fn_int_channelwise_impl_asm_stub(
-      params, Y, A, output_channel_group, multipliers_and_biases);
+extern "C" int8_t *output_transform_fn_int_channelwise_asm(
+  const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
+  int16_t *multipliers_and_biases, int output_count
+);
+
+int8_t *output_transform_fn_int_channelwise_vpu(
+  const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
+  int32_t output_channel_group, int16_t *multipliers_and_biases) 
+{
+  const int32_t output_slice_channel_count = params->output_slice_channel_count;
+  const int32_t group_channel_offset = output_channel_group * VPU_INT16_EPV;
+  const int32_t remaining_channels = output_slice_channel_count - group_channel_offset;
+  const int32_t output_count = min_int32(remaining_channels, (const int32_t)VPU_INT16_EPV);
+  return output_transform_fn_int_channelwise_asm(params, Y, A, multipliers_and_biases, output_count);
+}
+#endif
+
+int8_t *nn::otfn_int8_channelwise(
+  const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
+  int32_t output_channel_group, int16_t *multipliers_and_biases) 
+{
+#if defined(NN_USE_REF)
+  return output_transform_fn_int_channelwise_ref(params, Y, A, output_channel_group, multipliers_and_biases);
+#else
+  return output_transform_fn_int_channelwise_vpu(params, Y, A, output_channel_group, multipliers_and_biases);
 #endif  // NN_USE_REF
 }
-
 
 //----------------------- INT8 MAXPOOL -----------------------
 extern "C" int8_t *output_transform_maxpool_impl_asm(
