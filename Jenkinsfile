@@ -87,15 +87,7 @@ pipeline {
                             }
                         } // Unit test
 
-                        stage("Integration test") {
-                            steps {
-                                dir("${REPO}/test/integration") {
-                                    UnityJunit("./bin/integration_test -v", "NativeIntegration.log", "NativeIntegration")
-                                }
-                            }
-                        } // Integration test
-
-                        stage("Custom CMake") {
+                        stage("Custom CMake test") {
                             steps {
                                 dir("${REPO}/test/custom_cmake_build") {
                                     sh "cmake -B build_custom_cmake"
@@ -103,7 +95,15 @@ pipeline {
                                     sh "./bin/add_tensor"
                                 }
                             }
-                        } // Custom CMake
+                        } // Custom CMake test
+
+                        stage("Integration test") {
+                            steps {
+                                dir("${REPO}/test/integration") {
+                                    UnityJunit("./bin/integration_test -v", "NativeIntegration.log", "NativeIntegration")
+                                }
+                            }
+                        } // Integration test
 
                     } // stages
                     post {cleanup {xcoreCleanSandbox()}}
@@ -129,7 +129,17 @@ pipeline {
                             }
                         } // Setup
 
-                        stage("Custom CMake build") {
+                        stage("Unit test") {
+                            steps {
+                                dir("${REPO}/test/unit_test") {
+                                    withTools(params.TOOLS_VERSION_XS) {
+                                        UnityJunit("xsim --args bin/unit_test.xe -v", "XS3.log", "XS3")
+                                    }
+                                }
+                            }
+                        } // Unit test
+
+                        stage("Custom CMake test") {
                             steps {
                                 dir("${REPO}/test/custom_cmake_build") {
                                     sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch v1.0.0"
@@ -140,17 +150,7 @@ pipeline {
                                     }
                                 }
                             }
-                        } // Custom CMake build
-
-                        stage("Unit test") {
-                            steps {
-                                dir("${REPO}/test/unit_test") {
-                                    withTools(params.TOOLS_VERSION_XS) {
-                                        UnityJunit("xsim --args bin/unit_test.xe -v", "XS3.log", "XS3")
-                                    }
-                                }
-                            }
-                        } // Unit test
+                        } // Custom CMake test
 
                     } // stages
                     post {cleanup {xcoreCleanSandbox()}}
