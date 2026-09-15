@@ -5,12 +5,19 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <math.h>
-#include "quantize_int16.h"
 
-// Element quantization of float to int16_t tensor
+#include "nn_layers.h"
 
-extern void quantize_int16_tensor_asm(int16_t *output, float *input, int tensor_length, void *blob);
+int quantize_int16_tensor_blob(void *output,
+                                 float output_scaler) {
+    float *blob = (float *)output;
+    output_scaler = ldexp(output_scaler, 23);
+    blob[0] = 1/output_scaler;
+    return 1;
+}
 
+
+#if NN_USE_REF
 void quantize_int16_tensor_ref(int16_t *output, float *input, int tensor_length, void *blob) {
     for(int i = 0; i < tensor_length; i++) {
         float a = input[i] * ((float *) blob)[0];
@@ -21,6 +28,9 @@ void quantize_int16_tensor_ref(int16_t *output, float *input, int tensor_length,
         output[i] = a;
     }
 }
+#else
+extern void quantize_int16_tensor_asm(int16_t *output, float *input, int tensor_length, void *blob);
+#endif
 
 void quantize_int16_tensor(int16_t *output, float *input1, int tensor_length, void *blob) {
 #ifdef NN_USE_REF
@@ -29,4 +39,3 @@ void quantize_int16_tensor(int16_t *output, float *input1, int tensor_length, vo
     quantize_int16_tensor_asm(output, input1, tensor_length, blob);
 #endif
 }
-
