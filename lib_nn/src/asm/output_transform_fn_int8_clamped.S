@@ -2,7 +2,7 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if defined(__XS3A__)
 
-#define FUNCTION_NAME output_transform_fn_int_clamped_impl_asm
+#define FUNCTION_NAME output_transform_fn_int_clamped_asm
 
     .text
 	.cc_top FUNCTION_NAME.function,FUNCTION_NAME
@@ -58,7 +58,7 @@ VECT_INT8_MIN:
 #endif
 
 
-//int8_t *output_transform_fn_int_clamped_impl_asm(const OT_int8_clamped::Params *params, int8_t *Y,
+//int8_t *output_transform_fn_int_clamped_asm(const OT_int8_clamped::Params *params, int8_t *Y,
 //                                 VPURingBuffer *A, int32_t output_channel_group,
 //                                 int16_t *offsets_multipliers_and_biases) {
     
@@ -88,9 +88,9 @@ FUNCTION_NAME:
     {ldw output_slice_channel_count, params_p[0]; shr final_shr, initial_shift, 16}
     {sub output_count, output_slice_channel_count, output_channel_group; ldc t, 16}
     {lss t, output_count, t; sext final_shr, 16}
-    {bt t, output_transform_fn_int_clamped_impl_asm_skip; sext initial_shift, 16}
-        {ldc output_count, 16; ldc t, 1}
-    output_transform_fn_int_clamped_impl_asm_skip:
+    {bt t, output_transform_fn_int_clamped_asm_skip; sext initial_shift, 16}
+    {ldc output_count, 16; ldc t, 1}
+    output_transform_fn_int_clamped_asm_skip:
     
     {ldw omb_p, sp[S_OBM]; shl t, t, 8}
     {vsetc t ; mov t, A_p }
@@ -119,7 +119,7 @@ FUNCTION_NAME:
     ldap t, VECT_INT8_MIN
     {vldr t[0]                        ; ldaw t, sp[S_TEMP_VECTOR] } 
 
-    { mkmsk r3, r4                      ; ldw r2, sp[S_MASK] }
+    { mkmsk r3, output_count            ; ldw r2, sp[S_MASK] }
     vstrpv r1[0], r3                                          //store the int8_mins to output Y
 
     {vldr t[0]                        ; add r0, Y_p, output_count }
@@ -147,21 +147,67 @@ FUNCTION_NAME:
 
 #if defined(__VX4A__) || defined(__VX4B__)
 
-#define FUNCTION_NAME output_transform_fn_int_clamped_impl_asm
+#define FUNCTION_NAME   output_transform_fn_int_clamped_asm
+#define NSTACKWORDS     16
+#define S_TEMP_VECTOR   4
+
+#define params_p        a0
+#define out             a1
+#define acc             a2
+#define out_ch_g        a3
+
+#define offset          s2
+#define output_count    s3
+#define initial_shift   s4
+#define final_shr       s5
+
+#define multiplier      out_ch_g
+#define bias            params_p
+
 .p2align 1
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
 FUNCTION_NAME:
-    xm.entsp 0
-    xm.ldcu x10, 0
-    xm.assert x10 //NOT IMPLEMENTED
-    xm.retsp 0
+    { li t3, 16 ; xm.entsp (NSTACKWORDS * 4) }
+    xm.stdsp s2, s3, 0
+    xm.stdsp s4, s5, 8
+
+    { xm.shl out_ch_g, out_ch_g, 4 ; lw output_count, 0(params_p) }
+    sub output_count, output_count, out_ch_g
+    mv offset, a4
+    blt output_count, t3, .output_count_ready
+    mv output_count, t3
+.output_count_ready:
+
+    { xm.shl initial_shift, out_ch_g, 1 ; xm.shl out_ch_g, out_ch_g, 2 }
+    { add out_ch_g, out_ch_g, initial_shift ; lw initial_shift, 4(params_p) }
+    { add offset, offset, out_ch_g ; xm.shr final_shr, initial_shift, 16 }
+    { xm.sext final_shr, 16 ; xm.sext initial_shift, 16 }
+    li t3, 0x100
+    { xm.shl t3, output_count, 1 ; xm.vsetc t3 }
+
+    { add multiplier, offset, t3 ; xm.vldr acc }
+    { add bias, multiplier, t3 ; xm.vladd offset }
+    { xm.ldawsp t3, (S_TEMP_VECTOR * 4) ; xm.vpos }
+    xm.vstr t3
+    xm.vlashr t3, initial_shift
+    xm.vlmul0 multiplier
+    xm.vlmul1 multiplier
+    mv multiplier, bias
+    xm.vladd multiplier
+    xm.vstr t3
+    xm.vlashr t3, final_shr
+    xm.vstr t3
+    { xm.mkmsk t3, output_count ; xm.vdepth8 }
+    { add a0, out, output_count ; xm.vstrpv out, t3 }
+
+    xm.lddsp s2, s3, 0
+    xm.lddsp s4, s5, 8
+    xm.retsp (NSTACKWORDS * 4)
 .size FUNCTION_NAME, . -FUNCTION_NAME
-.resource_const FUNCTION_NAME, "stack_frame_bytes",  0
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  (NSTACKWORDS * 4)
 .resource_list_empty FUNCTION_NAME, "callees"
 .resource_list_empty FUNCTION_NAME, "tail_callees"
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
 
 #endif
-
-

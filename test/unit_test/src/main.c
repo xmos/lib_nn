@@ -18,11 +18,14 @@ int main(int argc, const char* argv[]) {
   RUN_TEST_GROUP(group_dequantize_int16);
   RUN_TEST_GROUP(group_expand_8_to_16);
   RUN_TEST_GROUP(group_lookup8);
+  RUN_TEST_GROUP(group_matmul);
   RUN_TEST_GROUP(group_mean);
   RUN_TEST_GROUP(group_mul_elementwise);
   RUN_TEST_GROUP(group_multiply_int16);
   RUN_TEST_GROUP(group_output_transform_fn_int16);
   RUN_TEST_GROUP(group_output_transforms_binary);
+  RUN_TEST_GROUP(group_output_transforms_clamped);
+  RUN_TEST_GROUP(group_output_transforms_channel_wise);
   RUN_TEST_GROUP(group_pad);
   RUN_TEST_GROUP(group_quantize_int16);
   RUN_TEST_GROUP(group_quadratic_interpolation);

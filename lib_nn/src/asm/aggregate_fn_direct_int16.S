@@ -145,44 +145,44 @@ void mat_mul_direct_int16_impl_asm(
 #define params_p             a0
 #define A_p                  a1
 #define X_p                  a2
-#define out_ch_g             a3 
+#define out_ch_g             a3
 #define kp_init              a4
 
 #define kw                   s2
-#define ic                   s3
+#define kh                   s3
 #define thirty_two           s4
 #define inner_x_h_step       s5
 #define inner_x_v_step       s6
 #define kw_init              s7
 #define kp2                  s8
 
-#define tmp                  x28
-#define kp                   tmp
+#define kp                   t3
 
-#define kh                   out_ch_g 
+#define ic                   out_ch_g
 #define ic_init              params_p
 
 .p2align 1
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
 FUNCTION_NAME:
-    xm.entsp NSTACKBYTES
+    { li t3, 32 ; xm.entsp NSTACKBYTES }
     xm.stdsp s2, s3, 0*8
     xm.stdsp s4, s5, 1*8
     xm.stdsp s6, s7, 2*8
-    sw s8, 3*8(sp)
+    { xm.shl t3, t3, 3 ; sw s8, 3*8(sp) }
     
-    {xm.vclrdr; xm.ldcu tmp, 32}
-    {xm.ldwi kw, PARAMS_bytes_per_kernel_channel*4(params_p); xm.shli tmp, tmp, 3}
-    xm.vsetc tmp;
+    xm.vsetc t3
+
+    xm.ldd kw, kh, PARAMS_bytes_per_kernel_channel * 4 (params_p)
+    xm.ldd inner_x_h_step, inner_x_v_step, PARAMS_inner_x_h_step * 4 (params_p)
 
     mul out_ch_g, kw, out_ch_g
     mv kp, kp_init 
-    {xm.ldwi inner_x_v_step, PARAMS_inner_x_v_step*4(params_p);         xm.add kp, out_ch_g, kp}
-    {xm.ldwi inner_x_h_step, PARAMS_inner_x_h_step*4(params_p);         xm.ldcu thirty_two, 32}
-    {xm.ldwi kh, PARAMS_k_height_loop_counter*4(params_p);              xm.sub X_p, X_p, inner_x_h_step}
-    {xm.ldwi kw_init, PARAMS_k_width_loop_counter*4(params_p);          xm.sub X_p, X_p, inner_x_v_step}
-    {xm.ldwi ic_init, PARAMS_input_channel_loop_counter*4(params_p);    xm.add kh, kh, 1}
+
+    { add kp, kp, out_ch_g ; xm.vclrdr }
+    { li thirty_two, 32 ; sub X_p, X_p, inner_x_h_step }
+    { add kh, kh, 1 ; sub X_p, X_p, inner_x_v_step }
+    xm.ldd kw_init, ic_init, PARAMS_k_width_loop_counter * 4 (params_p)
 
     
     kh_loop_asm:
@@ -210,6 +210,7 @@ FUNCTION_NAME:
 
     {xm.vstr A_p; xm.add A_p, A_p, thirty_two}
     xm.vstd A_p
+
     xm.lddsp s2, s3, 0*8
     xm.lddsp s4, s5, 1*8
     xm.lddsp s6, s7, 2*8
