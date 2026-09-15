@@ -6,6 +6,7 @@
 
 #include "nn_api.h"
 #include "nn_layers.h"
+#include "quadratic_approximation_tables.h"
 
 #include "unity.h"
 #include "unity_fixture.h"
