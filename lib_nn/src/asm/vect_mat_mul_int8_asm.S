@@ -170,13 +170,13 @@ FUNCTION_NAME:
     { xm.vsetc t3                   ; li s2, 32                 }
     { xm.vclrdr                     ; xm.shli s3, ch_size, 4    }   // s3: channel_size*16
     { xm.vstr vpu_buffer            ; add t3, vpu_buffer, s2    }   // make sure vpu buffer is all 0
-    { xm.vstr t3                    ; nop                       }   // make sure vpu buffer is all 0
+    xm.vstr t3                                                      // make sure vpu buffer is all 0
     { add ch_cnt, ch_size, 0        ; li t3, 16                 }
     { sltu col, col, t3             ; sub rhs, rhs, ch_size     }   // rhs point to ch15
     { xm.brff col, maccr_prepare    ; li col, 0                 }
     mv col, a4
-    { sub col, t3, col              ; nop                       }   // col: tail loop cnt
-    { xm.shli col, col, 2           ; nop                       }   // col: maccr loop offset (in byte)
+    sub col, t3, col                                                // col: tail loop cnt
+    xm.shli col, col, 2                                             // col: maccr loop offset (in byte)
 
 maccr_prepare:
     mv t3, lhs
@@ -210,7 +210,7 @@ maccr:
 
 exit:
     { xm.vstd vpu_buffer            ; add vpu_buffer, vpu_buffer, s2    }
-    { xm.vstr vpu_buffer            ; nop                               }
+    xm.vstr vpu_buffer
     xm.lddsp s2, s3, 0*8
     xm.lddsp s4, s5, 1*8
     xm.lddsp s6, s7, 2*8
