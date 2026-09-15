@@ -4,14 +4,15 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "quadratic_approximation.h"
-#include "quadratic_interpolation.h"
-#include "quadratic_approximation_tables.h"
+#include "nn_api.h"
+#include "nn_layers.h"
 
 #include "unity.h"
 #include "unity_fixture.h"
 
-#define TEST_FUNCTION_COUNT 3
+// test all on native, reduced set on a target
+#define TEST_COUNT_FULL 5
+#define TEST_COUNT      3
 
 TEST_GROUP(group_quadratic_interpolation);
 TEST_SETUP(group_quadratic_interpolation) {}
@@ -33,20 +34,26 @@ TEST_GROUP_RUNNER(group_quadratic_interpolation) {
 #define N 640
 #endif
 
-static float_function_t test_functions[TEST_FUNCTION_COUNT] = {
+static float_function_t test_functions[TEST_COUNT_FULL] = {
     approximation_function_tanh,
     approximation_function_logistics,
     approximation_function_elu,
+    approximation_function_relu,
+    approximation_function_relu6
 };
-static const float output_scalers[TEST_FUNCTION_COUNT] = {
+static const float output_scalers[TEST_COUNT_FULL] = {
     1.0 / 32768,
     1.0 / 32768,
     10.0 / 32768,
+    8.0 / 32768,
+    6.0 / 32768
 };
-static const float input_scalers[TEST_FUNCTION_COUNT] = {
+static const float input_scalers[TEST_COUNT_FULL] = {
     8.0 / 32768,
     8.0 / 32768,
     2.0 / 32768,
+    8.0 / 32768,
+    8.0 / 32768
 };
 
 static void validate_table(unsigned function_index, uint8_t *table) {
@@ -69,7 +76,7 @@ static void validate_table(unsigned function_index, uint8_t *table) {
 
 #ifdef TEST_BUILD_NATIVE
 TEST(group_quadratic_interpolation, test_quadratic_approximation_generator) {
-    for (unsigned f = 0; f < TEST_FUNCTION_COUNT; f++) {
+    for (unsigned f = 0; f < TEST_COUNT_FULL; f++) {
         DWORD_ALIGNED quadratic_function_table_t table;
         double square_error;
         int max_error;
@@ -87,7 +94,7 @@ TEST(group_quadratic_interpolation, test_quadratic_approximation_generator) {
 #endif
 
 TEST(group_quadratic_interpolation, test_quadratic_interpolation_tables) {
-    for (unsigned f = 0; f < TEST_FUNCTION_COUNT; f++) {
+    for (unsigned f = 0; f < TEST_COUNT; f++) {
         validate_table(f, test_quadratic_approximation_table(f));
     }
 }

@@ -51,6 +51,6 @@ int main(int argc, const char* argv[]) {
     RUN_TEST_GROUP(group_WindowGeometry);
     RUN_TEST_GROUP(group_WindowLocation);
   #endif
-  
+
   return UnityEnd();
 }
