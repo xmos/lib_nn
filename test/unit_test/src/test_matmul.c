@@ -34,10 +34,6 @@ static void impl_test_matmul(const unsigned lhs_row,
                              const unsigned channel,
                              const unsigned rhs_col,
                              const unsigned out_offset) {
-#if defined(__VX4A__) || defined(__VX4B__)
-  TEST_IGNORE_MESSAGE("mat_mul_real_int8 not implemented on VX4");
-#endif
-
   double lhsScale = 1. / 128.;
   double rhsScale = 1. / 128.;
   double outputScale = 1. / 128.;
@@ -124,10 +120,6 @@ TEST(group_matmul, test_matmul_full) {
 }
 
 TEST(group_matmul, test_matmul_zero_result) {
-#if defined(__VX4A__) || defined(__VX4B__)
-  TEST_IGNORE_MESSAGE("mat_mul_real_int8 not implemented on VX4");
-#endif
-
   int8_t WORD_ALIGNED lhs[LHS_ROW_SIZE * CHANNEL_SIZE];
   int8_t WORD_ALIGNED rhs[RHS_COL_SIZE * CHANNEL_SIZE];
   int8_t WORD_ALIGNED out[LHS_ROW_SIZE * RHS_COL_SIZE];
