@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdint.h>
 
+#include "nn_api.h"
 #include "quadratic_approximation_tables.h"
 
 typedef struct {
@@ -12,7 +13,7 @@ typedef struct {
     int16_t b;
 } test_quadratic_coefficient_t;
 
-static __attribute__((aligned(8)))
+static DWORD_ALIGNED
 test_quadratic_coefficient_t
     tables[TEST_QUADRATIC_APPROXIMATION_TABLE_COUNT]
           [TEST_QUADRATIC_APPROXIMATION_TABLE_CHUNKS] = {
