@@ -61,19 +61,22 @@ void requantize_int16_tensor(int16_t *output, int16_t *input,
 #define NEG_SAT_VAL (-128)
 #endif
 
-void requantize_16_to_8_ref(int8_t *y, const int16_t *x,
-                                                        const unsigned elm_start,
-                                                        const unsigned elm_count) {
+static inline
+void requantize_16_to_8_ref(
+    int8_t *y, const int16_t *x,
+    const unsigned elm_start,
+    const unsigned elm_count) 
+{
     for (unsigned i = elm_start; i < elm_start + elm_count; i++) {
         y[i] = (x[i] < -0x7F80) ? NEG_SAT_VAL : vdepth8_single_s16(x[i]);
     }
 }
 
-#undef NEG_SAT_VAL
-
-#ifdef NN_USE_REF
-void requantize_16_to_8(int8_t *y, const int16_t *x,
-                                                const unsigned elm_start, const unsigned elm_count) {
+void requantize_16_to_8(
+    int8_t *y, const int16_t *x,
+    const unsigned elm_start, const unsigned elm_count) 
+{
     requantize_16_to_8_ref(y, x, elm_start, elm_count);
 }
-#endif
+
+#undef NEG_SAT_VAL

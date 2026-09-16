@@ -9,19 +9,13 @@
 #include "nn_arch.h"
 #include "nn_layers.h"
 
-static inline 
-unsigned get_shift(void){
-    unsigned shift = NN_ARCH == TARGET_ARCH_XS3A ? VLMUL_SHR_XS3A : VLMUL_SHR_VX4A;
-    return shift;
-}
-
 int add_int16_tensor_blob(void *output,
                                float input1_scaler,
                                float input2_scaler,
                                float output_scaler,
                                char *err_msg) {
-    const unsigned shift = get_shift();
-    int tensor_length = 16;
+    const unsigned shift = 14;
+    const unsigned tensor_length = 16;
     int16_t *output_tensor = (int16_t *) output;
     float combined_scaler1 = input1_scaler / output_scaler;
     float combined_scaler2 = input2_scaler / output_scaler;
@@ -43,7 +37,7 @@ int add_int16_tensor_blob(void *output,
 #if NN_USE_REF
 void add_int16_tensor_ref(int16_t *output, int16_t *input1, int16_t *input2, int tensor_length, void *blob) {
     int16_t *multipliers = (int16_t *) blob;
-    const unsigned shift = get_shift();
+    const unsigned shift = 14;
     for(int i = 0; i < tensor_length; i++) {
         int64_t mult1 = input1[i] * (int64_t) multipliers[(i & 15)     ];
         int64_t mult2 = input2[i] * (int64_t) multipliers[(i & 15) + 16];

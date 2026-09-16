@@ -3,9 +3,22 @@
 
 #include <stdio.h>
 
+#include "nn_arch.h"
 #include "unity_fixture.h"
 
+static inline 
+void set_target(void) {
+#if defined(__XS3A__)
+  SetNNTargetArch(TARGET_ARCH_XS3A);
+#elif defined(__VX4B__)
+  SetNNTargetArch(TARGET_ARCH_VX4A);
+#else
+  SetNNTargetArch(TARGET_ARCH_XS3A);
+#endif
+}
+
 int main(int argc, const char* argv[]) {
+  set_target();
   printf("Running unit tests for lib_nn\n");
   UnityGetCommandLineOptions(argc, argv);
   UnityBegin(argv[0]);

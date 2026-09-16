@@ -16,16 +16,8 @@
 #ifndef TEST_BUILD_NATIVE
 #include "etc/test_vpu_sim.h"
 
-static void set_target(void){
-#if defined(__VX4B__)
-  SetNNTargetArch(TARGET_ARCH_VX4A);
-#else
-  SetNNTargetArch(TARGET_ARCH_XS3A);
-#endif
-}
-
 TEST_GROUP(group_vpu_sim);
-TEST_SETUP(group_vpu_sim) {set_target();}
+TEST_SETUP(group_vpu_sim) {}
 TEST_TEAR_DOWN(group_vpu_sim) {}
 
 TEST_GROUP_RUNNER(group_vpu_sim) {

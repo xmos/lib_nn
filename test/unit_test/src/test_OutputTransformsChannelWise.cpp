@@ -27,15 +27,6 @@ for each channel c in parallel:
 
 #define OUTPUT_SENTINEL 99
 
-static void set_target(void)
-{
-#if defined(__VX4B__)
-    SetNNTargetArch(TARGET_ARCH_VX4A);
-#else
-    SetNNTargetArch(TARGET_ARCH_XS3A);
-#endif
-}
-
 static int16_t get_multiplier()
 {
     return (NN_ARCH == TARGET_ARCH_XS3A)
@@ -99,10 +90,7 @@ static int8_t *run_channelwise_test(
 }
 
 TEST_GROUP(group_output_transforms_channel_wise);
-TEST_SETUP(group_output_transforms_channel_wise)
-{
-    set_target();
-}
+TEST_SETUP(group_output_transforms_channel_wise) {}
 TEST_TEAR_DOWN(group_output_transforms_channel_wise) {}
 TEST_GROUP_RUNNER(group_output_transforms_channel_wise)
 {
