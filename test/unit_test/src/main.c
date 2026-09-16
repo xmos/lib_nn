@@ -3,9 +3,22 @@
 
 #include <stdio.h>
 
+#include "nn_arch.h"
 #include "unity_fixture.h"
 
+static inline 
+void set_target(void) {
+#if defined(__XS3A__)
+  SetNNTargetArch(TARGET_ARCH_XS3A);
+#elif defined(__VX4B__)
+  SetNNTargetArch(TARGET_ARCH_VX4A);
+#else
+  SetNNTargetArch(TARGET_ARCH_XS3A);
+#endif
+}
+
 int main(int argc, const char* argv[]) {
+  set_target();
   printf("Running unit tests for lib_nn\n");
   UnityGetCommandLineOptions(argc, argv);
   UnityBegin(argv[0]);
@@ -20,6 +33,7 @@ int main(int argc, const char* argv[]) {
   RUN_TEST_GROUP(group_lookup8);
   RUN_TEST_GROUP(group_matmul);
   RUN_TEST_GROUP(group_mean);
+  RUN_TEST_GROUP(group_maxpool);
   RUN_TEST_GROUP(group_mul_elementwise);
   RUN_TEST_GROUP(group_multiply_int16);
   RUN_TEST_GROUP(group_output_transform_fn_int16);
@@ -45,7 +59,6 @@ int main(int argc, const char* argv[]) {
     RUN_TEST_GROUP(group_ImageGeometry);
     RUN_TEST_GROUP(group_ImageRegion);
     RUN_TEST_GROUP(group_ImageVect);
-    RUN_TEST_GROUP(group_maxpool);
     RUN_TEST_GROUP(group_mem_cpy_fns);
     RUN_TEST_GROUP(group_output_transforms);
     RUN_TEST_GROUP(group_WindowGeometry);
