@@ -257,7 +257,7 @@ void mat_mul_dw_direct_int16(const mat_mul_dw_direct_params_t *params, VPURingBu
 /** Compute 16-channel int8 MaxPool results into the ring buffer's vR vector.
  * @param params Pooling-window traversal parameters.
  * @param A Destination VPU ring buffer; only vR is updated.
- * @param T Input tensor data.
+ * @param T Input tensor data. Must be word aligned in xs3.
  */
 void maxpool_direct(const mat_mul_dw_direct_params_t *params, VPURingBuffer *A, int8_t *T);
 

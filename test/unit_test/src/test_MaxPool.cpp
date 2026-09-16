@@ -52,38 +52,51 @@ TEST(group_maxpool, test_maxpool_simple)
 
         Result should be -5
     */
-    const int channels = 1;
+    const unsigned channels = VPU_INT16_EPV;
     const unsigned w = 2;
     const unsigned h = 2;
 
     const int8_t expected = -5;
-    int8_t input[w*h] = {-100, -20, -70, expected};
+    WORD_ALIGNED int8_t input[w * h * channels] = {};
+    for (unsigned channel = 0; channel < channels; ++channel)
+    {
+        input[channel] = -100;
+        input[channels + channel] = -20;
+        input[2 * channels + channel] = -70;
+        input[3 * channels + channel] = expected;
+    }
 
     nn::ImageGeometry input_geometry(h, w, channels);
     nn::WindowGeometry kernel_geometry(h, w, 1, 1, 1, 1);
     nn::MatMulDirectFn_DW maxpool_params(input_geometry, kernel_geometry);
     nn::mat_mul_dw_direct_params_t params = maxpool_params.getParams();
-    VPURingBuffer accumulator{};
+    VPURingBuffer accumulator WORD_ALIGNED = {};
 
     nn::maxpool_direct(&params, &accumulator, input);
-    TEST_ASSERT_EQUAL_INT8(expected, ((int8_t *)&accumulator.vR)[0]);
+    for (unsigned channel = 0; channel < channels; ++channel)
+    {
+        TEST_ASSERT_EQUAL_INT8(expected, ((int8_t *)&accumulator.vR)[channel]);
+    }
 }
 
 TEST(group_maxpool, test_maxpool_zeros)
 {
     // very similar bit testing it all remains 0 for 0 inputs
-    const int channels = 1;
+    const unsigned channels = VPU_INT16_EPV;
     const unsigned w = 2;
     const unsigned h = 2;
     const int8_t expected = 0;
-    int8_t input[w*h] = {0, 0, 0, expected};
-    VPURingBuffer accumulator{};
+    WORD_ALIGNED int8_t input[w * h * channels] = {};
+    VPURingBuffer accumulator WORD_ALIGNED = {};
     nn::ImageGeometry input_geometry(h, w, channels);
     nn::WindowGeometry kernel_geometry(h, w, 1, 1, 1, 1);
     nn::MatMulDirectFn_DW maxpool_params(input_geometry, kernel_geometry);
     nn::mat_mul_dw_direct_params_t params = maxpool_params.getParams();
     nn::maxpool_direct(&params, &accumulator, input);
-    TEST_ASSERT_EQUAL_INT8(expected, ((int8_t *)&accumulator.vR)[0]);
+    for (unsigned channel = 0; channel < channels; ++channel)
+    {
+        TEST_ASSERT_EQUAL_INT8(expected, ((int8_t *)&accumulator.vR)[channel]);
+    }
 }
 
 TEST(group_maxpool, test_maxpool_random)
@@ -111,7 +124,7 @@ TEST(group_maxpool, test_maxpool_random)
             nn::WindowGeometry kernel_geometry(height, width, 1, 1, 1, 1);
             nn::MatMulDirectFn_DW maxpool_params(input_geometry, kernel_geometry);
             nn::mat_mul_dw_direct_params_t params = maxpool_params.getParams();
-            VPURingBuffer accumulator{};
+            VPURingBuffer accumulator WORD_ALIGNED = {};
 
             nn::maxpool_direct(&params, &accumulator, input);
             for (unsigned channel = 0; channel < channels; ++channel)
@@ -149,7 +162,7 @@ TEST(group_maxpool, test_maxpool_smaller_kernel)
     nn::WindowGeometry kernel_geometry(kernel_height, kernel_width, 1, 1, 1, 1);
     nn::MatMulDirectFn_DW maxpool_params(input_geometry, kernel_geometry);
     nn::mat_mul_dw_direct_params_t params = maxpool_params.getParams();
-    VPURingBuffer accumulator{};
+    VPURingBuffer accumulator WORD_ALIGNED = {};
     int8_t *input_window = &input[(start_row * image_width + start_col) * channels];
     nn::maxpool_direct(&params, &accumulator, input_window);
     for (unsigned channel = 0; channel < channels; ++channel)
