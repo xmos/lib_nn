@@ -12,15 +12,6 @@ extern "C" {
 
 #define OUTPUT_SENTINEL 99
 
-static void set_target(void)
-{
-#if defined(__VX4B__)
-    SetNNTargetArch(TARGET_ARCH_VX4A);
-#else
-    SetNNTargetArch(TARGET_ARCH_XS3A);
-#endif
-}
-
 static int16_t get_multiplier(void)
 {
     return (NN_ARCH == TARGET_ARCH_XS3A)
@@ -48,7 +39,7 @@ static int8_t groupwise_reference(int32_t accumulator, int16_t initial_shift,
     value = (int)vpu_saturate(value, 16);
     value = (int)vpu_saturate(value + bias, 16);
     value = (value + (1 << (final_shr + 7))) >> (final_shr + 8);
-    return (int8_t)vpu_saturate_fixed(value, 8);
+    return saturate_output_int8(value);
 }
 
 static int8_t *run_groupwise_test(int out_count, int16_t initial_shift,
@@ -87,10 +78,7 @@ static int8_t *run_groupwise_test(int out_count, int16_t initial_shift,
 }
 
 TEST_GROUP(group_output_transforms_int8);
-TEST_SETUP(group_output_transforms_int8)
-{
-    set_target();
-}
+TEST_SETUP(group_output_transforms_int8) {}
 TEST_TEAR_DOWN(group_output_transforms_int8) {}
 TEST_GROUP_RUNNER(group_output_transforms_int8)
 {
@@ -224,7 +212,7 @@ TEST(group_output_transforms_int8, Test_ot_int8_random)
 
 TEST(group_output_transforms_int8, Test_ot_int8_multiple_groups)
 {
-    const int output_count = VPU_INT16_EPV + 3;
+    const int output_count = VPU_INT16_EPV + 4;
     int32_t accs[output_count];
     int16_t mults[output_count];
     int16_t biases[output_count];

@@ -70,7 +70,7 @@ static int8_t channelwise_reference(int32_t accumulator, int16_t initial_shift,
     value = (int)vpu_saturate(value, 16);
     value = (int)vpu_saturate(value + bias, 16);
     value = (value + (1 << (final_shr + 7))) >> (final_shr + 8);
-    return (int8_t)vpu_saturate_fixed(value, 8);
+    return saturate_output_int8(value);
 }
 
 static int8_t *run_channelwise_test(
@@ -203,10 +203,12 @@ TEST(group_output_transforms_channel_wise, Test_ot_chwise_sats)
     const int output_count = VPU_INT16_EPV;
     const int16_t multiplier = get_multiplier();
     const int16_t final_shr = 0;
+    const int16_t boundary_bias =
+        (NN_ARCH == TARGET_ARCH_XS3A) ? 0 : -1;
     const int8_t int8_max = (int8_t)vpu_saturate_fixed(INT8_MAX, 8);
     const int8_t int8_min = INT8_MIN; //Note: vdepth8 is corrected in xs3
     const int32_t accs[output_count] = {
-        INT16_MAX, INT16_MIN, INT16_MAX, INT16_MIN,
+        INT16_MAX, -32640, INT16_MIN, -32641,
         INT16_MAX, INT16_MIN, INT16_MAX, INT16_MIN,
         INT16_MAX, INT16_MIN, INT16_MAX, INT16_MIN,
         INT16_MAX, INT16_MIN, INT16_MAX, INT16_MIN
@@ -214,11 +216,11 @@ TEST(group_output_transforms_channel_wise, Test_ot_chwise_sats)
     int16_t init_sh[output_count] = {};
     int16_t mults[output_count];
     const int16_t biases[output_count] = {
-        -1, -2, -3, -4, -5, -6, -7, -8,
+        0, boundary_bias, 0, boundary_bias, -5, -6, -7, -8,
         -9, -10, -11, -12, -13, -14, -15, -16
     };
     const int8_t expected[output_count] = {
-        int8_max, int8_min, int8_max, int8_min, int8_max, int8_min, int8_max, int8_min,
+        int8_max, -127, int8_min, int8_min, int8_max, int8_min, int8_max, int8_min,
         int8_max, int8_min, int8_max, int8_min, int8_max, int8_min, int8_max, int8_min
     };
     int8_t out[output_count + 1] = {};
@@ -295,7 +297,7 @@ TEST(group_output_transforms_channel_wise, Test_ot_chwise_random)
 
 TEST(group_output_transforms_channel_wise, Test_ot_chwise_multiple_groups)
 {
-    const int output_count = VPU_INT16_EPV + 3;
+    const int output_count = VPU_INT16_EPV + 4;
     int32_t accs[output_count];
     int16_t init_sh[output_count] = {};
     int16_t mults[output_count];
