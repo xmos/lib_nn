@@ -37,7 +37,7 @@ TEST(group_output_transform_fn_int16, test_output_transform_fn_int16) {
         0x04000000, 0x04000000, 0x04000000, 0x04000000,
         0x04000000, 0x04000000, 0x04000000, 0x04000000
     };
-    int16_t vDvR[32] __attribute__((aligned(8)));
+    int16_t vDvR[32] DWORD_ALIGNED;
     int16_t WORD_ALIGNED output[40];
 
     for(int j = 1; j <= 16; j++) {
@@ -62,7 +62,7 @@ TEST(group_output_transform_fn_int16, test_output_transform_fn_int16) {
 
 TEST(group_output_transform_fn_int16, test_output_transform_fn_int16_sat) {
     otfn_int16_params_t otfn_params = {2};
-    int16_t vDvR[32] __attribute__((aligned(8))) = {0};
+    int16_t vDvR[32] DWORD_ALIGNED = {0};
     int32_t mul_add[32] = {0};
     int16_t WORD_ALIGNED output[16];
 
@@ -88,7 +88,7 @@ TEST(group_output_transform_fn_int16, test_output_transform_fn_int16_kernel_tran
     };
     int8_t kernel_weights_in[16*8] = {0};
     int8_t kernel_weights_out[16*8] = {0};
-    int16_t vDvR[32] __attribute__((aligned(8))) = {0};
+    int16_t vDvR[32] DWORD_ALIGNED = {0};
     int16_t WORD_ALIGNED vDvRoutput[16];
     float channel_multipliers_in[16];
     int channel_bias_terms_in[16];

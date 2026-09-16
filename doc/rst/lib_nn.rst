@@ -147,12 +147,6 @@ VPU constraints that apply across the library.
 API Reference
 *************
 
-nn_pooling.h
-============
-
-.. doxygenfile:: nn_pooling.h
-   :project: lib_nn
-
 nn_layers.h
 ===========
 

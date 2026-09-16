@@ -3,16 +3,27 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "nn_op_utils.h"
-#include "nn_operator.h"
+#include "nn_layers.h"
 
-void pad_3_to_4_prepare(uint32_t * n_3, 
-    const unsigned height, 
+void pad_3_to_4_prepare(uint32_t * n_3,
+    const unsigned height,
     const unsigned width) {
     *n_3 = height*width;
 }
 
 #if NN_USE_REF
+
+void pad_1_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N, uint32_t pad_val){
+
+    uint32_t * output_p = (uint32_t *)outputs;
+    uint8_t * input_p = (uint8_t *)inputs;
+
+    for(uint32_t i=0;i<N*4;i++){
+        *output_p = *input_p | (pad_val & 0xffffff00);
+        output_p += 1;
+        input_p += 1;
+    }
+}
 void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val){
 
     int8_t * output_p = (int8_t *)outputs;
@@ -28,11 +39,11 @@ void pad_3_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pa
 }
 #else
 
-/** Function that copies a single pixel of 3 bytes
- * @param outputs  pointer to the outputs array - incremented by 4 bytes
- * @param inputs   pointer to the input array - incremented by 3 bytes
- * @param N_3      number of pixels will be decremented by 1.
- */
+extern void pad_1_to_4_asm(int32_t outputs[], int32_t inputs[], uint32_t N,
+                            uint32_t pad_val);
+extern void pad_3_to_4_asm(int32_t outputs[], int64_t inputs[], uint32_t N_24,
+                            uint32_t pad_val);
+
 static inline void pad_3_to_4_single(int8_t **outputs, int8_t **inputs, uint32_t *N_3, uint32_t pad_val) {
     for(uint32_t i = 0; i < 3; i++) {
         (*(int8_t**)outputs)[i] = (*inputs)[i];
@@ -43,36 +54,6 @@ static inline void pad_3_to_4_single(int8_t **outputs, int8_t **inputs, uint32_t
     *N_3 -= 1;
 }
 
-/** Function that pads an image with 3-byte values with a 0.
- * This functions is highly optimised, but has constraints on the
- * alignment of the input image and on the number of bytes to be copied
- * Use ``pad_3_to_4`` to not have any constraints.
- *
- * The input image must be double word aligned.
- * The output image must be word aligned.
- * It copies the image in chunks of 24 bytes
- *
- * @param    outputs    output values, every word contains 3 bytes and a zero
- * @param    inputs     input values, RGBRGBRGBRGB...
- * @param    N_24       number of blocks of 24 bytes to copy
- *
- * @returns  The inner product
- */
-extern void pad_3_to_4_asm(int32_t outputs[], int64_t inputs[], uint32_t N_24, uint32_t pad_val);
-
-
-/**
- * Pad 3-byte pixels to 4 bytes using the optimized XS3 implementation.
- *
- * The input must be double-word aligned and the output must be word aligned.
- * Unaligned pixels are copied individually before and after the assembly
- * routine processes blocks of eight pixels.
- *
- * @param outputs  Output buffer containing 4 bytes per pixel.
- * @param inputs   Input buffer containing 3 bytes per pixel.
- * @param N_3      Number of 3-byte pixels to copy.
- * @param pad_val  Value whose most significant byte is written as padding.
- */
 void pad_3_to_4_run_impl(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val) {
     // First copy single pixels until the input pointer is aligned
     // That will happen as it is incremented in steps of 3
@@ -80,7 +61,7 @@ void pad_3_to_4_run_impl(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32
     while((((uint32_t)inputs) & 7) != 0 && N_3 != 0) {
         pad_3_to_4_single(&outputs, &inputs, &N_3, pad_val);
     }
-    
+
     // Now figure out whether the total number of pixels to be copied
     // Is a multiple of 24; if not, remember what the remainder is
     uint32_t tail_N_3 = N_3 & 7;    // remaining blocks of 3
@@ -104,6 +85,13 @@ void pad_3_to_4_run_impl(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32
 }
 #endif
 
+void pad_1_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N, uint32_t pad_val) {
+#if NN_USE_REF
+    pad_1_to_4_ref(outputs, inputs, N, pad_val);
+#else
+    pad_1_to_4_asm((int32_t *)outputs, (int32_t *)inputs, N, pad_val);
+#endif
+}
 
 void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val) {
 #if NN_USE_REF
