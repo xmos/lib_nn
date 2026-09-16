@@ -15,7 +15,7 @@ int add_int16_tensor_blob(void *output,
                                float output_scaler,
                                char *err_msg) {
     const unsigned shift = 14;
-    const unsigned tensor_length = 16;
+    const int tensor_length = 16;
     int16_t *output_tensor = (int16_t *) output;
     float combined_scaler1 = input1_scaler / output_scaler;
     float combined_scaler2 = input2_scaler / output_scaler;
