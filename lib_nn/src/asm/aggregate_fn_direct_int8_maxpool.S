@@ -87,7 +87,7 @@ FUNCTION_NAME:
 
 
 
-#if defined(__VX4A__) || defined(__VX4B__)
+#if defined(__VX4B__)
 
 #define NSTACKWORDS  8
 #define ROUND_UP(X, Y) (((X+Y-1)/Y)*Y)

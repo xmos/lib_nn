@@ -121,7 +121,7 @@ maccr_tail:
 
 #endif
 
-#if defined(__VX4A__) || defined(__VX4B__)
+#if defined(__VX4B__)
 
 // Assume rhs is column major, [col, row]
 

@@ -109,7 +109,7 @@ FUNCTION_NAME:
 
 
 
-#if defined(__VX4A__) || defined(__VX4B__)
+#if defined(__VX4B__)
 
 #define FUNCTION_NAME mat_mul_dw_direct_int16_impl_asm
 #define NSTACKWORDS 8
