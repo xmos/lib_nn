@@ -11,9 +11,37 @@
 #include "nn_operator.h"
 #include "vpu_sim.h"
 
-#ifndef NN_USE_REF
+#ifdef NN_USE_REF
+void mat_mul_real_int8_ref(
+    nn_mat_mul_real_params_t *p,
+    int8_t *lhs, int8_t* rhs, int8_t *output)
+{
+  int out_index = 0;
+  for (uint32_t i = 0; i < p->lhs_row_size; ++i) {
+    for (uint32_t j = 0; j < p->rhs_col_size; ++j) {
+      double acc = 0.0;
+      for (uint32_t k = 0; k < p->channel_size; ++k) {
+        int lhs_idx = i*p->channel_size+k;
+        int rhs_idx = j*p->channel_size+k;
+        double x = ((double)(lhs[lhs_idx]) - p->lhs_zp);
+        double y = ((double)(rhs[rhs_idx]) - p->rhs_zp);
+        acc += x * y;
+      }
+      float quantized_value = (float)acc * p->scale + p->out_zp;
+      // Clamp the quantized value to int8 range
+      if (quantized_value > 127.0f) {
+        output[out_index++] = 127;
+      } else if (quantized_value < -128.0f) {
+        output[out_index++] = -128;
+      } else {
+        output[out_index++] = (int8_t)roundf(quantized_value);
+      }
+    }
+  }
+}
 
-extern int8_t round8(float r);
+#else
+extern int8_t round8_asm(float r);
 
 extern void vect_mat_mul_int8_asm(
   const int8_t *lhs, 
@@ -22,7 +50,6 @@ extern void vect_mat_mul_int8_asm(
   uint32_t channel_size,     // lhs size, rhs row size
   uint32_t rhs_col_size
 );
-
 void mat_mul_real_int8_vpu(
   nn_mat_mul_real_params_t *p,
   int8_t *vpu_buf0, int8_t *vpu_buf1,
@@ -62,43 +89,15 @@ void mat_mul_real_int8_vpu(
           +p->in_zp_sum;
         accf *= p->scale;
         accf += p->out_zp;
-        output[i] = round8(accf);
+        output[i] = round8_asm(accf);
       }
       output = &output[process_col];
     }
   }
 }
-#endif // NN_USE_REF
+#endif
 
-void mat_mul_real_int8_ref(
-    nn_mat_mul_real_params_t *p,
-    int8_t *lhs, int8_t* rhs, int8_t *output)
-{
-  int out_index = 0;
-  for (uint32_t i = 0; i < p->lhs_row_size; ++i) {
-    for (uint32_t j = 0; j < p->rhs_col_size; ++j) {
-      double acc = 0.0;
-      for (uint32_t k = 0; k < p->channel_size; ++k) {
-        int lhs_idx = i*p->channel_size+k;
-        int rhs_idx = j*p->channel_size+k;
-        double x = ((double)(lhs[lhs_idx]) - p->lhs_zp);
-        double y = ((double)(rhs[rhs_idx]) - p->rhs_zp);
-        acc += x * y;
-      }
-      float quantized_value = (float)acc * p->scale + p->out_zp;
-      // Clamp the quantized value to int8 range
-      if (quantized_value > 127.0f) {
-        output[out_index++] = 127;
-      } else if (quantized_value < -128.0f) {
-        output[out_index++] = -128;
-      } else {
-        output[out_index++] = (int8_t)roundf(quantized_value);
-      }
-    }
-  }
-}
 
-// A real mat mul here
 void mat_mul_real_int8(
   nn_mat_mul_real_params_t *p,
   int8_t *vpu_buf0, int8_t *vpu_buf1,

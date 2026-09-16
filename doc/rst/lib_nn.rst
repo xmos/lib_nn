@@ -125,6 +125,78 @@ mapped to the operators and source files that implement them.
 - **Data utilities**: repack or reformat tensor data into layouts required by the VPU. e.g. ``bsign_8()``, ``expand_8_to_16()``, ``pad_3_to_4_run()``.
 - **VPU utilities**: copy, move and set memory at word and vector alignment; simulate VPU instructions for C reference implementations. e.g. ``vpu_memcpy()``, ``VLMACCR()``, ``VLSAT()``.
 
+************
+Quantisation
+************
+
+Quantisation represents a real value ``x`` with an integer ``q`` using two
+parameters:
+
+- The **scale** ``s`` is a positive real number giving the distance between
+    adjacent integer values. A smaller scale gives finer precision but covers a
+    smaller real range.
+- The **zero point** ``z`` is the integer that represents real zero. This lets
+    an integer type represent an asymmetric real range while still representing
+    zero exactly.
+
+Following the `LiteRT 8-bit quantisation specification <https://developers.google.com/edge/litert/conversion/tensorflow/quantization/quantization_spec>`_,
+the relationship between the real and quantised values is:
+
+.. math::
+
+    x = (q - z) \times s
+
+Rearranging this gives the quantisation operation:
+
+.. math::
+
+    q = \operatorname{round}\left(\frac{x}{s}\right) + z
+
+For example, with ``s = 0.1`` and ``z = -3``, the value ``0.26`` becomes
+``q = 0``. This integer represents approximately ``(0 - (-3)) * 0.1 = 0.3``.
+The chosen scale and zero point must map the required real range into the
+range of the integer type.
+
+With **symmetric quantisation**, the zero point is fixed at ``z = 0``. The rule
+therefore simplifies to:
+
+.. math::
+
+    q = \operatorname{round}\left(\frac{x}{s}\right)
+
+Requantisation changes the scale of an already quantised value. When both zero
+points are zero:
+
+.. math::
+
+    q_{out} \approx
+    \operatorname{round}\left(q_{in}\frac{s_{in}}{s_{out}}\right)
+
+Optimised implementations often split this work into two stages. A
+**preparation function** converts the scale and zero point into fixed-point
+multipliers, shifts, or a small parameter blob. A **compute function** reuses
+those prepared parameters for every tensor element, avoiding repeated setup
+inside the processing loop.
+
+**************
+Dequantisation
+**************
+
+Dequantisation maps an integer back to its approximate real value using the
+same scale and zero point:
+
+.. math::
+
+    x = (q - z) \times s
+
+For symmetric quantisation, ``z = 0``, so this simplifies to ``x = q * s``.
+For example, with ``s = 0.1``, the integer ``3`` becomes ``0.3``. Rounding
+during quantisation means this may not exactly reproduce the original value.
+
+Dequantisation may use the same two-stage pattern: preparation transforms the
+scale into a representation suited to the target, then the compute stage
+applies it to every integer element.
+
 **********************
 Implementation Details
 **********************
@@ -152,5 +224,3 @@ nn_layers.h
 
 .. doxygenfile:: nn_layers.h
    :project: lib_nn
-
-Where the number of output (input) channels is not a multiple of 16 (32) -- and where the function allows this -- there will be an output (input) channel tail. The tail is the last channels which do not form a complete group. Some tensors, in particular the bias-shift-scale tensors, require that tails be padded. Whether padding must be zeros, or if it is safe to use arbitrary values, is specified by the function.
