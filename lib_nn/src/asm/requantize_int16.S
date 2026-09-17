@@ -70,7 +70,7 @@ requantise_tensor_16_loop_entry:
 
 #endif
 
-#if defined(__VX4A__) || defined(__VX4B__)
+#if defined(__VX4B__)
 
 #define FUNCTION_NAME requantize_int16_tensor_asm
 #define NSTACKWORDS 12

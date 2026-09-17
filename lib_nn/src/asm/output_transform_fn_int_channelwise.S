@@ -136,7 +136,7 @@ FUNCTION_NAME:
 
 #endif
 
-#if (defined(__VX4A__) || defined(__VX4B__))
+#if defined(__VX4B__)
 
 #define FUNCTION_NAME output_transform_fn_int_channelwise_asm
 
@@ -189,4 +189,4 @@ FUNCTION_NAME:
 .resource_list_empty FUNCTION_NAME, "tail_callees"
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
 
-#endif // defined(__VX4A__) || defined(__VX4B__)
+#endif // defined(__VX4B__)

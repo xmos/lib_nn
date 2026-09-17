@@ -105,9 +105,10 @@ static inline int ceil_log2(uint32_t a) {
   unsigned x;
   #ifdef __XS3A__
     asm("clz %0, %1" : "=r"(x) : "r"(a));
-  #endif
-  #if defined(__VX4A__) || defined(__VX4B__)
+  #elif defined(__VX4B__)
     asm("xm.clz %0, %1" : "=r"(x) : "r"(a));
+  #else
+  #error "Unsupported architecture"
   #endif
 
   unsigned y = 31 - x;

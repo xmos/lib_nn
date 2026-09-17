@@ -68,7 +68,7 @@ FUNCTION_NAME:
 
 #endif // __XS3A__
 
-#if defined(__VX4A__) || defined(__VX4B__)
+#if defined(__VX4B__)
 
 /*
 extern "C" int8_t *output_transform_fn_binary_asm(

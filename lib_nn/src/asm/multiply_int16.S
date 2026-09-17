@@ -74,7 +74,7 @@ skip:
 
 #endif
 
-#if defined(__VX4A__) || defined(__VX4B__)
+#if defined(__VX4B__)
 
 #define FUNCTION_NAME multiply_int16_tensor_asm
 #define NSTACKWORDS 8
