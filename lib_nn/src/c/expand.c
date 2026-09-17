@@ -3,7 +3,7 @@
 
 #include "nn_layers.h"
 
-#if NN_USE_REF
+#ifdef NN_USE_REF
 void expand_8_to_16_ref(int16_t *out, int8_t *in, int N) {
     for(int i = 0; i < N; i++) {
         out[i] = in[i];

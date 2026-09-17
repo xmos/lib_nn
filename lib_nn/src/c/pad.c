@@ -11,7 +11,7 @@ void pad_3_to_4_prepare(uint32_t * n_3,
     *n_3 = height*width;
 }
 
-#if NN_USE_REF
+#ifdef NN_USE_REF
 
 void pad_1_to_4_ref(int8_t outputs[], int8_t inputs[], uint32_t N, uint32_t pad_val){
 
@@ -86,7 +86,7 @@ void pad_3_to_4_run_impl(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32
 #endif
 
 void pad_1_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N, uint32_t pad_val) {
-#if NN_USE_REF
+#ifdef NN_USE_REF
     pad_1_to_4_ref(outputs, inputs, N, pad_val);
 #else
     pad_1_to_4_asm((int32_t *)outputs, (int32_t *)inputs, N, pad_val);
@@ -94,7 +94,7 @@ void pad_1_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N, uint32_t pad_
 }
 
 void pad_3_to_4_run(int8_t outputs[], int8_t inputs[], uint32_t N_3, uint32_t pad_val) {
-#if NN_USE_REF
+#ifdef NN_USE_REF
     pad_3_to_4_ref(outputs, inputs, N_3, pad_val);
 #else
     pad_3_to_4_run_impl(outputs, inputs, N_3, pad_val);

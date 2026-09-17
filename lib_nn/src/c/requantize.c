@@ -27,7 +27,7 @@ int requantize_int16_tensor_blob(void *blob, float input_scaler,
     return 1;
 }
 
-#if NN_USE_REF
+#ifdef NN_USE_REF
 void requantize_int16_tensor_ref(int16_t *output, int16_t *input,
                                  int tensor_length, void *blob) {
     int16_t *multipliers = (int16_t *)blob;

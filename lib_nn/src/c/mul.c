@@ -27,7 +27,7 @@ int multiply_int16_tensor_blob(void *output, float input1_scaler,
     return 1;
 }
 
-#if NN_USE_REF
+#ifdef NN_USE_REF
 void multiply_int16_tensor_ref(int16_t *output, int16_t *input1,
                                int16_t *input2, int tensor_length, void *blob) {
     int16_t *multipliers = (int16_t *)blob;

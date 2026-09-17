@@ -4,7 +4,7 @@
 
 #include "nn_layers.h"
 
-#if NN_USE_REF
+#ifdef NN_USE_REF
 void lookup8_ref(uint8_t *Y, const uint8_t *X, const uint8_t *lut,
                  const unsigned elm_start, const unsigned elm_count) {
   for (unsigned i = elm_start; i < elm_start + elm_count; i++) {

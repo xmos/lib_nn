@@ -34,7 +34,7 @@ int add_int16_tensor_blob(void *output,
     return 1;
 }
 
-#if NN_USE_REF
+#ifdef NN_USE_REF
 void add_int16_tensor_ref(int16_t *output, int16_t *input1, int16_t *input2, int tensor_length, void *blob) {
     int16_t *multipliers = (int16_t *) blob;
     const unsigned shift = 14;

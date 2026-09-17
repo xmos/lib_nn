@@ -17,7 +17,7 @@ int quantize_int16_tensor_blob(void *output,
 }
 
 
-#if NN_USE_REF
+#ifdef NN_USE_REF
 void quantize_int16_tensor_ref(int16_t *output, float *input, int tensor_length, void *blob) {
     for(int i = 0; i < tensor_length; i++) {
         float a = input[i] * ((float *) blob)[0];

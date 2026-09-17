@@ -22,7 +22,7 @@ int dequantize_int16_tensor_blob(void *output,
     return 1;
 }
 
-#if NN_USE_REF
+#ifdef NN_USE_REF
 void dequantize_int16_tensor_ref(float *output, int16_t *input, int tensor_length, void *blob) {
     for(int i = 0; i < tensor_length; i++) {
         float a;
