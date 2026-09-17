@@ -12,12 +12,6 @@
 #include "nn_operator.h"
 #include "vpu_sim.h"
 
-static int32_t clamp(int32_t v, int32_t lo, int32_t hi){
-    if (v < lo) return lo;
-    if (v > hi) return hi;
-    return v;
-}
-
 static const signed vlsat_shr = 1;
 static const unsigned vlmul_shr = 14;
 static const signed vdepth8_shr = 8;
@@ -75,12 +69,13 @@ void mul_boggle(nn_mul_params_t * params,
     }
 }
 
-extern void mul_elementwise_asm(
-    const int8_t* in1_data, 
-    const int8_t* in2_data, 
-    int element_count, 
-    nn_mul_params_t * params, 
-    int8_t * out_data);
+#ifdef NN_USE_REF
+static 
+int32_t clamp(int32_t v, int32_t lo, int32_t hi){
+    if (v < lo) return lo;
+    if (v > hi) return hi;
+    return v;
+}
 
 void mul_elementwise_ref(const int8_t* in1_data, const int8_t* in2_data, int element_count, nn_mul_params_t * params, int8_t * out_data)
 {
@@ -114,6 +109,16 @@ void mul_elementwise_ref(const int8_t* in1_data, const int8_t* in2_data, int ele
     out_data[i] = (int8_t)vdepth8_output;
   }
 }
+
+#else
+extern void mul_elementwise_asm(
+    const int8_t* in1_data, 
+    const int8_t* in2_data, 
+    int element_count, 
+    nn_mul_params_t * params, 
+    int8_t * out_data);
+
+#endif // NN_USE_REF
 
 void mul_elementwise(
     const int8_t* in1_data, 

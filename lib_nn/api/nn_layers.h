@@ -53,7 +53,9 @@ struct quadratic_function_table {
 
 typedef struct quadratic_function_table quadratic_function_table_t;
 
-/** @brief Function from one floating-point value to another. */
+/** @brief Function pointer from one floating-point value to another. 
+ * Used by @ref quadratic_approximation_generator().
+*/
 typedef float (*float_function_t)(float x);
 
 /**
