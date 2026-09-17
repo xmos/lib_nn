@@ -81,7 +81,7 @@ output_transform_16_unzip_loop:
 
 #endif // defined(__XS3A__)
 
-#if (defined(__VX4A__) || defined(__VX4B__))
+#if defined(__VX4B__)
 
 #define FUNCTION_NAME output_transform_fn_int16_impl_asm
 #define NSTACKWORDS 8
@@ -140,4 +140,4 @@ FUNCTION_NAME:
 .resource_list_empty FUNCTION_NAME, "tail_callees"
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
 
-#endif // defined(__VX4A__) || defined(__VX4B__)
+#endif // defined(__VX4B__)

@@ -24,6 +24,8 @@ void larq_ref_bconv2d_int8_out(
 
 int pseudo_rand(int* seed);
 
+int8_t saturate_output_int8(int value);
+
 void pick_threshold_params(int32_t* thresholds, const unsigned chans_out,
                            const unsigned receptive_volume);
 

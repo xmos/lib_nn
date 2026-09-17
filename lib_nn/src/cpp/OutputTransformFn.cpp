@@ -749,6 +749,7 @@ int8_t *output_transform_fn_int_channelwise_vpu(
   const int32_t group_channel_offset = output_channel_group * VPU_INT16_EPV;
   const int32_t remaining_channels = output_slice_channel_count - group_channel_offset;
   const int32_t output_count = min_int32(remaining_channels, (const int32_t)VPU_INT16_EPV);
+  multipliers_and_biases += output_channel_group * VPU_INT16_EPV * 3;
   return output_transform_fn_int_channelwise_asm(params, Y, A, multipliers_and_biases, output_count);
 }
 #endif

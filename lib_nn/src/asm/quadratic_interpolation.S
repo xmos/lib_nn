@@ -97,7 +97,7 @@ zero_offset_9_bit:
     .cc_bottom FUNCTION_NAME.function
 #endif
 
-#if defined(__VX4A__) || defined(__VX4B__)
+#if defined(__VX4B__)
 
 #define FUNCTION_NAME quadratic_interpolation_128_asm
 #define NSTACKWORDS 20

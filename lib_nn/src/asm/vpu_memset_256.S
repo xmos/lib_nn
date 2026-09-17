@@ -64,7 +64,7 @@ FUNCTION_NAME:
 
 
 
-#if defined(__VX4A__) || defined(__VX4B__)
+#if defined(__VX4B__)
 // void vpu_memset_256_asm(void * dst, const void * src, unsigned byte_count);
 
 #define FUNCTION_NAME vpu_memset_256_asm
