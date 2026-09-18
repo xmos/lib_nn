@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "quadratic_approximation.h"
-#include "quadratic_interpolation.h"
+#include "nn_api.h"
+#include "nn_layers.h"
 #include "quadratic_approximation_tables.h"
 
 #include "unity.h"
@@ -58,8 +58,8 @@ static const float input_scalers[TEST_COUNT_FULL] = {
 };
 
 static void validate_table(unsigned function_index, uint8_t *table) {
-    __attribute__((aligned(8))) int16_t inputs[N];
-    __attribute__((aligned(8))) int16_t outputs[N];
+    DWORD_ALIGNED int16_t inputs[N];
+    DWORD_ALIGNED int16_t outputs[N];
 
     for (int i = 0; i < N; i++) {
         inputs[i] = i * (65536 / N) - 32768;
@@ -78,7 +78,7 @@ static void validate_table(unsigned function_index, uint8_t *table) {
 #ifdef TEST_BUILD_NATIVE
 TEST(group_quadratic_interpolation, test_quadratic_approximation_generator) {
     for (unsigned f = 0; f < TEST_COUNT_FULL; f++) {
-        __attribute__((aligned(8))) quadratic_function_table_t table;
+        DWORD_ALIGNED quadratic_function_table_t table;
         double square_error;
         int max_error;
 

@@ -44,12 +44,6 @@ static inline int32_t sat_s32(const int64_t acc64) {
   return (int32_t)acc64;
 }
 
-// static inline void mulsat_s32(int32_t* acc32, const int8_t a, const int8_t b)
-// {
-//     int64_t acc64 = *acc32 + a*b;
-//     *acc32 = sat_s32(acc64);
-// }
-
 static inline int8_t vlsat_single_s8(int32_t acc, uint16_t shr,
                                      const int8_t sat_lo, const int8_t sat_hi) {
   int64_t acc64 = acc;

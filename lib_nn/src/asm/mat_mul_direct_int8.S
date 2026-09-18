@@ -36,7 +36,8 @@
 
 
 /*
-extern "C" void mat_mul_impl_asm(void *params, VPURingBuffer *A, int8_t *X, int32_t output_channel_group);
+extern "C" void mat_mul_direct_int8_impl_asm(
+    void *params, VPURingBuffer *A, int8_t *X, int32_t output_channel_group);
 */
 
 #define FUNCTION_NAME mat_mul_direct_int8_impl_asm
@@ -150,7 +151,7 @@ FUNCTION_NAME:
 #if defined(__VX4B__)
 
 /*
-void mat_mul_impl_asm(void *params, VPURingBuffer *A, int8_t *X, int32_t output_channel_group);
+void mat_mul_direct_int8_impl_asm(void *params, VPURingBuffer *A, int8_t *X, int32_t output_channel_group);
 */
 
 #define PARAMS_bytes_per_kernel_channel 0

@@ -609,7 +609,7 @@ OutputTransformFnInt8_Channelwise::Quantizer::quantise_activation(
 
     int16_t m = float_to_int16(activationParams[ch].multiplier, M);
     q.multipliers.push_back(m);
-    int16_t b = float_to_int16(activationParams[ch].bias, B);
+    int16_t b = float_to_int16_with_bias(activationParams[ch].bias, B);
     q.biases.push_back(b);
 
   }

@@ -123,7 +123,7 @@ output_loop:
     { ldw r3, sp[NSTACKWORDS+4]     ; nop                           }   // r3: scale
     fsub r0, r0, r1             // r0: acc-in_zero_sum
     fmacc r0, r2, r0, r3        // r0: r0*scale+out_zero
-    bl round8                   // r0: round(r0) in int8_t
+    bl round8_asm                   // r0: round(r0) in int8_t
     ldd r2, r1, sp[1]           // r1: output_ptr, r2: channel_cnt
     st8 r0, r1[r6]              // store result to output
     { add r1, r1, 1                 ; sub r2, r2, 1                 }   // r2: num of channel out left
@@ -149,7 +149,7 @@ maccr_tail_loop:
     { bau r11                       ; nop                   }
 
     .cc_bottom FUNCTION_NAME.function
-    .set FUNCTION_NAME.nstackwords, NSTACKWORDS + round8.nstackwords
+    .set FUNCTION_NAME.nstackwords, NSTACKWORDS + round8_asm.nstackwords
     .globl FUNCTION_NAME.nstackwords
     .set FUNCTION_NAME.maxcores,1
     .globl FUNCTION_NAME.maxcores
@@ -301,7 +301,7 @@ output_loop:
     mv a3, a7                       // a3: scale
     xm.fsub a0, a0, a1              // a0: acc-in_zero_sum
     xm.fmacc a0, a2, a0, a3         // a0: a0*scale+out_zero
-    call round8                     // a0: round(a0) in int8_t
+    call round8_asm                 // a0: round(a0) in int8_t
     xm.lddsp a2, a1, STACK_A1_TMP   // a1: output_ptr, a2: channel_cnt
     xm.st8 a0, s4(a1)               // store result to output
     { add a1, a1, 1                 ; addi a2, a2, -1               }   // a2: num of channel out left
@@ -328,7 +328,7 @@ maccr_tail_loop:
 
 .size FUNCTION_NAME, . -FUNCTION_NAME
 .resource_const FUNCTION_NAME, "stack_frame_bytes",  ROUND_UP(NSTACKBYTES, 16)
-.resource_list_add   FUNCTION_NAME, "callees", round8
+.resource_list_add   FUNCTION_NAME, "callees", round8_asm
 .resource_list_empty FUNCTION_NAME, "tail_callees"
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
 

@@ -36,15 +36,6 @@ extern "C"
 #include "unity_fixture.h"
 #include "vpu_sim.h"
 
-static void set_target(void)
-{
-#if defined(__VX4B__)
-    SetNNTargetArch(TARGET_ARCH_VX4A);
-#else
-    SetNNTargetArch(TARGET_ARCH_XS3A);
-#endif
-}
-
 static int16_t get_multiplier(void)
 {
     return (NN_ARCH == TARGET_ARCH_XS3A)
@@ -109,10 +100,7 @@ static int8_t *run_clamped_test(
 }
 
 TEST_GROUP(group_output_transforms_clamped);
-TEST_SETUP(group_output_transforms_clamped)
-{
-    set_target();
-}
+TEST_SETUP(group_output_transforms_clamped) {}
 TEST_TEAR_DOWN(group_output_transforms_clamped) {}
 TEST_GROUP_RUNNER(group_output_transforms_clamped)
 {
