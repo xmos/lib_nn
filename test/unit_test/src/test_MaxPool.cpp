@@ -2,8 +2,10 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 #include <cmath>
+#include <cstring>
 
 #include "AggregateFn.hpp"
+#include "OutputTransformFn.hpp"
 
 extern "C"
 {
@@ -41,6 +43,7 @@ TEST_GROUP_RUNNER(group_maxpool)
     RUN_TEST_CASE(group_maxpool, test_maxpool_zeros);
     RUN_TEST_CASE(group_maxpool, test_maxpool_random);
     RUN_TEST_CASE(group_maxpool, test_maxpool_smaller_kernel);
+    RUN_TEST_CASE(group_maxpool, test_output_transform_maxpool);
 }
 
 TEST(group_maxpool, test_maxpool_simple)
@@ -177,6 +180,43 @@ TEST(group_maxpool, test_maxpool_smaller_kernel)
         );
         const int8_t actual = ((int8_t *)&accumulator.vR)[channel];
         TEST_ASSERT_EQUAL_INT8(expected, actual);
+    }
+}
+
+TEST(group_maxpool, test_output_transform_maxpool)
+{
+    constexpr int8_t sentinel = -128;
+    WORD_ALIGNED VPURingBuffer accumulator = {};
+    int16_t multipliers_and_biases[VPU_INT16_EPV] = {};
+
+    for (unsigned channel = 0; channel < VPU_INT16_EPV; ++channel)
+    {
+        ((int8_t *)&accumulator.vR)[channel] =
+            (int8_t)(channel * 13 - 97);
+    }
+
+    for (unsigned output_count = 1; output_count <= VPU_INT16_EPV;
+         ++output_count)
+    {
+        nn::otfn_int8_channelwise_params_t params = {
+            (int32_t)output_count, 0};
+        // allocating 4 bytes before the array and 1 after
+        // to check that we only write in the region of interest
+        // 4 bytes before to be able to word align for xs3
+        WORD_ALIGNED int8_t output[VPU_INT16_EPV + 5];
+        std::memset(output, sentinel, sizeof(output));
+
+        int8_t *const end = nn::otfn_int8_maxpool(
+            &params, &output[4], &accumulator, 0, multipliers_and_biases);
+
+        TEST_ASSERT_EQUAL_PTR(&output[4 + output_count], end);
+        TEST_ASSERT_EQUAL_INT8(sentinel, output[3]);
+        for (unsigned channel = 0; channel < output_count; ++channel)
+        {
+            TEST_ASSERT_EQUAL_INT8(
+                ((int8_t *)&accumulator.vR)[channel], output[4 + channel]);
+        }
+        TEST_ASSERT_EQUAL_INT8(sentinel, output[4 + output_count]);
     }
 }
 

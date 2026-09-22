@@ -30,7 +30,7 @@ Features
 Known issues
 ************
 
-* None
+* ``mat_mul_direct_int16x8`` is not implemented for XS3. If called from an XS3 target, will trow an assertion.
 
 ****************
 Development repo

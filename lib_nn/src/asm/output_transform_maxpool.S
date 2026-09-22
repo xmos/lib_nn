@@ -1,6 +1,6 @@
 // Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
-#define FUNCTION_NAME output_transform_maxpool_impl_asm
+#define FUNCTION_NAME output_transform_maxpool_asm
 
     //int8_t *OT_int8::output_transform_maxpool( Ignored                     r0/x10
     //                                      int8_t *Y,                       r1/x11
@@ -76,7 +76,7 @@ FUNCTION_NAME:
     addi x13, x14, 0
     { xm.vldr x12                            ; xm.mkmsk x12, x13 }
     xm.vstrpv x11, x12
-    {xm.retsp 0                              ; add x10, x11, x13}
+    { ret                                    ; add x10, x11, x13 }
 
 .size FUNCTION_NAME, . -FUNCTION_NAME
 .resource_const FUNCTION_NAME, "stack_frame_bytes",  0

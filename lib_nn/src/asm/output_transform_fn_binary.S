@@ -80,7 +80,6 @@ extern "C" int8_t *output_transform_fn_binary_asm(
 */
 
 #define FUNCTION_NAME   output_transform_fn_binary_asm
-#define NSTACKWORDS     0
 
 #define out             a0
 #define acc             a1
@@ -93,16 +92,15 @@ extern "C" int8_t *output_transform_fn_binary_asm(
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
 FUNCTION_NAME:
-    xm.entsp NSTACKWORDS
     li x28, 0x100
     { xm.vsetc x28      ; slli og, og, 5    }
     { add th, th, og    ; xm.vldr acc       }
     { xm.vladd th       ; xm.mkmsk tmp, 2   }
     { xm.vdepth1        ; nop               }
     { addi out, out, 2  ; xm.vstrpv out, tmp}
-    xm.retsp NSTACKWORDS
+    ret
 .size FUNCTION_NAME, . -FUNCTION_NAME
-.resource_const FUNCTION_NAME, "stack_frame_bytes",  NSTACKWORDS
+.resource_const FUNCTION_NAME, "stack_frame_bytes",  0
 .resource_list_empty FUNCTION_NAME, "callees"
 .resource_list_empty FUNCTION_NAME, "tail_callees"
 .resource_list_empty FUNCTION_NAME, "parallel_callees"

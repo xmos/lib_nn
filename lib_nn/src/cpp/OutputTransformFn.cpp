@@ -766,23 +766,8 @@ int8_t *nn::otfn_int8_channelwise(
 }
 
 //----------------------- INT8 MAXPOOL -----------------------
-extern "C" int8_t *output_transform_maxpool_impl_asm(
-    const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
-    int16_t *multipliers_and_biases, int output_count);
-
-#ifndef NN_USE_REF
-int8_t *output_transform_fn_int_maxpool_impl_asm_stub(
-    const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
-    int32_t output_channel_group, int16_t *multipliers_and_biases) {
-  int output_count = std::min(
-      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
-      (int32_t)VPU_INT16_EPV);
-  return output_transform_maxpool_impl_asm(
-      params, Y, A, multipliers_and_biases, output_count);
-}
-#endif
-
-int8_t *output_transform_fn_int_maxpool_impl(
+#ifdef NN_USE_REF
+int8_t *output_transform_fn_int_maxpool_ref(
     const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
     int32_t output_channel_group, int16_t *multipliers_and_biases) {
 
@@ -798,13 +783,29 @@ int8_t *output_transform_fn_int_maxpool_impl(
   return Y + output_count;
 }
 
+#else
+extern "C" int8_t *output_transform_maxpool_asm(
+    const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
+    int16_t *multipliers_and_biases, int output_count);
+
+int8_t *output_transform_fn_int_maxpool_asm_impl(
+    const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
+    int32_t output_channel_group, int16_t *multipliers_and_biases) {
+  int output_count = std::min(
+      params->output_slice_channel_count - output_channel_group * VPU_INT16_EPV,
+      (int32_t)VPU_INT16_EPV);
+  return output_transform_maxpool_asm(
+      params, Y, A, multipliers_and_biases, output_count);
+}
+#endif
+
 int8_t *nn::otfn_int8_maxpool(const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
                                                  int32_t output_channel_group, int16_t *multipliers_and_biases) {
 #ifdef NN_USE_REF
-  return output_transform_fn_int_maxpool_impl(
+  return output_transform_fn_int_maxpool_ref(
       params, Y, A, output_channel_group, multipliers_and_biases);
 #else
-  return output_transform_fn_int_maxpool_impl_asm_stub(
+  return output_transform_fn_int_maxpool_asm_impl(
       params, Y, A, output_channel_group, multipliers_and_biases);
 #endif  // NN_USE_REF
 }

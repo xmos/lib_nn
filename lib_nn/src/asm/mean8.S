@@ -287,12 +287,8 @@ output_loop:
     { srli s4, s4, 16               ; li a1, 23                     }   // a1: 23
     { or a0, s5, s4                 ; li s4, 0                      }   // a0: 32bit accumulator, s4: 0
     // Convert int32 to float
-    srai a2, a0, 16
-    srai a2, a2, 16 // a2: sign
-    xm.brff a2, int32_to_f32_pack_not_neg
-    neg a0, a0
-    int32_to_f32_pack_not_neg:
-        xm.fmake a0, a2, a1, s4, a0
+    add a1, a1, -32
+    xm.fmakes a0, a1, a0, s4
     // Convert int32 to float done
     sub s7, s7, s8                  // s7: rollback for vD
     xm.eq s5, s7, s8                // a2: out zero point, s5: last output loop
