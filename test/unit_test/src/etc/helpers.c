@@ -11,6 +11,12 @@ int pseudo_rand(int *seed) {
   return *seed;
 }
 
+int8_t saturate_output_int8(int value) {
+  value = value < INT8_MIN ? INT8_MIN : value;
+  value = value > INT8_MAX ? INT8_MAX : value;
+  return (int8_t)value;
+}
+
 void pick_threshold_params(int32_t *thresholds, const unsigned chans_out,
                            const unsigned receptive_volume) {
   for (int i = 0; i < chans_out; i++)

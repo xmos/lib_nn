@@ -21,3 +21,9 @@
 #else
 #define WORD_ALIGNED
 #endif
+
+#if defined(__xcore__)
+#define DWORD_ALIGNED __attribute__((aligned(8)))
+#else
+#define DWORD_ALIGNED
+#endif

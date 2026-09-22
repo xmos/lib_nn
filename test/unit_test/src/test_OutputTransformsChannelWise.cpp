@@ -27,15 +27,6 @@ for each channel c in parallel:
 
 #define OUTPUT_SENTINEL 99
 
-static void set_target(void)
-{
-#if defined(__VX4B__)
-    SetNNTargetArch(TARGET_ARCH_VX4A);
-#else
-    SetNNTargetArch(TARGET_ARCH_XS3A);
-#endif
-}
-
 static int16_t get_multiplier()
 {
     return (NN_ARCH == TARGET_ARCH_XS3A)
@@ -70,27 +61,46 @@ static int8_t channelwise_reference(int32_t accumulator, int16_t initial_shift,
     value = (int)vpu_saturate(value, 16);
     value = (int)vpu_saturate(value + bias, 16);
     value = (value + (1 << (final_shr + 7))) >> (final_shr + 8);
-    return (int8_t)vpu_saturate_fixed(value, 8);
+    return saturate_output_int8(value);
 }
 
 static int8_t *run_channelwise_test(
-    int out_count, 
+    int out_count,
     int16_t final_shr,
     const int32_t *accs,
     const int16_t *init_sh,
     const int16_t *mults,
-    const int16_t *biases, int8_t *out)
+    const int16_t *biases,
+    int32_t out_chgroup,
+    int8_t *out)
 {
-    const int32_t out_chgroup = 0; 
     VPURingBuffer acc{};
-    int16_t params_mem[VPU_INT16_EPV * 3] = {};
+    int16_t params_mem[VPU_INT16_EPV * 6] = {};
+    const int group_offset = out_chgroup * VPU_INT16_EPV;
+    const int channels_in_group =
+        (out_count - group_offset < VPU_INT16_EPV)
+            ? out_count - group_offset
+            : VPU_INT16_EPV;
 
-    for (int ch = 0; ch < out_count; ++ch)
+    for (int ch = 0; ch < channels_in_group; ++ch)
     {
-        acc.SetAccu(ch, accs[ch]);
-        params_mem[ch] = init_sh[ch];
-        params_mem[out_count + ch] = mults[ch];
-        params_mem[out_count * 2 + ch] = biases[ch];
+        acc.SetAccu(ch, accs[group_offset + ch]);
+    }
+
+    for (int group = 0; group * VPU_INT16_EPV < out_count; ++group)
+    {
+        const int start = group * VPU_INT16_EPV;
+        const int count = (out_count - start < VPU_INT16_EPV)
+                              ? out_count - start
+                              : VPU_INT16_EPV;
+        int16_t *group_params = &params_mem[group * VPU_INT16_EPV * 3];
+
+        for (int ch = 0; ch < count; ++ch)
+        {
+            group_params[ch] = init_sh[start + ch];
+            group_params[count + ch] = mults[start + ch];
+            group_params[count * 2 + ch] = biases[start + ch];
+        }
     }
 
     nn::OT_int8_channelwise ot(out_count, final_shr);
@@ -99,10 +109,7 @@ static int8_t *run_channelwise_test(
 }
 
 TEST_GROUP(group_output_transforms_channel_wise);
-TEST_SETUP(group_output_transforms_channel_wise)
-{
-    set_target();
-}
+TEST_SETUP(group_output_transforms_channel_wise) {}
 TEST_TEAR_DOWN(group_output_transforms_channel_wise) {}
 TEST_GROUP_RUNNER(group_output_transforms_channel_wise)
 {
@@ -111,6 +118,7 @@ TEST_GROUP_RUNNER(group_output_transforms_channel_wise)
     RUN_TEST_CASE(group_output_transforms_channel_wise, Test_ot_chwise_sats);
     RUN_TEST_CASE(group_output_transforms_channel_wise, Test_ot_chwise_neg);
     RUN_TEST_CASE(group_output_transforms_channel_wise, Test_ot_chwise_random);
+    RUN_TEST_CASE(group_output_transforms_channel_wise, Test_ot_chwise_multiple_groups);
 }
 
 TEST(group_output_transforms_channel_wise, Test_ot_chwise_simple)
@@ -171,7 +179,8 @@ TEST(group_output_transforms_channel_wise, Test_ot_chwise_zeros)
     }
 
     out[output_count] = OUTPUT_SENTINEL;
-    int8_t *end = run_channelwise_test(output_count, final_shr, accs, init_sh, mults, biases, out);
+    int8_t *end = run_channelwise_test(
+        output_count, final_shr, accs, init_sh, mults, biases, 0, out);
     TEST_ASSERT_EQUAL_PTR(out + output_count, end);
     TEST_ASSERT_EQUAL_INT8_ARRAY(expected, out, output_count);
     TEST_ASSERT_EQUAL_INT8(OUTPUT_SENTINEL, out[output_count]);
@@ -182,10 +191,12 @@ TEST(group_output_transforms_channel_wise, Test_ot_chwise_sats)
     const int output_count = VPU_INT16_EPV;
     const int16_t multiplier = get_multiplier();
     const int16_t final_shr = 0;
+    const int16_t boundary_bias =
+        (NN_ARCH == TARGET_ARCH_XS3A) ? 0 : -1;
     const int8_t int8_max = (int8_t)vpu_saturate_fixed(INT8_MAX, 8);
     const int8_t int8_min = INT8_MIN; //Note: vdepth8 is corrected in xs3
     const int32_t accs[output_count] = {
-        INT16_MAX, INT16_MIN, INT16_MAX, INT16_MIN,
+        INT16_MAX, -32640, INT16_MIN, -32641,
         INT16_MAX, INT16_MIN, INT16_MAX, INT16_MIN,
         INT16_MAX, INT16_MIN, INT16_MAX, INT16_MIN,
         INT16_MAX, INT16_MIN, INT16_MAX, INT16_MIN
@@ -193,11 +204,11 @@ TEST(group_output_transforms_channel_wise, Test_ot_chwise_sats)
     int16_t init_sh[output_count] = {};
     int16_t mults[output_count];
     const int16_t biases[output_count] = {
-        -1, -2, -3, -4, -5, -6, -7, -8,
+        0, boundary_bias, 0, boundary_bias, -5, -6, -7, -8,
         -9, -10, -11, -12, -13, -14, -15, -16
     };
     const int8_t expected[output_count] = {
-        int8_max, int8_min, int8_max, int8_min, int8_max, int8_min, int8_max, int8_min,
+        int8_max, -127, int8_min, int8_min, int8_max, int8_min, int8_max, int8_min,
         int8_max, int8_min, int8_max, int8_min, int8_max, int8_min, int8_max, int8_min
     };
     int8_t out[output_count + 1] = {};
@@ -208,7 +219,8 @@ TEST(group_output_transforms_channel_wise, Test_ot_chwise_sats)
     }
 
     out[output_count] = OUTPUT_SENTINEL;
-    int8_t *end = run_channelwise_test(output_count, final_shr, accs, init_sh, mults, biases, out);
+    int8_t *end = run_channelwise_test(
+        output_count, final_shr, accs, init_sh, mults, biases, 0, out);
     TEST_ASSERT_EQUAL_PTR(out + output_count, end);
     TEST_ASSERT_EQUAL_INT8_ARRAY(expected, out, output_count);
     TEST_ASSERT_EQUAL_INT8(OUTPUT_SENTINEL, out[output_count]);
@@ -236,7 +248,8 @@ TEST(group_output_transforms_channel_wise, Test_ot_chwise_neg)
     }
 
     out[output_count] = OUTPUT_SENTINEL;
-    int8_t *end = run_channelwise_test(output_count, final_shr, accs, init_sh, mults, biases, out);
+    int8_t *end = run_channelwise_test(
+        output_count, final_shr, accs, init_sh, mults, biases, 0, out);
     TEST_ASSERT_EQUAL_PTR(out + output_count, end);
     TEST_ASSERT_EQUAL_INT8_ARRAY(expected, out, output_count);
     TEST_ASSERT_EQUAL_INT8(OUTPUT_SENTINEL, out[output_count]);
@@ -245,7 +258,6 @@ TEST(group_output_transforms_channel_wise, Test_ot_chwise_neg)
 TEST(group_output_transforms_channel_wise, Test_ot_chwise_random)
 {
     const int output_count = VPU_INT16_EPV;
-    const int16_t multiplier = get_multiplier();
     int seed = 0x4F1BBCDC;
     const int16_t final_shr = (int16_t)((uint16_t)pseudo_rand_int16(&seed) % 4 + 1);
     int32_t accs[output_count];
@@ -259,12 +271,46 @@ TEST(group_output_transforms_channel_wise, Test_ot_chwise_random)
     {
         accs[ch] = pseudo_rand_int32(&seed);
         init_sh[ch] = (int16_t)((uint16_t)pseudo_rand_int16(&seed) % 4);
-        mults[ch] = multiplier;
+        mults[ch] = pseudo_rand_int16(&seed);
         biases[ch] = pseudo_rand_int16(&seed);
         expected[ch] = channelwise_reference(accs[ch], init_sh[ch], mults[ch], biases[ch], final_shr);
     }
     out[output_count] = OUTPUT_SENTINEL;
-    int8_t *end = run_channelwise_test(output_count, final_shr, accs, init_sh, mults, biases, out);
+    int8_t *end = run_channelwise_test(
+        output_count, final_shr, accs, init_sh, mults, biases, 0, out);
+    TEST_ASSERT_EQUAL_PTR(out + output_count, end);
+    TEST_ASSERT_EQUAL_INT8_ARRAY(expected, out, output_count);
+    TEST_ASSERT_EQUAL_INT8(OUTPUT_SENTINEL, out[output_count]);
+}
+
+TEST(group_output_transforms_channel_wise, Test_ot_chwise_multiple_groups)
+{
+    const int output_count = VPU_INT16_EPV + 4;
+    int32_t accs[output_count];
+    int16_t init_sh[output_count] = {};
+    int16_t mults[output_count];
+    int16_t biases[output_count];
+    int8_t expected[output_count];
+    int8_t out[output_count + 1] = {};
+
+    for (int ch = 0; ch < output_count; ++ch)
+    {
+        accs[ch] = 256 * (ch + 1);
+        mults[ch] = (ch < VPU_INT16_EPV) ? get_multiplier()
+                                          : (get_multiplier() >> 1);
+        biases[ch] = (ch < VPU_INT16_EPV) ? 0 : 256;
+        expected[ch] =
+            channelwise_reference(accs[ch], init_sh[ch], mults[ch], biases[ch], 0);
+    }
+
+    out[output_count] = OUTPUT_SENTINEL;
+    int8_t *end = run_channelwise_test(
+        output_count, 0, accs, init_sh, mults, biases, 0, out);
+    TEST_ASSERT_EQUAL_PTR(out + VPU_INT16_EPV, end);
+    TEST_ASSERT_EQUAL_INT8_ARRAY(expected, out, VPU_INT16_EPV);
+
+    end = run_channelwise_test(
+        output_count, 0, accs, init_sh, mults, biases, 1, end);
     TEST_ASSERT_EQUAL_PTR(out + output_count, end);
     TEST_ASSERT_EQUAL_INT8_ARRAY(expected, out, output_count);
     TEST_ASSERT_EQUAL_INT8(OUTPUT_SENTINEL, out[output_count]);

@@ -25,7 +25,7 @@
 #define t                 r11
 
 /*
-extern "C" void mat_mul_impl_asm(MatMulInt8::Params *params, VPURingBuffer *A, int8_t *X, int32_t output_channel_group);
+extern "C" void mat_mul_generic_int8_impl_asm(MatMulInt8::Params *params, VPURingBuffer *A, int8_t *X, int32_t output_channel_group);
 */
 
 #define FUNCTION_NAME mat_mul_generic_int8_impl_asm
@@ -160,7 +160,7 @@ FUNCTION_NAME:
 
 
 
-#if defined(__VX4A__) || defined(__VX4B__)
+#if defined(__VX4B__)
 
 
 #define FUNCTION_NAME mat_mul_generic_int8_impl_asm
@@ -284,5 +284,3 @@ FUNCTION_NAME:
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
 
 #endif
-
-

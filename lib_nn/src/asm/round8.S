@@ -5,10 +5,10 @@
 #include <xs1.h>
 
 /** 
- * int8_t round8(float r)     // round-half-away-from-zero
+ * int8_t round8_asm(float r)     // round-half-away-from-zero
  */
 
-#define FUNCTION_NAME round8
+#define FUNCTION_NAME round8_asm
 
     .text
 	.cc_top FUNCTION_NAME.function,FUNCTION_NAME
@@ -64,9 +64,9 @@ exit:
 
 #endif
 
-#if defined(__VX4A__) || defined(__VX4B__)
+#if defined(__VX4B__)
 
-#define FUNCTION_NAME round8
+#define FUNCTION_NAME round8_asm
 
 .p2align 1
 .globl FUNCTION_NAME

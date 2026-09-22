@@ -62,7 +62,7 @@ ones:
 
 #endif // defined(__XS3A__)
 
-#if (defined(__VX4A__) || defined(__VX4B__))
+#if defined(__VX4B__)
 
 #define FUNCTION_NAME expand_8_to_16_asm
 
@@ -104,4 +104,4 @@ ones:
 .resource_list_empty FUNCTION_NAME, "tail_callees"
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
 
-#endif // defined(__VX4A__) || defined(__VX4B__)
+#endif // defined(__VX4B__)
