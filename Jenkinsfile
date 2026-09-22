@@ -90,8 +90,8 @@ pipeline {
                         stage("Custom CMake test") {
                             steps {
                                 dir("${REPO}/test/custom_cmake_build") {
-                                    sh "cmake -B build_custom_cmake"
-                                    sh "cmake --build build_custom_cmake"
+                                    sh "cmake -B build"
+                                    sh "cmake --build build"
                                     sh "./bin/add_tensor"
                                 }
                             }
@@ -142,7 +142,7 @@ pipeline {
                         stage("Custom CMake test") {
                             steps {
                                 dir("${REPO}/test/custom_cmake_build") {
-                                    sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch v1.0.0"
+                                    sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch vx4"
                                     withTools(params.TOOLS_VERSION_XS) {
                                         sh 'cmake -B build --toolchain=xmos_cmake_toolchain/xs3a.cmake'
                                         sh 'xmake -C build -j$(nproc)'
@@ -185,6 +185,19 @@ pipeline {
                                 }
                             }
                         } // Unit test
+
+                        stage("Custom CMake test") {
+                            steps {
+                                dir("${REPO}/test/custom_cmake_build") {
+                                    sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch vx4"
+                                    withTools(params.TOOLS_VERSION_VX) {
+                                        sh 'cmake -B build --toolchain=xmos_cmake_toolchain/vx4_xcc.cmake'
+                                        sh 'xmake -C build -j$(nproc)'
+                                        sh 'xsim bin/add_tensor.xe'
+                                    }
+                                }
+                            }
+                        } // Custom CMake test
 
                     } // stages
                     post {cleanup {xcoreCleanSandbox()}}
