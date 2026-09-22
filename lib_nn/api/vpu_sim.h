@@ -41,6 +41,12 @@ typedef struct {
 
 typedef xs3_vpu vpu_t;
 
+#if defined(__xcore__) || defined(__riscv_xxcore)
+#define MACC_FPTR __attribute__((fptrgroup("macc_functions")))
+#else
+#define MACC_FPTR
+#endif
+
 C_API void VSETC(xs3_vpu* vpu, const vector_mode mode);
 C_API void VCLRDR(xs3_vpu* vpu);
 C_API void VLDR(xs3_vpu* vpu, const void* addr);
@@ -50,10 +56,10 @@ C_API void VSTR(const xs3_vpu* vpu, void* addr);
 C_API void VSTD(const xs3_vpu* vpu, void* addr);
 C_API void VSTC(const xs3_vpu* vpu, void* addr);
 C_API void VSTRPV(const xs3_vpu* vpu, void* addr, unsigned mask);
-C_API void VLMACC(xs3_vpu* vpu, const void* addr);
-C_API void VLMACCR(xs3_vpu* vpu, const void* addr);
-C_API void VLMACCR1(xs3_vpu* vpu, const void* addr);
-C_API void VLMACCRB(xs3_vpu* vpu, const void* addr);
+C_API MACC_FPTR void VLMACC(xs3_vpu* vpu, const void* addr);
+C_API MACC_FPTR void VLMACCR(xs3_vpu* vpu, const void* addr);
+C_API MACC_FPTR void VLMACCR1(xs3_vpu* vpu, const void* addr);
+C_API MACC_FPTR void VLMACCRB(xs3_vpu* vpu, const void* addr);
 C_API void VPOS(xs3_vpu* vpu);
 C_API void VLSAT(xs3_vpu* vpu, const void* addr);
 C_API void VLSAT_FIXED(xs3_vpu* vpu, const void* addr);

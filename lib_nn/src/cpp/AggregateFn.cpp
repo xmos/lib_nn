@@ -144,7 +144,8 @@ This is used for implementing int8 and binary mat mul.
 void mat_mul_generic_impl(const mat_mul_generic_params_t *params, VPURingBuffer *A,
                           int8_t *T, int32_t output_channel_group,
                           int8_t *weights,
-                          void (*macc_inst)(xs3_vpu *vpu, const void *addr)) {
+                          MACC_FPTR void (*macc_inst)(xs3_vpu *vpu,
+                                                      const void *addr)) {
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
 
@@ -243,7 +244,8 @@ MatMulDirectFn::MatMulDirectFn(const ImageGeometry &X, const WindowGeometry &K,
 void mat_mul_direct_impl(const mat_mul_direct_params_t *params, VPURingBuffer *A,
                          int8_t *X, int32_t output_channel_group,
                          int8_t *weights,
-                         void (*macc_inst)(xs3_vpu *vpu, const void *addr)) {
+                         MACC_FPTR void (*macc_inst)(xs3_vpu *vpu,
+                                                     const void *addr)) {
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
 
@@ -358,7 +360,8 @@ void nn::mat_mul_generic_binary(const mat_mul_generic_params_t *params, VPURingB
 void mat_mul_direct16_impl(const mat_mul_direct_params_t *params, VPURingBuffer *A,
                            int16_t *X, int32_t output_channel_group,
                            int16_t *weights,
-                           void (*macc_inst)(xs3_vpu *vpu, const void *addr)) {
+                           MACC_FPTR void (*macc_inst)(xs3_vpu *vpu,
+                                                       const void *addr)) {
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
 
@@ -413,7 +416,7 @@ void nn::mat_mul_direct_int16(const mat_mul_direct_params_t *params,
 void mat_mul_direct16x8_impl(const mat_mul_direct_params_t *params, VPURingBuffer *A,
   int16_t *X, int32_t output_channel_group,
   int8_t *weights,
-  void (*macc_inst)(xs3_vpu *vpu, const void *addr)) {
+  MACC_FPTR void (*macc_inst)(xs3_vpu *vpu, const void *addr)) {
   xs3_vpu vpu_mem;
   xs3_vpu *vpu = &vpu_mem;
 
