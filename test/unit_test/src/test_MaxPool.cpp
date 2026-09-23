@@ -220,20 +220,4 @@ TEST(group_maxpool, test_output_transform_maxpool)
     }
 }
 
-TEST(group_maxpool, Test_AvgPool2D_Global) {
-  TEST_IGNORE_MESSAGE("avgpool2d_global has no implementation");
-}
-
-TEST(group_maxpool, Test_AvgPool2D_Ext) {
-  TEST_IGNORE_MESSAGE("avgpool2d_ext has no implementation");
-}
-
-TEST(group_maxpool, Test_MaxPool2D_Ext) {
-  TEST_IGNORE_MESSAGE("maxpool2d_ext has no implementation");
-}
-
-TEST(group_maxpool, Test_MaxPool2D_Global) {
-  TEST_IGNORE_MESSAGE("maxpool2d_global has no implementation");
-}
-
 } // extern "C"
