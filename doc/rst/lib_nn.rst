@@ -34,7 +34,6 @@ To use this library in an application include ``lib_nn`` in the application's ``
 
 .. code-block:: C
 
-    #include "nn_pooling.h"
     #include "nn_layers.h"
 
 *******************
@@ -80,7 +79,7 @@ At the top level of the hierarchy is the concept of a *network*. A network is a 
 Operators
 ---------
 
-Below the network is an *operator*. An operator is an abstraction representing a certain class of operations. For example, ``avgpool2d`` is an operator that performs 2D average pooling on images by sliding a pooling window of arbitrary size in two dimensions around an input image to produce an output image. An operator is represented semantically in the API by a set of struct definitions and functions capable of performing the necessary arithmetic.
+Below the network is an *operator*. An operator is an abstraction representing a certain class of operations. For example, ``add_elementwise()`` adds two quantized vectors element by element. An operator is represented semantically in the API by a set of struct definitions and functions capable of performing the necessary arithmetic.
 
 Operator Instances
 -------------------
@@ -103,12 +102,9 @@ to a kernel.
 The representation is sometimes the standard tensor layout, and
 sometimes an optimised layout required by the VPU.
 
-For example, ``maxpool2d()`` uses a simple representation: ``X`` and ``Y``
-are pointers to images, while ``x_params`` and ``y_params`` supply their
-shapes. The header specifies row-major memory with channels innermost, so the
-logical element ``X[r,c,p]`` is stored at ``(r * width + c) * channels + p``.
-``maxpool2d_ext()`` uses the same image representation, with ``job_params``
-selecting the output rows, columns, and channels computed by that call.
+For example, ``add_elementwise()`` takes pointers to complete input and output
+vectors and uses ``start`` and ``count`` to select the elements computed by one
+invocation.
 
 ************************
 Implementation Structure
@@ -117,11 +113,10 @@ Implementation Structure
 The following groups cover the main functional areas of the library, each
 mapped to the operators and source files that implement them.
 
-- **Pooling and image operators**: reduce an input image to an output image by sliding a window and computing a per-channel aggregate. e.g. ``maxpool2d()``, ``avgpool2d_global()``, ``argmax_16()``.
 - **Convolution**: transform an input image and kernel into an output image through weight reordering, multiply-accumulate, and per-channel output scaling. e.g. ``reorder_kernel_weights()``, ``mat_mul_direct_int8()``, ``execute()``. Depthwise and transpose variants included.
 - **Elementwise operators**: apply arithmetic operations element-by-element across two tensors of the same shape. e.g. ``add_elementwise()``, ``mul_elementwise()``, ``add_int16_tensor()``.
 - **Quantisation / dequantisation**: convert tensors between floating-point and fixed-point representations, with a compile-time ``*_blob()`` call to pre-compute runtime parameters. e.g. ``quantize_int16_tensor()``, ``dequantize_int16_tensor_blob()``.
-- **Activation and reduction**: apply non-linear functions or reduce a tensor along a dimension to a scalar output. e.g. ``softmax_generate_exp_lut()``, ``quadratic_interpolation_128()``, ``mean_int8()``.
+- **Activation and reduction**: apply non-linear functions or reduce a tensor along a dimension to a scalar output. e.g. ``softmax_generate_exp_lut()``, ``quadratic_interpolation_128()``, ``mean_int8()``, ``argmax_16()``.
 - **Data utilities**: repack or reformat tensor data into layouts required by the VPU. e.g. ``bsign_8()``, ``expand_8_to_16()``, ``pad_3_to_4_run()``.
 - **VPU utilities**: copy, move and set memory at word and vector alignment; simulate VPU instructions for C reference implementations. e.g. ``vpu_memcpy()``, ``VLMACCR()``, ``VLSAT()``.
 
