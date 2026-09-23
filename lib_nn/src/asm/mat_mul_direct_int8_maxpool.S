@@ -120,20 +120,20 @@ FUNCTION_NAME:
 
     { xm.vldr x28                                    ; xm.mkmski  x10, 16 }
     xm.vstrpv x11, x10
-    { xm.stwsp x10, S_TEMP                           ; xm.addi x28, x11, 0}       // Clear two bytes
+    xm.stwsp x10, S_TEMP       // Clear two bytes
 
     kh_loop_asm:
         {xm.addi x18, x23, 1                         ; xm.add x12, x12, x22     }
         kw_loop_asm:
-            { xm.vldr x28                            ; xm.sub x18, x18, 1       }
-            { xm.vlsub x12                           ; nop                      }
+            { xm.vldr x11                            ; xm.sub x18, x18, 1       }
+            xm.vlsub x12
             { xm.vdepth1                             ; xm.ldawsp x20, S_TEMP   }
             xm.vstrpv x20, x19                                        // store just one word
-            { xm.ldwsp x20, S_TEMP                   ; xm.addi x28, x12, 0      }
+            xm.ldwsp x20, S_TEMP
             xor x20, x20, x10
-            { xm.vldr x28                            ; xm.add x12, x12, x21     }
+            { xm.vldr x12                            ; xm.add x12, x12, x21     }
             xm.vstrpv x11, x20
-        {xm.bt x18, kw_loop_asm                      ; xm.addi x28, x11, 0      }
+        xm.bt x18, kw_loop_asm
     {xm.bt x13, kh_loop_asm                          ; xm.subi x13, x13, 1}
 
     xm.lddsp x18, x19, 0*8

@@ -150,6 +150,7 @@ void mat_mul_direct_int16(const mat_mul_direct_params_t *params, VPURingBuffer *
                               int16_t *X, int32_t output_channel_group,
                               int16_t *weights);
 
+// Not implemented for xs3a! Will throw an assertion if called from an xs3a device.
 void mat_mul_direct_int16x8(const mat_mul_direct_params_t *params, VPURingBuffer *A,
                               int16_t *X, int32_t output_channel_group,
                               int8_t *weights);

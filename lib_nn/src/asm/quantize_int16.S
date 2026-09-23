@@ -89,61 +89,41 @@ minint:
 #if defined(__VX4B__)
 
 #define FUNCTION_NAME quantize_int16_tensor_asm
-#define NSTACKWORDS 8
+#define NSTACKWORDS 4
     // a0: output array
     // a1: input array
     // a2: number of elements
     // a3: blob, floating point multiple and floating point addition
-    //     0x8000 afterwards (constant to make signed unsigned)
-    // s2/s3/s4: temp value
-    // s5: floating point multipler
-    // s6: maxint
-    // s7: minint
+    //     16 afterwards to use in lsats
+    // s2: floating point multipler
+    // s3/s4: temp value
     // t3: 8192.0
-.L0_5__MAXMIN:
-    .word  0xBB800000         // -32768.0 * 2^-23
-    .word  0x3B7FFE00         // +32767.0 * 2^-23
-    .word  0x33800000         // +0.5 * 2^-23
 
 .p2align 1
 .globl FUNCTION_NAME
 .type FUNCTION_NAME,@function
 FUNCTION_NAME:
-    { xm.ldap t3, .L0_5__MAXMIN ; xm.entsp (NSTACKWORDS * 4) }
+    xm.entsp (NSTACKWORDS * 4)
     xm.stdsp s2, s3, 0
-    xm.stdsp s4, s5, 8
-    xm.stdsp s6, s7, 16
+    xm.stwsp s4, 8
 
-    xm.ldd s7, s6, 0(t3)
-    xm.ldw t3, 8(t3)
-    { li a3, 0 ; xm.ldw s5, 0(a3) }
+    li t3, 0x33800000   // +0.5 * 2^-23
+    { li a3, 16 ; xm.ldw s2, 0(a3) }
 
 .loop:
     { addi a1, a1, 4 ; xm.ldw s4, 0(a1) }
-    xm.fmacc s4, t3, s4, s5
-    xm.fgt s2, s4, s6
-    xm.bt s2, .maxint
-    xm.flt s2, s4, s7
-    xm.bt s2, .minint
-    xm.fsexp s2, s3, s4
+    xm.fmacc s4, t3, s4, s2
+    xm.fsexp x0, s3, s4
     xm.fmants s4, s4
     { xm.shl s4, s4, s3 ; addi a2, a2, -1 }
-.storeme:
-    xm.st16 s4, a3(a0)
+    xm.lsats s4, x0, a3
+
+    sh s4, 0 * 2(a0)
     { addi a0, a0, 2 ; xm.bt a2, .loop }
 
     xm.lddsp s2, s3, 0
-    xm.lddsp s4, s5, 8
-    xm.lddsp s6, s7, 16
+    xm.ldwsp s4, 8
     xm.retsp (NSTACKWORDS * 4)
-
-.maxint:
-    li s4, 0x7fff
-    { addi a2, a2, -1 ; xm.bu .storeme }
-
-.minint:
-    li s4, 0x8000
-    { addi a2, a2, -1 ; xm.bu .storeme }
 
 .size FUNCTION_NAME, . -FUNCTION_NAME
 .resource_const FUNCTION_NAME, "stack_frame_bytes",  (NSTACKWORDS * 4)

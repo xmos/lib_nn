@@ -142,7 +142,6 @@ early_exit:
 #undef NSTACKWORDS
 
 #define FUNCTION_NAME vpu_memcpy_vector_int_asm
-#define NSTACKWORDS (8)
 
 //    void vpu_memcpy_vector_int_asm(
 //        void* dst, 
@@ -165,7 +164,7 @@ dvpu_memcpy_vector_int_asm_done:
 	ret
 
 .size FUNCTION_NAME, . -FUNCTION_NAME
-.resource_const FUNCTION_NAME, "stack_frame_bytes", ROUND_UP(NSTACKWORDS*4, 16)
+.resource_const FUNCTION_NAME, "stack_frame_bytes", 0
 .resource_list_empty FUNCTION_NAME, "callees"
 .resource_list_empty FUNCTION_NAME, "tail_callees"
 .resource_list_empty FUNCTION_NAME, "parallel_callees"

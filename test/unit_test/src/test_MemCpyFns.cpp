@@ -3,7 +3,9 @@
 #include <cstring>
 
 #include "MemCpyFn.hpp"
+#ifdef TEST_BUILD_NATIVE
 #include "Rand.hpp"
+#endif
 
 extern "C" {
 #include "tst_common.h"
@@ -12,9 +14,11 @@ extern "C" {
 }
 
 using namespace nn;
+#ifdef TEST_BUILD_NATIVE
 using namespace nn::test;
 
 static auto rng = test::Rand(42);
+#endif
 
 extern "C" {
 
@@ -22,10 +26,123 @@ TEST_GROUP(group_mem_cpy_fns);
 TEST_SETUP(group_mem_cpy_fns) {}
 TEST_TEAR_DOWN(group_mem_cpy_fns) {}
 TEST_GROUP_RUNNER(group_mem_cpy_fns) {
+  RUN_TEST_CASE(group_mem_cpy_fns, Test_ImToColValidLowLevel);
+  RUN_TEST_CASE(group_mem_cpy_fns, Test_ImToColPaddedLowLevel);
+  RUN_TEST_CASE(group_mem_cpy_fns, Test_DerefInputFnLowLevel);
+#ifdef TEST_BUILD_NATIVE
   RUN_TEST_CASE(group_mem_cpy_fns, Test_ImToColValid);
   RUN_TEST_CASE(group_mem_cpy_fns, Test_ImToColPadded);
   RUN_TEST_CASE(group_mem_cpy_fns, Test_DerefInputFn);
+#endif
 }
+
+TEST(group_mem_cpy_fns, Test_ImToColValidLowLevel) {
+  constexpr int input_height = 2;
+  constexpr int input_width = 3;
+  constexpr int input_channels = 40;
+  constexpr int copied_channels = 36;
+  constexpr int output_channel = 4;
+  constexpr int patch_bytes = 2 * 2 * copied_channels;
+  constexpr int tail_bytes = 32;
+
+  ImageGeometry X(input_height, input_width, input_channels);
+  WindowGeometry K(2, 2, input_channels);
+  ImToColValid cpy(X, K, copied_channels);
+
+  alignas(4) int8_t input[input_height * input_width * input_channels + 28];
+  alignas(4) int8_t patch[patch_bytes + tail_bytes];
+  for (size_t i = 0; i < sizeof(input); ++i) {
+    input[i] = static_cast<int8_t>(i);
+  }
+  std::memset(patch, 0x55, sizeof(patch));
+
+  memcpyfn_imtocol_valid_params_t params = cpy.getParams();
+  int8_t *result = memcpyfn_imtocol_valid(
+      &params, patch, input, 0, 0, output_channel);
+
+  TEST_ASSERT_EQUAL_PTR(patch, result);
+  TEST_ASSERT_EQUAL_INT(patch_bytes + tail_bytes, cpy.get_scratch_bytes());
+  TEST_ASSERT_EQUAL_INT(28, cpy.get_overread_bytes());
+
+  int patch_index = 0;
+  for (int row = 0; row < 2; ++row) {
+    for (int col = 0; col < 2; ++col) {
+      int input_index =
+          (row * input_width + col) * input_channels + output_channel;
+      TEST_ASSERT_EQUAL_INT8_ARRAY(&input[input_index], &patch[patch_index],
+                                   copied_channels);
+      patch_index += copied_channels;
+    }
+  }
+  for (; patch_index < static_cast<int>(sizeof(patch)); ++patch_index) {
+    TEST_ASSERT_EQUAL_INT8(0, patch[patch_index]);
+  }
+}
+
+TEST(group_mem_cpy_fns, Test_ImToColPaddedLowLevel) {
+  constexpr int input_channels = 3;
+  constexpr int input_bytes = 2 * 2 * input_channels;
+  constexpr int head_bytes = 9;
+  constexpr int patch_bytes = 2 * 2 * input_channels;
+  constexpr int tail_bytes = 32;
+  constexpr int8_t padding_value = -9;
+
+  ImageGeometry X(2, 2, input_channels);
+  WindowGeometry K(2, 2, input_channels);
+  padding_t padding = {};
+  padding.top = 1;
+  padding.left = 1;
+  ImToColPadded cpy(X, K, padding, input_channels, padding_value);
+
+  int8_t input_storage[head_bytes + input_bytes];
+  int8_t *input = &input_storage[head_bytes];
+  int8_t patch[patch_bytes + tail_bytes];
+  for (int i = 0; i < input_bytes; ++i) {
+    input[i] = static_cast<int8_t>(i + 1);
+  }
+  std::memset(patch, 0x55, sizeof(patch));
+
+  memcpyfn_imtocol_padded_params_t params = cpy.getParams();
+  int8_t *result =
+      memcpyfn_imtocol_padded(&params, patch, input, 0, 0, 0);
+
+  TEST_ASSERT_EQUAL_PTR(patch, result);
+  TEST_ASSERT_EQUAL_INT(patch_bytes + tail_bytes, cpy.get_scratch_bytes());
+  TEST_ASSERT_EQUAL_INT(tail_bytes, cpy.get_overread_bytes());
+  for (int i = 0; i < 9; ++i) {
+    TEST_ASSERT_EQUAL_INT8(padding_value, patch[i]);
+  }
+  TEST_ASSERT_EQUAL_INT8_ARRAY(input, &patch[9], input_channels);
+  for (int i = patch_bytes; i < static_cast<int>(sizeof(patch)); ++i) {
+    TEST_ASSERT_EQUAL_INT8(0, patch[i]);
+  }
+}
+
+TEST(group_mem_cpy_fns, Test_DerefInputFnLowLevel) {
+  constexpr int input_height = 3;
+  constexpr int input_width = 4;
+  constexpr int input_channels = 5;
+
+  ImageGeometry X(input_height, input_width, input_channels);
+  WindowGeometry K(1, 1, 1, 0, 0, 2, 3, 1);
+  DerefInputFn cpy(X, K);
+
+  int8_t input[input_height * input_width * input_channels];
+  for (size_t i = 0; i < sizeof(input); ++i) {
+    input[i] = static_cast<int8_t>(i);
+  }
+
+  memcpyfn_deref_params_t params = cpy.getParams();
+  int8_t *result = memcpyfn_deref(&params, nullptr, input, 1, 1, 2);
+  int expected_index = (2 * input_width + 3) * input_channels + 2;
+
+  TEST_ASSERT_EQUAL_PTR(&input[expected_index], result);
+  TEST_ASSERT_EQUAL_INT8(input[expected_index], *result);
+  TEST_ASSERT_EQUAL_INT(0, cpy.get_scratch_bytes());
+  TEST_ASSERT_EQUAL_INT(0, cpy.get_overread_bytes());
+}
+
+#ifdef TEST_BUILD_NATIVE
 
 // TODO binary tests for ImToColValid
 TEST(group_mem_cpy_fns, Test_ImToColValid) {
@@ -332,5 +449,7 @@ TEST(group_mem_cpy_fns, Test_DerefInputFn) {
     }
   }
 }
+
+#endif
 
 }  // extern "C"

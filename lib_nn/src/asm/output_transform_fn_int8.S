@@ -209,9 +209,8 @@ FUNCTION_NAME:
     xm.vlsat x28
 
     mv x12, x14
-    xm.shl x10, x12, 1
-    xm.vlmul0 x13
-    xm.vlmul1 x13                      
+    { xm.shl x10, x12, 1 ; xm.vlmul0 x13 }
+    xm.vlmul1 x13
     xm.add x13, x13, x10
     xm.vladd x13
 
