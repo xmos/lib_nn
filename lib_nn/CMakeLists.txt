@@ -4,10 +4,13 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 file(GLOB_RECURSE LIB_NN_SOURCES CONFIGURE_DEPENDS
-     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c"
-     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+)
 
-if(CMAKE_SYSTEM_NAME STREQUAL "XS3A" OR CMAKE_SYSTEM_NAME STREQUAL "VX4A")
+if(CMAKE_SYSTEM_PROCESSOR STREQUAL "XCORE_XS3A" OR
+   CMAKE_SYSTEM_PROCESSOR STREQUAL "XCORE_VX4" OR
+   CMAKE_SYSTEM_PROCESSOR STREQUAL "riscv32")
   file(GLOB_RECURSE LIB_NN_ASM_SOURCES CONFIGURE_DEPENDS
        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.S")
   list(APPEND LIB_NN_SOURCES ${LIB_NN_ASM_SOURCES})
@@ -22,12 +25,13 @@ if(BUILD_DDR_FIX)
 endif()
 
 # -------- target specific ----------
+message(STATUS "Building lib_nn for CMAKE_SYSTEM_PROCESSOR : ${CMAKE_SYSTEM_PROCESSOR}")
 
 # xs3
-if(CMAKE_SYSTEM_NAME STREQUAL "XS3A")
+if(CMAKE_SYSTEM_PROCESSOR STREQUAL "XCORE_XS3A")
   target_compile_options(lib_nn PRIVATE -O3 -Wall -Wno-xcore-fptrgroup -Werror -Wextra)
 # vx4
-elseif(CMAKE_SYSTEM_NAME STREQUAL "VX4A")
+elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "XCORE_VX4" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "riscv32")
   target_compile_options(lib_nn PRIVATE -O3 -Wall -Wno-fptrgroup -Werror -Wextra)
   target_compile_options(lib_nn PRIVATE -ffunction-sections -fdata-sections)
   target_link_options(lib_nn PRIVATE -Wl,--gc-sections)

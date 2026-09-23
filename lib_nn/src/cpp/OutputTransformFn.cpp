@@ -632,7 +632,7 @@ int8_t *output_transform_fn_ref(
   const int output_slice_channel_count = params->output_slice_channel_count;
   const int group_channel_offset = output_channel_group * VPU_INT16_EPV;
   const int remaining_channels = output_slice_channel_count - group_channel_offset;
-  const int output_count = std::min(remaining_channels, (int32_t)VPU_INT16_EPV);
+  const int output_count = min_int32(remaining_channels, (int32_t)VPU_INT16_EPV);
   const int mask = (1 << output_count) - 1;
   const int16_t in_shift =  params->initial_shift;
   const int16_t sat_shift = in_shift > 0 ? in_shift : 0;

@@ -8,6 +8,16 @@
 
 namespace nn {
 
+#if defined(__xcore__) || defined(__riscv_xxcore)
+#define MEM_FN_GROUP __attribute__((fptrgroup("mem_functions")))
+#define AGG_FN_GROUP __attribute__((fptrgroup("aggregate_functions")))
+#define OT_FN_GROUP __attribute__((fptrgroup("output_transform_functions")))
+#else
+#define MEM_FN_GROUP
+#define AGG_FN_GROUP
+#define OT_FN_GROUP
+#endif
+
 struct abstract_kernel_params_t {
       /**
      * The first (`h_begin`; inclusive) and final (`h_end`; exclusive) rows of
@@ -120,9 +130,9 @@ struct conv_params_t{
     void *mem_p;
     void *agg_p;
     void *ot_p;
-    MemFnType memcopy_fn;
-    AggFnType aggregate_fn;
-    OtFnType output_transform_fn;
+    MEM_FN_GROUP MemFnType memcopy_fn;
+    AGG_FN_GROUP AggFnType aggregate_fn;
+    OT_FN_GROUP OtFnType output_transform_fn;
 };
 
 /**
