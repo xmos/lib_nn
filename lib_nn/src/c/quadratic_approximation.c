@@ -142,8 +142,12 @@ void quadratic_approximation_generator(
     double *error) {
     assert(chunks > 0 && chunks <= QUADRATIC_APPROXIMATION_MAX_CHUNKS);
     const int datapoints = DATAPOINTS / chunks;
-    double A[datapoints][DEGREE];
-    double B[datapoints];
+    double (*A)[DEGREE] = malloc(sizeof(*A) * datapoints);
+    double *B = malloc(sizeof(*B) * datapoints);
+    int16_t *inputs_16bit = malloc(sizeof(*inputs_16bit) * datapoints);
+    int16_t *outputs_16bit = malloc(sizeof(*outputs_16bit) * datapoints);
+    assert(A != NULL && B != NULL &&
+           inputs_16bit != NULL && outputs_16bit != NULL);
     double ATA[DEGREE][DEGREE] ;
     double ATB[DEGREE] ;
     int zeropoint = 32768;
@@ -153,8 +157,6 @@ void quadratic_approximation_generator(
     int output_index = 0;
     for(int mid = datapoints/2; mid <= DATAPOINTS; mid += datapoints) {
         int start = mid - datapoints / 2;
-        int16_t inputs_16bit[datapoints];
-        int16_t outputs_16bit[datapoints];
         for(int i = 0; i < datapoints; i++) {
             int input_val = i - datapoints / 2;
             A[i][0] = 1;
@@ -242,6 +244,10 @@ void quadratic_approximation_generator(
     }
     *error = sqrt(avg2error_i / (double)DATAPOINTS);
     *max_error = max_error_i;
+    free(outputs_16bit);
+    free(inputs_16bit);
+    free(B);
+    free(A);
 }
 
 uint32_t quadratic_function_table_number_bytes(quadratic_function_table_t *x) {
