@@ -45,3 +45,9 @@ else()
   target_compile_definitions(lib_nn PRIVATE NN_USE_REF)
   target_link_libraries(lib_nn PRIVATE m)
 endif()
+
+# Supress warning on native build gcc < 9 on vpu_sim.c : GetAccumulator
+if(WIN32 AND CMAKE_C_COMPILER_ID STREQUAL "GNU"
+   AND CMAKE_C_COMPILER_VERSION VERSION_LESS 9)
+  set_source_files_properties(src/c/vpu_sim.c PROPERTIES COMPILE_OPTIONS "-Wno-array-bounds")
+endif()

@@ -51,14 +51,14 @@ static int64_t GetAccumulator(const xs3_vpu *vpu, unsigned index) {
     } acc;
     acc.s16[1] = vpu->vD.s16[index];
     acc.s16[0] = vpu->vR.s16[index];
-
     return acc.s32;
   } else if (vpu->mode == MODE_S32) {
     assert(index < VPU_INT32_EPV);
     return vpu->vR.s32[index];
   } else {
-    assert(0);  // TODO
+    assert(0 && "Unsupported VPU mode");
   }
+  return 0; // Should never reach here, avoid compiler warning
 }
 
 /**
@@ -648,7 +648,7 @@ void vpu_accu_print(xs3_vpu *vpu) {
   } else if (vpu->mode == MODE_S32) {
     for (int i = 0; i < VPU_INT32_ACC_PERIOD; i++) {
       int64_t acc = GetAccumulator(vpu, i);
-      printf("%d %lld\n", i, (long long)acc);
+      printf("%d %ld\n", i, (long)acc);
     }
   } else {
     assert(0);  // How'd this happen?
