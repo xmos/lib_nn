@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#include "output_transform_fn_int16_kernel_transform.h"
+#include "nn_layers.h"
 #include "output_transform_fn_int16_mappings.h"
 
 void output_transform_fn_int16_kernel_transform(
