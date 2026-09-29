@@ -648,7 +648,7 @@ void vpu_accu_print(xs3_vpu *vpu) {
   } else if (vpu->mode == MODE_S32) {
     for (int i = 0; i < VPU_INT32_ACC_PERIOD; i++) {
       int64_t acc = GetAccumulator(vpu, i);
-      printf("%d %d\n", i, (int)acc);
+      printf("%d %ld\n", i, (long)acc);
     }
   } else {
     assert(0);  // How'd this happen?
