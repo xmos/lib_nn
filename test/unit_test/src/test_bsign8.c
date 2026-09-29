@@ -142,7 +142,7 @@ TEST(group_bsign_8, test_bsign_8_rand0) {
     inputLen = (inputLen >> 3) << 3;
 
     pseudo_rand_bytes((char *)x_orig, sizeof(x_orig));
-    vpu_memcpy(x, x_orig, sizeof(x));
+    vpu_memcpy_ext(x, x_orig, sizeof(x));
 
     size_t jobCount = (pseudo_rand_uint16() % (MAX_JOBS - 1)) + 1;
 

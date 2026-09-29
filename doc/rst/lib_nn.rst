@@ -123,7 +123,7 @@ mapped to the operators and source files that implement them.
 - **Quantisation / dequantisation**: convert tensors between floating-point and fixed-point representations, with a compile-time ``*_blob()`` call to pre-compute runtime parameters. e.g. ``quantize_int16_tensor()``, ``dequantize_int16_tensor_blob()``.
 - **Activation and reduction**: apply non-linear functions or reduce a tensor along a dimension to a scalar output. e.g. ``softmax_generate_exp_lut()``, ``quadratic_interpolation_128()``, ``mean_int8()``.
 - **Data utilities**: repack or reformat tensor data into layouts required by the VPU. e.g. ``bsign_8()``, ``expand_8_to_16()``, ``pad_3_to_4_run()``.
-- **VPU utilities**: copy, move and set memory at word and vector alignment; simulate VPU instructions for C reference implementations. e.g. ``vpu_memcpy()``, ``VLMACCR()``, ``VLSAT()``.
+- **VPU utilities**: copy, move and set memory at word and vector alignment; simulate VPU instructions for C reference implementations. e.g. ``vpu_memcpy_ext()``, ``VLMACCR()``, ``VLSAT()``.
 
 ************
 Quantisation

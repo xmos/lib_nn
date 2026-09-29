@@ -10,10 +10,6 @@
 
 #ifdef NN_USE_REF
 
-void vpu_memcpy(void* dst, const void* src, size_t byte_count) {
-  memcpy(dst, src, byte_count);
-}
-
 void vpu_memcpy_int(void* dst, const void* src, size_t byte_count) {
   memcpy(dst, src, byte_count);
 }
@@ -73,10 +69,6 @@ void vpu_memcpy_base(
 
 extern void vpu_memcpy_vector_ext_asm(void* dst, const void* src, size_t byte_count);
 extern void vpu_memcpy_vector_int_asm(void* dst, const void* src, size_t byte_count);
-
-void vpu_memcpy(void* dst, const void* src, size_t byte_count) {
-  vpu_memcpy_base(dst, src, byte_count, vpu_memcpy_vector_ext_asm, MEMCPY_VECT_EXT_BYTES);
-}
 
 void vpu_memcpy_int(void* dst, const void* src, size_t byte_count) {
   vpu_memcpy_base(dst, src, byte_count, vpu_memcpy_vector_int_asm, MEMCPY_VECT_INT_BYTES);
