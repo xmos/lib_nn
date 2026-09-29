@@ -22,20 +22,6 @@ typedef void (*memcpy_fn_t)(void *dst, const void *src, size_t byte_count);
 
 /**
  * @brief Copy `size` bytes from `src` to `dst`.
- *
- * `dst` and `src` both must be word-aligned addresses.
- *
- * `size` need not be an integer number of words.
- *
- * @param dst  [out]    Destination address
- * @param src  [in]     Source address
- * @param byte_count [in]     Number of bytes to be copied
- */
-MEMCPY_FPTRGROUP
-void vpu_memcpy(void *dst, const void *src, size_t byte_count);
-
-/**
- * @brief Copy `size` bytes from `src` to `dst`.
  * Faster for copies from internal SRAM.
  *
  * `dst` and `src` both must be word-aligned addresses.

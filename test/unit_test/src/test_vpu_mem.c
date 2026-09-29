@@ -33,7 +33,7 @@ TEST_GROUP_RUNNER(group_vpu) {
 }
 
 // ---------------------------------------------------------------------------
-// vpu_memcpy / vpu_memcpy_int / vpu_memcpy_ext / vpu_memcpy_vector_{int,ext}
+// vpu_memcpy_int / vpu_memcpy_ext / vpu_memcpy_vector_{int,ext}
 // ---------------------------------------------------------------------------
 
 static 
@@ -118,7 +118,6 @@ static void impl_vpu_memcpy_pseudo_random(size_t src_pointer_inc,
 }
 
 TEST(group_vpu, test_vpu_memcpy) {
-  impl_vpu_memcpy_directed(1, 256, 4, vpu_memcpy);
   impl_vpu_memcpy_directed(1, 256, 4, vpu_memcpy_int);
   impl_vpu_memcpy_directed(1, 256, 4, vpu_memcpy_ext);
   impl_vpu_memcpy_directed(MEMCPY_VECT_EXT_BYTES, 5, 4, vpu_memcpy_vector_ext);
@@ -127,7 +126,6 @@ TEST(group_vpu, test_vpu_memcpy) {
   // Minimal smoke check of the pointer-offset logic (single offset, a
   // handful of lengths); the full sweep is far too slow under simulation,
   // so it's native-only.
-  impl_vpu_memcpy_pseudo_random(32, 32, 1, 32, 4, vpu_memcpy);
   impl_vpu_memcpy_pseudo_random(32, 32, 1, 32, 4, vpu_memcpy_int);
   impl_vpu_memcpy_pseudo_random(32, 32, 1, 32, 4, vpu_memcpy_ext);
   impl_vpu_memcpy_pseudo_random(2, 2, MEMCPY_VECT_EXT_BYTES, 2, 4, vpu_memcpy_vector_ext);
@@ -136,7 +134,6 @@ TEST(group_vpu, test_vpu_memcpy) {
 
 #ifdef TEST_BUILD_NATIVE
 TEST(group_vpu, test_vpu_memcpy_full) {
-  impl_vpu_memcpy_pseudo_random(8, 8, 1, 32, 4, vpu_memcpy);
   impl_vpu_memcpy_pseudo_random(8, 8, 1, 32, 4, vpu_memcpy_int);
   impl_vpu_memcpy_pseudo_random(8, 8, 1, 32, 4, vpu_memcpy_ext);
   impl_vpu_memcpy_pseudo_random(4, 4, MEMCPY_VECT_EXT_BYTES, 8, 4, vpu_memcpy_vector_ext);
