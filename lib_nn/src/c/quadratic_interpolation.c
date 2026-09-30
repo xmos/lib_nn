@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "quadratic_interpolation.h"
+#include "nn_layers.h"
 
 static int clamp(int64_t x) {
     if (x > 32767) return 32767;

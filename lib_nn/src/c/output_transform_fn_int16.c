@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #include "nn_op_helper.h"
-#include "output_transform_fn_int16.h"
+#include "nn_layers.h"
 #include "output_transform_fn_int16_mappings.h"
 
 #define VPU_INT16_EPV 16
