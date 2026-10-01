@@ -1,5 +1,6 @@
 // Copyright 2025-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
+
 #if defined(__XS3A__)
 
 #define FUNCTION_NAME mat_mul_direct_int16x8_impl_asm

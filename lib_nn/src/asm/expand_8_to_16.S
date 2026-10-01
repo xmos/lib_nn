@@ -1,5 +1,6 @@
 // Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
+
 #if defined(__XS3A__)
 
 .issue_mode  dual
@@ -60,7 +61,7 @@ ones:
     .size FUNCTION_NAME, .Ltmp0-FUNCTION_NAME
     .issue_mode  single
 
-#endif // defined(__XS3A__)
+#endif // __XS3A__
 
 #if defined(__riscv_xxcore)
 

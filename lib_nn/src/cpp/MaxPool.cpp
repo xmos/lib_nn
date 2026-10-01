@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "AggregateFn.hpp"
+#include "nn_api.h"
 
 using namespace nn;
 
@@ -44,7 +45,7 @@ void maxpool_direct_ref(
     }
 }
 #else
-extern "C" void maxpool_direct_asm(
+C_API void maxpool_direct_asm(
     const mat_mul_dw_direct_params_t *params,
     VPURingBuffer *A,
     int8_t *X);

@@ -28,7 +28,7 @@ void mean_int8(const int8_t *input, int8_t *output, const int start_dim_size,
 
 #ifndef NN_USE_REF
   if (end_dim_size == 1) {
-#ifdef __XS3A__
+#if defined(__XS3A__)
     if (mean_dim_size % 4 == 0) {
 #endif
       int8_t vpu_buffer[64];
@@ -38,7 +38,7 @@ void mean_int8(const int8_t *input, int8_t *output, const int start_dim_size,
         vpu_buffer, 
         in_zero_point_sum, out_zero_point, scale_mul);
       return;
-#ifdef __XS3A__
+#if defined(__XS3A__)
     }
 #endif
   }

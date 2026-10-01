@@ -8,6 +8,7 @@ void maxpool_direct_asm(mat_mul_dw_direct_params_t *params,
 
 #define FUNCTION_NAME maxpool_direct_asm
 
+
 #if defined(__XS3A__)
 
 .issue_mode  dual

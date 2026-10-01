@@ -1,5 +1,6 @@
 // Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
+
 #if defined(__XS3A__)
 
     // This function is the optimal FIR on a 1-bit signal with 16-bit coefficients.

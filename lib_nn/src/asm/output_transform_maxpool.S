@@ -10,6 +10,7 @@
 
     //  r2 holds 32.
 
+
 #if defined(__XS3A__)
 
     .text

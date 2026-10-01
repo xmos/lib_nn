@@ -4,12 +4,10 @@
 
 #include <stddef.h>
 
-#ifdef __XC__
-extern "C" {
-#endif
+#include "nn_api.h"
 
 // fptrgroup 
-#if (defined(__XS3A__) || defined(__riscv_xxcore))
+#if HAS_FPTRGROUP
 #define MEMCPY_FPTRGROUP __attribute__((fptrgroup("memcpy_fn_group")))
 #else
 #define MEMCPY_FPTRGROUP
@@ -33,7 +31,7 @@ typedef void (*memcpy_fn_t)(void *dst, const void *src, size_t byte_count);
  * @param byte_count [in]     Number of bytes to be copied
  */
 MEMCPY_FPTRGROUP
-void vpu_memcpy_int(void *dst, const void *src, size_t byte_count);
+C_API void vpu_memcpy_int(void *dst, const void *src, size_t byte_count);
 
 /**
  * @brief Copy `size` bytes from `src` to `dst`.
@@ -48,7 +46,7 @@ void vpu_memcpy_int(void *dst, const void *src, size_t byte_count);
  * @param byte_count [in]     Number of bytes to be copied
  */
 MEMCPY_FPTRGROUP
-void vpu_memcpy_ext(void *dst, const void *src, size_t byte_count);
+C_API void vpu_memcpy_ext(void *dst, const void *src, size_t byte_count);
 
 /**
  * @brief Copy `vector_count` multiples of MEMCPY_VECT_EXT_BYTES bytes
@@ -65,7 +63,7 @@ void vpu_memcpy_ext(void *dst, const void *src, size_t byte_count);
  * be bytes to be performed
  */
 MEMCPY_FPTRGROUP
-void vpu_memcpy_vector_ext(void *dst, const void *src, size_t vector_count);
+C_API void vpu_memcpy_vector_ext(void *dst, const void *src, size_t vector_count);
 
 /**
  * @brief Copy `vector_count` multiples of MEMCPY_VECT_INT_BYTES bytes
@@ -82,8 +80,4 @@ void vpu_memcpy_vector_ext(void *dst, const void *src, size_t vector_count);
  * be bytes to be performed
  */
 MEMCPY_FPTRGROUP
-void vpu_memcpy_vector_int(void *dst, const void *src, size_t vector_count);
-
-#ifdef __XC__
-} // extern "C"
-#endif
+C_API void vpu_memcpy_vector_int(void *dst, const void *src, size_t vector_count);

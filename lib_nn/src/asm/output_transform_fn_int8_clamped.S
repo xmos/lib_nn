@@ -1,5 +1,6 @@
 // Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
+
 #if defined(__XS3A__)
 
 #define FUNCTION_NAME output_transform_fn_int_clamped_asm

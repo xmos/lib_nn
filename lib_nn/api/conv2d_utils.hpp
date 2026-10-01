@@ -10,12 +10,12 @@
 #include "geom/util.hpp"
 #include "nn_arch.h"
 
-C_API typedef struct {
+typedef struct {
   int16_t high[16];
   uint16_t low[16];
 } vpu_split_acc32_t;
 
-C_API typedef struct {
+typedef struct {
   uint16_t shift1[16];
   int16_t scale[16];
   int16_t offset_scale[16];

@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "AggregateFn.hpp"
+#include "nn_api.h"
 
 extern "C" {
 #include "unity.h"
@@ -137,8 +138,8 @@ TEST(group_mat_mul, Test_DepthwiseInt16) {
   MatMulDirectFn_DW dir(img_i16, win);
   mat_mul_dw_direct_params_t prm = dir.getParams();
 
-#if defined(__riscv_xxcore)
-  // VX4B VLMACC drops the product's least-significant bit.
+#if VPU_VLMACC_PRODUCT_LSB_DROPS > 0
+  // Keep the expected product representable after VLMACC discards product LSBs.
   constexpr int16_t weight_value = 2;
 #else
   constexpr int16_t weight_value = 1;

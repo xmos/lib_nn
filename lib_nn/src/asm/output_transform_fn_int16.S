@@ -1,5 +1,6 @@
 // Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
+
 #if defined(__XS3A__)
 
 #include <xs1.h>
@@ -79,7 +80,7 @@ output_transform_16_unzip_loop:
     .size FUNCTION_NAME, .Ltmp0-FUNCTION_NAME
     .issue_mode  single
 
-#endif // defined(__XS3A__)
+#endif // __XS3A__
 
 #if defined(__riscv_xxcore)
 

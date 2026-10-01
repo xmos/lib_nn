@@ -8,10 +8,9 @@
 #include <limits>
 #include <tuple>
 
-extern "C" {
+#include "nn_api.h"
 #include "vpu_sim.h"
 #include "xs3_vpu.h"
-}
 
 using namespace nn;
 
@@ -667,7 +666,7 @@ int8_t *output_transform_fn_ref(
   return Y;
 }
 #else
-extern "C" int8_t *output_transform_fn_impl_asm(
+C_API int8_t *output_transform_fn_impl_asm(
   const otfn_int8_params_t *params, int8_t *Y, VPURingBuffer *A,
   int16_t *multipliers_and_biases, int output_count
 );
@@ -736,7 +735,7 @@ int8_t *output_transform_fn_int_channelwise_ref(
 }
 
 #else
-extern "C" int8_t *output_transform_fn_int_channelwise_asm(
+C_API int8_t *output_transform_fn_int_channelwise_asm(
   const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
   int16_t *multipliers_and_biases, int output_count
 );
@@ -784,7 +783,7 @@ int8_t *output_transform_fn_int_maxpool_ref(
 }
 
 #else
-extern "C" int8_t *output_transform_maxpool_asm(
+C_API int8_t *output_transform_maxpool_asm(
     const otfn_int8_channelwise_params_t *params, int8_t *Y, VPURingBuffer *A,
     int16_t *multipliers_and_biases, int output_count);
 
@@ -845,7 +844,7 @@ int8_t *output_transform_fn_int_clamped_ref(
   return Y;
 }
 #else
-extern "C" int8_t *output_transform_fn_int_clamped_asm(
+C_API int8_t *output_transform_fn_int_clamped_asm(
     const otfn_int8_clamped_params_t *params, int8_t *Y, VPURingBuffer *A,
     int32_t output_channel_group, int16_t *offsets_multipliers_and_biases);
 
@@ -892,7 +891,7 @@ int8_t *output_transform_fn_binary_ref(
 }
 
 #else
-extern "C" int8_t *output_transform_fn_binary_asm(
+C_API int8_t *output_transform_fn_binary_asm(
   int8_t *Y, 
   VPURingBuffer *A, 
   int32_t output_channel_group,

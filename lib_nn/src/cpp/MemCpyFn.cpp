@@ -2,6 +2,7 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #include "MemCpyFn.hpp"
 
+#include "nn_api.h"
 #include "vpu_sim.h"
 
 using namespace nn;
@@ -274,7 +275,7 @@ int8_t *memcpyfn_imtocol_valid_impl(const memcpyfn_imtocol_valid_params_t *param
   return T_in;
 }
 
-extern "C" int8_t *im_to_col_valid_impl_asm(const memcpyfn_imtocol_valid_params_t *params, int8_t *T, int8_t *X,
+C_API int8_t *im_to_col_valid_impl_asm(const memcpyfn_imtocol_valid_params_t *params, int8_t *T, int8_t *X,
                                             int32_t output_v_coord,
                                             int32_t output_h_coord,
                                             int32_t output_c_coord);

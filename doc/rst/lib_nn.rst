@@ -210,6 +210,30 @@ VPU constraints that apply across the library.
 - **Channel groups**: the VPU processes ``VPU_INT8_EPV = 32`` input channels per load and holds ``VPU_INT8_ACC_PERIOD = 16`` accumulators. Parameter tensors are grouped accordingly: input channel groups of 32, output channel groups of 16.
 - **BSO tensor layout**: the Bias-Scale-Offset tensor packs the per-channel output parameters required after accumulation into a single 3-D buffer of shape ``(ceil(C_out/16), 7, 16)``. Axis 0 is the output channel group, axis 2 is the channel offset within that group (so channel ``k`` is at ``[k//16, :, k%16]``), and axis 1 selects the parameter: 0 = bias high half-word, 1 = bias low half-word, 2 = shift1, 3 = scale, 4 = offset scale, 5 = offset, 6 = shift2. The interleaved layout lets the VPU load all parameters for a channel group in one pass.
 
+Target configuration
+====================
+
+``lib_nn`` separates instruction-set selection from VPU behavior. Instruction-set
+selection uses the compiler-provided ``__XS3A__`` macro for the legacy XCORE ISA and
+``__riscv_xxcore`` for RISC-V with the XCORE extension. The XTC ``__XS3A__`` and
+Slipgate ``__VX4B__`` macros also provide backward-compatible defaults for these VPU
+capabilities:
+
+* ``VPU_SYMMETRIC_SATURATION``
+* ``VPU_VLMACC_PRODUCT_LSB_DROPS``
+* ``VPU_VLMUL_SHIFT_OFFSET``
+
+A RISC-V XCORE toolchain that does not provide a legacy processor macro must define all
+three capabilities. With the standalone CMake target, use the corresponding cache
+variables, for example for VX4B-compatible VPU behavior::
+
+    -DLIB_NN_VPU_SYMMETRIC_SATURATION=0
+    -DLIB_NN_VPU_VLMACC_PRODUCT_LSB_DROPS=1
+    -DLIB_NN_VPU_VLMUL_SHIFT_OFFSET=1
+
+Compiler/runtime features can be overridden independently with ``HAS_FPTRGROUP`` and
+``HAS_FULL_CXX_RTTI``.
+
 *************
 API Reference
 *************
