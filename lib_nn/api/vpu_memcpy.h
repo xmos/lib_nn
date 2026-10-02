@@ -9,7 +9,7 @@ extern "C" {
 #endif
 
 // fptrgroup 
-#if (defined(__XS3A__) || defined(__VX4B__))
+#if (defined(__XS3A__) || defined(__riscv_xxcore))
 #define MEMCPY_FPTRGROUP __attribute__((fptrgroup("memcpy_fn_group")))
 #else
 #define MEMCPY_FPTRGROUP

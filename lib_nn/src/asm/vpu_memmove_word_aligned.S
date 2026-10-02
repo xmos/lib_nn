@@ -68,7 +68,7 @@ FUNCTION_NAME:
 
 
 
-#if defined(__VX4B__)
+#if defined(__riscv_xxcore)
 
 
 #define FUNCTION_NAME vpu_memmove_word_aligned_asm

@@ -121,7 +121,7 @@ maccr_tail:
 
 #endif
 
-#if defined(__VX4B__)
+#if defined(__riscv_xxcore)
 
 // Assume rhs is column major, [col, row]
 

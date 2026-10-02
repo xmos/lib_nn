@@ -29,7 +29,7 @@ FUNCTION_NAME:
 
 #endif // XS3A
 
-#if defined(__VX4B__)
+#if defined(__riscv_xxcore)
 
 /*
 void mat_mul_direct_int16x8_impl_asm(

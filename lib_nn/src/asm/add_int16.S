@@ -123,7 +123,7 @@ done:
 #endif
 
 
-#if defined(__VX4B__)
+#if defined(__riscv_xxcore)
 
 shifts:
     .word 0x000E000E, 0x000E000E, 0x000E000E, 0x000E000E
