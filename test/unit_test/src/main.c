@@ -10,7 +10,7 @@ static inline
 void set_target(void) {
 #if defined(__XS3A__)
   SetNNTargetArch(TARGET_ARCH_XS3A);
-#elif defined(__VX4B__)
+#elif defined(__riscv_xxcore)
   SetNNTargetArch(TARGET_ARCH_VX4A);
 #else
   SetNNTargetArch(TARGET_ARCH_XS3A);

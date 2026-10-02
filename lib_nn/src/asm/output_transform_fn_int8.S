@@ -169,7 +169,7 @@ vlsat_done:
 
 
 
-#if defined(__VX4B__)
+#if defined(__riscv_xxcore)
 
 #define FUNCTION_NAME output_transform_fn_impl_asm
 

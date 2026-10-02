@@ -119,7 +119,7 @@ FUNCTION_NAME:
 #endif
 
 
-#if defined(__VX4B__)
+#if defined(__riscv_xxcore)
 
 /*
 void mat_mul_direct_int16_impl_asm(

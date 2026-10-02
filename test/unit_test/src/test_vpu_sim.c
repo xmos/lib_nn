@@ -274,7 +274,7 @@ TEST(group_vpu_sim, test_vl_add_sub_mul) {
 #if defined(__XS3A__)
   TEST_ASSERT_EQUAL_INT8_ARRAY(expected_xs3, out_asm, VPU_INT8_EPV);
   TEST_ASSERT_EQUAL_INT8_ARRAY(expected_xs3, out_sim, VPU_INT8_EPV);
-#elif defined(__VX4B__)
+#elif defined(__riscv_xxcore)
   TEST_ASSERT_EQUAL_INT8_ARRAY(expected_vx4, out_asm, VPU_INT8_EPV);
   TEST_ASSERT_EQUAL_INT8_ARRAY(expected_vx4, out_sim, VPU_INT8_EPV);
 #endif
@@ -413,7 +413,7 @@ TEST(group_vpu_sim, test_vlsat_fixed) {
   VLDD(&sim, acc_high);
   VLSAT_FIXED(&sim, shifts);
   VSTR(&sim, output);
-#if defined(__VX4B__)
+#if defined(__riscv_xxcore)
   TEST_ASSERT_EQUAL_INT8(-128, output[0]);
 #elif defined(__XS3A__)
   TEST_ASSERT_EQUAL_INT8(-127, output[0]);
@@ -425,7 +425,7 @@ TEST(group_vpu_sim, test_sats) {
   TEST_ASSERT_EQUAL_INT(-127, vpu_saturate(-200, 8));
 
   TEST_ASSERT_EQUAL_INT(127, vpu_saturate_fixed(200, 8));
-#if defined(__VX4B__)
+#if defined(__riscv_xxcore)
   TEST_ASSERT_EQUAL_INT(-128, vpu_saturate_fixed(-200, 8));
 #elif defined(__XS3A__)
   TEST_ASSERT_EQUAL_INT(-127, vpu_saturate_fixed(-200, 8));

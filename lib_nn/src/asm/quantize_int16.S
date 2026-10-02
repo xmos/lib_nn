@@ -86,7 +86,7 @@ minint:
     .size FUNCTION_NAME, .Ltmp1-FUNCTION_NAME
 #endif
 
-#if defined(__VX4B__)
+#if defined(__riscv_xxcore)
 
 #define FUNCTION_NAME quantize_int16_tensor_asm
 #define NSTACKWORDS 4

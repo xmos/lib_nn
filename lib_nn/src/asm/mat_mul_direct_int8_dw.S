@@ -114,7 +114,7 @@ FUNCTION_NAME:
 #endif
 
 
-#if defined(__VX4B__)
+#if defined(__riscv_xxcore)
 
 
 #define FUNCTION_NAME mat_mul_dw_direct_impl_asm

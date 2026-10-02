@@ -145,7 +145,7 @@ FUNCTION_NAME:
 
 #endif
 
-#if defined(__VX4B__)
+#if defined(__riscv_xxcore)
 
 #define FUNCTION_NAME   output_transform_fn_int_clamped_asm
 #define NSTACKWORDS     16

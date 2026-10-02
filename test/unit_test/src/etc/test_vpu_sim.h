@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 
-#if defined(__VX4A__) || defined(__VX4B__)
+#if defined(__riscv_xxcore)
 
 static inline void vsetc(const unsigned mode) { asm volatile("li x28, %0\n xm.vsetc x28" :: "i"(mode) : "x28"); }
 static inline void vclrdr(void) {asm volatile("xm.vclrdr");}
