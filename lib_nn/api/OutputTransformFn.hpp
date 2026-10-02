@@ -339,7 +339,8 @@ class OutputTransformFnInt8 : public OutputTransformFn {
       return sat(((int64_t)val + (1LL << (shr_amount - 1))) >> shr_amount,
                  bits);
     } else {
-      return sat((int64_t)val << (-shr_amount), bits);
+      // Multiply rather than shift left: left-shifting a negative value is undefined before C++20
+      return sat((int64_t)val * ((int64_t)1 << (-shr_amount)), bits);
     }
   }
 
