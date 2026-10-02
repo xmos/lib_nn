@@ -41,6 +41,8 @@ TEST_GROUP_RUNNER(group_output_transforms) {
   RUN_TEST_CASE(group_output_transforms, Test_OT_int8_channelwise_small_range_wide_bias_range);
   RUN_TEST_CASE(group_output_transforms, Test_OT_int8_big_range);
   RUN_TEST_CASE(group_output_transforms, Test_OT_int8_channelwise_big_range);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_bias_low_precision);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_channelwise_bias_low_precision);
 }
 
 }  // extern "C"
@@ -667,6 +669,34 @@ TEST(group_output_transforms, Test_OT_int8_channelwise_big_range) {
     TEST_ASSERT_TRUE(is_in);
   }
 #endif
+}
+
+// Three channels of a real VNR conv layer whose largest channel forces B == 0 with the VX4 VLMUL
+// shift. Rounding their biases with a fixed 2^-B correction cost a whole output LSB there.
+static MulsAndBias low_bias_precision_channels() {
+  MulsAndBias mb;
+  mb.push_back(OutputTransformFn::ActivationParams(-489.400, 0.015873, 22768, 38833));
+  mb.push_back(OutputTransformFn::ActivationParams(-1842.950, 0.069603, 24639, 28303));
+  mb.push_back(OutputTransformFn::ActivationParams(-12824.039, 0.072502, 175113, 178631));
+  return mb;
+}
+
+TEST(group_output_transforms, Test_OT_int8_bias_low_precision) {
+  for (nn_vlmul_shr_t shr : {VLMUL_SHR_XS3A, VLMUL_SHR_VX4A}) {
+    MulsAndBias mb = low_bias_precision_channels();
+    auto qp = OutputTransformFnInt8_Group::Quantizer().quantise_activation(mb, shr, false);
+    double error = OutputTransformFnInt8::get_quant_error(mb, qp, shr, true);
+    TEST_ASSERT_TRUE_MESSAGE(error < 0.5, "group quantisation error too high");
+  }
+}
+
+TEST(group_output_transforms, Test_OT_int8_channelwise_bias_low_precision) {
+  for (nn_vlmul_shr_t shr : {VLMUL_SHR_XS3A, VLMUL_SHR_VX4A}) {
+    MulsAndBias mb = low_bias_precision_channels();
+    auto qp = OutputTransformFnInt8_Channelwise::Quantizer().quantise_activation(mb, shr, false);
+    double error = OutputTransformFnInt8_Channelwise::get_quant_error(mb, qp, shr, true);
+    TEST_ASSERT_TRUE_MESSAGE(error < 0.5, "channelwise quantisation error too high");
+  }
 }
 
 }  // extern "C"
