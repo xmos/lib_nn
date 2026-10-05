@@ -115,10 +115,20 @@ static int16_t float_to_int16(T f, int e) {
  * 2^-(s+1) on average. The transform rounds at the initial shift (vlsat), the multiply (vlmul),
  * and the final shifts: vlashr by B - 8 then vdepth8 by 8. Those are exact left shifts when
  * B <= 0, a single rounding by 2^B when 1 <= B <= 8, and a double rounding when B > 8.
+ *
+ * The vlmul products are not uniform when they share low zero bits: each is a multiple of 2^k,
+ * where k is the multiplier's trailing zero count plus any left shift of the accumulator, so the
+ * multiply only rounds away vlmul_shr - k bits.
  */
 static double rounding_drift(int initial_shift, int16_t multiplier, int B,
                              nn_vlmul_shr_t vlmul_shr) {
-  double drift = std::ldexp(1.0, -((int)vlmul_shr + 1));  // vlmul
+  double drift = 0.0;
+  if (multiplier != 0) {
+    int zero_bits = std::max(-initial_shift, 0);
+    for (uint16_t m = (uint16_t)multiplier; (m & 1) == 0; m >>= 1) zero_bits++;
+    int rounded_bits = (int)vlmul_shr - zero_bits;
+    if (rounded_bits > 0) drift += std::ldexp(1.0, -(rounded_bits + 1));  // vlmul
+  }
   if (initial_shift > 0)                                    // vlsat, scaled by the multiplier
     drift += std::ldexp((double)multiplier, -(initial_shift + 1 + (int)vlmul_shr));
   if (B > 8)
@@ -146,6 +156,12 @@ static int16_t choose_bias(const OutputTransformFn::ActivationParams &p,
   double accu_mid = 0.5 * ((double)p.accu_min_val + (double)p.accu_max_val);
   double corrected_bias =
       p.bias + accu_mid * (p.multiplier - quantised_multiplier);
+
+  // A zero multiplier makes every output the bias alone, with no spread of values for the drift
+  // to average over. Encode the reference's rounded output exactly instead, so the final shifts
+  // are exact and ties round away from zero like std::round() rather than to even.
+  if (multiplier == 0) return float_to_int16(std::round(corrected_bias), B);
+
   double scaled_bias = std::ldexp(corrected_bias, B) -
                        rounding_drift(initial_shift, multiplier, B, vlmul_shr);
   return float_to_int16(scaled_bias, 0);

@@ -43,6 +43,8 @@ TEST_GROUP_RUNNER(group_output_transforms) {
   RUN_TEST_CASE(group_output_transforms, Test_OT_int8_channelwise_big_range);
   RUN_TEST_CASE(group_output_transforms, Test_OT_int8_bias_low_precision);
   RUN_TEST_CASE(group_output_transforms, Test_OT_int8_channelwise_bias_low_precision);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_bias_left_shifted_accu);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_zero_multiplier);
 }
 
 }  // extern "C"
@@ -696,6 +698,106 @@ TEST(group_output_transforms, Test_OT_int8_channelwise_bias_low_precision) {
     auto qp = OutputTransformFnInt8_Channelwise::Quantizer().quantise_activation(mb, shr, false);
     double error = OutputTransformFnInt8_Channelwise::get_quant_error(mb, qp, shr, true);
     TEST_ASSERT_TRUE_MESSAGE(error < 0.5, "channelwise quantisation error too high");
+  }
+}
+
+// Mean signed error of the quantised group transform against the unrounded float result, over
+// every accumulator of every channel. get_quant_error() is an absolute error, so it does not see
+// a constant output offset that is smaller than the rounding steps.
+static double group_mean_signed_error(MulsAndBias &mb,
+                                      OutputTransformFnInt8_Group::QuantisationParams &qp,
+                                      nn_vlmul_shr_t shr) {
+  double error_sum = 0.0;
+  int64_t count = 0;
+  for (unsigned ch = 0; ch < mb.size(); ++ch) {
+    for (int accu = mb[ch].accu_min_val; accu <= mb[ch].accu_max_val; ++accu) {
+      int32_t t = OutputTransformFnInt8::shr(accu, qp.initial_shr);                // vlsat
+      t = OutputTransformFnInt8::mul(t, qp.multipliers[ch], 16, shr);              // vlmul
+      t = OutputTransformFnInt8::add(t, qp.biases[ch]);                            // vladd
+      t = OutputTransformFnInt8::shr(t, qp.final_shr);                             // vlashr
+      t = OutputTransformFnInt8::sat(OutputTransformFnInt8::shr(t, 8), 8);         // vdepth8
+      error_sum += t - ((double)accu * mb[ch].multiplier + mb[ch].bias);
+      count++;
+    }
+  }
+  return error_sum / (double)count;
+}
+
+// Small accumulators make the group quantiser shift them left (initial_shr < 0), and a multiplier
+// of 2.5 quantises to 5 * 2^12. Every VLMUL product is then a multiple of 2^(vlmul_shr - 1), so
+// half of them round up by half an LSB. That rounding drift is 0.25 output LSB at B == 0, not the
+// 2^-(vlmul_shr + 1) of uniformly spread products, and the bias has to remove it.
+TEST(group_output_transforms, Test_OT_int8_bias_left_shifted_accu) {
+  for (nn_vlmul_shr_t shr : {VLMUL_SHR_XS3A, VLMUL_SHR_VX4A}) {
+    MulsAndBias mb;
+    for (int ch = 0; ch < 16; ++ch) {
+      int32_t accu_min = 4300 + 230 * ch;
+      int32_t accu_max = accu_min + 80;
+      // Spread the biases' fractional parts so that the channels round their biases differently
+      double bias = -2.5 * 0.5 * (accu_min + accu_max) + (ch / 16.0 - 0.5) + 0.03;
+      mb.push_back(OutputTransformFn::ActivationParams(bias, 2.5, accu_min, accu_max));
+    }
+    auto qp = OutputTransformFnInt8_Group::Quantizer().quantise_activation(mb, shr, false);
+    TEST_ASSERT_TRUE_MESSAGE(qp.initial_shr < 0, "expected the accumulators to be shifted left");
+
+    double offset = group_mean_signed_error(mb, qp, shr);
+    TEST_ASSERT_TRUE_MESSAGE(std::fabs(offset) < 0.1, "group quantisation has an output offset");
+    // Half of the channels have every other output on a rounding tie, so they are about 0.5 LSB
+    // out whichever bias is chosen
+    double error = OutputTransformFnInt8::get_quant_error(mb, qp, shr, true);
+    TEST_ASSERT_TRUE_MESSAGE(error < 0.55, "group quantisation error too high");
+  }
+}
+
+// int8 output of one channel of a quantised transform for one accumulator
+static int32_t int8_output(int initial_shr, int16_t multiplier, int16_t bias, int final_shr,
+                           int32_t accu, nn_vlmul_shr_t shr) {
+  int32_t t = OutputTransformFnInt8::shr(accu, initial_shr);                // vlsat
+  t = OutputTransformFnInt8::mul(t, multiplier, 16, shr);                   // vlmul
+  t = OutputTransformFnInt8::add(t, bias);                                  // vladd
+  t = OutputTransformFnInt8::shr(t, final_shr);                             // vlashr
+  return OutputTransformFnInt8::sat(OutputTransformFnInt8::shr(t, 8), 8);   // vdepth8
+}
+
+// Zero-multiplier channels, with biases on rounding ties of both signs. Their output is the bias
+// alone, so it must be exactly the reference's std::round(bias). With only these channels B == 0;
+// adding a channel with a small multiplier raises B so the final shifts round too. The constructor
+// zeroes the bias of a zero-multiplier channel, so the bias is set afterwards.
+static MulsAndBias zero_multiplier_channels(bool with_product) {
+  MulsAndBias mb;
+  for (double bias : {1.5, 2.5, -1.5, -2.5, 0.5, -0.5, 3.0, 100.4, -127.5}) {
+    mb.push_back(OutputTransformFn::ActivationParams(bias, 0.0, -100, 100));
+    mb.back().bias = bias;
+  }
+  if (with_product)
+    mb.push_back(OutputTransformFn::ActivationParams(0.0, 0.01, 0, 1000));
+  return mb;
+}
+
+TEST(group_output_transforms, Test_OT_int8_zero_multiplier) {
+  for (nn_vlmul_shr_t shr : {VLMUL_SHR_XS3A, VLMUL_SHR_VX4A}) {
+    for (bool with_product : {false, true}) {
+      MulsAndBias mb = zero_multiplier_channels(with_product);
+      auto qg = OutputTransformFnInt8_Group::Quantizer().quantise_activation(mb, shr, false);
+      auto qc = OutputTransformFnInt8_Channelwise::Quantizer().quantise_activation(mb, shr, false);
+      TEST_ASSERT_TRUE_MESSAGE((qg.final_shr > -8) == with_product, "unexpected group B");
+      for (unsigned ch = 0; ch < mb.size(); ++ch) {
+        if (mb[ch].multiplier != 0.0) continue;
+        int expected = (int)std::round(mb[ch].bias);
+        const int32_t accus[] = {mb[ch].accu_min_val, 0, mb[ch].accu_max_val};
+        for (int32_t accu : accus) {
+          TEST_ASSERT_EQUAL_INT32_MESSAGE(
+              expected,
+              int8_output(qg.initial_shr, qg.multipliers[ch], qg.biases[ch], qg.final_shr, accu, shr),
+              "group zero-multiplier output");
+          TEST_ASSERT_EQUAL_INT32_MESSAGE(
+              expected,
+              int8_output(qc.initial_shifts[ch], qc.multipliers[ch], qc.biases[ch], qc.final_shr,
+                          accu, shr),
+              "channelwise zero-multiplier output");
+        }
+      }
+    }
   }
 }
 
