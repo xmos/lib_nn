@@ -108,83 +108,47 @@ static int16_t float_to_int16(T f, int e) {
   return (int16_t)v;
 }
 
-/** @brief Mean absolute int8 output error of one channel over its non-saturating accumulators. */
-static double channel_quant_error(const OutputTransformFn::ActivationParams &p,
-                                  int initial_shift, int16_t multiplier,
-                                  int16_t bias, int final_shr,
-                                  nn_vlmul_shr_t vlmul_shr) {
-  // Sample at most this many accumulators so the cost stays bounded for wide ranges. The stride is
-  // rounded up so the cap holds, then kept odd: an even stride aliases with the power-of-two
-  // rounding steps and skews the result.
-  const int64_t max_samples = 4096;
-  const int64_t range = (int64_t)p.accu_max_val - p.accu_min_val + 1;
-  if (range <= 0) return 0.0;
-  const int64_t stride = ((range + max_samples - 1) / max_samples) | 1;
-
-  int64_t abs_error_sum = 0, count = 0;
-  for (int64_t accu = p.accu_min_val; accu <= p.accu_max_val; accu += stride) {
-    // Same arithmetic as OutputTransformFnInt8::get_quant_error()
-    int32_t t = OutputTransformFnInt8::shr((int32_t)accu, initial_shift);  // vlsat
-    t = OutputTransformFnInt8::mul(t, multiplier, 16, vlmul_shr);           // vlmul
-    t = OutputTransformFnInt8::add(t, bias);                                // vladd
-    t = OutputTransformFnInt8::shr(t, final_shr);                           // vlashr
-    t = OutputTransformFnInt8::sat(OutputTransformFnInt8::shr(t, 8), 8);    // vdepth8
-
-    int expected = (int)std::round((double)accu * p.multiplier + p.bias);
-    expected = std::max((int)INT8_MIN, std::min((int)INT8_MAX, expected));
-    abs_error_sum += std::abs(expected - t);
-    count++;
-  }
-  return (double)abs_error_sum / (double)count;
+/**
+ * @brief Mean upward drift, in bias LSBs, added by the int8 output transform's rounding shifts.
+ *
+ * A round-half-up shift right by s of integers that are uniform modulo 2^s overshoots by
+ * 2^-(s+1) on average. The transform rounds at the initial shift (vlsat), the multiply (vlmul),
+ * and the final shifts: vlashr by B - 8 then vdepth8 by 8. Those are exact left shifts when
+ * B <= 0, a single rounding by 2^B when 1 <= B <= 8, and a double rounding when B > 8.
+ */
+static double rounding_drift(int initial_shift, int16_t multiplier, int B,
+                             nn_vlmul_shr_t vlmul_shr) {
+  double drift = std::ldexp(1.0, -((int)vlmul_shr + 1));  // vlmul
+  if (initial_shift > 0)                                    // vlsat, scaled by the multiplier
+    drift += std::ldexp((double)multiplier, -(initial_shift + 1 + (int)vlmul_shr));
+  if (B > 8)
+    drift += 0.5 + std::ldexp(1.0, B - 9);  // vlashr, then vdepth8 of the result
+  else if (B > 0)
+    drift += 0.5;                           // vdepth8 only
+  return drift;
 }
 
 /**
  * @brief Choose a channel's 16-bit bias, given its already-quantised initial shift and multiplier.
  *
- * Rounding the scaled bias on its own leaves an output offset caused by the multiplier's rounding
- * error, and a fixed correction term only suits some bias exponents: subtracting 2^-B is a whole
- * output LSB when B == 0. Instead, start from the rounded bias corrected for the multiplier error
- * at the middle of the accumulator range, and pick the nearby integer that minimises the same
- * error measure as get_quant_error(). The optimum is within one LSB of that start.
- *
- * The search only pays off when the bias has few fractional bits. From B == 4 upwards the fixed
- * correction is within about 0.02 output LSB of the best bias, so it is kept there and the search,
- * which costs thousands of simulated transforms, is skipped.
+ * Rounding the scaled bias on its own leaves two systematic output offsets: the multiplier's
+ * rounding error times the accumulator, and the mean overshoot of the transform's round-half-up
+ * shifts. Correct for the first at the middle of the accumulator range and subtract the second
+ * (see rounding_drift()), then round. The old fixed correction of one bias LSB matches the
+ * rounding drift only at B == 9; at B == 0 it is a whole output LSB too much.
  */
 static int16_t choose_bias(const OutputTransformFn::ActivationParams &p,
                            int initial_shift, int16_t multiplier, int B,
-                           int final_shr, nn_vlmul_shr_t vlmul_shr) {
-  const int search_radius = 1;
-  const int min_B_without_search = 4;
-
-  if (B >= min_B_without_search)
-    return float_to_int16(p.bias - std::ldexp(1.0, -B), B);
-
+                           nn_vlmul_shr_t vlmul_shr) {
   // B = A + M - vlmul_shr with A = -initial_shift, so the multiplier's exponent is
   int M = B + initial_shift + (int)vlmul_shr;
   double quantised_multiplier = std::ldexp((double)multiplier, -M);
   double accu_mid = 0.5 * ((double)p.accu_min_val + (double)p.accu_max_val);
   double corrected_bias =
       p.bias + accu_mid * (p.multiplier - quantised_multiplier);
-  int16_t start = float_to_int16(corrected_bias, B);
-
-  int16_t best_bias = start;
-  double best_error = channel_quant_error(p, initial_shift, multiplier, start,
-                                          final_shr, vlmul_shr);
-  for (int d = 1; d <= search_radius; ++d) {
-    for (int sign : {-1, 1}) {
-      int64_t candidate = (int64_t)start + sign * d;
-      if (candidate < INT16_MIN || candidate > INT16_MAX) continue;
-      double e = channel_quant_error(p, initial_shift, multiplier,
-                                     (int16_t)candidate, final_shr, vlmul_shr);
-      // Strict improvement only, so ties keep the candidate closest to start
-      if (e < best_error) {
-        best_error = e;
-        best_bias = (int16_t)candidate;
-      }
-    }
-  }
-  return best_bias;
+  double scaled_bias = std::ldexp(corrected_bias, B) -
+                       rounding_drift(initial_shift, multiplier, B, vlmul_shr);
+  return float_to_int16(scaled_bias, 0);
 }
 
 // Select A, M such that
@@ -646,7 +610,7 @@ OutputTransformFnInt8_Group::Quantizer::quantise_activation(
     int16_t m = float_to_int16(activationParams[ch].multiplier, M);
     q.multipliers.push_back(m);
     int16_t b = choose_bias(activationParams[ch], q.initial_shr, m, B,
-                            q.final_shr, vlmul_shr);
+                            vlmul_shr);
     q.biases.push_back(b);
 
   }
@@ -683,8 +647,7 @@ OutputTransformFnInt8_Channelwise::Quantizer::quantise_activation(
 
     int16_t m = float_to_int16(activationParams[ch].multiplier, M);
     q.multipliers.push_back(m);
-    int16_t b = choose_bias(activationParams[ch], -A, m, B, q.final_shr,
-                            vlmul_shr);
+    int16_t b = choose_bias(activationParams[ch], -A, m, B, vlmul_shr);
     q.biases.push_back(b);
 
   }
