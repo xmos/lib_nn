@@ -146,11 +146,19 @@ static double channel_quant_error(const OutputTransformFn::ActivationParams &p,
  * output LSB when B == 0. Instead, start from the rounded bias corrected for the multiplier error
  * at the middle of the accumulator range, and pick the nearby integer that minimises the same
  * error measure as get_quant_error(). The optimum is within one LSB of that start.
+ *
+ * The search only pays off when the bias has few fractional bits. From B == 4 upwards the fixed
+ * correction is within about 0.02 output LSB of the best bias, so it is kept there and the search,
+ * which costs thousands of simulated transforms, is skipped.
  */
 static int16_t choose_bias(const OutputTransformFn::ActivationParams &p,
                            int initial_shift, int16_t multiplier, int B,
                            int final_shr, nn_vlmul_shr_t vlmul_shr) {
   const int search_radius = 1;
+  const int min_B_without_search = 4;
+
+  if (B >= min_B_without_search)
+    return float_to_int16(p.bias - std::ldexp(1.0, -B), B);
 
   // B = A + M - vlmul_shr with A = -initial_shift, so the multiplier's exponent is
   int M = B + initial_shift + (int)vlmul_shr;
