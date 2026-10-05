@@ -34,7 +34,6 @@ To use this library in an application include ``lib_nn`` in the application's ``
 
 .. code-block:: C
 
-    #include "nn_pooling.h"
     #include "nn_layers.h"
 
 *******
