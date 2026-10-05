@@ -354,6 +354,23 @@ class OutputTransformFnInt8 : public OutputTransformFn {
     return sat(prod >> vlmul_shr, bits);
   }
 
+  /** @brief int8 output of the quantised transform for one accumulator. */
+  static int32_t quantised_output(int32_t accu, int initial_shr, int16_t multiplier,
+                                  int16_t bias, int final_shr, nn_vlmul_shr_t vlmul_shr) {
+    int32_t t = shr(accu, initial_shr);           // vlsat
+    t = mul(t, multiplier, 16, vlmul_shr);        // vlmul
+    t = add(t, bias);                             // vladd
+    t = shr(t, final_shr);                        // vlashr
+    return sat(shr(t, 8), 8);                     // vdepth8
+  }
+
+  /** @brief Reference int8 output for one accumulator: rounded, then clamped to int8. */
+  static int expected_output(const ActivationParams &p, int32_t accu) {
+    int expected = (int)std::round((double)accu * p.multiplier + p.bias);
+    expected = std::min(expected, (int)INT8_MAX);
+    return std::max(expected, (int)INT8_MIN);
+  }
+
   /**
    * Calculate the maximum average error between the reference and quantised
    * implementations of the output transform over each channel. The average is
@@ -373,21 +390,9 @@ class OutputTransformFnInt8 : public OutputTransformFn {
 
         for (int accu = mul_and_bias[idx].accu_min_val;
              accu <= mul_and_bias[idx].accu_max_val; ++accu) {
-          int32_t t = shr(accu, qp.initial_shr);  // vlsat
-          t = mul(t, qp.multipliers[idx], 16, vlmul_shr);  // vlmul
-          t = add(t, qp.biases[idx]);             // vladd
-          t = shr(t, qp.final_shr);               // vlashr
-          t = sat(shr(t, 8), 8);                  // vdepth8
-
-          double v = (double)accu * mul_and_bias[idx].multiplier +
-                     mul_and_bias[idx].bias;
-
-          int expected = (int)std::round(v);
-
-          expected = std::min((int)expected, (int)INT8_MAX);
-          expected = std::max((int)expected, (int)INT8_MIN);
-
-          abs_error_sum += std::abs(expected - t);
+          int32_t t = quantised_output(accu, qp.initial_shr, qp.multipliers[idx],
+                                       qp.biases[idx], qp.final_shr, vlmul_shr);
+          abs_error_sum += std::abs(expected_output(mul_and_bias[idx], accu) - t);
         }
 
         int64_t interesting_accumulators =
@@ -491,21 +496,9 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
 
         for (int accu = mul_and_bias[idx].accu_min_val;
              accu <= mul_and_bias[idx].accu_max_val; ++accu) {
-          int32_t t = shr(accu, qp.initial_shifts[idx]);  // vlsat
-          t = mul(t, qp.multipliers[idx], 16, vlmul_shr);  // vlmul
-          t = add(t, qp.biases[idx]);             // vladd
-          t = shr(t, qp.final_shr);               // vlashr
-          t = sat(shr(t, 8), 8);                  // vdepth8
-
-          double v = (double)accu * mul_and_bias[idx].multiplier +
-                     mul_and_bias[idx].bias;
-
-          int expected = (int)std::round(v);
-
-          expected = std::min((int)expected, (int)INT8_MAX);
-          expected = std::max((int)expected, (int)INT8_MIN);
-
-          abs_error_sum += std::abs(expected - t);
+          int32_t t = quantised_output(accu, qp.initial_shifts[idx], qp.multipliers[idx],
+                                       qp.biases[idx], qp.final_shr, vlmul_shr);
+          abs_error_sum += std::abs(expected_output(mul_and_bias[idx], accu) - t);
         }
 
         int64_t interesting_accumulators =
