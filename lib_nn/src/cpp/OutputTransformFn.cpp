@@ -139,53 +139,6 @@ static double rounding_drift(int initial_shift, int16_t multiplier, int B,
 }
 
 /**
- * @brief Check a bias against its neighbours over the channel's actual accumulators.
- *
- * Simulates the transform once per sampled accumulator and scores the three biases around
- * `bias` by their mean absolute int8 error, the measure get_quant_error() uses. A neighbour
- * replaces `bias` only if it is better by more than a small margin: the absolute error cannot
- * tell apart biases that trade a constant output offset against rounding ties, and `bias` is the
- * one without the offset.
- */
-static int16_t refine_bias(const OutputTransformFn::ActivationParams &p,
-                           int initial_shift, int16_t multiplier, int B,
-                           nn_vlmul_shr_t vlmul_shr, int16_t bias) {
-  const int64_t max_samples = 1024;
-  const double min_improvement = 0.05;
-  // Round the stride up so the cap holds, then keep it odd so it does not alias with the
-  // power-of-two rounding steps
-  const int64_t range = (int64_t)p.accu_max_val - p.accu_min_val + 1;
-  const int64_t stride = ((range + max_samples - 1) / max_samples) | 1;
-
-  const int candidate_count = 3;
-  int64_t candidates[candidate_count] = {bias, (int64_t)bias - 1, (int64_t)bias + 1};
-  int64_t abs_error_sums[candidate_count] = {0, 0, 0};
-  int64_t count = 0;
-  for (int64_t accu = p.accu_min_val; accu <= p.accu_max_val; accu += stride) {
-    // Same arithmetic as OutputTransformFnInt8::get_quant_error()
-    int32_t product = OutputTransformFnInt8::shr((int32_t)accu, initial_shift);     // vlsat
-    product = OutputTransformFnInt8::mul(product, multiplier, 16, vlmul_shr);       // vlmul
-    int expected = (int)std::round((double)accu * p.multiplier + p.bias);
-    expected = std::max((int)INT8_MIN, std::min((int)INT8_MAX, expected));
-    for (int i = 0; i < candidate_count; ++i) {
-      int32_t t = OutputTransformFnInt8::add(product, (int32_t)candidates[i]);     // vladd
-      t = OutputTransformFnInt8::shr(t, B - 8);                                    // vlashr
-      t = OutputTransformFnInt8::sat(OutputTransformFnInt8::shr(t, 8), 8);         // vdepth8
-      abs_error_sums[i] += std::abs(expected - t);
-    }
-    count++;
-  }
-
-  int best = 0;
-  for (int i = 1; i < candidate_count; ++i) {
-    if (candidates[i] < INT16_MIN || candidates[i] > INT16_MAX) continue;
-    if (abs_error_sums[i] < abs_error_sums[best]) best = i;
-  }
-  double improvement = (double)(abs_error_sums[0] - abs_error_sums[best]) / (double)count;
-  return improvement > min_improvement ? (int16_t)candidates[best] : bias;
-}
-
-/**
  * @brief Choose a channel's 16-bit bias, given its already-quantised initial shift and multiplier.
  *
  * Rounding the scaled bias on its own leaves two systematic output offsets: the multiplier's
@@ -195,9 +148,8 @@ static int16_t refine_bias(const OutputTransformFn::ActivationParams &p,
  * rounding drift only at B == 9; at B == 0 it is a whole output LSB too much.
  *
  * The drift is a mean over products spread across many rounding steps. A near-constant channel,
- * whose products span less than one output LSB, rounds them all alike instead, which can leave
- * its outputs a whole LSB out. When B is small enough for that to matter, the bias is checked
- * against the channel's own accumulators (see refine_bias()). Other channels skip the check.
+ * whose products span less than one output LSB, rounds them all alike instead, so at small B its
+ * outputs can still be a whole LSB out. No real model checked so far has such a channel.
  */
 static int16_t choose_bias(const OutputTransformFn::ActivationParams &p,
                            int initial_shift, int16_t multiplier, int B,
@@ -216,19 +168,7 @@ static int16_t choose_bias(const OutputTransformFn::ActivationParams &p,
 
   double scaled_bias = std::ldexp(corrected_bias, B) -
                        rounding_drift(initial_shift, multiplier, B, vlmul_shr);
-  int16_t bias = float_to_int16(scaled_bias, 0);
-
-  // Only check channels where a wrong bias can cost a sizeable part of an output LSB (a bias LSB
-  // is 2^-B output LSBs) and whose products, which change by multiplier * 2^-(initial_shift +
-  // vlmul_shr) bias LSBs per accumulator, span less than one output LSB (one bias LSB when
-  // B < 0), so they round alike
-  const int max_B_to_check = 2;
-  if (B > max_B_to_check) return bias;
-  double product_span =
-      ((double)p.accu_max_val - (double)p.accu_min_val) *
-      std::fabs(std::ldexp((double)multiplier, -(initial_shift + (int)vlmul_shr)));
-  if (product_span >= std::ldexp(1.0, std::max(B, 0))) return bias;
-  return refine_bias(p, initial_shift, multiplier, B, vlmul_shr, bias);
+  return float_to_int16(scaled_bias, 0);
 }
 
 // Select A, M such that
