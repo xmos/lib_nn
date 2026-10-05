@@ -67,7 +67,7 @@ FUNCTION_NAME:
 #endif
 
 
-#if defined(__VX4B__)
+#if defined(__riscv_xxcore)
 
 .p2align 1
 .globl FUNCTION_NAME

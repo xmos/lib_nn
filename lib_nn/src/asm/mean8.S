@@ -162,7 +162,7 @@ maccr_tail_loop:
 
 #endif
 
-#if defined(__VX4B__)
+#if defined(__riscv_xxcore)
 
 // scale_mul is in_scale / out_scale
 // only support mean axis is the last axis, which end_dim_size = 1

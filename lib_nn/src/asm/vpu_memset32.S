@@ -37,7 +37,7 @@ early_exit:
 
 
 
-#if defined(__VX4B__)
+#if defined(__riscv_xxcore)
 
 #define FUNCTION_NAME vpu_memset32_asm
 

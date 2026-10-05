@@ -171,7 +171,7 @@ void broadcast_32_to_256(void *dst, uint32_t from) {
   asm("std %0, %1, %2[2]" :: "r" (from), "r" (from), "r" (dst));
   asm("std %0, %1, %2[3]" :: "r" (from), "r" (from), "r" (dst));
 #endif
-#if defined(__VX4A__) || defined(__VX4B__)
+#if defined(__riscv_xxcore)
   for (int i = 0; i < 8; i++) {
     ((uint32_t *)dst)[i] = from;
   }

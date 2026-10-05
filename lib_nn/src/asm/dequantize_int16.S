@@ -60,7 +60,7 @@ magic_constant:
 
 #endif
 
-#if defined(__VX4B__)
+#if defined(__riscv_xxcore)
 
 #define FUNCTION_NAME dequantize_int16_tensor_asm
     // a0: output array

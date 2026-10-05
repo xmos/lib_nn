@@ -137,7 +137,7 @@ TEST(group_mat_mul, Test_DepthwiseInt16) {
   MatMulDirectFn_DW dir(img_i16, win);
   mat_mul_dw_direct_params_t prm = dir.getParams();
 
-#if defined(__VX4B__)
+#if defined(__riscv_xxcore)
   // VX4B VLMACC drops the product's least-significant bit.
   constexpr int16_t weight_value = 2;
 #else

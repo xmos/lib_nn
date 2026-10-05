@@ -52,7 +52,7 @@ done:
     .cc_bottom pad_1_to_4_asm.func
 #endif
 
-#if defined(__VX4B__)
+#if defined(__riscv_xxcore)
 
 .pad_1_to_4_lut1:
     .word 0x030201FF, 0x030201FF, 0x030201FF, 0x030201FF
@@ -102,4 +102,4 @@ FUNCTION_NAME:
 .resource_list_empty FUNCTION_NAME, "tail_callees"
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
 
-#endif // defined(__VX4B__)
+#endif // defined(__riscv_xxcore)

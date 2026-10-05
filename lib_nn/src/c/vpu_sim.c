@@ -32,7 +32,7 @@ int64_t vpu_saturate(const int64_t input, const unsigned bits) {
 int64_t vpu_saturate_fixed(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
   int64_t min_val;
-  #if (defined(__VX4B__) || defined(NN_USE_REF))
+  #if (defined(__riscv_xxcore) || defined(NN_USE_REF))
     min_val = -(1LL << (bits - 1));
   #else
     min_val = -max_val;

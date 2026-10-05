@@ -75,7 +75,7 @@ loop:
     .cc_bottom pad_3_to_4_asm.func
 #endif
 
-#if defined(__VX4B__)
+#if defined(__riscv_xxcore)
 
 #define FUNCTION_NAME pad_3_to_4_asm
 #define NSTACKWORDS 4
@@ -111,5 +111,5 @@ FUNCTION_NAME:
 .resource_list_empty FUNCTION_NAME, "tail_callees"
 .resource_list_empty FUNCTION_NAME, "parallel_callees"
 
-#endif // defined(__VX4B__)
+#endif // defined(__riscv_xxcore)
 
