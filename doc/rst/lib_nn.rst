@@ -6,7 +6,8 @@ lib_nn: Neural network library
 Introduction
 ************
 
-``lib_nn`` is a library of optimised kernels for the neural network operators commonly used in 8-bit quantised inference, such as convolution, pooling, fully-connected layers and elementwise operations. Each kernel is written to maximise performance and minimise memory footprint on XMOS devices.
+``lib_nn`` is a library of optimised kernels for the neural network operators commonly used in 8-bit quantised inference, such as convolution, pooling, fully-connected layers and elementwise operations. 
+Each kernel is written to maximise performance and minimise memory footprint on XMOS devices.
 
 This library targets the xs3 and vx4 architectures. These architectures have a vector unit with 256-bit wide registers that can operate in 8-bit, 16-bit or 32-bit integer mode; ``lib_nn`` kernels are written to make direct use of this vector unit, alongside portable C reference implementations of the same operators.
 
@@ -19,8 +20,7 @@ Usage
 ``lib_nn`` is intended to be used with the `XCommon CMake <https://www.xmos.com/file/xcommon-cmake-documentation/?version=latest>`_
 , the `XMOS` application build and dependency management system.
 
-To use this library in an application include ``lib_nn`` in the application's ``APP_DEPENDENT_MODULES`` list in
-`CMakeLists.txt`, for example:
+To use this library in an application include ``lib_nn`` in the application's ``APP_DEPENDENT_MODULES`` list in `CMakeLists.txt`, for example:
 
 .. code-block:: cmake
 
@@ -37,9 +37,9 @@ To use this library in an application include ``lib_nn`` in the application's ``
     #include "nn_pooling.h"
     #include "nn_layers.h"
 
-*******************
-Example application
-*******************
+*******
+Example
+*******
 
 The ``examples/add_tensor`` directory contains a minimal application that demonstrates how to use ``lib_nn``.
 
@@ -63,164 +63,26 @@ Then, from the top level of the repository, run the following commands::
 
 See ``examples/add_tensor/README.rst`` for the full walkthrough.
 
-********
-Concepts
-********
+*****************
+Library Structure
+*****************
 
-Networks, Operators, Instances and Jobs
-========================================
+Layers
+======
 
-The design of ``lib_nn`` centres around a concept hierarchy that breaks down as follows.
+Geometry
+========
 
-Networks
---------
+Parameter Preparation
+=====================
 
-At the top level of the hierarchy is the concept of a *network*. A network is a sequence of operations and the data that joins them that accomplishes some computational task, such as performing inference using a convolutional neural network. ``lib_nn`` in its raw form does not have any explicit semantic representation of a network; a network is instead created by the sequence of invocations performed by a user of ``lib_nn``.
+Aggregation and Output Transformation
+=====================================
 
-Operators
----------
-
-Below the network is an *operator*. An operator is an abstraction representing a certain class of operations. For example, ``avgpool2d`` is an operator that performs 2D average pooling on images by sliding a pooling window of arbitrary size in two dimensions around an input image to produce an output image. An operator is represented semantically in the API by a set of struct definitions and functions capable of performing the necessary arithmetic.
-
-Operator Instances
--------------------
-
-It will often be the case that a network makes use of the same operator multiple times, for example, by having alternating layers of convolutions and pooling. Each occurrence of an operator within the network has a set of hyperparameters which describe the structure of the work to be performed, such as the size of a convolution window, or the number of channels processed by a pooling operation. An operator together with its hyperparameters constitutes a concrete instance of that operator.
-
-Jobs
-----
-
-It is often beneficial to split the actual execution of the work for an operator instance into multiple parts. This may be done, for example, to reduce latency by dividing the work among multiple cores that can run in parallel, or to reduce the memory overhead by only keeping part of the parameters or data in SRAM at a time. Each block of work to be performed is referred to as a *job*. In ``lib_nn``, each job corresponds to a subset of the data to be output by an operator instance. In some operators a job will compute a rectangular subset of an output image, while in others a job will compute a contiguous block of the output's memory.
-
-Logical vs API Entities
-------------------------
-
-The API distinguishes between a logical tensor and its representation in
-memory. A logical tensor is the mathematical object operated on; its API
-representation is the pointer, shape information, and memory layout supplied
-to a kernel. 
-
-The representation is sometimes the standard tensor layout, and
-sometimes an optimised layout required by the VPU.
-
-For example, ``maxpool2d()`` uses a simple representation: ``X`` and ``Y``
-are pointers to images, while ``x_params`` and ``y_params`` supply their
-shapes. The header specifies row-major memory with channels innermost, so the
-logical element ``X[r,c,p]`` is stored at ``(r * width + c) * channels + p``.
-``maxpool2d_ext()`` uses the same image representation, with ``job_params``
-selecting the output rows, columns, and channels computed by that call.
-
-************************
-Implementation Structure
-************************
-
-The following groups cover the main functional areas of the library, each
-mapped to the operators and source files that implement them.
-
-- **Pooling and image operators**: reduce an input image to an output image by sliding a window and computing a per-channel aggregate. e.g. ``maxpool2d()``, ``avgpool2d_global()``, ``argmax_16()``.
-- **Convolution**: transform an input image and kernel into an output image through weight reordering, multiply-accumulate, and per-channel output scaling. e.g. ``reorder_kernel_weights()``, ``mat_mul_direct_int8()``, ``execute()``. Depthwise and transpose variants included.
-- **Elementwise operators**: apply arithmetic operations element-by-element across two tensors of the same shape. e.g. ``add_elementwise()``, ``mul_elementwise()``, ``add_int16_tensor()``.
-- **Quantisation / dequantisation**: convert tensors between floating-point and fixed-point representations, with a compile-time ``*_blob()`` call to pre-compute runtime parameters. e.g. ``quantize_int16_tensor()``, ``dequantize_int16_tensor_blob()``.
-- **Activation and reduction**: apply non-linear functions or reduce a tensor along a dimension to a scalar output. e.g. ``softmax_generate_exp_lut()``, ``quadratic_interpolation_128()``, ``mean_int8()``.
-- **Data utilities**: repack or reformat tensor data into layouts required by the VPU. e.g. ``bsign_8()``, ``expand_8_to_16()``, ``pad_3_to_4_run()``.
-- **VPU utilities**: copy, move and set memory at word and vector alignment; simulate VPU instructions for C reference implementations. e.g. ``vpu_memcpy_ext()``, ``VLMACCR()``, ``VLSAT()``.
-
-************
-Quantisation
-************
-
-Quantisation represents a real value ``x`` with an integer ``q`` using two
-parameters:
-
-- The **scale** ``s`` is a positive real number giving the distance between
-    adjacent integer values. A smaller scale gives finer precision but covers a
-    smaller real range.
-- The **zero point** ``z`` is the integer that represents real zero. This lets
-    an integer type represent an asymmetric real range while still representing
-    zero exactly.
-
-Following the `LiteRT 8-bit quantisation specification <https://developers.google.com/edge/litert/conversion/tensorflow/quantization/quantization_spec>`_,
-the relationship between the real and quantised values is:
-
-.. math::
-
-    x = (q - z) \times s
-
-Rearranging this gives the quantisation operation:
-
-.. math::
-
-    q = \operatorname{round}\left(\frac{x}{s}\right) + z
-
-For example, with ``s = 0.1`` and ``z = -3``, the value ``0.26`` becomes
-``q = 0``. This integer represents approximately ``(0 - (-3)) * 0.1 = 0.3``.
-The chosen scale and zero point must map the required real range into the
-range of the integer type.
-
-With **symmetric quantisation**, the zero point is fixed at ``z = 0``. The rule
-therefore simplifies to:
-
-.. math::
-
-    q = \operatorname{round}\left(\frac{x}{s}\right)
-
-Requantisation changes the scale of an already quantised value. When both zero
-points are zero:
-
-.. math::
-
-    q_{out} \approx
-    \operatorname{round}\left(q_{in}\frac{s_{in}}{s_{out}}\right)
-
-Optimised implementations often split this work into two stages. A
-**preparation function** converts the scale and zero point into fixed-point
-multipliers, shifts, or a small parameter blob. A **compute function** reuses
-those prepared parameters for every tensor element, avoiding repeated setup
-inside the processing loop.
-
-**************
-Dequantisation
-**************
-
-Dequantisation maps an integer back to its approximate real value using the
-same scale and zero point:
-
-.. math::
-
-    x = (q - z) \times s
-
-For symmetric quantisation, ``z = 0``, so this simplifies to ``x = q * s``.
-For example, with ``s = 0.1``, the integer ``3`` becomes ``0.3``. Rounding
-during quantisation means this may not exactly reproduce the original value.
-
-Dequantisation may use the same two-stage pattern: preparation transforms the
-scale into a representation suited to the target, then the compute stage
-applies it to every integer element.
-
-**********************
-Implementation Details
-**********************
-
-The following notes describe the memory layouts, numerical conventions and
-VPU constraints that apply across the library.
-
-- **Standard tensor layout**: row-major, later dimensions fastest, matching C array order. Element ``A[i,j,k]`` is at byte offset ``(i*s1 + j*s2 + k) * element_size``.
-- **VPU saturation**: both architectures use saturating rather than wrapping arithmetic, so inner products are not associative. The saturation model differs between them:
-
-  - **xs3** uses *symmetric* saturation — the lower bound is the negative of the upper bound: 8-bit ``[-127, 127]``, 16-bit ``[-32767, 32767]``, 32-bit ``[-2147483647, 2147483647]``. This avoids the twos-complement corner case where ``abs(INT_MIN) = INT_MIN``, at the cost of a possible 1 LSb error at the negative extreme.
-  - **vx4** uses *asymmetric* saturation — standard twos-complement bounds: 8-bit ``[-128, 127]``, 16-bit ``[-32768, 32767]``, 32-bit ``[-2147483648, 2147483647]``.
-  - For more details on saturation behaviour, see `VPU saturating arithmetic <https://www.xmos.com/documentation/XM-015059-UG/html/doc/rst/src/reference/notes.html#note-vpu-saturating-arithmetic>`_. 
-
-- **Accumulation and output scaling**: convolution accumulates 8-bit products into a 32-bit accumulator seeded with a 32-bit bias, then applies: ``y[i] = ((acc32[i] >> shr1[i]) * scale[i]) >> shr2[i]``, with an additional ``>> 8`` for 8-bit outputs. Shifts are saturating and rounding; negative accumulators never shift to zero.
-- **Channel groups**: the VPU processes ``VPU_INT8_EPV = 32`` input channels per load and holds ``VPU_INT8_ACC_PERIOD = 16`` accumulators. Parameter tensors are grouped accordingly: input channel groups of 32, output channel groups of 16.
-- **BSO tensor layout**: the Bias-Scale-Offset tensor packs the per-channel output parameters required after accumulation into a single 3-D buffer of shape ``(ceil(C_out/16), 7, 16)``. Axis 0 is the output channel group, axis 2 is the channel offset within that group (so channel ``k`` is at ``[k//16, :, k%16]``), and axis 1 selects the parameter: 0 = bias high half-word, 1 = bias low half-word, 2 = shift1, 3 = scale, 4 = offset scale, 5 = offset, 6 = shift2. The interleaved layout lets the VPU load all parameters for a channel group in one pass.
+VPU Support
+===========
 
 *************
 API Reference
 *************
 
-nn_layers.h
-===========
-
-.. doxygenfile:: nn_layers.h
-   :project: lib_nn
