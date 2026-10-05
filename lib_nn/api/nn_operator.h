@@ -9,7 +9,6 @@ extern "C" {
 
 #include "nn_layers.h"
 #include "nn_op_utils.h"
-#include "nn_pooling.h"
 
 #ifdef __XC__
 }  // extern "C"
