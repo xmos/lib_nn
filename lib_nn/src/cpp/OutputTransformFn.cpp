@@ -194,10 +194,10 @@ static int16_t refine_bias(const OutputTransformFn::ActivationParams &p,
  * (see rounding_drift()), then round. The old fixed correction of one bias LSB matches the
  * rounding drift only at B == 9; at B == 0 it is a whole output LSB too much.
  *
- * The drift is a mean over products spread across many rounding steps. When a channel's products
- * span only a few bias LSBs, or a few output LSBs once B > 0, they round alike instead, so the
- * bias is then checked against the channel's own accumulators (see refine_bias()). Wider channels
- * skip that check, which keeps the cost per channel constant.
+ * The drift is a mean over products spread across many rounding steps. A near-constant channel,
+ * whose products span less than one output LSB, rounds them all alike instead, which can leave
+ * its outputs a whole LSB out. When B is small enough for that to matter, the bias is checked
+ * against the channel's own accumulators (see refine_bias()). Other channels skip the check.
  */
 static int16_t choose_bias(const OutputTransformFn::ActivationParams &p,
                            int initial_shift, int16_t multiplier, int B,
@@ -218,12 +218,16 @@ static int16_t choose_bias(const OutputTransformFn::ActivationParams &p,
                        rounding_drift(initial_shift, multiplier, B, vlmul_shr);
   int16_t bias = float_to_int16(scaled_bias, 0);
 
-  // Products in bias LSBs change by multiplier * 2^-(initial_shift + vlmul_shr) per accumulator
-  const double min_spread_steps = 16.0;
+  // Only check channels where a wrong bias can cost a sizeable part of an output LSB (a bias LSB
+  // is 2^-B output LSBs) and whose products, which change by multiplier * 2^-(initial_shift +
+  // vlmul_shr) bias LSBs per accumulator, span less than one output LSB (one bias LSB when
+  // B < 0), so they round alike
+  const int max_B_to_check = 2;
+  if (B > max_B_to_check) return bias;
   double product_span =
       ((double)p.accu_max_val - (double)p.accu_min_val) *
       std::fabs(std::ldexp((double)multiplier, -(initial_shift + (int)vlmul_shr)));
-  if (product_span >= min_spread_steps * std::ldexp(1.0, std::max(B, 0))) return bias;
+  if (product_span >= std::ldexp(1.0, std::max(B, 0))) return bias;
   return refine_bias(p, initial_shift, multiplier, B, vlmul_shr, bias);
 }
 
