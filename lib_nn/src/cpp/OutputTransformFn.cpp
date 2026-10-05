@@ -109,20 +109,29 @@ static int16_t float_to_int16(T f, int e) {
 }
 
 /**
- * @brief Mean upward drift, in bias LSBs, added by the int8 output transform's rounding shifts.
+ * @brief Mean upward drift, in bias LSBs, added by the int8 output transform's final shifts.
  *
  * A round-half-up shift right by s of integers that are uniform modulo 2^s overshoots by
- * 2^-(s+1) on average. The transform rounds at the initial shift (vlsat), the multiply (vlmul),
- * and the final shifts: vlashr by B - 8 then vdepth8 by 8. Those are exact left shifts when
- * B <= 0, a single rounding by 2^B when 1 <= B <= 8, and a double rounding when B > 8.
+ * 2^-(s+1) on average. The final shifts are vlashr by B - 8 then vdepth8 by 8: exact left shifts
+ * when B <= 0, a single rounding by 2^B when 1 <= B <= 8, and a double rounding when B > 8.
+ */
+static double final_shift_drift(int B) {
+  if (B > 8) return 0.5 + std::ldexp(1.0, B - 9);  // vlashr, then vdepth8 of the result
+  if (B > 0) return 0.5;                           // vdepth8 only
+  return 0.0;
+}
+
+/**
+ * @brief Mean upward drift, in bias LSBs, added by all of the int8 output transform's rounding.
  *
+ * Adds the drift of the initial shift (vlsat) and the multiply (vlmul) to final_shift_drift().
  * The vlmul products are not uniform when they share low zero bits: each is a multiple of 2^k,
  * where k is the multiplier's trailing zero count plus any left shift of the accumulator, so the
  * multiply only rounds away vlmul_shr - k bits.
  */
 static double rounding_drift(int initial_shift, int16_t multiplier, int B,
                              nn_vlmul_shr_t vlmul_shr) {
-  double drift = 0.0;
+  double drift = final_shift_drift(B);
   if (multiplier != 0) {
     int zero_bits = std::max(-initial_shift, 0);
     for (uint16_t m = (uint16_t)multiplier; (m & 1) == 0; m >>= 1) zero_bits++;
@@ -131,10 +140,6 @@ static double rounding_drift(int initial_shift, int16_t multiplier, int B,
   }
   if (initial_shift > 0)                                    // vlsat, scaled by the multiplier
     drift += std::ldexp((double)multiplier, -(initial_shift + 1 + (int)vlmul_shr));
-  if (B > 8)
-    drift += 0.5 + std::ldexp(1.0, B - 9);  // vlashr, then vdepth8 of the result
-  else if (B > 0)
-    drift += 0.5;                           // vdepth8 only
   return drift;
 }
 
@@ -147,9 +152,9 @@ static double rounding_drift(int initial_shift, int16_t multiplier, int B,
  * (see rounding_drift()), then round. The old fixed correction of one bias LSB matches the
  * rounding drift only at B == 9; at B == 0 it is a whole output LSB too much.
  *
- * The drift is a mean over products spread across many rounding steps. A near-constant channel,
- * whose products span less than one output LSB, rounds them all alike instead, so at small B its
- * outputs can still be a whole LSB out. No real model checked so far has such a channel.
+ * The vlsat and vlmul drift is a mean over products spread across many rounding steps. When a
+ * channel's products span less than one bias LSB they all round alike instead, so the mean does
+ * not apply: use the actual quantised product at the middle accumulator in its place.
  */
 static int16_t choose_bias(const OutputTransformFn::ActivationParams &p,
                            int initial_shift, int16_t multiplier, int B,
@@ -165,6 +170,18 @@ static int16_t choose_bias(const OutputTransformFn::ActivationParams &p,
   // to average over. Encode the reference's rounded output exactly instead, so the final shifts
   // are exact and ties round away from zero like std::round() rather than to even.
   if (multiplier == 0) return float_to_int16(std::round(corrected_bias), B);
+
+  // Products change by multiplier * 2^-(initial_shift + vlmul_shr) bias LSBs per accumulator
+  double product_span =
+      ((double)p.accu_max_val - (double)p.accu_min_val) *
+      std::fabs(std::ldexp((double)multiplier, -(initial_shift + (int)vlmul_shr)));
+  if (product_span < 1.0) {
+    int32_t accu = (int32_t)std::llround(accu_mid);
+    int32_t product = OutputTransformFnInt8::mul(
+        OutputTransformFnInt8::shr(accu, initial_shift), multiplier, 16, vlmul_shr);
+    double target = std::ldexp((double)accu * p.multiplier + p.bias, B) - product;
+    return float_to_int16(target - final_shift_drift(B), 0);
+  }
 
   double scaled_bias = std::ldexp(corrected_bias, B) -
                        rounding_drift(initial_shift, multiplier, B, vlmul_shr);

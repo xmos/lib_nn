@@ -45,6 +45,7 @@ TEST_GROUP_RUNNER(group_output_transforms) {
   RUN_TEST_CASE(group_output_transforms, Test_OT_int8_channelwise_bias_low_precision);
   RUN_TEST_CASE(group_output_transforms, Test_OT_int8_bias_left_shifted_accu);
   RUN_TEST_CASE(group_output_transforms, Test_OT_int8_zero_multiplier);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_bias_narrow_range);
 }
 
 }  // extern "C"
@@ -787,6 +788,32 @@ TEST(group_output_transforms, Test_OT_int8_zero_multiplier) {
         }
       }
     }
+  }
+}
+
+// A channel with only ten accumulators, grouped with a channel whose multiplier of 3 limits M to
+// 13. The narrow channel then quantises to initial_shr 1, multiplier -21 and B -2 (XS3), so every
+// product rounds the same way and the mean rounding drift misplaces its bias by about half a bias
+// LSB: 2 output LSBs at B == -2.
+TEST(group_output_transforms, Test_OT_int8_bias_narrow_range) {
+  for (nn_vlmul_shr_t shr : {VLMUL_SHR_XS3A, VLMUL_SHR_VX4A}) {
+    MulsAndBias mb;
+    mb.push_back(OutputTransformFn::ActivationParams(189.44601749396065, -0.0026232995180676013,
+                                                     47523, 47532));
+    mb.push_back(OutputTransformFn::ActivationParams(0.0, 3.0, -40, 40));
+    auto qp = OutputTransformFnInt8_Group::Quantizer().quantise_activation(mb, shr, false);
+    // B == final_shr + 8
+    TEST_ASSERT_TRUE_MESSAGE(qp.final_shr < -8, "expected a negative bias exponent");
+
+    double abs_error_sum = 0.0;
+    for (int32_t accu = mb[0].accu_min_val; accu <= mb[0].accu_max_val; ++accu) {
+      int32_t t = OutputTransformFnInt8::quantised_output(accu, qp.initial_shr, qp.multipliers[0],
+                                                          qp.biases[0], qp.final_shr, shr);
+      abs_error_sum += std::abs(OutputTransformFnInt8::expected_output(mb[0], accu) - t);
+    }
+    double error = abs_error_sum / (mb[0].accu_max_val - mb[0].accu_min_val + 1);
+    // With B == -2 the outputs step by 4, so the best reachable error here is about 1 LSB
+    TEST_ASSERT_TRUE_MESSAGE(error < 1.5, "narrow-range channel quantisation error too high");
   }
 }
 
