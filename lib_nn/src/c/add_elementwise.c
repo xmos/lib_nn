@@ -27,7 +27,7 @@
 #endif
 
 #define ASHR16(A, A_SHR) (((A_SHR) >= 0) ? ((A) >> (A_SHR)) : ((A) << -(A_SHR)))
-#define ROUND_SHR(A, A_SHR) (((A) + (1 << ((A_SHR)-1))) >> (A_SHR))
+#define ROUND_SHR(A, A_SHR) (((A_SHR) > 0) ? (((A) + (1 << ((A_SHR)-1))) >> (A_SHR)) : (A))
 
 #define MAX(A, B) (((A) >= (B)) ? (A) : (B))
 #define MIN(A, B) (((A) <= (B)) ? (A) : (B))
