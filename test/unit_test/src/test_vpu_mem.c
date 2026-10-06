@@ -10,9 +10,7 @@
 #include "helpers.h"
 #include "nn_operator.h"
 #include "tst_common.h"
-#include "vpu_memmove.h"
-#include "vpu_memcpy.h"
-#include "vpu_memset.h"
+#include "vpu_mem.h"
 #include "xs3_vpu.h"
 
 #include "unity.h"
