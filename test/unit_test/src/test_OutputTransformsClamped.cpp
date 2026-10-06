@@ -49,15 +49,15 @@ static int8_t clamped_reference(int32_t accumulator, int16_t offset,
 {
     const int sh = (NN_ARCH == TARGET_ARCH_XS3A) ? VLMUL_SHR_XS3A
                                                   : VLMUL_SHR_VX4A;
-    int value = (int)vpu_saturate(accumulator + offset, 16);
+    int value = (int)vpu_saturate_symmetric(accumulator + offset, 16);
     value = value > 0 ? value : 0;
     if (initial_shift > 0) {
         value += 1 << (initial_shift - 1);
     }
     value >>= initial_shift;
     value = (int)(((int64_t)value * multiplier + (1LL << (sh - 1))) >> sh);
-    value = (int)vpu_saturate(value, 16);
-    value = (int)vpu_saturate(value + bias, 16);
+    value = (int)vpu_saturate_symmetric(value, 16);
+    value = (int)vpu_saturate_symmetric(value + bias, 16);
     value = (value + (1 << (final_shr + 7))) >> (final_shr + 8);
     return saturate_output_int8(value);
 }

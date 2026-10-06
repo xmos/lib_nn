@@ -76,9 +76,10 @@ C_API void vpu_accu_print(xs3_vpu* vpu);
 C_API void vpu_sim_print(xs3_vpu* vpu);
 C_API void vpu_sim_mem_print(void* address, vector_mode mode);
 
-// Function for implementing the saturation logic within the VPU.
+// Saturation: vpu_saturate as the active target's VPU does it (NN_ARCH), and
+// vpu_saturate_symmetric to +-(2^(bits-1) - 1) on any target.
+C_API int64_t vpu_saturate_symmetric(const int64_t input, const unsigned bits);
 C_API int64_t vpu_saturate(const int64_t input, const unsigned bits);
-C_API int64_t vpu_saturate_fixed(const int64_t input, const unsigned bits);
 
 // Assert if the memory access is non-word aligned
 // void assert_word_aligned(const void* address);

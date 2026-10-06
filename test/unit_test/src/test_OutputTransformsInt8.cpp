@@ -34,10 +34,10 @@ static int8_t groupwise_reference(int32_t accumulator, int16_t initial_shift,
         value <<= -initial_shift;
     }
 
-    value = (int)vpu_saturate(value, 16);
+    value = (int)vpu_saturate_symmetric(value, 16);
     value = (int)(((int64_t)value * multiplier + (1LL << (sh - 1))) >> sh);
-    value = (int)vpu_saturate(value, 16);
-    value = (int)vpu_saturate(value + bias, 16);
+    value = (int)vpu_saturate_symmetric(value, 16);
+    value = (int)vpu_saturate_symmetric(value + bias, 16);
     value = (value + (1 << (final_shr + 7))) >> (final_shr + 8);
     return saturate_output_int8(value);
 }

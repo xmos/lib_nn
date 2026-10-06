@@ -17,9 +17,9 @@
 #endif
 
 /**
- * vpu_saturate to the relevant bounds.
+ * Saturate symmetrically to +-(2^(bits-1) - 1), whatever the target.
  */
-int64_t vpu_saturate(const int64_t input, const unsigned bits) {
+int64_t vpu_saturate_symmetric(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
   const int64_t min_val = -max_val;
 
@@ -27,11 +27,11 @@ int64_t vpu_saturate(const int64_t input, const unsigned bits) {
 }
 
 /**
- * vpu_saturate to the relevant bounds using the active target's minimum:
- * XS3 saturates symmetrically, VX4 uses the full two's complement range.
- * The target is chosen at runtime (NN_ARCH) so a host build can model either.
+ * Saturate as the VPU of the active target does: XS3 saturates symmetrically, VX4 uses the
+ * full two's complement range. The target is chosen at runtime (NN_ARCH) so a host build can
+ * model either.
  */
-int64_t vpu_saturate_fixed(const int64_t input, const unsigned bits) {
+int64_t vpu_saturate(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
   const int64_t min_val = (NN_ARCH == TARGET_ARCH_VX4A) ? -max_val - 1 : -max_val;
   return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
@@ -186,7 +186,7 @@ void VLMACC(xs3_vpu *vpu, const void *addr) {
       int64_t acc = GetAccumulator(vpu, i);
       acc = acc + (((int32_t)vpu->vC.s8[i]) * addr8[i]);
 
-      SetAccumulator(vpu, i, vpu_saturate_fixed(acc, 32));
+      SetAccumulator(vpu, i, vpu_saturate(acc, 32));
     }
   } else if (vpu->mode == MODE_S16) {
     const int16_t *addr16 = (const int16_t *)addr;
@@ -198,7 +198,7 @@ void VLMACC(xs3_vpu *vpu, const void *addr) {
       // sum, so the result loses its LSB.
       if (NN_ARCH == TARGET_ARCH_VX4A) acc = (acc >> 1) * 2;
 
-      SetAccumulator(vpu, i, vpu_saturate_fixed(acc, 32));
+      SetAccumulator(vpu, i, vpu_saturate(acc, 32));
     }
   } else if (vpu->mode == MODE_S16x8) {
     const int8_t *addr8 = (const int8_t *)addr;
@@ -207,7 +207,7 @@ void VLMACC(xs3_vpu *vpu, const void *addr) {
       int64_t acc = GetAccumulator(vpu, i);
       acc = acc + (((int32_t)vpu->vC.s16[i]) * (int16_t)(addr8[2*i]));
 
-      SetAccumulator(vpu, i, vpu_saturate_fixed(acc, 32));
+      SetAccumulator(vpu, i, vpu_saturate(acc, 32));
     }
   } else if (vpu->mode == MODE_S32) {
     const int32_t *addr32 = (const int32_t *)addr;
@@ -216,7 +216,7 @@ void VLMACC(xs3_vpu *vpu, const void *addr) {
       int64_t acc = GetAccumulator(vpu, i);
       acc = acc + round_shr((int64_t)vpu->vC.s32[i] * addr32[i], 30);
 
-      SetAccumulator(vpu, i, vpu_saturate_fixed(acc, 40));
+      SetAccumulator(vpu, i, vpu_saturate(acc, 40));
     }
   } else {
     assert(0);  // How'd this happen?
@@ -234,7 +234,7 @@ void VLMACCR(xs3_vpu *vpu, const void *addr) {
     for (int i = 0; i < VPU_INT8_EPV; i++)
       acc = acc + (((int32_t)vpu->vC.s8[i]) * addr8[i]);
 
-    acc = vpu_saturate_fixed(acc, 32);
+    acc = vpu_saturate(acc, 32);
     rotate_accumulators(vpu);
     SetAccumulator(vpu, 0, acc);
   } else if (vpu->mode == MODE_S16) {
@@ -247,7 +247,7 @@ void VLMACCR(xs3_vpu *vpu, const void *addr) {
     // to a multiple of 2, so an odd result is rounded up.
     if (NN_ARCH == TARGET_ARCH_VX4A) acc = ((acc + 1) >> 1) * 2;
 
-    acc = vpu_saturate_fixed(acc, 32);
+    acc = vpu_saturate(acc, 32);
     rotate_accumulators(vpu);
     SetAccumulator(vpu, 0, acc);
   } else if (vpu->mode == MODE_S16x8) {
@@ -257,7 +257,7 @@ void VLMACCR(xs3_vpu *vpu, const void *addr) {
     for (int i = 0; i < VPU_INT16_EPV; i++)
       acc = acc + (((int32_t)vpu->vC.s16[i]) * (int16_t)(addr8[2*i]));
 
-    acc = vpu_saturate_fixed(acc, 32);
+    acc = vpu_saturate(acc, 32);
     rotate_accumulators(vpu);
     SetAccumulator(vpu, 0, acc);
   } else if (vpu->mode == MODE_S32) {
@@ -267,7 +267,7 @@ void VLMACCR(xs3_vpu *vpu, const void *addr) {
     for (int i = 0; i < VPU_INT32_EPV; i++)
       acc = acc + round_shr((int64_t)vpu->vC.s32[i] * addr32[i], 30);
 
-    acc = vpu_saturate_fixed(acc, 40);
+    acc = vpu_saturate(acc, 40);
     rotate_accumulators(vpu);
     SetAccumulator(vpu, 0, acc);
   } else {
@@ -306,7 +306,7 @@ void VLMACCR1(xs3_vpu *vpu, const void *addr) {
     acc += (2 * __builtin_popcount(~v) - 32) / 2;
   }
 
-  acc = vpu_saturate_fixed(acc, 32);
+  acc = vpu_saturate(acc, 32);
   rotate_accumulators(vpu);
   SetAccumulator(vpu, 0, acc);
 }
@@ -343,10 +343,10 @@ static void vlsat_impl(xs3_vpu *vpu, const void *addr, const bool asymmetric) {
     for (int i = 0; i < VPU_INT8_ACC_PERIOD; i++) {
       int64_t acc = vlsat_shr(GetAccumulator(vpu, i), addr16[i], 32);
       if (s16_results)
-        vpu->vR.s16[i] = (int16_t)vpu_saturate_fixed(acc, 16);
+        vpu->vR.s16[i] = (int16_t)vpu_saturate(acc, 16);
       else
         vpu->vR.s8[i] = (int8_t)(asymmetric ? saturate_asymmetric(acc, 8)
-                                            : vpu_saturate_fixed(acc, 8));
+                                            : vpu_saturate(acc, 8));
     }
     if (!s16_results)
       memset(&vpu->vR.u8[VPU_INT8_ACC_PERIOD], 0, VPU_INT8_ACC_PERIOD);
@@ -357,7 +357,7 @@ static void vlsat_impl(xs3_vpu *vpu, const void *addr, const bool asymmetric) {
     for (int i = 0; i < VPU_INT16_ACC_PERIOD; i++) {
       int64_t acc = vlsat_shr(GetAccumulator(vpu, i), addr16[i], 32);
       vpu->vR.s16[i] = (int16_t)(asymmetric ? saturate_asymmetric(acc, 16)
-                                            : vpu_saturate_fixed(acc, 16));
+                                            : vpu_saturate(acc, 16));
     }
     memset(&vpu->vD.u8[0], 0, XS3_VPU_VREG_WIDTH_BYTES);
   } else if (vpu->mode == MODE_S32) {
@@ -368,7 +368,7 @@ static void vlsat_impl(xs3_vpu *vpu, const void *addr, const bool asymmetric) {
       int64_t acc = (int64_t)vpu->vD.s32[i] * ((int64_t)1 << 32) + vpu->vR.u32[i];
       acc = vlsat_shr(acc, addr32[i], 64);
       vpu->vR.s32[i] = (int32_t)(asymmetric ? saturate_asymmetric(acc, 32)
-                                            : vpu_saturate_fixed(acc, 32));
+                                            : vpu_saturate(acc, 32));
     }
     memset(&vpu->vD.u8[0], 0, XS3_VPU_VREG_WIDTH_BYTES);
   } else {
@@ -396,11 +396,11 @@ void VLSAT_ASYMMETRIC(xs3_vpu *vpu, const void *addr) {
  */
 static int64_t vlashr_element(const int64_t val, const int32_t shr, const unsigned bits) {
   // The result is always saturated, so on XS3 an unshifted MIN becomes -MAX
-  if (shr >= (int32_t)bits) return vpu_saturate_fixed(val >> (bits - 1), bits);
-  if (shr >= 0) return vpu_saturate_fixed(val >> shr, bits);
+  if (shr >= (int32_t)bits) return vpu_saturate(val >> (bits - 1), bits);
+  if (shr >= 0) return vpu_saturate(val >> shr, bits);
   // Shifting left by bits - 1 already saturates every non-zero value
   const unsigned shl = (-shr >= (int32_t)bits) ? bits - 1 : (unsigned)-shr;
-  return vpu_saturate_fixed(val * ((int64_t)1 << shl), bits);
+  return vpu_saturate(val * ((int64_t)1 << shl), bits);
 }
 
 void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
@@ -432,21 +432,21 @@ void VLADD(xs3_vpu *vpu, const void *addr) {
     const int8_t *addr8 = (const int8_t *)addr;
     for (int i = 0; i < VPU_INT8_EPV; i++) {
       int32_t val = addr8[i];
-      vpu->vR.s8[i] = vpu_saturate_fixed((int32_t)vpu->vR.s8[i] + val, 8);
+      vpu->vR.s8[i] = vpu_saturate((int32_t)vpu->vR.s8[i] + val, 8);
     }
   } else if (vpu->mode == MODE_S16) {
     const int16_t *addr16 = (const int16_t *)addr;
 
     for (int i = 0; i < VPU_INT16_EPV; i++) {
       int32_t val = addr16[i];
-      vpu->vR.s16[i] = vpu_saturate_fixed((int32_t)vpu->vR.s16[i] + val, 16);
+      vpu->vR.s16[i] = vpu_saturate((int32_t)vpu->vR.s16[i] + val, 16);
     }
   } else if (vpu->mode == MODE_S32) {
     const int32_t *addr32 = (const int32_t *)addr;
 
     for (int i = 0; i < VPU_INT32_EPV; i++) {
       int64_t val = addr32[i];
-      vpu->vR.s32[i] = vpu_saturate_fixed((int32_t)vpu->vR.s32[i] + val, 32);
+      vpu->vR.s32[i] = vpu_saturate((int32_t)vpu->vR.s32[i] + val, 32);
     }
   } else {
     assert(0);  // How'd this happen?
@@ -460,10 +460,10 @@ void VLADD(xs3_vpu *vpu, const void *addr) {
 static int64_t vlsub_element(const int64_t mem, const int64_t r, const unsigned bits) {
   const int64_t min_val = -((int64_t)1 << (bits - 1));
   if (r == min_val) {
-    if (NN_ARCH == TARGET_ARCH_XS3A && bits == 32) return vpu_saturate_fixed(mem + min_val, bits);
+    if (NN_ARCH == TARGET_ARCH_XS3A && bits == 32) return vpu_saturate(mem + min_val, bits);
     if (mem == 0) return min_val;
   }
-  return vpu_saturate_fixed(mem - r, bits);
+  return vpu_saturate(mem - r, bits);
 }
 
 void VLSUB(xs3_vpu *vpu, const void *addr) {
@@ -530,7 +530,7 @@ void VLMUL(xs3_vpu *vpu, const void *addr) {
     for (int i = 0; i < VPU_INT8_EPV; i++) {
       int32_t val = addr8[i];
       int32_t res = ((int32_t)vpu->vR.s8[i] * (int32_t)val + (1L<<(shift - 1))) >> shift;
-      vpu->vR.s8[i] = vpu_saturate_fixed(res, 8);
+      vpu->vR.s8[i] = vpu_saturate(res, 8);
     }
   } else if (vpu->mode == MODE_S16 && NN_ARCH == TARGET_ARCH_VX4A) {
     // VX4 multiplies in two halves: VLMUL0 leaves the low byte's product, shifted down
@@ -540,21 +540,21 @@ void VLMUL(xs3_vpu *vpu, const void *addr) {
       const int32_t lo = (int32_t)(vpu->vR.u16[i] & 0xFF) * addr16[i];
       const int32_t hi = (int32_t)(int8_t)(vpu->vR.u16[i] >> 8) * addr16[i];
       vpu->vD.s16[i] = (int16_t)(lo >> 8);
-      vpu->vR.s16[i] = (int16_t)vpu_saturate_fixed(round_shr(vpu->vD.s16[i] + hi, 7), 16);
+      vpu->vR.s16[i] = (int16_t)vpu_saturate(round_shr(vpu->vD.s16[i] + hi, 7), 16);
     }
   } else if (vpu->mode == MODE_S16) {
     const int16_t *addr16 = (const int16_t *)addr;
     for (int i = 0; i < VPU_INT16_EPV; i++) {
       int64_t val = addr16[i];
       int64_t res = ((int64_t)vpu->vR.s16[i] * (int64_t)val + (1LL<<(shift - 1))) >> shift;
-      vpu->vR.s16[i] = vpu_saturate_fixed(res, 16);
+      vpu->vR.s16[i] = vpu_saturate(res, 16);
     }
   } else if (vpu->mode == MODE_S32) {
     const int32_t *addr32 = (const int32_t *)addr;
     for (int i = 0; i < VPU_INT32_EPV; i++) {
       int64_t val = addr32[i];
       int64_t res = ((int64_t)vpu->vR.s32[i] * (int64_t)val + (1LL<<(shift - 1))) >> shift;
-      vpu->vR.s32[i] = vpu_saturate_fixed(res, 32);
+      vpu->vR.s32[i] = vpu_saturate(res, 32);
     }
   } else {
     assert(0);  // How'd this happen?
@@ -592,12 +592,12 @@ void VDEPTH8(xs3_vpu *vpu) {
   if (vpu->mode == MODE_S16) {
     for (int i = 0; i < VPU_INT16_EPV; i++) {
       int32_t elm = ((int32_t)vec_tmp.s16[i]) + (1 << 7);
-      vpu->vR.s8[i] = vpu_saturate_fixed(elm >> 8, 8);
+      vpu->vR.s8[i] = vpu_saturate(elm >> 8, 8);
     }
   } else if (vpu->mode == MODE_S32) {
     for (int i = 0; i < VPU_INT32_EPV; i++) {
       int64_t elm = ((int64_t)vec_tmp.s32[i]) + (1 << 23);
-      vpu->vR.s8[i] = vpu_saturate_fixed(elm >> 24, 8);
+      vpu->vR.s8[i] = vpu_saturate(elm >> 24, 8);
     }
   } else {
     assert(0);
@@ -608,7 +608,7 @@ void VDEPTH16(xs3_vpu *vpu) {
   if (vpu->mode == MODE_S32) {
     for (int i = 0; i < VPU_INT32_EPV; i++) {
       int64_t elm = ((int64_t)vpu->vR.s32[i]) + (1 << 15);
-      vpu->vR.s16[i] = vpu_saturate_fixed(elm >> 16, 16);
+      vpu->vR.s16[i] = vpu_saturate(elm >> 16, 16);
     }
 
     for (int i = VPU_INT32_EPV; i < VPU_INT16_EPV; i++) {
