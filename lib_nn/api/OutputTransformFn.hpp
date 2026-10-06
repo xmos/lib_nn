@@ -339,8 +339,7 @@ class OutputTransformFnInt8 : public OutputTransformFn {
       return sat(((int64_t)val + (1LL << (shr_amount - 1))) >> shr_amount,
                  bits);
     } else {
-      // Multiply rather than shift left: left-shifting a negative value is undefined before C++20
-      return sat((int64_t)val * ((int64_t)1 << (-shr_amount)), bits);
+      return sat((int64_t)val << (-shr_amount), bits);
     }
   }
 
@@ -368,7 +367,7 @@ class OutputTransformFnInt8 : public OutputTransformFn {
     int32_t t = shr(accu, initial_shr);           // vlsat
     t = mul(t, multiplier, 16, vlmul_shr);        // vlmul
     t = add(t, bias);                             // vladd
-    t = ashr(t, final_shr);                        // vlashr
+    t = ashr(t, final_shr);                       // vlashr
     return sat(shr(t, 8), 8);                     // vdepth8
   }
 
