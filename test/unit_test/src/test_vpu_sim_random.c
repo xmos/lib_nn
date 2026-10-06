@@ -106,12 +106,22 @@ static void fill_vector(vpu_vector_t *v, unsigned bits) {
   }
 }
 
+// Shifts at and beyond the 32-bit (8/16-bit modes) and 64-bit (32-bit mode) accumulator widths
+static const uint32_t BIG_SHIFTS[] = {24, 30, 31, 32, 33, 34, 40, 47, 48, 61, 62, 63, 64, 65,
+                                      100, 127, 128, 255, 256, 0x7FFF, 0x8000, 0xFFFF,
+                                      0x10000, 0x7FFFFFFF, 0x80000000, 0xFFFFFFFF};
+
 static void fill_shifts(vpu_vector_t *v, unsigned mode) {
+  const unsigned n_big = sizeof(BIG_SHIFTS) / sizeof(BIG_SHIFTS[0]);
   memset(v, 0, sizeof(*v));
   if (mode == MODE_S32) {
-    for (int i = 0; i < VPU_INT32_ACC_PERIOD; i++) v->u32[i] = rand_range(0, 31);
+    for (int i = 0; i < VPU_INT32_ACC_PERIOD; i++)
+      v->u32[i] = (pseudo_rand_uint32() & 1) ? (uint32_t)rand_range(0, 31)
+                                             : BIG_SHIFTS[pseudo_rand_uint32() % n_big];
   } else {
-    for (int i = 0; i < VPU_INT16_ACC_PERIOD; i++) v->u16[i] = rand_range(0, 23);
+    for (int i = 0; i < VPU_INT16_ACC_PERIOD; i++)
+      v->u16[i] = (pseudo_rand_uint32() & 1) ? (uint16_t)rand_range(0, 23)
+                                             : (uint16_t)BIG_SHIFTS[pseudo_rand_uint32() % n_big];
   }
 }
 
@@ -272,6 +282,46 @@ TEST(group_vpu_sim_random, vlsat) {
   RUN_ALL(c);
 }
 
+// VLSAT of the largest and smallest accumulators, over the shifts that leave them in range:
+// adding the rounding bit can overflow, which random accumulators almost never reach.
+TEST(group_vpu_sim_random, vlsat_extreme_accumulators) {
+  const vpu_case_t c = {"vlsat", hw_vlsat, sim_vlsat, MEM_SHIFTS, 0, 0};
+  unsigned fails = 0;
+  for (unsigned m = 0; m < 3; m++) {
+    const unsigned mode = ALL_MODES[m];
+    for (int negative = 0; negative < 2; negative++) {
+      // 8/16-bit modes: all shifts 17..32 at once. 32-bit mode: shifts 32..63, 8 at a time.
+      const int first = mode == MODE_S32 ? 32 : 17;
+      for (int base = first; base < 64 && (mode == MODE_S32 || base == first); base += 8) {
+        vpu_state_t WORD_ALIGNED in, hw, sim;
+        vpu_vector_t WORD_ALIGNED mem;
+        memset(&in, 0, sizeof(in));
+        memset(&mem, 0, sizeof(mem));
+        if (mode == MODE_S32) {
+          for (int i = 0; i < VPU_INT32_ACC_PERIOD; i++) {
+            in.vD.u32[i] = negative ? 0x80000000 : 0x7FFFFFFF;
+            in.vR.u32[i] = negative ? 0 : 0xFFFFFFFF;
+            mem.u32[i] = base + i;
+          }
+        } else {
+          for (int i = 0; i < VPU_INT16_ACC_PERIOD; i++) {
+            in.vD.u16[i] = negative ? 0x8000 : 0x7FFF;
+            in.vR.u16[i] = negative ? 0 : 0xFFFF;
+            mem.u16[i] = base + i;
+          }
+        }
+        hw_run(mode, &in, &mem, c.hw, 0, &hw);
+        sim_run(mode, &in, &mem, c.sim, 0, &sim);
+        if (memcmp(&hw, &sim, sizeof(hw)) != 0) {
+          if (fails < MAX_REPORTED) report(&c, mode, 0, &in, &mem, &hw, &sim);
+          fails++;
+        }
+      }
+    }
+  }
+  TEST_ASSERT_EQUAL_UINT(0, fails);
+}
+
 TEST(group_vpu_sim_random, vlashr) {
   const vpu_case_t c = {"vlashr", hw_vlashr, sim_vlashr, MEM_DATA, -40, 40};
   RUN_ALL(c);
@@ -350,6 +400,7 @@ TEST_GROUP_RUNNER(group_vpu_sim_random) {
   RUN_TEST_CASE(group_vpu_sim_random, vlmaccr1);
   RUN_TEST_CASE(group_vpu_sim_random, vpos);
   RUN_TEST_CASE(group_vpu_sim_random, vlsat);
+  RUN_TEST_CASE(group_vpu_sim_random, vlsat_extreme_accumulators);
   RUN_TEST_CASE(group_vpu_sim_random, vlashr);
   RUN_TEST_CASE(group_vpu_sim_random, vladd);
   RUN_TEST_CASE(group_vpu_sim_random, vlsub);

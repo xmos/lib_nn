@@ -306,13 +306,34 @@ void VLMACCRB(xs3_vpu *vpu, const void *addr) {
   VLMACCR1(vpu, addr);
 }
 
+/** A VLSAT shift operand of the given width: XS3 reads it as unsigned, VX4 as signed. */
+static int64_t vlsat_shift(const uint32_t shr, const unsigned bits) {
+  const int64_t sign_bit = (int64_t)1 << (bits - 1);
+  if (NN_ARCH == TARGET_ARCH_VX4A && (shr & sign_bit)) return (int64_t)shr - 2 * sign_bit;
+  return shr;
+}
+
 /**
- * VLSAT's rounding shift, for shift amounts that may exceed the accumulator width.
- * XS3 does not round once the shift reaches acc_bits; VX4 always rounds.
+ * VLSAT's shift, before saturation. A negative shift (VX4 only) is a saturating shift left.
+ * A right shift rounds half up, except that XS3 does not round once the shift reaches
+ * acc_bits, and adds the rounding bit to a 64-bit accumulator with saturation.
  */
-static int64_t vlsat_shr(const int64_t acc, unsigned shr, const unsigned acc_bits) {
-  if (shr > 62) shr = 62;
-  if (NN_ARCH == TARGET_ARCH_XS3A && shr >= acc_bits) return acc >> shr;
+static int64_t vlsat_shr(const int64_t acc, const int64_t shr, const unsigned acc_bits) {
+  if (shr < 0) {
+    // Results are at most 32 bits, so anything reaching 40 bits saturates
+    const int64_t sat = (int64_t)1 << 40;
+    const unsigned shl = (shr <= -40) ? 40 : (unsigned)-shr;
+    if (acc >= (sat >> shl)) return sat;
+    if (acc <= -(sat >> shl)) return -sat;
+    return acc * ((int64_t)1 << shl);
+  }
+  const bool rounds = NN_ARCH != TARGET_ARCH_XS3A || shr < (int64_t)acc_bits;
+  // Shifting a 64-bit value by 64 or more leaves 0, or only sign bits without rounding
+  if (shr >= 64) return (rounds || acc >= 0) ? 0 : -1;
+  if (!rounds) return acc >> shr;
+  if (NN_ARCH == TARGET_ARCH_XS3A && acc_bits == 64 && shr > 0 &&
+      acc > INT64_MAX - ((int64_t)1 << (shr - 1)))
+    return INT64_MAX >> shr;
   return round_shr(acc, shr);
 }
 
@@ -332,7 +353,7 @@ static void vlsat_impl(xs3_vpu *vpu, const void *addr, const bool asymmetric) {
     const bool s16_results = !asymmetric && NN_ARCH == TARGET_ARCH_VX4A;
 
     for (int i = 0; i < VPU_INT8_ACC_PERIOD; i++) {
-      int64_t acc = vlsat_shr(GetAccumulator(vpu, i), addr16[i], 32);
+      int64_t acc = vlsat_shr(GetAccumulator(vpu, i), vlsat_shift(addr16[i], 16), 32);
       if (s16_results)
         vpu->vR.s16[i] = (int16_t)vpu_saturate(acc, 16);
       else
@@ -346,7 +367,7 @@ static void vlsat_impl(xs3_vpu *vpu, const void *addr, const bool asymmetric) {
     const uint16_t *addr16 = (const uint16_t *)addr;
 
     for (int i = 0; i < VPU_INT16_ACC_PERIOD; i++) {
-      int64_t acc = vlsat_shr(GetAccumulator(vpu, i), addr16[i], 32);
+      int64_t acc = vlsat_shr(GetAccumulator(vpu, i), vlsat_shift(addr16[i], 16), 32);
       vpu->vR.s16[i] = (int16_t)(asymmetric ? saturate_asymmetric(acc, 16)
                                             : vpu_saturate(acc, 16));
     }
@@ -357,7 +378,7 @@ static void vlsat_impl(xs3_vpu *vpu, const void *addr, const bool asymmetric) {
     for (int i = 0; i < VPU_INT32_ACC_PERIOD; i++) {
       // VLSAT reads all of vD, not just the 8 bits of headroom the MACs maintain
       int64_t acc = (int64_t)vpu->vD.s32[i] * ((int64_t)1 << 32) + vpu->vR.u32[i];
-      acc = vlsat_shr(acc, addr32[i], 64);
+      acc = vlsat_shr(acc, vlsat_shift(addr32[i], 32), 64);
       vpu->vR.s32[i] = (int32_t)(asymmetric ? saturate_asymmetric(acc, 32)
                                             : vpu_saturate(acc, 32));
     }

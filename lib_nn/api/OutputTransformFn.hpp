@@ -338,12 +338,18 @@ class OutputTransformFnInt8 : public OutputTransformFn {
     return (int32_t)a;
   }
 
-  /** @brief Model VLSAT: a right shift rounds half up; a negative shift is a saturating left shift. */
+  /**
+   * @brief Model VLSAT: a right shift rounds half up, except that XS3 does not round once the
+   * shift reaches the 32-bit accumulator width; a negative shift is a saturating left shift.
+   */
   static int32_t shr(int32_t val, int shr_amount, int bits = 16,
                      nn_vlmul_shr_t vlmul_shr = VLMUL_SHR_XS3A) {
     if (shr_amount > 0) {
-      return sat(((int64_t)val + (1LL << (shr_amount - 1))) >> shr_amount,
-                 bits, vlmul_shr);
+      const bool rounds = vlmul_shr == VLMUL_SHR_VX4A || shr_amount < 32;
+      // Shifting by 32 already leaves 0 when rounding, or only sign bits when not
+      if (shr_amount > 32) shr_amount = 32;
+      const int64_t rounding = rounds ? (1LL << (shr_amount - 1)) : 0;
+      return sat(((int64_t)val + rounding) >> shr_amount, bits, vlmul_shr);
     } else {
       // Multiply rather than shift left: left-shifting a negative value is undefined before C++20
       return sat((int64_t)val * ((int64_t)1 << (-shr_amount)), bits, vlmul_shr);

@@ -144,7 +144,12 @@ TEST(group_output_transform_helpers, shr_vs_vlsat) {
       acc[i] = rand_value(32);
       hi.s16[i] = (int16_t)(acc[i] >> 16);
       lo.u16[i] = (uint16_t)acc[i];
-      shifts.u16[i] = (uint16_t)rand_range(0, 24);
+      // Include shifts at and beyond the accumulator width, where XS3 stops rounding.
+      // Negative shifts are left out: the kernels never pass them to VLSAT.
+      static const uint16_t big_shifts[] = {30, 31, 32, 33, 40, 63, 64, 65, 255, 0x7FFF};
+      shifts.u16[i] = (pseudo_rand_uint32() & 1)
+                          ? (uint16_t)rand_range(0, 24)
+                          : big_shifts[pseudo_rand_uint32() % (sizeof(big_shifts) / sizeof(big_shifts[0]))];
     }
     vsetc(MODE_S16);
     vldd(&hi);
