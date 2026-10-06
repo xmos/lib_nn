@@ -52,6 +52,7 @@ int main(int argc, const char* argv[]) {
   // ---------- Device only --------------
 #ifndef TEST_BUILD_NATIVE
   RUN_TEST_GROUP(group_vpu_sim);
+  RUN_TEST_GROUP(group_vpu_sim_random);
 #endif
 
   // -------- Native only --------------
