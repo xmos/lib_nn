@@ -47,19 +47,19 @@ static int8_t clamped_reference(int32_t accumulator, int16_t offset,
                                 int16_t initial_shift, int16_t multiplier,
                                 int16_t bias, int16_t final_shr)
 {
-    const int sh = (NN_ARCH == TARGET_ARCH_XS3A) ? VLMUL_SHR_XS3A
-                                                  : VLMUL_SHR_VX4A;
-    int value = (int)vpu_saturate_symmetric(accumulator + offset, 16);
-    value = value > 0 ? value : 0;
-    if (initial_shift > 0) {
-        value += 1 << (initial_shift - 1);
-    }
-    value >>= initial_shift;
-    value = (int)(((int64_t)value * multiplier + (1LL << (sh - 1))) >> sh);
-    value = (int)vpu_saturate_symmetric(value, 16);
-    value = (int)vpu_saturate_symmetric(value + bias, 16);
-    value = (value + (1 << (final_shr + 7))) >> (final_shr + 8);
-    return saturate_output_int8(value);
+    // The kernel's instruction sequence, using the scalar VPU models in OutputTransformFnInt8
+    // (checked against the hardware in test_OutputTransformHelpers.cpp). The kernel loads only
+    // the low 16 bits of each accumulator (vR).
+    using nn::OutputTransformFnInt8;
+    const nn_vlmul_shr_t sh = (NN_ARCH == TARGET_ARCH_XS3A) ? VLMUL_SHR_XS3A
+                                                             : VLMUL_SHR_VX4A;
+    int32_t value = OutputTransformFnInt8::add((int16_t)accumulator, offset, 16, sh);  // vladd
+    value = value > 0 ? value : 0;                                                     // vpos
+    value = OutputTransformFnInt8::ashr(value, initial_shift, 16, sh);                 // vlashr
+    value = OutputTransformFnInt8::mul(value, multiplier, 16, sh);                     // vlmul
+    value = OutputTransformFnInt8::add(value, bias, 16, sh);                           // vladd
+    value = OutputTransformFnInt8::ashr(value, final_shr, 16, sh);                     // vlashr
+    return (int8_t)OutputTransformFnInt8::depth8(value);                               // vdepth8
 }
 
 static int8_t *run_clamped_test(
@@ -259,12 +259,7 @@ TEST(group_output_transforms_clamped, Test_otfn_int8clm_random)
         params_mem[oc + ch] = mul;
         params_mem[oc * 2 + ch] = bia;
 
-        int val = (int)aval + off;
-        val = val > 0 ? val : 0;
-        val = (val + (1 << (ish - 1))) >> ish;
-        val += bia;
-        val = (val + 128) >> 8;
-        expected[ch] = saturate_output_int8(val);
+        expected[ch] = clamped_reference(aval, off, ish, mul, bia, fshr);
     }
 
     nn::OT_int8_clamped ot(oc, ish, fshr);
@@ -309,10 +304,8 @@ TEST(group_output_transforms_clamped, Test_otfn_int8clm_random_large)
     TEST_ASSERT_EQUAL_PTR(out + oc, end);
     for (int ch = 0; ch < oc; ++ch)
     {
-        int val = (int)acc.GetAccu(ch);
-        val = val > 0 ? val : 0;
-        val = (val + 128) >> 8;
-        TEST_ASSERT_EQUAL_INT8(saturate_output_int8(val), out[ch]);
+        TEST_ASSERT_EQUAL_INT8(
+            clamped_reference(acc.GetAccu(ch), off, ish, mul, bia, fshr), out[ch]);
     }
 }
 
