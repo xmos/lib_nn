@@ -323,34 +323,76 @@ class OutputTransformFnInt8 : public OutputTransformFn {
     return canonical_values;
   }
 
-  static int32_t sat(int64_t a, int bits) {
-    int64_t max_val = (1LL << bits) - 1;
-    int64_t min_val = -(1LL << bits);
+  // Scalar models of the VPU instructions used by the int8 output transform kernels.
+  // The target is identified by its VLMUL shift.
+
+  /** @brief Saturate to a bits-wide VPU element: symmetric on XS3, full range on VX4. */
+  static int32_t sat(int64_t a, int bits, nn_vlmul_shr_t vlmul_shr = VLMUL_SHR_XS3A) {
+    int64_t max_val = (1LL << (bits - 1)) - 1;
+    int64_t min_val = (vlmul_shr == VLMUL_SHR_VX4A) ? -max_val - 1 : -max_val;
 
     if (a > max_val) return (int32_t)max_val;
 
     if (a < min_val) return (int32_t)min_val;
 
-    return a;
+    return (int32_t)a;
   }
 
-  static int32_t shr(int32_t val, int shr_amount, int bits = 16) {
+  /** @brief Model VLSAT: a right shift rounds half up; a negative shift is a saturating left shift. */
+  static int32_t shr(int32_t val, int shr_amount, int bits = 16,
+                     nn_vlmul_shr_t vlmul_shr = VLMUL_SHR_XS3A) {
     if (shr_amount > 0) {
       return sat(((int64_t)val + (1LL << (shr_amount - 1))) >> shr_amount,
-                 bits);
+                 bits, vlmul_shr);
     } else {
-      return sat((int64_t)val << (-shr_amount), bits);
+      // Multiply rather than shift left: left-shifting a negative value is undefined before C++20
+      return sat((int64_t)val * ((int64_t)1 << (-shr_amount)), bits, vlmul_shr);
     }
   }
 
-  static int32_t add(int32_t a, int32_t b, int bits = 16) {
-    return sat((int64_t)a + (int64_t)b, bits);
+  /** @brief Model VLASHR: a right shift is arithmetic, so it rounds down rather than to nearest. */
+  static int32_t ashr(int32_t val, int shr_amount, int bits = 16,
+                      nn_vlmul_shr_t vlmul_shr = VLMUL_SHR_XS3A) {
+    if (shr_amount > 0) return sat((int64_t)val >> shr_amount, bits, vlmul_shr);
+    return shr(val, shr_amount, bits, vlmul_shr);
   }
 
+  static int32_t add(int32_t a, int32_t b, int bits = 16,
+                     nn_vlmul_shr_t vlmul_shr = VLMUL_SHR_XS3A) {
+    return sat((int64_t)a + (int64_t)b, bits, vlmul_shr);
+  }
+
+  /** @brief Model VLMUL on 16-bit a and b. */
   static int32_t mul(int32_t a, int32_t b, int bits = 16, nn_vlmul_shr_t vlmul_shr = VLMUL_SHR_XS3A) {
+    if (vlmul_shr == VLMUL_SHR_VX4A && bits == 16) {
+      // VX4 multiplies by the low and high bytes of a separately: the low byte's product is
+      // shifted down by 8 without rounding, then the sum is rounded and shifted down by 7.
+      int32_t lo = ((a & 0xFF) * b) >> 8;
+      int32_t hi = (int32_t)(int8_t)(a >> 8) * b;
+      return sat(((int64_t)lo + hi + (1 << 6)) >> 7, bits, vlmul_shr);
+    }
     int64_t prod = (int64_t)a * (int64_t)b;
     prod = prod + (1LL << (vlmul_shr - 1));
-    return sat(prod >> vlmul_shr, bits);
+    return sat(prod >> vlmul_shr, bits, vlmul_shr);
+  }
+
+  /**
+   * @brief Model the int8 output stage: VDEPTH8 rounds and saturates to the full int8 range.
+   * The XS3 kernels write -128 themselves where VDEPTH8 would saturate to -127.
+   */
+  static int32_t depth8(int32_t val) {
+    int32_t t = (val + (1 << 7)) >> 8;
+    return t > INT8_MAX ? INT8_MAX : t < INT8_MIN ? INT8_MIN : t;
+  }
+
+  /** @brief int8 output of the quantised transform for one accumulator, as the kernels compute it. */
+  static int32_t quantised_output(int32_t accu, int initial_shr, int16_t multiplier,
+                                  int16_t bias, int final_shr, nn_vlmul_shr_t vlmul_shr) {
+    int32_t t = shr(accu, initial_shr, 16, vlmul_shr);  // vlsat
+    t = mul(t, multiplier, 16, vlmul_shr);              // vlmul
+    t = add(t, bias, 16, vlmul_shr);                    // vladd
+    t = ashr(t, final_shr, 16, vlmul_shr);              // vlashr
+    return depth8(t);                                   // vdepth8
   }
 
   /**
@@ -372,11 +414,8 @@ class OutputTransformFnInt8 : public OutputTransformFn {
 
         for (int accu = mul_and_bias[idx].accu_min_val;
              accu <= mul_and_bias[idx].accu_max_val; ++accu) {
-          int32_t t = shr(accu, qp.initial_shr);  // vlsat
-          t = mul(t, qp.multipliers[idx], 16, vlmul_shr);  // vlmul
-          t = add(t, qp.biases[idx]);             // vladd
-          t = shr(t, qp.final_shr);               // vlashr
-          t = sat(shr(t, 8), 8);                  // vdepth8
+          int32_t t = quantised_output(accu, qp.initial_shr, qp.multipliers[idx],
+                                       qp.biases[idx], qp.final_shr, vlmul_shr);
 
           double v = (double)accu * mul_and_bias[idx].multiplier +
                      mul_and_bias[idx].bias;
@@ -490,11 +529,8 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
 
         for (int accu = mul_and_bias[idx].accu_min_val;
              accu <= mul_and_bias[idx].accu_max_val; ++accu) {
-          int32_t t = shr(accu, qp.initial_shifts[idx]);  // vlsat
-          t = mul(t, qp.multipliers[idx], 16, vlmul_shr);  // vlmul
-          t = add(t, qp.biases[idx]);             // vladd
-          t = shr(t, qp.final_shr);               // vlashr
-          t = sat(shr(t, 8), 8);                  // vdepth8
+          int32_t t = quantised_output(accu, qp.initial_shifts[idx], qp.multipliers[idx],
+                                       qp.biases[idx], qp.final_shr, vlmul_shr);
 
           double v = (double)accu * mul_and_bias[idx].multiplier +
                      mul_and_bias[idx].bias;
