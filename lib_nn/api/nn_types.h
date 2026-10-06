@@ -1,7 +1,6 @@
 // Copyright 2020-2026 XMOS LIMITED.
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
-#ifndef NN_TYPES_H_
-#define NN_TYPES_H_
+#pragma once
 
 #include <stdint.h>
 
@@ -20,7 +19,7 @@ typedef enum {
  * padding, right padding. Rather than hard-coding those values, this enum can
  * be used instead.
  */
-enum {
+enum nn_pad_index_t {
   NN_PAD_TOP = 0,
   NN_PAD_LEFT,
   NN_PAD_BOTTOM,
@@ -79,5 +78,3 @@ typedef void (*UnaryI16FnType)(void *output, void *input, int tensor_length, voi
  * Function pointer to binary op kernel functions for int16
  */
 typedef void (*BinaryI16FnType)(void *output, void *input1, void *input2, int tensor_length, void *blob);
-
-#endif  // NN_TYPES_H_
