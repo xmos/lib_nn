@@ -2,7 +2,6 @@
 // This Software is subject to the terms of the XMOS Public Licence: Version 1.
 #if defined(__XS3A__)
 
-#include "nn_config.h"
 #include <xs1.h>
 
 /*
