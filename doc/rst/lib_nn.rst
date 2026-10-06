@@ -357,7 +357,7 @@ Moving weights and tensors or initialising scratch buffers can be a significant
 part of kernel execution. The memory helpers provide vector-based paths for
 these transfers and fills without implementing copy loops in each kernel.
 
-The library mirros common memory operations such as:
+The library mirrors common memory operations such as:
 
 - **Copy:** ``vpu_memcpy_int()`` is tuned for internal SRAM and ``vpu_memcpy_ext()`` for external memory. 
 - **Move:** ``vpu_memmove_word_aligned()`` takes a byte count and permits overlapping source and destination regions.
@@ -440,26 +440,35 @@ binary data.
 .. doxygenfile:: nn_bin_types.h
     :project: lib_nn
 
-Geometry
-========
+Geometry API
+============
 
 C++ descriptions of image and window shapes, coordinate mappings, output
 regions and padding.
 
-.. doxygenfile:: ImageGeometry.hpp
+.. doxygenclass:: nn::ImageGeometry
     :project: lib_nn
+    :members:
 
-.. doxygenfile:: WindowGeometry.hpp
+.. doxygenclass:: nn::WindowGeometry
     :project: lib_nn
+    :members:
 
-.. doxygenfile:: Filter2dGeometry.hpp
+.. doxygenclass:: nn::Filter2dGeometry
     :project: lib_nn
+    :members:
 
-.. doxygenfile:: WindowLocation.hpp
+.. doxygenclass:: nn::WindowLocation
     :project: lib_nn
+    :members:
 
-.. doxygenfile:: geom/util.hpp
+.. doxygenclass:: nn::ImageVect
     :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::ImageRegion
+    :project: lib_nn
+    :members:
 
 Kernel Composition
 ==================
@@ -467,31 +476,53 @@ Kernel Composition
 Execution interfaces, input-access handlers, aggregation kernels, output
 transforms and the accumulator buffer shared between stages.
 
-.. doxygenfile:: AbstractKernel.hpp
+.. doxygenclass:: nn::AbstractKernel
     :project: lib_nn
+    :members:
 
-.. doxygenfile:: MemCpyFn.hpp
+.. doxygenclass:: nn::MemCpyFn
     :project: lib_nn
+    :members:
 
-.. doxygenfile:: AggregateFn.hpp
+.. doxygenclass:: nn::DerefInputFn
     :project: lib_nn
+    :members:
 
-.. doxygenfile:: OutputTransformFn.hpp
+.. doxygenclass:: nn::ImToColValid
     :project: lib_nn
+    :members:
 
-.. doxygenfile:: vpu.hpp
+.. doxygenclass:: nn::ImToColPadded
     :project: lib_nn
+    :members:
 
-Convolution Preparation
-=======================
-
-TFLite parameter conversion and transpose-convolution weight preparation.
-
-.. doxygenfile:: conv2d_utils.hpp
+.. doxygenclass:: nn::MatMulBase
     :project: lib_nn
+    :members:
 
-.. doxygenfile:: TransposeConv.hpp
+.. doxygenclass:: nn::MatMulInt8
     :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::MatMulDirectFn
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::MatMulDirectFn_DW
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::OutputTransformFn
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::OutputTransformFnInt8_Group
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::OutputTransformFnInt8_Channelwise
+    :project: lib_nn
+    :members:
 
 Work Partitioning
 =================
