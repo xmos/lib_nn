@@ -66,7 +66,7 @@ After running the input tensors and the addition result are printed to the conso
     Input2: 100,    200,    300,    400,    500,    600,    700,    800,    900,    1000,   1100,   1200,
     Output: 0,      400,    600,    800,    0,      1400,   800,    750,    875,    2000,   2200,   2400,
 
-Output correspond to input1 and input2 added together.
+Output corresponds to input1 and input2 added together.
 
 *****************
 Library Structure
