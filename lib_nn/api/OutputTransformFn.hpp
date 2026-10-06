@@ -343,6 +343,14 @@ class OutputTransformFnInt8 : public OutputTransformFn {
     }
   }
 
+  static int32_t ashr(int32_t val, int shr_amount, int bits = 16) {
+    if (shr_amount > 0) {
+      return sat((int64_t)val >> shr_amount, bits);
+    } else {
+      return shr(val, shr_amount, bits);
+    }
+  }
+
   static int32_t add(int32_t a, int32_t b, int bits = 16) {
     return sat((int64_t)a + (int64_t)b, bits);
   }
@@ -375,7 +383,7 @@ class OutputTransformFnInt8 : public OutputTransformFn {
           int32_t t = shr(accu, qp.initial_shr);  // vlsat
           t = mul(t, qp.multipliers[idx], 16, vlmul_shr);  // vlmul
           t = add(t, qp.biases[idx]);             // vladd
-          t = shr(t, qp.final_shr);               // vlashr
+          t = ashr(t, qp.final_shr);               // vlashr
           t = sat(shr(t, 8), 8);                  // vdepth8
 
           double v = (double)accu * mul_and_bias[idx].multiplier +
@@ -493,7 +501,7 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
           int32_t t = shr(accu, qp.initial_shifts[idx]);  // vlsat
           t = mul(t, qp.multipliers[idx], 16, vlmul_shr);  // vlmul
           t = add(t, qp.biases[idx]);             // vladd
-          t = shr(t, qp.final_shr);               // vlashr
+          t = ashr(t, qp.final_shr);               // vlashr
           t = sat(shr(t, 8), 8);                  // vdepth8
 
           double v = (double)accu * mul_and_bias[idx].multiplier +

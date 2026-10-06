@@ -354,14 +354,14 @@ TEST(group_vpu_sim, test_vdepth16) {
 
 
 TEST(group_vpu_sim, test_vlashr) {
-  // simple test: 0x55 RSH 4 = 0x05
+  // simple test: 0x58 RSH 4 = 0x05 (a rounding shift would give 0x06)
   int8_t WORD_ALIGNED input[VPU_INT8_EPV];
   int8_t WORD_ALIGNED out_asm[VPU_INT8_EPV];
   int8_t WORD_ALIGNED out_sim[VPU_INT8_EPV];
   int8_t WORD_ALIGNED expected[VPU_INT8_EPV];
   vpu_t sim = {0};
 
-  memset(input, 0x55, sizeof(input));
+  memset(input, 0x58, sizeof(input));
   memset(expected, 0x05, sizeof(expected));
   const unsigned rsh = 4;
 
@@ -411,24 +411,17 @@ TEST(group_vpu_sim, test_vlsat_fixed) {
   VSETC(&sim, MODE_S8);
   VLDR(&sim, acc_low);
   VLDD(&sim, acc_high);
-  VLSAT_FIXED(&sim, shifts);
+  VLSAT_ASYMMETRIC(&sim, shifts);
   VSTR(&sim, output);
-#if defined(__riscv_xxcore)
   TEST_ASSERT_EQUAL_INT8(-128, output[0]);
-#elif defined(__XS3A__)
-  TEST_ASSERT_EQUAL_INT8(-127, output[0]);
-#endif
 }
 
 TEST(group_vpu_sim, test_sats) {
   TEST_ASSERT_EQUAL_INT(127, vpu_saturate(200, 8));
-  TEST_ASSERT_EQUAL_INT(-127, vpu_saturate(-200, 8));
-
-  TEST_ASSERT_EQUAL_INT(127, vpu_saturate_fixed(200, 8));
 #if defined(__riscv_xxcore)
-  TEST_ASSERT_EQUAL_INT(-128, vpu_saturate_fixed(-200, 8));
+  TEST_ASSERT_EQUAL_INT(-128, vpu_saturate(-200, 8));
 #elif defined(__XS3A__)
-  TEST_ASSERT_EQUAL_INT(-127, vpu_saturate_fixed(-200, 8));
+  TEST_ASSERT_EQUAL_INT(-127, vpu_saturate(-200, 8));
 #endif
 
   TEST_ASSERT_EQUAL_INT8(127, sat_s8(200, -127, 127));

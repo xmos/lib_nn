@@ -62,7 +62,7 @@ C_API MACC_FPTR void VLMACCR1(xs3_vpu* vpu, const void* addr);
 C_API MACC_FPTR void VLMACCRB(xs3_vpu* vpu, const void* addr);
 C_API void VPOS(xs3_vpu* vpu);
 C_API void VLSAT(xs3_vpu* vpu, const void* addr);
-C_API void VLSAT_FIXED(xs3_vpu* vpu, const void* addr);
+C_API void VLSAT_ASYMMETRIC(xs3_vpu* vpu, const void* addr);
 C_API void VLASHR(xs3_vpu* vpu, const void* addr, const int32_t shr);
 C_API void VLADD(xs3_vpu* vpu, const void* addr);
 C_API void VLSUB(xs3_vpu* vpu, const void* addr);
@@ -78,7 +78,7 @@ C_API void vpu_sim_mem_print(void* address, vector_mode mode);
 
 // Function for implementing the saturation logic within the VPU.
 C_API int64_t vpu_saturate(const int64_t input, const unsigned bits);
-C_API int64_t vpu_saturate_fixed(const int64_t input, const unsigned bits);
+C_API int64_t vpu_saturate_asymmetric(const int64_t input, const unsigned bits);
 
 // Assert if the memory access is non-word aligned
 // void assert_word_aligned(const void* address);
