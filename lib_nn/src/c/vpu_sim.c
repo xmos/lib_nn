@@ -16,15 +16,6 @@
 #define __builtin_popcount __popcnt
 #endif
 
-/**
- * Saturate symmetrically to +-(2^(bits-1) - 1), whatever the target.
- */
-int64_t vpu_saturate_symmetric(const int64_t input, const unsigned bits) {
-  const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
-  const int64_t min_val = -max_val;
-
-  return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
-}
 
 /**
  * Saturate as the VPU of the active target does: XS3 saturates symmetrically, VX4 uses the

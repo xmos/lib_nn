@@ -418,8 +418,6 @@ TEST(group_vpu_sim, test_vlsat_asymmetric) {
 }
 
 TEST(group_vpu_sim, test_sats) {
-  TEST_ASSERT_EQUAL_INT(127, vpu_saturate_symmetric(200, 8));
-  TEST_ASSERT_EQUAL_INT(-127, vpu_saturate_symmetric(-200, 8));
 
   TEST_ASSERT_EQUAL_INT(127, vpu_saturate(200, 8));
 #if defined(__riscv_xxcore)
