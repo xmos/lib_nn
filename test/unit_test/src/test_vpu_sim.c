@@ -37,7 +37,7 @@ TEST_GROUP_RUNNER(group_vpu_sim) {
 
   RUN_TEST_CASE(group_vpu_sim, test_vlashr);
   RUN_TEST_CASE(group_vpu_sim, test_vpos);
-  RUN_TEST_CASE(group_vpu_sim, test_vlsat_fixed);
+  RUN_TEST_CASE(group_vpu_sim, test_vlsat_asymmetric);
   RUN_TEST_CASE(group_vpu_sim, test_sats);
 }
 
@@ -402,7 +402,7 @@ TEST(group_vpu_sim, test_vpos) {
   TEST_ASSERT_EQUAL_INT32_ARRAY(expected, out_sim, VPU_INT32_EPV);
 }
 
-TEST(group_vpu_sim, test_vlsat_fixed) {
+TEST(group_vpu_sim, test_vlsat_asymmetric) {
   int16_t WORD_ALIGNED acc_low[VPU_INT16_EPV] = {-128};
   int16_t WORD_ALIGNED acc_high[VPU_INT16_EPV] = {-1};
   uint16_t WORD_ALIGNED shifts[VPU_INT8_ACC_PERIOD] = {0};
@@ -411,13 +411,10 @@ TEST(group_vpu_sim, test_vlsat_fixed) {
   VSETC(&sim, MODE_S8);
   VLDR(&sim, acc_low);
   VLDD(&sim, acc_high);
-  VLSAT_FIXED(&sim, shifts);
+  VLSAT_ASYMMETRIC(&sim, shifts);
   VSTR(&sim, output);
-#if defined(__riscv_xxcore)
+  // VLSAT_ASYMMETRIC models the kernels' output, which uses the full int8 range on both targets
   TEST_ASSERT_EQUAL_INT8(-128, output[0]);
-#elif defined(__XS3A__)
-  TEST_ASSERT_EQUAL_INT8(-127, output[0]);
-#endif
 }
 
 TEST(group_vpu_sim, test_sats) {
