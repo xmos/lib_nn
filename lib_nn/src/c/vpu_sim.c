@@ -383,7 +383,7 @@ void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
       if (shr >= 7)
         val = (val < 0) ? -1 : 0;
       else if (shr > 0)
-        val = (val + (1<<(shr-1))) >> shr;
+        val = val >> shr;  // arithmetic shift: VLASHR does not round
       else
         val = (unsigned)val << (-shr);
 
@@ -397,7 +397,7 @@ void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
       if (shr >= 15)
         val = (val < 0) ? -1 : 0;
       else if (shr > 0)
-        val = (val + (1<<(shr-1))) >> shr;
+        val = val >> shr;  // arithmetic shift: VLASHR does not round
       else
         val = (int32_t)((uint64_t)(uint32_t)val << (-shr));
       vpu->vR.s16[i] = vpu_saturate(val, 16);
@@ -410,7 +410,7 @@ void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
       if (shr >= 31)
         val = (val < 0) ? -1 : 0;
       else if (shr > 0)
-        val = (val + (1<<(shr-1))) >> shr;
+        val = val >> shr;  // arithmetic shift: VLASHR does not round
       else
         val = (unsigned)val << (-shr);
       vpu->vR.s32[i] = vpu_saturate(val, 32);
