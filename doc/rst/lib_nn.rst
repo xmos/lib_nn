@@ -545,7 +545,7 @@ VPU Simulation Support
 
 Instruction simulation, register state and VPU constants.
 
-.. doxygenfile:: xs3_vpu.h
+.. doxygenfile:: vpu_defs.h
     :project: lib_nn
 
 .. doxygenfile:: vpu_sim.h
