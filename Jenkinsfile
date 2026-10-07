@@ -1,7 +1,7 @@
 @Library('xmos_jenkins_shared_library@v0.54.0') _
 
 // Runs a Unity test, publishes its JUnit report, and prints its log on failure.
-def UnityJunit(String command, String logFile, String suiteName) {
+def UnityJunit(String command, String logFile, String suiteName, Boolean allowEmpty=false) {
     def status = sh(
         returnStatus: true,
         script: "${command} > ${logFile} 2>&1"
@@ -11,7 +11,7 @@ def UnityJunit(String command, String logFile, String suiteName) {
     }
     sh "ruby ${WORKSPACE}/lib_unity/lib_unity/Unity/auto/parse_output.rb -xml -suite${suiteName} ${logFile}"
     sh "mv report.xml ${suiteName}_results.xml"
-    junit "${suiteName}_results.xml"
+    junit allowEmptyResults: allowEmpty, testResults: "${suiteName}_results.xml"
     if (status != 0) {
         error("${suiteName} tests failed")
     }
@@ -32,8 +32,8 @@ pipeline {
         )
         string(
             name: 'TOOLS_VERSION_VX',
-            defaultValue: '-j --repo arch_vx_slipgate -b master -a XTC 131',
-            description: 'VX XTC tools version'
+            defaultValue: 'bob@develop',
+            description: 'VX Bob tools version'
         )
         string(
             name: 'XMOSDOC_VERSION',
@@ -180,7 +180,11 @@ pipeline {
                             steps {
                                 dir("${REPO}/test/unit_test") {
                                     withTools(params.TOOLS_VERSION_VX) {
-                                        UnityJunit("xsim --args bin/unit_test.xe -v", "VX4.log", "VX4")
+                                        // Incompleteness in the current VX toolchain can produce empty test results.
+                                        // Do not fail the job even if the test results are empty.
+                                        // ToDo: remove the allowEmpty flag once the VX toolchain accepts command line
+                                        // arguments when starting a program.
+                                        UnityJunit("xsim --args bin/unit_test.xe -v", "VX4.log", "VX4", true)
                                     }
                                 }
                             }
@@ -191,9 +195,9 @@ pipeline {
                                 dir("${REPO}/test/custom_cmake_build") {
                                     sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch develop"
                                     withTools(params.TOOLS_VERSION_VX) {
-                                        sh 'cmake -B build --toolchain=xmos_cmake_toolchain/vx4_xcc.cmake'
+                                        sh 'cmake -B build --toolchain=xmos_cmake_toolchain/vx4_clang.cmake'
                                         sh 'xmake -C build -j$(nproc)'
-                                        sh 'xsim bin/add_tensor.xe'
+                                        sh 'xsim bin/add_tensor --config-file ../config_elf.xml'
                                     }
                                 }
                             }
