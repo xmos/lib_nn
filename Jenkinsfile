@@ -171,8 +171,7 @@ pipeline {
                                             toolsVersion: params.TOOLS_VERSION_VX,
                                             // Version 0.6.0 of the VX tools may select an incompatible default Python executable.
                                             // Explicitly set it to python3.
-                                            cmakeOpts: '-DXMOS_PYTHON_EXECUTABLE=python3',
-//                                            cmakeOpts: '-DAPP_HW_TARGET=XK-EVK-XU416 -DXMOS_PYTHON_EXECUTABLE=python3',
+                                            cmakeOpts: '-DAPP_HW_TARGET=XK-EVK-XU416 -DXMOS_PYTHON_EXECUTABLE=python3',
                                         )
                                     }
                                 }
