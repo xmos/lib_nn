@@ -30,7 +30,6 @@ namespace nn {
  *
  * Unsigned padding is similar, but negative values are 0 instead.
  */
-C_API
 typedef struct padding_t {
   /// Rows of padding associated with the top edge (i.e. low row values)
   int16_t top;

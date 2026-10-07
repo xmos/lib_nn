@@ -3,15 +3,7 @@
 #ifndef NN_OPERATOR_H_
 #define NN_OPERATOR_H_
 
-#ifdef __XC__
-extern "C" {
-#endif
-
 #include "nn_layers.h"
 #include "nn_op_utils.h"
-
-#ifdef __XC__
-}  // extern "C"
-#endif
 
 #endif  // NN_OPERATOR_H_
