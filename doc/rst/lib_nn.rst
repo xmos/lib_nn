@@ -116,11 +116,7 @@ Layers extract features, combine intermediate results and adapt tensor
 representations for inference without requiring application-level kernel
 implementations.
 
-``lib_nn`` provides direct tensor operations and composable kernels for
-convolution and max pooling. The main operations are described below.
-
-Applications supply tensor buffers, prepare any required parameters or tables,
-and execute operations in the order required by the network.
+The supported operation families include:
 
 - **Convolution and matrix multiplication** form weighted combinations of
     inputs. Convolution applies kernels to successive tensor windows; matrix
@@ -340,10 +336,9 @@ hardware. Simulation allows these kernels to run on a host for testing and
 debugging; it models instruction results, not execution timing.
 
 Reference implementations use an explicit ``vpu_t`` state and instruction-like
-functions: ``VSETC()`` selects the element mode, loads populate registers,
-multiply-accumulate and shift operations update them, and stores copy results
-back to memory. ``NN_USE_REF`` selects reference kernel paths. Applications
-using those kernels do not need to manage simulated registers themselves.
+functions: for instance ``VSETC()`` replicates the ``vsetc`` instruction, which selects the vpu mode.  
+``NN_USE_REF`` selects reference kernel paths. These kernels manage the simulated
+VPU registers internally; applications call the kernel functions as usual.
 
 ``api/vpu_sim.h`` defines the register state and operations;
 ``src/c/vpu_sim.c`` implements vector loads, arithmetic, accumulator rotation,
