@@ -16,21 +16,6 @@
 #include "unity_fixture.h"
 #include "xs3_vpu.h"
 
-
-#ifdef CONFIG_SYMMETRIC_SATURATION_GLOBAL
-  #define CONFIG_SYMMETRIC_SATURATION_add_elementwise CONFIG_SYMMETRIC_SATURATION_GLOBAL
-#else
-  #ifndef CONFIG_SYMMETRIC_SATURATION_add_elementwise
-    #define CONFIG_SYMMETRIC_SATURATION_add_elementwise (0)
-  #endif 
-#endif
-
-#if CONFIG_SYMMETRIC_SATURATION_add_elementwise
-  #define NEG_SAT_VAL   (-127)
-#else
-  #define NEG_SAT_VAL   (-128)
-#endif 
-
 TEST_GROUP(group_add_elementwise);
 TEST_SETUP(group_add_elementwise) { srand(563456); }
 TEST_TEAR_DOWN(group_add_elementwise) {}
@@ -115,7 +100,7 @@ TEST(group_add_elementwise, test_add_elementwise_case1)
     }
             
     for(int i = 0; i < LENGTH; i++){
-        Y_expected[i] = vlsat_single_s8(m1*X1[i] + m2*X2[i] + bias, shift, NEG_SAT_VAL, VPU_INT8_MAX);
+        Y_expected[i] = vlsat_single_s8(m1*X1[i] + m2*X2[i] + bias, shift, INT8_MIN, VPU_INT8_MAX);
     }
     unsigned start = 0;
 
@@ -205,7 +190,7 @@ TEST(group_add_elementwise, test_add_elementwise_case2)
             int32_t x1 = ((int32_t) X1[i]);
             acc += x1 * m[1];
 
-            Y_expected[i] = vlsat_single_s8(acc, shr, NEG_SAT_VAL, VPU_INT8_MAX);
+            Y_expected[i] = vlsat_single_s8(acc, shr, INT8_MIN, VPU_INT8_MAX);
         }
 
         memset(Y, 0xCC, sizeof(Y));
