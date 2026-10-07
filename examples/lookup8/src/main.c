@@ -29,7 +29,7 @@ static void saturating_double_u8(uint8_t *expected, const uint8_t *input, int n)
 static void print_arr_uint8(const char *name, const uint8_t *v, int n) {
   printf("%s: ", name);
   for (int i = 0; i < n; i++) {
-    printf("%u%s", (unsigned)v[i], (i + 1 == n) ? "\n" : ", ");
+    printf("%3u%s", (unsigned)v[i], (i + 1 == n) ? "\n" : ", ");
   }
 }
 
@@ -79,8 +79,8 @@ int main(void) {
 
   const int mismatches = count_mismatches_u8(output_u8, expected_u8, SIZE);
 
-  print_arr_uint8("Input", input_u8, SIZE);
-  print_arr_uint8("Output", output_u8, SIZE);
+  print_arr_uint8("Input   ", input_u8, SIZE);
+  print_arr_uint8("Output  ", output_u8, SIZE);
   print_arr_uint8("Expected", expected_u8, SIZE);
   printf("mismatches=%d\n", mismatches);
 
