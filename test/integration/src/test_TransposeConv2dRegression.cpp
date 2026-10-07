@@ -16,7 +16,7 @@
 #include "geom/Filter2dGeometry.hpp"
 #include "geom/util.hpp"
 #include "nn_types.h"
-#include "TransposeConv.h"
+#include "TransposeConv.hpp"
 
 extern "C" {
 #include "unity.h"
