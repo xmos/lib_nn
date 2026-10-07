@@ -1,3 +1,6 @@
+# Custom cmake configuration for the lib_nn library.
+# The lib_tflite_micro library depends on lib_nn, and it doesn't have xcommon-cmake support.
+# Consequently, it uses this custom CMake configuration.
 option(BUILD_DDR_FIX "Build XCore binary with DDR fix enabled" OFF)
 
 set(LIB_NN_VPU_SYMMETRIC_SATURATION "" CACHE STRING
@@ -15,9 +18,10 @@ file(GLOB_RECURSE LIB_NN_SOURCES CONFIGURE_DEPENDS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
 )
 
-if(CMAKE_SYSTEM_PROCESSOR STREQUAL "XCORE_XS3A" OR
-   CMAKE_SYSTEM_PROCESSOR STREQUAL "XCORE_VX4" OR
-   CMAKE_SYSTEM_PROCESSOR STREQUAL "riscv32")
+if(CMAKE_SYSTEM_PROCESSOR STREQUAL "XCORE_XS" OR
+  CMAKE_SYSTEM_PROCESSOR STREQUAL "XCORE_XS3A" OR
+  CMAKE_SYSTEM_PROCESSOR STREQUAL "XCORE_VX4" OR
+  CMAKE_SYSTEM_PROCESSOR STREQUAL "riscv32")
   file(GLOB_RECURSE LIB_NN_ASM_SOURCES CONFIGURE_DEPENDS
        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.S")
   list(APPEND LIB_NN_SOURCES ${LIB_NN_ASM_SOURCES})
