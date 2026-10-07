@@ -26,6 +26,7 @@ TEST_GROUP_RUNNER(group_vpu_sim) {
   RUN_TEST_CASE(group_vpu_sim, test_vstrpv);
   
   RUN_TEST_CASE(group_vpu_sim, test_vlmacc);
+  RUN_TEST_CASE(group_vpu_sim, test_vlmacc_product_lsb_drops);
   RUN_TEST_CASE(group_vpu_sim, test_vlmaccr);
   RUN_TEST_CASE(group_vpu_sim, test_vlmaccr1);
 
@@ -168,6 +169,35 @@ TEST(group_vpu_sim, test_vlmacc) {
   TEST_ASSERT_EQUAL_INT16_ARRAY(out_sim, out_asm, VPU_INT16_EPV);
 }
 
+TEST(group_vpu_sim, test_vlmacc_product_lsb_drops) {
+  int16_t WORD_ALIGNED coefficients[VPU_INT16_EPV];
+  int16_t WORD_ALIGNED input[VPU_INT16_EPV];
+  int16_t WORD_ALIGNED output[VPU_INT16_EPV];
+  vpu_t sim = {0};
+  const nn_vpu_config_t saved_config = NN_VPU_CONFIG;
+
+  for (unsigned i = 0; i < VPU_INT16_EPV; ++i) {
+    coefficients[i] = 1;
+    input[i] = 1;
+  }
+
+  SetNNVPUConfig((nn_vpu_config_t){1, 0, 2});
+  VSETC(&sim, MODE_S16);
+  VCLRDR(&sim);
+  VLDC(&sim, coefficients);
+  VLMACC(&sim, input);
+  VSTR(&sim, output);
+  TEST_ASSERT_EACH_EQUAL_INT16(1, output, VPU_INT16_EPV);
+
+  SetNNVPUConfig((nn_vpu_config_t){1, 1, 2});
+  VCLRDR(&sim);
+  VLMACC(&sim, input);
+  VSTR(&sim, output);
+  TEST_ASSERT_EACH_EQUAL_INT16(0, output, VPU_INT16_EPV);
+
+  SetNNVPUConfig(saved_config);
+}
+
 TEST(group_vpu_sim, test_vlmaccr) {
   // multiply and accumulate one complete vector into the ring buffer
   // hw and sim are expected to match
@@ -271,10 +301,10 @@ TEST(group_vpu_sim, test_vl_add_sub_mul) {
   VLMUL(&sim, d);
   VSTR(&sim, out_sim);
 
-#if defined(__XS3A__)
+#if VPU_VLMUL_SHIFT_OFFSET == 2
   TEST_ASSERT_EQUAL_INT8_ARRAY(expected_xs3, out_asm, VPU_INT8_EPV);
   TEST_ASSERT_EQUAL_INT8_ARRAY(expected_xs3, out_sim, VPU_INT8_EPV);
-#elif defined(__riscv_xxcore)
+#elif VPU_VLMUL_SHIFT_OFFSET == 1
   TEST_ASSERT_EQUAL_INT8_ARRAY(expected_vx4, out_asm, VPU_INT8_EPV);
   TEST_ASSERT_EQUAL_INT8_ARRAY(expected_vx4, out_sim, VPU_INT8_EPV);
 #endif
@@ -413,10 +443,10 @@ TEST(group_vpu_sim, test_vlsat_fixed) {
   VLDD(&sim, acc_high);
   VLSAT_FIXED(&sim, shifts);
   VSTR(&sim, output);
-#if defined(__riscv_xxcore)
-  TEST_ASSERT_EQUAL_INT8(-128, output[0]);
-#elif defined(__XS3A__)
+#if VPU_SYMMETRIC_SATURATION
   TEST_ASSERT_EQUAL_INT8(-127, output[0]);
+#else
+  TEST_ASSERT_EQUAL_INT8(-128, output[0]);
 #endif
 }
 
@@ -425,10 +455,10 @@ TEST(group_vpu_sim, test_sats) {
   TEST_ASSERT_EQUAL_INT(-127, vpu_saturate(-200, 8));
 
   TEST_ASSERT_EQUAL_INT(127, vpu_saturate_fixed(200, 8));
-#if defined(__riscv_xxcore)
-  TEST_ASSERT_EQUAL_INT(-128, vpu_saturate_fixed(-200, 8));
-#elif defined(__XS3A__)
+#if VPU_SYMMETRIC_SATURATION
   TEST_ASSERT_EQUAL_INT(-127, vpu_saturate_fixed(-200, 8));
+#else
+  TEST_ASSERT_EQUAL_INT(-128, vpu_saturate_fixed(-200, 8));
 #endif
 
   TEST_ASSERT_EQUAL_INT8(127, sat_s8(200, -127, 127));

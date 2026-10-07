@@ -15,6 +15,13 @@ void set_target(void) {
 #else
   SetNNTargetArch(TARGET_ARCH_XS3A);
 #endif
+#if defined(TEST_BUILD_NATIVE)
+  SetNNVPUConfig((nn_vpu_config_t){0, 0, 2});
+#elif VPU_CONFIGURED
+  SetNNVPUConfig((nn_vpu_config_t){VPU_SYMMETRIC_SATURATION,
+                                   VPU_VLMACC_PRODUCT_LSB_DROPS,
+                                   VPU_VLMUL_SHIFT_OFFSET});
+#endif
 }
 
 int main(int argc, const char* argv[]) {
