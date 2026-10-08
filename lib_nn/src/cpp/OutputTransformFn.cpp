@@ -113,13 +113,10 @@ static int16_t float_to_int16(T f, int e) {
  *
  * A round-half-up shift right by s of integers that are uniform modulo 2^s overshoots by
  * 2^-(s+1) on average. The final shifts are vlashr by B - 8 then vdepth8 by 8: exact left shifts
- * when B <= 0, a single rounding by 2^B when 1 <= B <= 8, and a double rounding when B > 8.
+ * when B <= 0, otherwise a single round-half-up by 2^B. When B > 8 vlashr truncates, and
+ * truncating then rounding half up is the same as one round-half-up by the combined shift.
  */
-static double final_shift_drift(int B) {
-  if (B > 8) return 0.5 + std::ldexp(1.0, B - 9);  // vlashr, then vdepth8 of the result
-  if (B > 0) return 0.5;                           // vdepth8 only
-  return 0.0;
-}
+static double final_shift_drift(int B) { return B > 0 ? 0.5 : 0.0; }
 
 /**
  * @brief Mean upward drift, in bias LSBs, added by all of the int8 output transform's rounding.
@@ -149,8 +146,8 @@ static double rounding_drift(int initial_shift, int16_t multiplier, int B,
  * Rounding the scaled bias on its own leaves two systematic output offsets: the multiplier's
  * rounding error times the accumulator, and the mean overshoot of the transform's round-half-up
  * shifts. Correct for the first at the middle of the accumulator range and subtract the second
- * (see rounding_drift()), then round. The old fixed correction of one bias LSB matches the
- * rounding drift only at B == 9; at B == 0 it is a whole output LSB too much.
+ * (see rounding_drift()), then round. The old fixed correction of one bias LSB is half a bias
+ * LSB too much whenever B >= 1, and at B == 0 it is a whole output LSB too much.
  *
  * The vlsat and vlmul drift is a mean over products spread across many rounding steps. When a
  * channel's products span less than one bias LSB they all round alike instead, so the mean does
