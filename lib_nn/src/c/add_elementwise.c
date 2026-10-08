@@ -7,24 +7,9 @@
 #include "nn_api.h"
 #include "nn_op_helper.h"
 #include "nn_operator.h"
-#include "xs3_vpu.h"
+#include "vpu_defs.h"
 
 #include "vpu_sim.h"
-
-#ifdef CONFIG_SYMMETRIC_SATURATION_GLOBAL
-#define CONFIG_SYMMETRIC_SATURATION_add_elementwise                            \
-  CONFIG_SYMMETRIC_SATURATION_GLOBAL
-#else
-#ifndef CONFIG_SYMMETRIC_SATURATION_add_elementwise
-#define CONFIG_SYMMETRIC_SATURATION_add_elementwise (0)
-#endif
-#endif
-
-#if CONFIG_SYMMETRIC_SATURATION_add_elementwise
-#define NEG_SAT_VAL (-127)
-#else
-#define NEG_SAT_VAL (-128)
-#endif
 
 #define ASHR16(A, A_SHR) (((A_SHR) >= 0) ? ((A) >> (A_SHR)) : ((A) << -(A_SHR)))
 #define ROUND_SHR(A, A_SHR) (((A) + (1 << ((A_SHR)-1))) >> (A_SHR))
@@ -117,7 +102,7 @@ void add_elementwise_ref(
     acc = ROUND_SHR(acc, params->shift[0]);
 
     acc = MIN(acc, VPU_INT8_MAX);
-    acc = MAX(acc, NEG_SAT_VAL);
+    acc = MAX(acc, INT8_MIN);
 
     y[index] = (int8_t)acc;
     index++;

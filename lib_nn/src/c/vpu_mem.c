@@ -4,9 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "vpu_memcpy.h"
-#include "vpu_memmove.h"
-#include "vpu_memset.h"
+#include "vpu_mem.h"
 
 #ifdef NN_USE_REF
 

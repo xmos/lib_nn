@@ -11,7 +11,7 @@
 #include <math.h>
 
 #include "nn_op_helper.h"
-#include "xs3_vpu.h"
+#include "vpu_defs.h"
 
 int calculateThreadSplit(int tc, int split_size, int split_start[],
                           int split_end[], int alignment) {
