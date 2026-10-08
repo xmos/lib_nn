@@ -6,11 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "nn_api.h"
 #include "vpu_defs.h"
-
-#if defined(__cplusplus) || defined(__XC__)
-extern "C" {
-#endif
 
 /** @name Defines
  * @{ */
@@ -51,7 +48,7 @@ typedef void (*memcpy_fn_t)(void *dst, const void *src, size_t byte_count);
  * @param src        [in] Source address.
  * @param byte_count [in] Number of bytes to copy.
  */
-MEMCPY_FPTRGROUP
+C_API MEMCPY_FPTRGROUP
 void vpu_memcpy_int(void *dst, const void *src, size_t byte_count);
 
 /**
@@ -64,7 +61,7 @@ void vpu_memcpy_int(void *dst, const void *src, size_t byte_count);
  * @param src        [in] Source address.
  * @param byte_count [in] Number of bytes to copy.
  */
-MEMCPY_FPTRGROUP
+C_API MEMCPY_FPTRGROUP
 void vpu_memcpy_ext(void *dst, const void *src, size_t byte_count);
 
 /**
@@ -76,7 +73,7 @@ void vpu_memcpy_ext(void *dst, const void *src, size_t byte_count);
  * @param src          [in] Source address.
  * @param vector_count [in] Number of MEMCPY_VECT_EXT_BYTES-byte blocks to copy.
  */
-MEMCPY_FPTRGROUP
+C_API MEMCPY_FPTRGROUP
 void vpu_memcpy_vector_ext(void *dst, const void *src, size_t vector_count);
 
 /**
@@ -88,7 +85,7 @@ void vpu_memcpy_vector_ext(void *dst, const void *src, size_t vector_count);
  * @param src          [in] Source address.
  * @param vector_count [in] Number of MEMCPY_VECT_INT_BYTES-byte blocks to copy.
  */
-MEMCPY_FPTRGROUP
+C_API MEMCPY_FPTRGROUP
 void vpu_memcpy_vector_int(void *dst, const void *src, size_t vector_count);
 
 /** @} */
@@ -105,8 +102,8 @@ void vpu_memcpy_vector_int(void *dst, const void *src, size_t vector_count);
  * @param src        [in] Source address.
  * @param byte_count [in] Number of bytes to move; may be zero.
  */
-void vpu_memmove_word_aligned(void *dst, const void *src,
-                              unsigned int byte_count);
+C_API void vpu_memmove_word_aligned(void *dst, const void *src,
+                                    unsigned int byte_count);
 
 /** @} */
 
@@ -122,7 +119,7 @@ void vpu_memmove_word_aligned(void *dst, const void *src,
  * @param value      [in] Value to repeat.
  * @param word_count [in] Number of 32-bit words to write.
  */
-void vpu_memset_32(void *dst, const int32_t value, const int word_count);
+C_API void vpu_memset_32(void *dst, const int32_t value, const int word_count);
 
 /**
  * @brief Fill vectors with a repeated 32-bit value.
@@ -133,7 +130,8 @@ void vpu_memset_32(void *dst, const int32_t value, const int word_count);
  * @param value        [in] Value to repeat.
  * @param vector_count [in] Number of VPU_MEMSET_VECTOR_WORDS-word vectors.
  */
-void vpu_memset_vector(void *dst, const int32_t value, const int vector_count);
+C_API void vpu_memset_vector(void *dst, const int32_t value,
+                            const int vector_count);
 
 /**
  * @brief Fill bytes from a repeated 32-byte pattern buffer.
@@ -146,7 +144,8 @@ void vpu_memset_vector(void *dst, const int32_t value, const int vector_count);
  * @param src        [in] Address of the 32-byte pattern buffer.
  * @param byte_count [in] Number of bytes to fill.
  */
-void vpu_memset_256(void *dst, const void *src, unsigned int byte_count);
+C_API void vpu_memset_256(void *dst, const void *src,
+                         unsigned int byte_count);
 
 /**
  * @brief Repeat a 32-bit value across a 32-byte buffer.
@@ -157,10 +156,6 @@ void vpu_memset_256(void *dst, const void *src, unsigned int byte_count);
  * @param dst  [out] Word-aligned address of a 32-byte buffer.
  * @param from [in] Value to repeat.
  */
-void broadcast_32_to_256(void *dst, uint32_t from);
+C_API void broadcast_32_to_256(void *dst, uint32_t from);
 
 /** @} */
-
-#if defined(__cplusplus) || defined(__XC__)
-}
-#endif

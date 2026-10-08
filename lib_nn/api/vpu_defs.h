@@ -17,21 +17,21 @@
  * Integer type which fits a single accumulator (32-bits) corresponding to the
  * 8-bit VPU mode.
  */
-C_API typedef int32_t vpu_int8_acc_t;
+typedef int32_t vpu_int8_acc_t;
 
 /**
  * Integer type which fits a single accumulator (32-bits) corresponding to the
  * 16-bit VPU mode.
  */
-C_API typedef int32_t vpu_int16_acc_t;
+typedef int32_t vpu_int16_acc_t;
 
 /**
  * Integer type which fits a single accumulator (40-bits) corresponding to the
  * 32-bit VPU mode.
  */
-C_API typedef int64_t vpu_int32_acc_t;
+typedef int64_t vpu_int32_acc_t;
 
-C_API enum vpu_element_mode {
+enum vpu_element_mode {
   VEC_INT_32 = 0, /**< 0 */
   VEC_INT_16 = 1, /**< 1 */
   VEC_INT_8 = 2,  /**< 2 */
@@ -40,7 +40,7 @@ C_API enum vpu_element_mode {
   VEC_FLT_8 = 6,  /**< 6 */
 };
 
-C_API enum vpu_shift_mode {
+enum vpu_shift_mode {
   VEC_SH0 = 0, /**< 0 */
   VEC_SHL = 1, /**< 1 */
   VEC_SHR = 2, /**< 2 */
@@ -49,7 +49,7 @@ C_API enum vpu_shift_mode {
 /**
  * The saturation bounds for signed integers in each VPU operating mode.
  */
-C_API enum vpu_bounds {
+enum vpu_bounds {
   VPU_INT8_MAX = 0x7F,  /**<  0x7F */
   VPU_INT8_MIN = -0x7F, /**< -0x7F */
 
@@ -68,7 +68,7 @@ C_API enum vpu_bounds {
  * most significant bits are stored in vD, and the least significant bits are
  * stored in vR.
  */
-C_API enum vpu_acc_bits {
+enum vpu_acc_bits {
   VPU_INT8_ACC_SIZE = 32,  /**< 32 */
   VPU_INT16_ACC_SIZE = 32, /**< 32 */
   VPU_INT32_ACC_SIZE = 40, /**< 40 */
@@ -79,7 +79,7 @@ C_API enum vpu_acc_bits {
  * many least significant bits are stored in vR, with the remaining bits stored
  * in vD.
  */
-C_API enum vpu_acc_low_bits {
+enum vpu_acc_low_bits {
   VPU_INT8_ACC_VR_BITS = 16,  /**< 16 */
   VPU_INT16_ACC_VR_BITS = 16, /**< 16 */
   VPU_INT32_ACC_VR_BITS = 32, /**< 32 */
@@ -89,7 +89,7 @@ C_API enum vpu_acc_low_bits {
  * mask off the bits of the accumulator value which correspond to the portion in
  * vR.
  */
-C_API enum vpu_acc_low_mask {
+enum vpu_acc_low_mask {
   VPU_INT8_ACC_VR_MASK = 0xFFFF,      /**< 0xFFFF */
   VPU_INT16_ACC_VR_MASK = 0xFFFF,     /**< 0xFFFF */
   VPU_INT32_ACC_VR_MASK = 0xFFFFFFFF, /**< 0xFFFFFFFF */
@@ -104,7 +104,7 @@ C_API enum vpu_acc_low_mask {
  * VLMUL, VLSUB, VPOS, VSIGN
  *
  */
-C_API enum vpu_elements {
+enum vpu_elements {
   VPU_INT8_EPV = 32,  /**< 32 */
   VPU_INT16_EPV = 16, /**< 16 */
   VPU_INT32_EPV = 8,  /**< 8 */
@@ -113,7 +113,7 @@ C_API enum vpu_elements {
 /**
  * log-base-2 of the corresponding VPU_INT*_EPV values.
  */
-C_API enum vpu_elements_log2 {
+enum vpu_elements_log2 {
   VPU_INT8_EPV_LOG2 = 5,  /**< 5 */
   VPU_INT16_EPV_LOG2 = 4, /**< 4 */
   VPU_INT32_EPV_LOG2 = 3, /**< 3 */
@@ -125,7 +125,7 @@ C_API enum vpu_elements_log2 {
  * This is also the number of elements consumed (number of multiplies) by the
  * VLMACC instruction.
  */
-C_API enum vpu_acc_count {
+enum vpu_acc_count {
   VPU_BIN_ACC_PERIOD = 16,   /**< 16 */
   VPU_INT8_ACC_PERIOD = 16,  /**< 16 */
   VPU_INT16_ACC_PERIOD = 16, /**< 16 */
@@ -135,7 +135,7 @@ C_API enum vpu_acc_count {
 /**
  * log-base-2 of the corresponding VPU_INT*_ACC_PERIOD values.
  */
-C_API enum vpu_acc_count_log2 {
+enum vpu_acc_count_log2 {
   VPU_INT8_ACC_PERIOD_LOG2 = 4,  /**< 4 */
   VPU_INT16_ACC_PERIOD_LOG2 = 4, /**< 4 */
   VPU_INT32_ACC_PERIOD_LOG2 = 3, /**< 3 */
@@ -146,7 +146,7 @@ C_API enum vpu_acc_count_log2 {
  * mode. In other words, the number of simultaneous multiply-accumulates
  * performed by the VLMACC instruction.
  */
-C_API enum vpu_macc_elements {
+enum vpu_macc_elements {
   VPU_INT8_VLMACC_ELMS = 16,  /**< 16 */
   VPU_INT16_VLMACC_ELMS = 16, /**< 16 */
   VPU_INT32_VLMACC_ELMS = 8,  /**< 8 */
@@ -155,7 +155,7 @@ C_API enum vpu_macc_elements {
 /**
  * log-base-2 of the corresponding VPU_INT*_VLMACC_ELMS values.
  */
-C_API enum vpu_macc_elements_log2 {
+enum vpu_macc_elements_log2 {
   VPU_INT8_VLMACC_ELMS_LOG2 = 4,  /**< 4 */
   VPU_INT16_VLMACC_ELMS_LOG2 = 4, /**< 4 */
   VPU_INT32_VLMACC_ELMS_LOG2 = 3, /**< 3 */

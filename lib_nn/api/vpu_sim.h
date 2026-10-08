@@ -11,7 +11,6 @@
 #include "nn_types.h"
 #include "vpu_defs.h"
 
-C_API
 typedef union {
   uint8_t u8[VPU_INT8_EPV];
   int8_t s8[VPU_INT8_EPV];
@@ -23,7 +22,6 @@ typedef union {
   int32_t s32[VPU_INT32_EPV];
 } vpu_vector_t;
 
-C_API
 typedef enum {
   MODE_S32 = 0x00,
   MODE_S16 = 0x100,
@@ -31,7 +29,6 @@ typedef enum {
   MODE_S16x8 = 0x400,
 } vector_mode;
 
-C_API
 typedef struct {
   vector_mode mode;
   vpu_vector_t vR;
