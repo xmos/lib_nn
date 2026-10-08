@@ -5,15 +5,10 @@
 
 #include <xcore/hwtimer.h>
 
+#include "nn_api.h"
 #include "nn_layers.h"
 
 #define SIZE 16
-
-#ifdef __xcore__
-#define WORD_ALIGNED __attribute__((aligned(4)))
-#else
-#define WORD_ALIGNED
-#endif
 
 static uint8_t saturating_double_scalar(uint8_t x) {
   const unsigned y = ((unsigned)x) * 2U;

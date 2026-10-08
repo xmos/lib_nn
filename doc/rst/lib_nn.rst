@@ -1,3 +1,5 @@
+:tocdepth: 3
+
 ##############################
 lib_nn: Neural network library
 ##############################
@@ -6,7 +8,8 @@ lib_nn: Neural network library
 Introduction
 ************
 
-``lib_nn`` is a library of optimised kernels for the neural network operators commonly used in 8-bit quantised inference, such as convolution, pooling, fully-connected layers and elementwise operations. Each kernel is written to maximise performance and minimise memory footprint on XMOS devices.
+``lib_nn`` is a library of optimised kernels for the neural network operators commonly used in 8-bit quantised inference, such as convolution, pooling, fully-connected layers and elementwise operations. 
+Each kernel is written to maximise performance and minimise memory footprint on XMOS devices.
 
 This library targets the xs3 and vx4 architectures. These architectures have a vector unit with 256-bit wide registers that can operate in 8-bit, 16-bit or 32-bit integer mode; ``lib_nn`` kernels are written to make direct use of this vector unit, alongside portable C reference implementations of the same operators.
 
@@ -19,8 +22,7 @@ Usage
 ``lib_nn`` is intended to be used with the `XCommon CMake <https://www.xmos.com/file/xcommon-cmake-documentation/?version=latest>`_
 , the `XMOS` application build and dependency management system.
 
-To use this library in an application include ``lib_nn`` in the application's ``APP_DEPENDENT_MODULES`` list in
-`CMakeLists.txt`, for example:
+To use this library in an application include ``lib_nn`` in the application's ``APP_DEPENDENT_MODULES`` list in `CMakeLists.txt`, for example:
 
 .. code-block:: cmake
 
@@ -36,9 +38,9 @@ To use this library in an application include ``lib_nn`` in the application's ``
 
     #include "nn_layers.h"
 
-*******************
-Example application
-*******************
+*******
+Example
+*******
 
 The ``examples/add_tensor`` directory contains a minimal application that demonstrates how to use ``lib_nn``.
 
@@ -47,175 +49,510 @@ The program prints the two input tensors and the result of adding them together 
 This example is built for ``XK-EVK-XU316`` target and runs it in the xcore simulator.
 
 First, make sure the XMOS XTC tools are installed and activated.
+
 Then, from the top level of the repository, run the following commands::
 
-    # go to the example directory
     cd examples/add_tensor
-    # build
-    cmake -G "Unix Makefiles" -B build && cmake --build build
-    # run (simulation)
+    cmake -G "Unix Makefiles" -B build 
+    xmake -C build
+
+This will build ``add_tensor.xe``. To run this binary in simulation use::
+
     xsim bin/add_tensor.xe
-    # >> output
+
+After running the input tensors and the addition result are printed to the console::
+
     Input1: -100,   200,    300,    400,    -500,   800,    100,    -50,    -25,    1000,   1100,   1200,
     Input2: 100,    200,    300,    400,    500,    600,    700,    800,    900,    1000,   1100,   1200,
     Output: 0,      400,    600,    800,    0,      1400,   800,    750,    875,    2000,   2200,   2400,
 
-See ``examples/add_tensor/README.rst`` for the full walkthrough.
+Output corresponds to input1 and input2 added together.
 
-********
-Concepts
-********
+*****************
+Library Structure
+*****************
 
-Networks, Operators, Instances and Jobs
-========================================
+``lib_nn`` separates operator execution, parameter preparation and hardware
+support so callers can reuse prepared data and kernel components without
+having to implement VPU operations themselves.
 
-The design of ``lib_nn`` centres around a concept hierarchy that breaks down as follows.
+The library is organised around five responsibilities. Layers provide callable
+tensor operations. Geometry describes image shapes and filter windows.
+Parameter preparation converts scales, biases and weights into kernel-ready
+data. Aggregation and output transformation compute intermediate results and
+convert them into output values. VPU support provides vector types, memory
+utilities and instruction simulation for reference implementations. These are
+related components, not stages that every operator must pass through.
 
-Networks
---------
+For a direct layer call, supply the tensor buffers and any required shape or
+prepared parameters. For a composed filter kernel, select the input-access,
+aggregation and output-transform functions, prepare their parameters and
+weights, then call ``nn::execute()`` for the selected output region. The build
+selects the reference or target-specific implementations used by the kernels.
 
-At the top level of the hierarchy is the concept of a *network*. A network is a sequence of operations and the data that joins them that accomplishes some computational task, such as performing inference using a convolutional neural network. ``lib_nn`` in its raw form does not have any explicit semantic representation of a network; a network is instead created by the sequence of invocations performed by a user of ``lib_nn``.
+For example, a padded int8 Conv2D follows this flow:
 
-Operators
----------
+.. code-block:: text
 
-Below the network is an *operator*. An operator is an abstraction representing a certain class of operations. For example, ``add_elementwise()`` adds two quantized vectors element by element. An operator is represented semantically in the API by a set of struct definitions and functions capable of performing the necessary arithmetic.
+    Setup:
+    geometry + weights + scales and biases
+        -> prepared kernel parameters and reordered weights
+        -> nn::execute() for the selected output region
 
-Operator Instances
--------------------
+    Processing inside nn::execute():
+    input tensor -> gather padded window -> multiply by weights
+                 -> scale, add bias and clip -> output tensor
 
-It will often be the case that a network makes use of the same operator multiple times, for example, by having alternating layers of convolutions and pooling. Each occurrence of an operator within the network has a set of hyperparameters which describe the structure of the work to be performed, such as the size of a convolution window, or the number of channels processed by a pooling operation. An operator together with its hyperparameters constitutes a concrete instance of that operator.
+The three processing stages are ``memcpyfn_imtocol_padded()``,
+``mat_mul_generic_int8()`` and ``otfn_int8()``, connected by ``conv_params_t``.
+``nn::execute()`` repeats them across output pixels and channel groups,
+reusing each gathered window across the groups for that pixel. The complete
+setup is demonstrated in ``test/integration/src/test_Conv2dRegression.cpp``.
 
-Jobs
-----
+Layers
+======
 
-It is often beneficial to split the actual execution of the work for an operator instance into multiple parts. This may be done, for example, to reduce latency by dividing the work among multiple cores that can run in parallel, or to reduce the memory overhead by only keeping part of the parameters or data in SRAM at a time. Each block of work to be performed is referred to as a *job*. In ``lib_nn``, each job corresponds to a subset of the data to be output by an operator instance. In some operators a job will compute a rectangular subset of an output image, while in others a job will compute a contiguous block of the output's memory.
+Layers extract features, combine intermediate results and adapt tensor
+representations for inference without requiring application-level kernel
+implementations.
 
-Logical vs API Entities
-------------------------
+The supported operation families include:
 
-The API distinguishes between a logical tensor and its representation in
-memory. A logical tensor is the mathematical object operated on; its API
-representation is the pointer, shape information, and memory layout supplied
-to a kernel. 
+- **Convolution and matrix multiplication** form weighted combinations of
+    inputs. Convolution applies kernels to successive tensor windows; matrix
+    multiplication computes dot products between matrix rows and columns.
 
-The representation is sometimes the standard tensor layout, and
-sometimes an optimised layout required by the VPU.
+- **Elementwise arithmetic** merges feature paths or applies scaling and
+    gating. It adds or multiplies corresponding elements of two tensors,
+    accounting for their quantisation scales.
 
-For example, ``add_elementwise()`` takes pointers to complete input and output
-vectors and uses ``start`` and ``count`` to select the elements computed by one
-invocation.
+- **Pooling** summarises local windows independently for each channel.
+    Max pooling retains the largest value; average pooling computes the mean.
+    Neither uses learned weights, and window size and stride determine the
+    output dimensions. Max pooling uses dedicated kernels. Average pooling
+    reuses depthwise convolution with fixed all-one filters, scaling each
+    channel's accumulated sum to produce the mean.
 
-************************
-Implementation Structure
-************************
+- **Activations** introduce non-linear responses. ReLU, sigmoid and tanh act
+    independently on each element. Softmax converts a vector of scores into
+    normalised exponentials, with each output depending on the entire vector.
+    Elementwise mappings can use prepared tables or polynomial approximations.
 
-The following groups cover the main functional areas of the library, each
-mapped to the operators and source files that implement them.
+- **Reductions** summarise values or select a result. Mean averages over a
+    dimension; argmax returns the index of the largest value. Mean computation
+    uses a caller-supplied factor for averaging and quantisation rescaling.
 
-- **Convolution**: transform an input image and kernel into an output image through weight reordering, multiply-accumulate, and per-channel output scaling. e.g. ``reorder_kernel_weights()``, ``mat_mul_direct_int8()``, ``execute()``. Depthwise and transpose variants included.
-- **Elementwise operators**: apply arithmetic operations element-by-element across two tensors of the same shape. e.g. ``add_elementwise()``, ``mul_elementwise()``, ``add_int16_tensor()``.
-- **Quantisation / dequantisation**: convert tensors between floating-point and fixed-point representations, with a compile-time ``*_blob()`` call to pre-compute runtime parameters. e.g. ``quantize_int16_tensor()``, ``dequantize_int16_tensor_blob()``.
-- **Activation and reduction**: apply non-linear functions or reduce a tensor along a dimension to a scalar output. e.g. ``softmax_generate_exp_lut()``, ``quadratic_interpolation_128()``, ``mean_int8()``, ``argmax_16()``.
-- **Data utilities**: repack or reformat tensor data into layouts required by the VPU. e.g. ``bsign_8()``, ``expand_8_to_16()``, ``pad_3_to_4_run()``.
-- **VPU utilities**: copy, move and set memory at word and vector alignment; simulate VPU instructions for C reference implementations. e.g. ``vpu_memcpy_ext()``, ``VLMACCR()``, ``VLSAT()``.
+- **Quantisation** reduces storage and enables integer VPU computation by
+    converting floating-point values to scaled integers. The scale is the real
+    step between adjacent integers; smaller scales trade range for precision.
+    The int16 conversions use zero point zero: divide by the scale, round and
+    clip to the integer range. For example, ``1.0`` at scale ``0.1`` becomes ``10``.
 
-************
-Quantisation
-************
+- **Requantisation** connects integer tensors with different scales without
+    returning to floating point. It multiplies values by
+    ``input_scale / output_scale``, then rounds and clips. Thus ``10`` at scale
+    ``0.1`` becomes ``5`` at scale ``0.2``, representing the same real value.
 
-Quantisation represents a real value ``x`` with an integer ``q`` using two
-parameters:
+- **Dequantisation** makes integer results available to floating-point
+    consumers by multiplying by the scale. Thus ``10`` at scale ``0.1`` becomes
+    approximately ``1.0``. It cannot recover precision lost through quantisation.
 
-- The **scale** ``s`` is a positive real number giving the distance between
-    adjacent integer values. A smaller scale gives finer precision but covers a
-    smaller real range.
-- The **zero point** ``z`` is the integer that represents real zero. This lets
-    an integer type represent an asymmetric real range while still representing
-    zero exactly.
+- **Expansion** adapts tensors to wider integer element types by
+    sign-extending values, without changing their integer values or scales.
 
-Following the `LiteRT 8-bit quantisation specification <https://developers.google.com/edge/litert/conversion/tensorflow/quantization/quantization_spec>`_,
-the relationship between the real and quantised values is:
+- **Padding** adapts packed data to a kernel's storage layout by inserting
+    specified bytes, for example expanding three-byte blocks to four bytes.
+    This is distinct from padding a convolution's input window.
 
-.. math::
+Geometry
+========
 
-    x = (q - z) \times s
+Geometry separates tensor shapes and coordinate calculations from kernel
+arithmetic. It describes which input values contribute to an output and which
+output region to compute, allowing work to be divided without changing the
+operation itself.
 
-Rearranging this gives the quantisation operation:
+The logical tensor is distinct from its memory representation. Geometry
+describes dimensions and coordinates; a kernel receives a buffer and the
+parameters that describe its layout. For a row-major image with channels
+innermost, element ``X[r,c,p]`` has element offset
+``(r * width + c) * channels + p``. The byte offset also depends on the element
+size. Reordered weights and packed parameter buffers have kernel-specific
+layouts rather than this image layout.
 
-.. math::
+For two-dimensional, channel-based operations, the C++ types in ``api/geom/``
+describe the following:
 
-    q = \operatorname{round}\left(\frac{x}{s}\right) + z
+- **ImageGeometry** specifies rows, columns, channels and element size, and
+    provides memory-stride calculations.
+- **WindowGeometry** specifies the window shape, starting position, stride
+    and dilation.
+- **Filter2dGeometry** combines the input, output and window descriptions.
+- **WindowLocation** maps a particular output coordinate to its input window.
+- **ImageRegion** selects a rectangular range of rows, columns and channels.
 
-For example, with ``s = 0.1`` and ``z = -3``, the value ``0.26`` becomes
-``q = 0``. This integer represents approximately ``(0 - (-3)) * 0.1 = 0.3``.
-The chosen scale and zero point must map the required real range into the
-range of the integer type.
+For example, split an operation's output between two kernel invocations.
+The output geometry describes the complete tensor; each region selects the
+part that one invocation should compute:
 
-With **symmetric quantisation**, the zero point is fixed at ``z = 0``. The rule
-therefore simplifies to:
+.. code-block:: cpp
 
-.. math::
+    #include "geom/ImageGeometry.hpp"
 
-    q = \operatorname{round}\left(\frac{x}{s}\right)
+    const nn::ImageGeometry output(8, 16, 16);
+    const int split_row = output.height / 2;
 
-Requantisation changes the scale of an already quantised value. When both zero
-points are zero:
+    const nn::ImageRegion first_half(
+        0, 0, 0, split_row, output.width, output.depth);
+    const nn::ImageRegion second_half(
+        split_row, 0, 0, output.height - split_row, output.width, output.depth);
 
-.. math::
+``output`` has 8 rows, 16 columns and 16 channels. Region arguments specify
+the starting row, column and channel, followed by the counts in each dimension.
+``first_half`` selects rows ``[0, 4)`` and ``second_half`` selects rows
+``[4, 8)``; both include every column and channel. Together they cover the
+output exactly once.
 
-    q_{out} \approx
-    \operatorname{round}\left(q_{in}\frac{s_{in}}{s_{out}}\right)
+During kernel setup, use each region to prepare a separate invocation's output
+bounds, while keeping the same full tensor geometry and operation parameters.
+The invocations can run sequentially or on separate cores. Parallel invocations
+must use separate scratch buffers where required. The regions describe work;
+they neither allocate buffers nor launch execution. Region boundaries must
+satisfy the selected kernel's alignment and channel-group requirements.
 
-Optimised implementations often split this work into two stages. A
-**preparation function** converts the scale and zero point into fixed-point
-multipliers, shifts, or a small parameter blob. A **compute function** reuses
-those prepared parameters for every tensor element, avoiding repeated setup
-inside the processing loop.
+Parameter Preparation
+=====================
 
-**************
-Dequantisation
-**************
+Parameter preparation separates setup calculations from tensor processing.
+Preparation functions convert scales, zero points, biases and weights into
+the representations required by a selected kernel. Execution functions consume
+this prepared data, avoiding repeated conversion inside the processing loop.
+The data can be reused while the operation parameters and target remain
+unchanged.
 
-Dequantisation maps an integer back to its approximate real value using the
-same scale and zero point:
+Preparation takes several forms:
 
-.. math::
+- **Parameter blobs** encode transformed scalar parameters. For example,
+    ``quantize_int16_tensor_blob()`` converts an output scale into the blob
+    consumed by ``quantize_int16_tensor()``. The API recommends generating
+    these blobs at build time for use at run time; they are generated by
+    preparation functions, not implicitly by the compiler. Blob sizes,
+    alignment requirements and preparation failure conditions are specified
+    in ``api/nn_layers.h``.
+- **Weight reordering** arranges convolution weights in the order consumed by
+    the aggregation kernel. ``MatMulInt8::reorder_kernel_weights()`` prepares
+    weights for the generic int8 path; other aggregation variants have their
+    own layout requirements.
+- **Output parameters** represent scaling and bias in fixed-point form and
+    pack per-channel values for the chosen output transform. The preparation
+    helpers in ``api/OutputTransformFn.hpp`` support the corresponding int8
+    and binary transforms.
 
-    x = (q - z) \times s
+Grouping and packing reflect how the VPU processes data. A 256-bit load holds
+32 int8 elements, while int8 multiply-accumulate operations maintain a group
+of 16 accumulators. Loaded elements are not necessarily distinct channels:
+their meaning depends on the input and weight layout. Prepared weights and
+output parameters follow the selected kernel's grouping and padding rules;
+formats for different aggregation or output-transform variants are not
+interchangeable.
 
-For symmetric quantisation, ``z = 0``, so this simplifies to ``x = q * s``.
-For example, with ``s = 0.1``, the integer ``3`` becomes ``0.3``. Rounding
-during quantisation means this may not exactly reproduce the original value.
+Aggregation and Output Transformation
+=====================================
 
-Dequantisation may use the same two-stage pattern: preparation transforms the
-scale into a representation suited to the target, then the compute stage
-applies it to every integer element.
+Separating the calculation from output conversion allows an aggregation kernel
+to be reused with different quantisation schemes and output representations.
+For example, the same int8 convolution accumulator can feed either a shared-
+shift or a channelwise-shift output transform.
 
-**********************
-Implementation Details
-**********************
+The two stages have distinct responsibilities:
 
-The following notes describe the memory layouts, numerical conventions and
-VPU constraints that apply across the library.
+- **Aggregation** combines the input window into intermediate results for an
+    output channel group. Convolution computes sums of products; max pooling
+    computes channel maxima. Results go into ``VPURingBuffer``, not directly
+    into the output tensor. Convolution stores accumulator halves there;
+    max pooling stores its int8 maxima in the buffer's ``vR`` vector.
+- **Output transformation** reads those results and writes the output tensor.
+    Depending on the operation, it applies prepared scaling and bias, rounds
+    and saturates, produces thresholded bits, or simply stores pooling results.
 
-- **Standard tensor layout**: row-major, later dimensions fastest, matching C array order. Element ``A[i,j,k]`` is at byte offset ``(i*s1 + j*s2 + k) * element_size``.
-- **VPU saturation**: both architectures use saturating rather than wrapping arithmetic, so inner products are not associative. The saturation model differs between them:
+Select compatible input-access, aggregation and output-transform functions,
+and connect them with their parameter structs in ``conv_params_t``.
+``nn::execute()`` calls the input handler, then aggregation and output
+transformation for each output channel group. Dense convolution reuses the
+input patch across groups; depthwise execution selects the input channels
+for each group. Shared buffer storage does not make all variants interchangeable:
+their element types, weight layouts and output parameters must agree.
 
-  - **xs3** uses *symmetric* saturation — the lower bound is the negative of the upper bound: 8-bit ``[-127, 127]``, 16-bit ``[-32767, 32767]``, 32-bit ``[-2147483647, 2147483647]``. This avoids the twos-complement corner case where ``abs(INT_MIN) = INT_MIN``, at the cost of a possible 1 LSb error at the negative extreme.
-  - **vx4** uses *asymmetric* saturation — standard twos-complement bounds: 8-bit ``[-128, 127]``, 16-bit ``[-32768, 32767]``, 32-bit ``[-2147483648, 2147483647]``.
-  - For more details on saturation behaviour, see `VPU saturating arithmetic <https://www.xmos.com/documentation/XM-015059-UG/html/doc/rst/src/reference/notes.html#note-vpu-saturating-arithmetic>`_. 
+**Aggregation variants** describe how the input is accessed and combined:
 
-- **Accumulation and output scaling**: convolution accumulates 8-bit products into a 32-bit accumulator seeded with a 32-bit bias, then applies: ``y[i] = ((acc32[i] >> shr1[i]) * scale[i]) >> shr2[i]``, with an additional ``>> 8`` for 8-bit outputs. Shifts are saturating and rounding; negative accumulators never shift to zero.
-- **Channel groups**: the VPU processes ``VPU_INT8_EPV = 32`` input channels per load and holds ``VPU_INT8_ACC_PERIOD = 16`` accumulators. Parameter tensors are grouped accordingly: input channel groups of 32, output channel groups of 16.
-- **BSO tensor layout**: the Bias-Scale-Offset tensor packs the per-channel output parameters required after accumulation into a single 3-D buffer of shape ``(ceil(C_out/16), 7, 16)``. Axis 0 is the output channel group, axis 2 is the channel offset within that group (so channel ``k`` is at ``[k//16, :, k%16]``), and axis 1 selects the parameter: 0 = bias high half-word, 1 = bias low half-word, 2 = shift1, 3 = scale, 4 = offset scale, 5 = offset, 6 = shift2. The interleaved layout lets the VPU load all parameters for a channel group in one pass.
+- ``mat_mul_generic_*()`` consumes a contiguous input patch, usually gathered
+    into scratch memory. ``mat_mul_direct_*()`` traverses the original tensor
+    using prepared strides, avoiding that copy when its constraints permit.
+- ``mat_mul_dw_direct()`` and its int16 variant compute depthwise products:
+    each output channel uses its corresponding input channel, rather than
+    combining all input channels.
+- Binary variants compute inner products of packed one-bit inputs and weights.
+    Integer variants cover int8, int16 and mixed int16-input/int8-weight paths;
+    the mixed path is not implemented on XS3.
+- ``maxpool_direct()`` computes maxima without weights rather than a sum of
+    products.
+
+**Output variants** determine what is stored:
+
+- ``otfn_int8()`` uses shared initial and final shifts with per-channel
+    multipliers and biases. ``otfn_int8_channelwise()`` adds a separate initial
+    shift per channel to accommodate different accumulator ranges.
+- ``output_transform_fn_int16()`` adds prepared accumulator-domain biases,
+    applies fixed-point multipliers and saturates the results to int16.
+- ``otfn_binary()`` thresholds results and packs one bit per channel.
+    ``otfn_int8_clamped()`` provides the offset, clamp and scaling path used
+    to produce int8 outputs from binary aggregation.
+- ``otfn_int8_maxpool()`` stores the selected maxima without rescaling them.
+
+The aggregation API is in ``api/AggregateFn.hpp``; its implementations are in
+``src/cpp/AggregateFn.cpp``, ``src/cpp/AggregateFn_DW.cpp`` and
+``src/cpp/MaxPool.cpp``. Output-transform helpers and int8/binary entry points
+are in ``api/OutputTransformFn.hpp`` and ``src/cpp/OutputTransformFn.cpp``.
+The int16 output API is in ``api/nn_layers.h``, with implementation in
+``src/c/output_transform_fn_int16.c``. Corresponding files in ``src/asm/``
+provide target-specific implementations of these stages; the wrappers select
+them instead of the reference path when ``NN_USE_REF`` is not enabled.
+
+VPU Support
+===========
+
+The VPU (Vector Processing Unit) provides specialized instructions for
+efficient vector arithmetic. The ``vpu_sim`` module provides a software model
+of these instructions. The library also provides vectorized memory operations
+that mirror common ``<string.h>`` routines, such as ``memcpy``, ``memmove`` and
+``memset``. These helpers have specific constraints; see each function's
+documentation for details.
+
+VPU Simulation
+--------------
+
+Reference kernels need to reproduce vector arithmetic without requiring VPU
+hardware. Simulation allows these kernels to run on a host for testing and
+debugging; it models instruction results, not execution timing.
+
+Reference implementations use an explicit ``vpu_t`` state and instruction-like
+functions: for instance ``VSETC()`` replicates the ``vsetc`` instruction, which selects the vpu mode.  
+``NN_USE_REF`` selects reference kernel paths. These kernels manage the simulated
+VPU registers internally; applications call the kernel functions as usual.
+
+``api/vpu_sim.h`` defines the register state and operations;
+``src/c/vpu_sim.c`` implements vector loads, arithmetic, accumulator rotation,
+rounding, saturation and output conversion. The ``nn::VPU`` class wraps the
+same operations for C++, and register-printing helpers support debugging.
+
+VPU Memory Operations
+---------------------
+
+Moving weights and tensors or initialising scratch buffers can be a significant
+part of kernel execution. The memory helpers provide vector-based paths for
+these transfers and fills without implementing copy loops in each kernel.
+
+The library mirrors common memory operations such as:
+
+- **Copy:** ``vpu_memcpy_int()`` is tuned for internal SRAM and ``vpu_memcpy_ext()`` for external memory. 
+- **Move:** ``vpu_memmove_word_aligned()`` takes a byte count and permits overlapping source and destination regions.
+- **Fill:** ``vpu_memset_32()`` and ``vpu_memset_vector()`` both repeat a
+    32-bit value, with the fill length specified in words or 32-byte vectors,
+    respectively. ``vpu_memset_256()`` fills a specified number of bytes from
+    a 32-byte pattern buffer; ``broadcast_32_to_256()`` prepares such a buffer
+    by repeating a 32-bit value across it.
+
+Notes
+=====
+
+- **Word alignment:** many XS3 kernels require tensor and parameter buffers
+    to be word aligned, meaning their addresses are multiples of four bytes.
+    For example, ``quantize_int16_tensor()`` requires aligned input, output
+    and blob buffers on XS3. Requirements are specified per function; memory
+    helpers may impose alignment constraints on both architectures.
+
+- **VPU width:** both architectures have 256-bit vector registers, holding
+    32 int8, 16 int16 or 8 int32 elements. Vector width is distinct from the
+    number of accumulators and does not imply that each load spans that many
+    tensor channels.
+
+- **Saturation ranges:** XS3 symmetric saturation uses ``[-127, 127]`` for
+    int8 and ``[-32767, 32767]`` for int16. VX4 output depth conversions use
+    the full two's-complement ranges, ``[-128, 127]`` and ``[-32768, 32767]``,
+    respectively. Bounds depend on the instruction and kernel path; these
+    ranges are not a universal rule for every arithmetic operation.
+
+- **Accumulation order:** saturation clips intermediate results rather than
+    wrapping them. If an intermediate sum saturates, a different accumulation
+    order can produce a different final result.
+
+- **Output conversion:** bias, fixed-point scaling, rounding and clipping
+    are applied according to the selected output transform. Shared-shift,
+    channelwise-shift and int16 transforms have different parameter formats
+    and numerical behaviour.
+
+- **Zero points:** the int16 quantisation and dequantisation functions use
+    zero point zero, with the relationship ``x = q * s`` between the represented
+    real value, integer and scale. Other operators may account for nonzero
+    zero points through prepared biases and output parameters.
+
+- **Reference behaviour:** ``NN_USE_REF`` selects reference implementations,
+    whose simulation functions model instruction-specific rounding and
+    saturation. Some output conversions select full-range saturation when
+    ``NN_USE_REF`` is enabled, so a host reference build does not by itself
+    establish bit-identical behaviour at the XS3 negative limit.
 
 *************
 API Reference
 *************
 
-nn_layers.h
-===========
+Layer Operations
+================
+
+Tensor operations and their parameter-preparation functions.
 
 .. doxygenfile:: nn_layers.h
    :project: lib_nn
+
+Tensor and Window Types
+=======================
+
+C types describing tensors, images, convolution windows, output jobs and
+binary data.
+
+.. doxygenfile:: nn_types.h
+    :project: lib_nn
+
+.. doxygenfile:: nn_image.h
+    :project: lib_nn
+
+.. doxygenfile:: nn_conv2d_structs.h
+    :project: lib_nn
+
+.. doxygenfile:: nn_window_params.h
+    :project: lib_nn
+
+.. doxygenfile:: nn_bin_types.h
+    :project: lib_nn
+
+Geometry API
+============
+
+C++ descriptions of image and window shapes, coordinate mappings, output
+regions and padding.
+
+.. doxygenclass:: nn::ImageGeometry
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::WindowGeometry
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::Filter2dGeometry
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::WindowLocation
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::ImageVect
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::ImageRegion
+    :project: lib_nn
+    :members:
+
+Kernel Composition
+==================
+
+Execution interfaces, input-access handlers, aggregation kernels, output
+transforms and the accumulator buffer shared between stages.
+
+.. doxygenclass:: nn::AbstractKernel
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::MemCpyFn
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::DerefInputFn
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::ImToColValid
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::ImToColPadded
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::MatMulBase
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::MatMulInt8
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::MatMulDirectFn
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::MatMulDirectFn_DW
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::OutputTransformFn
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::OutputTransformFnInt8_Group
+    :project: lib_nn
+    :members:
+
+.. doxygenclass:: nn::OutputTransformFnInt8_Channelwise
+    :project: lib_nn
+    :members:
+
+Work Partitioning
+=================
+
+Utilities for splitting aligned ranges between threads.
+
+.. doxygenfile:: nn_op_utils.h
+    :project: lib_nn
+
+VPU Memory Operations
+=====================
+
+Vector-based copy, overlapping move and fill operations.
+
+.. doxygenfile:: vpu_mem.h
+    :project: lib_nn
+
+VPU Simulation Support
+======================
+
+Instruction simulation, register state and VPU constants.
+
+.. doxygenfile:: vpu_defs.h
+    :project: lib_nn
+
+.. doxygenfile:: vpu_sim.h
+    :project: lib_nn
+
+Configuration
+=============
+
+Target selection configuration.
+
+.. doxygenfile:: nn_arch.h
+    :project: lib_nn
+
+.. doxygenfile:: nn_api.h
+    :project: lib_nn

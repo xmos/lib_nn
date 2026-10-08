@@ -10,7 +10,7 @@
 
 #include "nn_api.h"
 #include "vpu_sim.h"
-#include "xs3_vpu.h"
+#include "vpu_defs.h"
 
 using namespace nn;
 
