@@ -171,7 +171,7 @@ pipeline {
                                             toolsVersion: params.TOOLS_VERSION_VX,
                                             // Version 0.6.0 of the VX tools may select an incompatible default Python executable.
                                             // Explicitly set it to python3.
-                                            cmakeOpts: '-DAPP_HW_TARGET=XK-EVK-XU416 -DXMOS_PYTHON_EXECUTABLE=python3',
+                                            cmakeOpts: '-DAPP_HW_TARGET=XK-EVK-XU416 -DPython_EXECUTABLE=/usr/bin/python3',
                                         )
                                     }
                                 }
@@ -195,7 +195,7 @@ pipeline {
                                     withTools(params.TOOLS_VERSION_VX) {
                                         // Version 0.6.0 of the VX tools may select an incompatible default Python executable.
                                         // Explicitly set it to python3.
-                                        sh 'cmake -B build --toolchain=xmos_cmake_toolchain/vx4_xcc.cmake -DXMOS_PYTHON_EXECUTABLE=python3'
+                                        sh 'cmake -B build --toolchain=xmos_cmake_toolchain/vx4_xcc.cmake -DPython_EXECUTABLE=/usr/bin/python3'
                                         sh 'xmake -C build -j$(nproc)'
                                         sh 'xsim bin/add_tensor.xe'
                                     }
