@@ -55,12 +55,6 @@ void requantize_int16_tensor(int16_t *output, int16_t *input,
 #endif
 }
 
-#if CONFIG_SYMMETRIC_SATURATION_requantize_16_to_8
-#define NEG_SAT_VAL (-127)
-#else
-#define NEG_SAT_VAL (-128)
-#endif
-
 static inline
 void requantize_16_to_8_ref(
     int8_t *y, const int16_t *x,
@@ -68,7 +62,7 @@ void requantize_16_to_8_ref(
     const unsigned elm_count) 
 {
     for (unsigned i = elm_start; i < elm_start + elm_count; i++) {
-        y[i] = (x[i] < -0x7F80) ? NEG_SAT_VAL : vdepth8_single_s16(x[i]);
+        y[i] = (x[i] < -0x7F80) ? INT8_MIN : vdepth8_single_s16(x[i]);
     }
 }
 
@@ -78,5 +72,3 @@ void requantize_16_to_8(
 {
     requantize_16_to_8_ref(y, x, elm_start, elm_count);
 }
-
-#undef NEG_SAT_VAL
