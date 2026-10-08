@@ -119,43 +119,35 @@ static int16_t float_to_int16(T f, int e) {
  * The reference rounds a real value but the hardware rounds an integer sum. If the sum were the
  * nearest integer to (real value * 2^B), real values up to half a bias LSB below an output's
  * half-way point would land exactly on the half-way integer and round up when they should round
- * down. Lowering the sum by half a bias LSB lines the two half-way points up. Put another way, a
- * round-half-up shift by s of integers that are uniform modulo 2^s overshoots by 2^-(s+1) output
- * LSBs on average, which is half a bias LSB.
+ * down. Lowering the sum by half a bias LSB lines the two half-way points up.
+ *
+ * The earlier roundings drift upwards too. vlsat's drift is much less than a bias LSB, so it is
+ * not corrected for; vlmul's usually is too, but not always (see vlmul_drift()).
  */
 static double final_shift_drift(int B) { return B > 0 ? 0.5 : 0.0; }
 
 /**
- * @brief Mean upward drift, in bias LSBs, added by all of the int8 output transform's rounding.
+ * @brief Mean upward drift, in bias LSBs, added by vlmul's rounding. multiplier must be nonzero.
  *
- * Every rounding step in the transform rounds half up: it adds half an output LSB and then
- * shifts right, which rounds down. Rounding away r bits this way leaves errors that cancel in
- * +/- pairs, except for an exact tie, which goes up by half an LSB. Ties are 1 in 2^r of
- * uniformly spread inputs, so the mean error is 2^-(r+1) output LSBs. These values are those
- * mean errors (which choose_bias() subtracts), not the rounding constants the hardware adds.
- * This totals the three steps:
- *  - the final shifts: final_shift_drift();
- *  - vlmul, whose output is in bias LSBs and which rounds away rounded_bits bits:
- *    2^-(rounded_bits + 1) bias LSBs;
- *  - vlsat, which rounds the accumulator right by initial_shift: 2^-(initial_shift + 1) of its
- *    output LSB, which the multiply then scales by multiplier * 2^-vlmul_shr into bias LSBs.
+ * vlmul rounds the product right by vlmul_shr, half up. Rounding away r bits leaves errors that
+ * cancel in +/- pairs, except for an exact tie, which goes up by half an LSB. Ties are 1 in 2^r of
+ * evenly spread products, so the mean error is 2^-(r+1).
  *
- * A step only drifts by the bits it really discards. Each vlmul product is a multiple of 2^k,
- * where k is the multiplier's trailing zero count plus any left shift of the accumulator, so the
- * multiply only rounds away vlmul_shr - k bits.
+ * vlmul shifts away vlmul_shr bits, but some of them may always be zero, and zero bits round
+ * exactly. The low bits of every product are zero if the multiplier ends in zero bits, or if the
+ * accumulator was shifted left (initial_shift < 0). If k is the total of those two, only
+ * r = vlmul_shr - k bits are really rounded away.
+ *
+ * Usually k is small, so r is large, ties are rare and the drift is negligible. But fewer rounded
+ * bits make ties more common. For example, a multiplier of 2.5 quantises to 5 * 2^12, which ends
+ * in 12 zero bits. With the accumulator shifted left by 1, k = 13. With vlmul_shr = 14 that
+ * leaves r = 1, so half of all products are ties and the drift is 0.25 bias LSB.
  */
-static double rounding_drift(int initial_shift, int16_t multiplier, int B,
-                             nn_vlmul_shr_t vlmul_shr) {
-  double drift = final_shift_drift(B);
-  if (multiplier != 0) {
-    int zero_bits = std::max(-initial_shift, 0);
-    for (uint16_t m = (uint16_t)multiplier; (m & 1) == 0; m >>= 1) zero_bits++;
-    int rounded_bits = (int)vlmul_shr - zero_bits;
-    if (rounded_bits > 0) drift += std::ldexp(1.0, -(rounded_bits + 1));  // vlmul
-  }
-  if (initial_shift > 0)                                    // vlsat, scaled by the multiplier
-    drift += std::ldexp((double)multiplier, -(initial_shift + 1 + (int)vlmul_shr));
-  return drift;
+static double vlmul_drift(int initial_shift, int16_t multiplier, nn_vlmul_shr_t vlmul_shr) {
+  int zero_bits = std::max(-initial_shift, 0);
+  for (uint16_t m = (uint16_t)multiplier; (m & 1) == 0; m >>= 1) zero_bits++;
+  int rounded_bits = (int)vlmul_shr - zero_bits;
+  return rounded_bits > 0 ? std::ldexp(1.0, -(rounded_bits + 1)) : 0.0;
 }
 
 /**
@@ -171,13 +163,12 @@ static double rounding_drift(int initial_shift, int16_t multiplier, int B,
  *  1. The quantised multiplier is slightly off, which adds accu * (multiplier error) to every
  *     output. The bias can be adjusted such that it cancels the slope error at the middle of the
  *     accumulator range, which leaves the smallest error at both ends.
- *  2. Each round-half-up step drifts upwards on average, so subtract that drift
- *     (see rounding_drift()).
+ *  2. The round-half-up steps drift upwards on average, so subtract that drift: half a bias LSB
+ *     for the final divide by 2^B (see final_shift_drift()), plus vlmul's (see vlmul_drift()).
  * A fixed correction of one bias LSB is half a bias LSB too much whenever B >= 1, and at B == 0
  * it is a whole output LSB too much.
  *
- * A zero multiplier and a very narrow accumulator range are handled separately, as the drift
- * averages don't apply to them.
+ * A zero multiplier and a very narrow accumulator range are handled separately.
  */
 static int16_t choose_bias(const OutputTransformFn::ActivationParams &p,
                            int initial_shift, int16_t multiplier, int B,
@@ -190,21 +181,22 @@ static int16_t choose_bias(const OutputTransformFn::ActivationParams &p,
   double corrected_bias =
       p.bias + accu_mid * (p.multiplier - quantised_multiplier);
 
-  // A zero multiplier makes every output the bias alone, with no spread of values for the drift
-  // to average over. Encode the reference's rounded output exactly instead, so the final shifts
-  // are exact and ties round away from zero like std::round() rather than to even.
+  // A zero multiplier makes every output the bias alone. Encode the reference's rounded output
+  // exactly, so the final shifts are exact and ties round away from zero like std::round() rather
+  // than to even.
   if (multiplier == 0) return float_to_int16(std::round(corrected_bias), B);
 
-  // The vlsat and vlmul drift is a mean over products that land at many different points between
-  // rounding thresholds. When the whole accumulator range moves the product by less than one bias
-  // LSB, all the products round alike and the mean doesn't apply. Instead, compute the actual
-  // integer product at the middle accumulator, and pick the bias that puts that product plus bias
-  // on the reference value. Only the final shifts' drift is still subtracted.
-  // Products change by multiplier * 2^-(initial_shift + vlmul_shr) bias LSBs per accumulator.
+  // Check accumulator range
   double product_span =
       ((double)p.accu_max_val - (double)p.accu_min_val) *
       std::fabs(std::ldexp((double)multiplier, -(initial_shift + (int)vlmul_shr)));
   if (product_span < 1.0) {
+  // Across a wide accumulator range the vlsat and vlmul rounding errors average out to their
+  // drift. When the whole range moves the product by less than one bias LSB they don't: every
+  // product is off by about the same amount, up to half a bias LSB. That constant error can be
+  // cancelled, so compute the actual integer product at the middle accumulator and pick the bias
+  // that puts that product plus bias on the reference value.
+  // Products change by multiplier * 2^-(initial_shift + vlmul_shr) bias LSBs per accumulator.
     int32_t accu = (int32_t)std::llround(accu_mid);
     int32_t product = OutputTransformFnInt8::mul(
         OutputTransformFnInt8::shr(accu, initial_shift), multiplier, 16, vlmul_shr);
@@ -212,9 +204,9 @@ static int16_t choose_bias(const OutputTransformFn::ActivationParams &p,
     return float_to_int16(target - final_shift_drift(B), 0);
   }
 
-  // Usual case: scale the corrected bias into bias LSBs, then remove error 2, the rounding drift
-  double scaled_bias = std::ldexp(corrected_bias, B) -
-                       rounding_drift(initial_shift, multiplier, B, vlmul_shr);
+  // Usual case: scale the corrected bias into bias LSBs, then remove error 2, the drift
+  double scaled_bias = std::ldexp(corrected_bias, B) - final_shift_drift(B) -
+                       vlmul_drift(initial_shift, multiplier, vlmul_shr);
   return float_to_int16(scaled_bias, 0);
 }
 
