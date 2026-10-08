@@ -554,5 +554,5 @@ Target selection and saturation configuration.
 .. doxygenfile:: nn_arch.h
     :project: lib_nn
 
-.. doxygenfile:: nn_config.h
+.. doxygenfile:: nn_api.h
     :project: lib_nn
