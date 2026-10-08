@@ -32,8 +32,8 @@ pipeline {
         )
         string(
             name: 'TOOLS_VERSION_VX',
-            defaultValue: '-j --repo arch_vx_slipgate -b master -a XTC 131',
-            description: 'VX XTC tools version'
+            defaultValue: 'bob@develop',
+            description: 'VX Bob tools version'
         )
         string(
             name: 'XMOSDOC_VERSION',
@@ -169,7 +169,9 @@ pipeline {
                                         xcoreBuild(
                                             buildDir: 'build_vx4',
                                             toolsVersion: params.TOOLS_VERSION_VX,
-                                            cmakeOpts: '-DAPP_HW_TARGET=XK-EVK-XU416',
+                                            // Version 0.6.0 of the VX tools may select an incompatible default Python executable.
+                                            // Explicitly set it to python3.
+                                            cmakeOpts: '-DAPP_HW_TARGET=XK-EVK-XU416 -DPython_EXECUTABLE=/usr/bin/python3',
                                         )
                                     }
                                 }
@@ -191,7 +193,9 @@ pipeline {
                                 dir("${REPO}/test/custom_cmake_build") {
                                     sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch develop"
                                     withTools(params.TOOLS_VERSION_VX) {
-                                        sh 'cmake -B build --toolchain=xmos_cmake_toolchain/vx4_xcc.cmake'
+                                        // Version 0.6.0 of the VX tools may select an incompatible default Python executable.
+                                        // Explicitly set it to python3.
+                                        sh 'cmake -B build --toolchain=xmos_cmake_toolchain/vx4_xcc.cmake -DPython_EXECUTABLE=/usr/bin/python3'
                                         sh 'xmake -C build -j$(nproc)'
                                         sh 'xsim bin/add_tensor.xe'
                                     }

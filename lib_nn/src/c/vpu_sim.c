@@ -31,12 +31,9 @@ int64_t vpu_saturate(const int64_t input, const unsigned bits) {
  */
 int64_t vpu_saturate_fixed(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
-  int64_t min_val;
-  #if (defined(__riscv_xxcore) || defined(NN_USE_REF))
-    min_val = -(1LL << (bits - 1));
-  #else
-    min_val = -max_val;
-  #endif
+  const int64_t min_val = NN_VPU_CONFIG.symmetric_saturation
+                              ? -max_val
+                              : -(1LL << (bits - 1));
   return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
 }
 
@@ -114,49 +111,49 @@ void VCLRDR(xs3_vpu *vpu) {
 }
 
 void VLDR(xs3_vpu *vpu, const void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   memcpy(&vpu->vR.u8[0], addr, XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VLDD(xs3_vpu *vpu, const void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   memcpy(&vpu->vD.u8[0], addr, XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VLDC(xs3_vpu *vpu, const void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   memcpy(&vpu->vC.u8[0], addr, XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VSTR(const xs3_vpu *vpu, void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   memcpy(addr, &vpu->vR.u8[0], XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VSTD(const xs3_vpu *vpu, void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   memcpy(addr, &vpu->vD.u8[0], XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VSTC(const xs3_vpu *vpu, void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   memcpy(addr, &vpu->vC.u8[0], XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VSTRPV(const xs3_vpu *vpu, void *addr, unsigned mask) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   int8_t *addr8 = (int8_t *)addr;
@@ -168,8 +165,15 @@ void VSTRPV(const xs3_vpu *vpu, void *addr, unsigned mask) {
   }
 }
 
+static int64_t vlmacc_product(int64_t product) {
+  const unsigned drops = NN_VPU_CONFIG.vlmacc_product_lsb_drops;
+  assert(drops < 64);
+  const uint64_t keep_mask = ~((UINT64_C(1) << drops) - 1);
+  return (int64_t)((uint64_t)product & keep_mask);
+}
+
 void VLMACC(xs3_vpu *vpu, const void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   if (vpu->mode == MODE_S8) {
@@ -177,7 +181,7 @@ void VLMACC(xs3_vpu *vpu, const void *addr) {
 
     for (int i = 0; i < VPU_INT8_VLMACC_ELMS; i++) {
       int64_t acc = GetAccumulator(vpu, i);
-      acc = acc + (((int32_t)vpu->vC.s8[i]) * addr8[i]);
+      acc += vlmacc_product(((int32_t)vpu->vC.s8[i]) * addr8[i]);
 
       SetAccumulator(vpu, i, vpu_saturate(acc, 32));
     }
@@ -186,7 +190,7 @@ void VLMACC(xs3_vpu *vpu, const void *addr) {
 
     for (int i = 0; i < VPU_INT16_VLMACC_ELMS; i++) {
       int64_t acc = GetAccumulator(vpu, i);
-      acc = acc + (((int32_t)vpu->vC.s16[i]) * addr16[i]);
+      acc += vlmacc_product(((int32_t)vpu->vC.s16[i]) * addr16[i]);
 
       SetAccumulator(vpu, i, vpu_saturate(acc, 32));
     }
@@ -195,7 +199,7 @@ void VLMACC(xs3_vpu *vpu, const void *addr) {
 
     for (int i = 0; i < VPU_INT16_VLMACC_ELMS; i++) {
       int64_t acc = GetAccumulator(vpu, i);
-      acc = acc + (((int32_t)vpu->vC.s16[i]) * (int16_t)(addr8[2*i]));
+      acc += vlmacc_product(((int32_t)vpu->vC.s16[i]) * (int16_t)(addr8[2*i]));
 
       SetAccumulator(vpu, i, vpu_saturate(acc, 32));
     }
@@ -204,7 +208,7 @@ void VLMACC(xs3_vpu *vpu, const void *addr) {
 
     for (int i = 0; i < VPU_INT32_VLMACC_ELMS; i++) {
       int64_t acc = GetAccumulator(vpu, i);
-      acc = acc + (((int64_t)vpu->vC.s32[i]) * addr32[i]);
+      acc += vlmacc_product(((int64_t)vpu->vC.s32[i]) * addr32[i]);
 
       SetAccumulator(vpu, i, vpu_saturate(acc, 40));
     }
@@ -214,7 +218,7 @@ void VLMACC(xs3_vpu *vpu, const void *addr) {
 }
 
 void VLMACCR(xs3_vpu *vpu, const void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   if (vpu->mode == MODE_S8) {
@@ -222,7 +226,7 @@ void VLMACCR(xs3_vpu *vpu, const void *addr) {
     int64_t acc = GetAccumulator(vpu, VPU_INT8_ACC_PERIOD - 1);
 
     for (int i = 0; i < VPU_INT8_EPV; i++)
-      acc = acc + (((int32_t)vpu->vC.s8[i]) * addr8[i]);
+      acc += vlmacc_product(((int32_t)vpu->vC.s8[i]) * addr8[i]);
 
     acc = vpu_saturate(acc, 32);
     rotate_accumulators(vpu);
@@ -232,7 +236,7 @@ void VLMACCR(xs3_vpu *vpu, const void *addr) {
     int64_t acc = GetAccumulator(vpu, VPU_INT16_ACC_PERIOD - 1);
 
     for (int i = 0; i < VPU_INT16_EPV; i++)
-      acc = acc + (((int32_t)vpu->vC.s16[i]) * addr16[i]);
+      acc += vlmacc_product(((int32_t)vpu->vC.s16[i]) * addr16[i]);
 
     acc = vpu_saturate(acc, 32);
     rotate_accumulators(vpu);
@@ -242,7 +246,7 @@ void VLMACCR(xs3_vpu *vpu, const void *addr) {
     int64_t acc = GetAccumulator(vpu, VPU_INT16_ACC_PERIOD - 1);
 
     for (int i = 0; i < VPU_INT16_EPV; i++)
-      acc = acc + (((int32_t)vpu->vC.s16[i]) * (int16_t)(addr8[2*i]));
+      acc += vlmacc_product(((int32_t)vpu->vC.s16[i]) * (int16_t)(addr8[2*i]));
 
     acc = vpu_saturate(acc, 32);
     rotate_accumulators(vpu);
@@ -252,7 +256,7 @@ void VLMACCR(xs3_vpu *vpu, const void *addr) {
     int32_t acc = GetAccumulator(vpu, VPU_INT32_ACC_PERIOD - 1);
 
     for (int i = 0; i < VPU_INT32_EPV; i++)
-      acc = acc + (((int32_t)vpu->vC.s32[i]) * addr32[i]);
+      acc += vlmacc_product(((int32_t)vpu->vC.s32[i]) * addr32[i]);
 
     acc = vpu_saturate(acc, 40);
     rotate_accumulators(vpu);
@@ -287,7 +291,7 @@ void VPOS(xs3_vpu *vpu) {
 }
 
 void VLMACCR1(xs3_vpu *vpu, const void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   const int32_t *addr32 = (const int32_t *)addr;
@@ -309,7 +313,7 @@ void VLMACCRB(xs3_vpu *vpu, const void *addr) {
 
 static
 void _VLSAT_IMPL(xs3_vpu *vpu, const void *addr, bool fixed_saturation) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   if (vpu->mode == MODE_S8) {
@@ -371,7 +375,7 @@ void VLSAT_FIXED(xs3_vpu *vpu, const void *addr) {
 }
 
 void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   if (vpu->mode == MODE_S8) {
@@ -421,7 +425,7 @@ void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
 }
 
 void VLADD(xs3_vpu *vpu, const void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   if (vpu->mode == MODE_S8) {
@@ -450,7 +454,7 @@ void VLADD(xs3_vpu *vpu, const void *addr) {
 }
 
 void VLSUB(xs3_vpu *vpu, const void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   if (vpu->mode == MODE_S8) {
@@ -479,20 +483,17 @@ void VLSUB(xs3_vpu *vpu, const void *addr) {
 }
 
 static inline
-unsigned vlmul_get_shift(const nn_target_arch_t arch, const vector_mode mode) {
-  // VLMUL shift = bpe - 2 for XS3A, bpe - 1 for VX4A
-  assert(arch == TARGET_ARCH_XS3A || arch == TARGET_ARCH_VX4A);
+unsigned vlmul_get_shift(const nn_vpu_config_t *config, const vector_mode mode) {
   unsigned shift = 0;
-  unsigned adj = (arch == TARGET_ARCH_XS3A) ? 0 : 1;
   switch (mode) {
     case MODE_S8:
-      shift = 8 - 2 + adj;
+      shift = 8 - config->vlmul_shift_offset;
       break;
     case MODE_S16:
-      shift = 16 - 2 + adj;
+      shift = 16 - config->vlmul_shift_offset;
       break;
     case MODE_S32:
-      shift = 32 - 2 + adj;
+      shift = 32 - config->vlmul_shift_offset;
       break;
     default:
       assert(0);  // How'd this happen?
@@ -502,11 +503,11 @@ unsigned vlmul_get_shift(const nn_target_arch_t arch, const vector_mode mode) {
 }
 
 void VLMUL(xs3_vpu *vpu, const void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
 
-  const unsigned shift = vlmul_get_shift(NN_ARCH, vpu->mode);
+  const unsigned shift = vlmul_get_shift(&NN_VPU_CONFIG, vpu->mode);
   if (vpu->mode == MODE_S8) {
     const int8_t *addr8 = (const int8_t *)addr;
     for (int i = 0; i < VPU_INT8_EPV; i++) {
