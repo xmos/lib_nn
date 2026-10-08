@@ -12,7 +12,7 @@
 #include "tst_common.h"
 #include "unity.h"
 #include "unity_fixture.h"
-#include "xs3_vpu.h"
+#include "vpu_defs.h"
 
 #define LHS_ROW_SIZE 128
 #define CHANNEL_SIZE 256

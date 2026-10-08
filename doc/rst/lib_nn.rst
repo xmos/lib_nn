@@ -549,10 +549,8 @@ Instruction simulation, register state and VPU constants.
 Configuration
 =============
 
-Target selection and saturation configuration.
+Target selection configuration.
 
 .. doxygenfile:: nn_arch.h
     :project: lib_nn
 
-.. doxygenfile:: nn_config.h
-    :project: lib_nn

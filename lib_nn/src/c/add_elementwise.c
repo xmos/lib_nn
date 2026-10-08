@@ -7,7 +7,7 @@
 #include "nn_api.h"
 #include "nn_op_helper.h"
 #include "nn_operator.h"
-#include "xs3_vpu.h"
+#include "vpu_defs.h"
 
 #include "vpu_sim.h"
 

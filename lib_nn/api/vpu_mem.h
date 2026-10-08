@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "xs3_vpu.h"
+#include "vpu_defs.h"
 
 #if defined(__cplusplus) || defined(__XC__)
 extern "C" {
