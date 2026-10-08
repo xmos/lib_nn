@@ -402,6 +402,30 @@ Notes
     ``NN_USE_REF`` is enabled, so a host reference build does not by itself
     establish bit-identical behaviour at the XS3 negative limit.
 
+Target configuration
+====================
+
+``lib_nn`` separates instruction-set selection from VPU behavior. Instruction-set
+selection uses the compiler-provided ``__XS3A__`` macro for the legacy XCORE ISA and
+``__riscv_xxcore`` for RISC-V with the XCORE extension. The XTC ``__XS3A__`` and
+Slipgate ``__VX4B__`` macros also provide backward-compatible defaults for these VPU
+capabilities:
+
+* ``VPU_SYMMETRIC_SATURATION``
+* ``VPU_VLMACC_PRODUCT_LSB_DROPS``
+* ``VPU_VLMUL_SHIFT_OFFSET``
+
+A RISC-V XCORE toolchain that does not provide a legacy processor macro must define all
+three capabilities. With the standalone CMake target, use the corresponding cache
+variables, for example for VX4B-compatible VPU behavior::
+
+    -DLIB_NN_VPU_SYMMETRIC_SATURATION=0
+    -DLIB_NN_VPU_VLMACC_PRODUCT_LSB_DROPS=1
+    -DLIB_NN_VPU_VLMUL_SHIFT_OFFSET=1
+
+Compiler/runtime features can be overridden independently with ``HAS_FPTRGROUP`` and
+``HAS_FULL_CXX_RTTI``.
+
 *************
 API Reference
 *************
