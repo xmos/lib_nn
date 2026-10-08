@@ -7,7 +7,7 @@
 #ifndef LIB_NN_VPU_HPP_
 #define LIB_NN_VPU_HPP_
 
-#include "xs3_vpu.h"
+#include "vpu_defs.h"
 
 struct VPURingBuffer {
   int16_t vR[VPU_INT16_EPV];

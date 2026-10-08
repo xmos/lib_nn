@@ -8,7 +8,7 @@
 #include "unity_fixture.h"
 
 #include "vpu_sim.h"
-#include "xs3_vpu.h"
+#include "vpu_defs.h"
 #include "nn_arch.h"
 #include "nn_op_helper.h"
 
