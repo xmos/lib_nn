@@ -9,7 +9,7 @@
 #include "Utils.hpp"
 #include "geom/Filter2dGeometry.hpp"
 #include "vpu.hpp"
-#include "xs3_vpu.h"
+#include "vpu_defs.h"
 
 namespace nn {
 

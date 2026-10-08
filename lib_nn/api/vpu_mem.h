@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 #include "nn_api.h"
-#include "xs3_vpu.h"
+#include "vpu_defs.h"
 
 /** @name Defines
  * @{ */

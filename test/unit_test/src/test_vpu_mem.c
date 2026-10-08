@@ -11,7 +11,7 @@
 #include "nn_operator.h"
 #include "tst_common.h"
 #include "vpu_mem.h"
-#include "xs3_vpu.h"
+#include "vpu_defs.h"
 
 #include "unity.h"
 #include "unity_fixture.h"

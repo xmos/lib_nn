@@ -13,7 +13,7 @@
 #include "tst_common.h"
 #include "unity.h"
 #include "unity_fixture.h"
-#include "xs3_vpu.h"
+#include "vpu_defs.h"
 
 TEST_GROUP(group_mul_elementwise);
 TEST_SETUP(group_mul_elementwise) { srand(563456); }

@@ -10,7 +10,7 @@
 #include <limits>
 #include <vector>
 
-#include "xs3_vpu.h"
+#include "vpu_defs.h"
 
 using namespace nn;
 

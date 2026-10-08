@@ -9,7 +9,7 @@
 
 #include "nn_operator.h"
 #include "tst_common.h"
-#include "xs3_vpu.h"
+#include "vpu_defs.h"
 #include "vpu_mem.h"
 
 #include "unity.h"

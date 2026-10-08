@@ -9,7 +9,7 @@
 #include <string.h>
 
 #include "nn_types.h"
-#include "xs3_vpu.h"
+#include "vpu_defs.h"
 
 typedef union {
   uint8_t u8[VPU_INT8_EPV];
