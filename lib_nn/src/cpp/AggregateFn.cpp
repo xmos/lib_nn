@@ -312,7 +312,7 @@ C_API void mat_mul_direct_binary_impl_asm(const mat_mul_direct_params_t *params,
                                           VPURingBuffer *A, int8_t *X,
                                           int32_t output_channel_group,
                                           int8_t *weights);
-C_API void mat_mul_generic_binary_impl_asm(const mat_mul_generic_params_t *params,
+C_API void mat_mul_generic_binary_asm(const mat_mul_generic_params_t *params,
                                            VPURingBuffer *A, int8_t *X,
                                            int32_t output_channel_group,
                                            int8_t *weights);
@@ -322,8 +322,7 @@ void nn::mat_mul_direct_int8(const mat_mul_direct_params_t *params, VPURingBuffe
 #ifdef NN_USE_REF
   mat_mul_direct_int8_impl(params, A, T, output_channel_group, weights);
 #else
-  mat_mul_direct_int8_impl_asm(params, A, T, output_channel_group,
-                               weights);
+  mat_mul_direct_int8_impl_asm(params, A, T, output_channel_group, weights);
 #endif  // NN_USE_REF
 }
 
@@ -346,14 +345,13 @@ void nn::mat_mul_generic_int8(const mat_mul_generic_params_t *params, VPURingBuf
                                 weights);
 #endif  // NN_USE_REF
 }
+
 void nn::mat_mul_generic_binary(const mat_mul_generic_params_t *params, VPURingBuffer *A, int8_t *T,
                                 int32_t output_channel_group, int8_t *weights) {
 #ifdef NN_USE_REF
-  mat_mul_generic_binary_impl(params, A, T, output_channel_group,
-                              weights);
+  mat_mul_generic_binary_impl(params, A, T, output_channel_group, weights);
 #else
-  mat_mul_generic_binary_impl_asm(params, A, T, output_channel_group,
-                                  weights);
+  mat_mul_generic_binary_asm(params, A, T, output_channel_group, weights);
 #endif  // NN_USE_REF
 }
 
