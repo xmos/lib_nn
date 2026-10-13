@@ -22,6 +22,7 @@ TEST_TEAR_DOWN(group_mat_mul) {}
 TEST_GROUP_RUNNER(group_mat_mul) {
   RUN_TEST_CASE(group_mat_mul, Test_GenericInt8);
   RUN_TEST_CASE(group_mat_mul, Test_GenericBinary);
+  RUN_TEST_CASE(group_mat_mul, Test_BinaryMultipleOutchans);
   RUN_TEST_CASE(group_mat_mul, Test_DirectInt8);
   RUN_TEST_CASE(group_mat_mul, Test_DirectBinary);
   RUN_TEST_CASE(group_mat_mul, Test_DirectInt16);
@@ -77,6 +78,21 @@ TEST(group_mat_mul, Test_GenericBinary) {
 
   mat_mul_generic_binary(&prm, &A, inp_i8, ocg, wgt_i8);
   assert_accumulator_value(A, elm_n * 4);
+}
+
+TEST(group_mat_mul, Test_BinaryMultipleOutchans) {
+  constexpr unsigned output_channels = 4;
+  constexpr unsigned input_bytes = 3 * XS3_VPU_VREG_WIDTH_BYTES; // 96 (768bits)
+  constexpr unsigned expected = 768 / 2; // all zeros so all matches, acc = (matches - mismatches) / 2 = 768 /2
+  DWORD_ALIGNED int8_t input[input_bytes] = {};
+  DWORD_ALIGNED int8_t weights[output_channels * input_bytes + VPU_INT16_EPV * XS3_VPU_VREG_WIDTH_BYTES] = {};
+  MatMulBinary gen(output_channels, input_bytes);
+  mat_mul_generic_params_t prm = gen.getParams();
+  VPURingBuffer accumulator{};
+  mat_mul_generic_binary(&prm, &accumulator, input, 0, weights);
+  for (unsigned channel = 0; channel < output_channels; channel++) {
+    TEST_ASSERT_EQUAL_INT32(expected, accumulator_value(accumulator, channel));
+  }
 }
 
 TEST(group_mat_mul, Test_DirectInt8) {

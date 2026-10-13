@@ -23,10 +23,10 @@
 #define t                 r11
 
 /*
-extern "C" void mat_mul_generic_binary_impl_asm(MatMulInt8::Params *params, VPURingBuffer *A, int8_t *X, int32_t output_channel_group);
+extern "C" void mat_mul_generic_binary_asm(MatMulInt8::Params *params, VPURingBuffer *A, int8_t *X, int32_t output_channel_group);
 */
 
-#define FUNCTION_NAME mat_mul_generic_binary_impl_asm
+#define FUNCTION_NAME mat_mul_generic_binary_asm
 
 
 #ifdef USE_DDR_FIX
@@ -156,7 +156,7 @@ FUNCTION_NAME:
 
 #if defined(__riscv_xxcore)
 
-#define FUNCTION_NAME mat_mul_generic_binary_impl_asm
+#define FUNCTION_NAME mat_mul_generic_binary_asm
 #define NSTACKWORDS 8
 
 #define PARAMS_output_slice_channel_count 0
@@ -205,7 +205,7 @@ FUNCTION_NAME:
     { xm.brff ic_gr_count, .calc_step ; addi ic_gr_count, ic_gr_count, -1 }
 
 .input_channel_loop:
-    { xm.vldr X_p ; add X_p, X_p, thirty_two }
+    { xm.vldc X_p ; add X_p, X_p, thirty_two }
 
     { xm.vlmaccrb K_p ; add K_p, K_p, thirty_two }
     { xm.vlmaccrb K_p ; add K_p, K_p, thirty_two }
