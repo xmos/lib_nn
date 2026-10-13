@@ -23,23 +23,12 @@ static int8_t groupwise_reference(int32_t accumulator, int16_t initial_shift,
                                   int16_t multiplier, int16_t bias,
                                   int16_t final_shr)
 {
-    const int sh = (NN_ARCH == TARGET_ARCH_XS3A) ? VLMUL_SHR_XS3A
-                                                  : VLMUL_SHR_VX4A;
-    int value = accumulator;
-
-    if (initial_shift > 0) {
-        value += 1 << (initial_shift - 1);
-        value >>= initial_shift;
-    } else if (initial_shift < 0) {
-        value <<= -initial_shift;
-    }
-
-    value = (int)vpu_saturate(value, 16);
-    value = (int)(((int64_t)value * multiplier + (1LL << (sh - 1))) >> sh);
-    value = (int)vpu_saturate(value, 16);
-    value = (int)vpu_saturate(value + bias, 16);
-    value = (value + (1 << (final_shr + 7))) >> (final_shr + 8);
-    return saturate_output_int8(value);
+    // The scalar VPU models in OutputTransformFnInt8 are checked against the hardware
+    // instructions and kernels in test_OutputTransformHelpers.cpp
+    const nn_vlmul_shr_t sh = (NN_ARCH == TARGET_ARCH_XS3A) ? VLMUL_SHR_XS3A
+                                                             : VLMUL_SHR_VX4A;
+    return (int8_t)nn::OutputTransformFnInt8::quantised_output(
+        accumulator, initial_shift, multiplier, bias, final_shr, sh);
 }
 
 static int8_t *run_groupwise_test(int out_count, int16_t initial_shift,
