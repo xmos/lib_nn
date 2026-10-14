@@ -18,10 +18,7 @@ file(GLOB_RECURSE LIB_NN_SOURCES CONFIGURE_DEPENDS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
 )
 
-if(CMAKE_SYSTEM_PROCESSOR STREQUAL "XCORE_XS" OR
-  CMAKE_SYSTEM_PROCESSOR STREQUAL "XCORE_XS3A" OR
-  CMAKE_SYSTEM_PROCESSOR STREQUAL "XCORE_VX4" OR
-  CMAKE_SYSTEM_PROCESSOR STREQUAL "riscv32")
+if(CMAKE_CROSSCOMPILING)
   file(GLOB_RECURSE LIB_NN_ASM_SOURCES CONFIGURE_DEPENDS
        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.S")
   list(APPEND LIB_NN_SOURCES ${LIB_NN_ASM_SOURCES})
@@ -59,14 +56,14 @@ endif()
 # -------- target specific ----------
 message(STATUS "Building lib_nn for CMAKE_SYSTEM_PROCESSOR : ${CMAKE_SYSTEM_PROCESSOR}")
 
-# xs3
-if(CMAKE_SYSTEM_PROCESSOR STREQUAL "XCORE_XS3A")
-  target_compile_options(lib_nn PRIVATE -O3 -Wall -Wno-xcore-fptrgroup -Werror -Wextra)
-# vx4
-elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "XCORE_VX4" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "riscv32")
-  target_compile_options(lib_nn PRIVATE -O3 -Wall -Wno-fptrgroup -Werror -Wextra)
-  target_compile_options(lib_nn PRIVATE -ffunction-sections -fdata-sections)
-  target_link_options(lib_nn PRIVATE -Wl,--gc-sections)
+if(CMAKE_CROSSCOMPILING)
+  if(CMAKE_SYSTEM_PROCESSOR MATCHES "^XCORE_XS")
+    target_compile_options(lib_nn PRIVATE -O3 -Wall -Wno-xcore-fptrgroup -Werror -Wextra)
+  else()
+    target_compile_options(lib_nn PRIVATE -O3 -Wall -Wno-fptrgroup -Werror -Wextra)
+    target_compile_options(lib_nn PRIVATE -ffunction-sections -fdata-sections)
+    target_link_options(lib_nn PRIVATE -Wl,--gc-sections)
+  endif()
 # Native MSVC
 elseif(MSVC) 
   target_compile_options(lib_nn PRIVATE /O2)

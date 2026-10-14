@@ -161,7 +161,7 @@ pipeline {
                     post {cleanup {xcoreCleanSandbox()}}
                 } // XS3 test
 
-                stage("VX4 Transitional test") {
+                stage("VX4 transitional test") {
                     when {expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }}
                     agent {label "linux && x86_64"}
 
@@ -208,7 +208,7 @@ pipeline {
                     post {cleanup {xcoreCleanSandbox()}}
                 } // VX4 Transitional test
 
-                stage("VX4 New test") {
+                stage("VX4 test") {
                     when {expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }}
                     agent {label "linux && x86_64"}
 
