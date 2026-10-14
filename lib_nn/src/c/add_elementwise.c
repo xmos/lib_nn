@@ -78,7 +78,7 @@ void add_elementwise_ref(
     VLMACC(vpu, params->m2);
 
     VSETC(vpu, MODE_S8);
-    VLSAT_FIXED(vpu, params->shift);
+    VLSAT_ASYMMETRIC(vpu, params->shift);
     VSTRPV(vpu, &y[index], mask);
 
     index += vpu_epv;

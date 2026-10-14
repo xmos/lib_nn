@@ -37,6 +37,7 @@ TEST_GROUP_RUNNER(group_vpu_sim) {
   RUN_TEST_CASE(group_vpu_sim, test_vdepth16);
 
   RUN_TEST_CASE(group_vpu_sim, test_vlashr);
+  RUN_TEST_CASE(group_vpu_sim, test_vlashr_limits);
   RUN_TEST_CASE(group_vpu_sim, test_vpos);
   RUN_TEST_CASE(group_vpu_sim, test_vlsat_fixed);
   RUN_TEST_CASE(group_vpu_sim, test_sats);
@@ -384,14 +385,14 @@ TEST(group_vpu_sim, test_vdepth16) {
 
 
 TEST(group_vpu_sim, test_vlashr) {
-  // simple test: 0x55 RSH 4 = 0x05
+  // simple test: 0x58 RSH 4 = 0x05 (a rounding shift would give 0x06)
   int8_t WORD_ALIGNED input[VPU_INT8_EPV];
   int8_t WORD_ALIGNED out_asm[VPU_INT8_EPV];
   int8_t WORD_ALIGNED out_sim[VPU_INT8_EPV];
   int8_t WORD_ALIGNED expected[VPU_INT8_EPV];
   vpu_t sim = {0};
 
-  memset(input, 0x55, sizeof(input));
+  memset(input, 0x58, sizeof(input));
   memset(expected, 0x05, sizeof(expected));
   const unsigned rsh = 4;
 
@@ -405,7 +406,50 @@ TEST(group_vpu_sim, test_vlashr) {
 
   // Both should be the same and equal to expected
   TEST_ASSERT_EQUAL_INT8_ARRAY(out_sim, out_asm, sizeof(out_asm));
-  TEST_ASSERT_EQUAL_INT8_ARRAY(expected, out_sim, sizeof(expected));
+  TEST_ASSERT_EQUAL_INT8_ARRAY(expected, out_sim, sizeof(out_asm));
+}
+
+TEST(group_vpu_sim, test_vlashr_limits) {
+  typedef struct {
+    int8_t shift;
+    int8_t input[8];
+  } vlashr_test_case_t;
+
+  const vlashr_test_case_t cases[] = {
+    {1, {-128, -127, -3, -2, -1, 0, 1, 127}},
+    {4, {-25, -24, -23, -8, 7, 8, 23, 24}},
+    {0, {-128, -127, -1, 0, 1, 2, 126, 127}},
+    {7, {-128, -127, -2, -1, 0, 1, 126, 127}},
+    {8, {-128, -127, -2, -1, 0, 1, 126, 127}}
+  };
+  int8_t WORD_ALIGNED input[VPU_INT8_EPV];
+  int8_t WORD_ALIGNED expected[VPU_INT8_EPV];
+  int8_t WORD_ALIGNED out_asm[VPU_INT8_EPV];
+  int8_t WORD_ALIGNED out_sim[VPU_INT8_EPV];
+  vpu_t sim = {0};
+  const size_t n_cases = sizeof(cases) / sizeof(cases[0]);
+
+  for (unsigned case_index = 0; case_index < n_cases; case_index++) {
+    const int32_t shift = cases[case_index].shift;
+    for (unsigned lane = 0; lane < VPU_INT8_EPV; ++lane) {
+      input[lane] = cases[case_index].input[lane % 8];
+      const int32_t value = input[lane];
+      const int32_t shifted = value >> shift;
+      expected[lane] = (int8_t)vpu_saturate(shifted, 8);
+    }
+
+    vsetc(MODE_S8);
+    vlashr(input, cases[case_index].shift);
+    vstr(out_asm);
+
+    VSETC(&sim, MODE_S8);
+    VLASHR(&sim, input, cases[case_index].shift);
+    VSTR(&sim, out_sim);
+
+    TEST_ASSERT_EQUAL_INT8_ARRAY(expected, out_asm, VPU_INT8_EPV);
+    TEST_ASSERT_EQUAL_INT8_ARRAY(expected, out_sim, VPU_INT8_EPV);
+    TEST_ASSERT_EQUAL_INT8_ARRAY(out_sim, out_asm, VPU_INT8_EPV);
+  }
 }
 
 TEST(group_vpu_sim, test_vpos) {
@@ -441,7 +485,7 @@ TEST(group_vpu_sim, test_vlsat_fixed) {
   VSETC(&sim, MODE_S8);
   VLDR(&sim, acc_low);
   VLDD(&sim, acc_high);
-  VLSAT_FIXED(&sim, shifts);
+  VLSAT_ASYMMETRIC(&sim, shifts);
   VSTR(&sim, output);
 #if VPU_SYMMETRIC_SATURATION
   TEST_ASSERT_EQUAL_INT8(-127, output[0]);
