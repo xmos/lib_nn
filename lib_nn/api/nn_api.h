@@ -21,6 +21,11 @@
 #error "lib_nn target cannot use both legacy XCORE and RISC-V instruction sets"
 #endif
 
+/* Remove when the New toolchain derives this symbol from APP_HW_TARGET_VX. */
+#if defined(__riscv_xxcore) && !defined(__VX4B__)
+#define __VX4B__ 1
+#endif
+
 /**
  * @def VPU_SYMMETRIC_SATURATION
  * @brief Indicates whether signed VPU saturation uses symmetric bounds.
@@ -31,7 +36,7 @@
 #ifndef VPU_SYMMETRIC_SATURATION
 #if defined(__XS3A__)
 #define VPU_SYMMETRIC_SATURATION 1
-#elif defined(__riscv_xxcore)
+#elif defined(__VX4B__)
 #define VPU_SYMMETRIC_SATURATION 0
 #endif
 #endif
@@ -46,7 +51,7 @@
 #ifndef VPU_VLMACC_PRODUCT_LSB_DROPS
 #if defined(__XS3A__)
 #define VPU_VLMACC_PRODUCT_LSB_DROPS 0
-#elif defined(__riscv_xxcore)
+#elif defined(__VX4B__)
 #define VPU_VLMACC_PRODUCT_LSB_DROPS 1
 #endif
 #endif
@@ -61,7 +66,7 @@
 #ifndef VPU_VLMUL_SHIFT_OFFSET
 #if defined(__XS3A__)
 #define VPU_VLMUL_SHIFT_OFFSET 2
-#elif defined(__riscv_xxcore)
+#elif defined(__VX4B__)
 #define VPU_VLMUL_SHIFT_OFFSET 1
 #endif
 #endif
