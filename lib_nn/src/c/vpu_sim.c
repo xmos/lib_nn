@@ -16,27 +16,26 @@
 #define __builtin_popcount __popcnt
 #endif
 
+
 /**
- * vpu_saturate to the relevant bounds.
+ * Saturate as the VPU of the active target does: XS3 saturates symmetrically, VX4 uses the
+ * full two's complement range. The target is chosen at runtime (NN_ARCH) so a host build can
+ * model either.
  */
 int64_t vpu_saturate(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
-  const int64_t min_val = -max_val;
-
+  const int64_t min_val = (NN_ARCH == TARGET_ARCH_VX4A) ? -max_val - 1 : -max_val;
   return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
 }
 
 /**
- * vpu_saturate to the relevant bounds using the active target's minimum.
+ * vpu_saturate with asymmetric bounds using the active target's minimum.
+ * This is the native VPU behaviour on VX4, but XS3 requires additional
+ * steps
  */
-int64_t vpu_saturate_fixed(const int64_t input, const unsigned bits) {
+int64_t vpu_saturate_asymmetric(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
-  int64_t min_val;
-  #if (defined(__riscv_xxcore) || defined(NN_USE_REF))
-    min_val = -(1LL << (bits - 1));
-  #else
-    min_val = -max_val;
-  #endif
+  const int64_t min_val = -(1LL << (bits - 1));
   return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
 }
 
@@ -308,7 +307,7 @@ void VLMACCRB(xs3_vpu *vpu, const void *addr) {
 }
 
 static
-void _VLSAT_IMPL(xs3_vpu *vpu, const void *addr, bool fixed_saturation) {
+void _VLSAT_IMPL(xs3_vpu *vpu, const void *addr, bool asymmetric) {
   #ifdef __XS3A__
   assert_word_aligned(addr);
   #endif
@@ -321,14 +320,17 @@ void _VLSAT_IMPL(xs3_vpu *vpu, const void *addr, bool fixed_saturation) {
       if (addr16[i] != 0) acc = acc + (1 << (addr16[i] - 1));  // Round
       acc = acc >> addr16[i];                                  // Shift
       int8_t val;
-      if(fixed_saturation){
-        val = vpu_saturate_fixed(acc, 8);                 // vpu_saturate
+      if(asymmetric){
+        // Native vlsat plus the XS3 -128 fix-up: always the full int8 range
+        val = vpu_saturate_asymmetric(acc, 8);
       } else {
-        val = vpu_saturate(acc, 8);                       // vpu_saturate
+        // saturate as on the native VPU
+        val = vpu_saturate(acc, 8);     // vpu_saturate
       }
-
       vpu->vR.s8[i] = val;
+
     }
+    // Note VX4 produces 16-bit results in 8-bit mode, not implemented here
     memset(&vpu->vD.u8[0], 0, XS3_VPU_VREG_WIDTH_BYTES);
     memset(&vpu->vR.u8[VPU_INT8_ACC_PERIOD], 0, VPU_INT8_ACC_PERIOD);
   } else if (vpu->mode == MODE_S16) {
@@ -340,8 +342,15 @@ void _VLSAT_IMPL(xs3_vpu *vpu, const void *addr, bool fixed_saturation) {
         acc = acc + (1 << ((int16_t)(addr16[i] - 1)));  // Round
 
       acc = acc >> addr16[i];               // Shift
-      int16_t val = vpu_saturate(acc, 16);  // vpu_saturate
-
+      int16_t val;
+      if(asymmetric){
+        // not currently implemented in any NN kernel
+        assert(0);  // Asymmetric saturation for S16 not implemented
+        val = vpu_saturate_asymmetric(acc, 16);
+      } else {
+        // saturate as on the native VPU
+        val = vpu_saturate(acc, 16);                       // vpu_saturate
+      }
       vpu->vR.s16[i] = val;
     }
     memset(&vpu->vD.u8[0], 0, XS3_VPU_VREG_WIDTH_BYTES);
@@ -352,8 +361,15 @@ void _VLSAT_IMPL(xs3_vpu *vpu, const void *addr, bool fixed_saturation) {
       int64_t acc = GetAccumulator(vpu, i);
       if (addr32[i] != 0) acc = acc + (1 << (addr32[i] - 1));  // Round
       acc = acc >> addr32[i];                                  // Shift
-      int32_t val = vpu_saturate(acc, 32);                     // vpu_saturate
-
+      int32_t val;
+      if(asymmetric){
+        // not currently implemented in any NN kernel
+        assert(0);  // Asymmetric saturation for S32 not implemented
+        val = vpu_saturate_asymmetric(acc, 32);
+      } else {
+        // saturate as on the native VPU
+        val = vpu_saturate(acc, 32);                       // vpu_saturate
+      }
       vpu->vR.s32[i] = val;
     }
     memset(&vpu->vD.u8[0], 0, XS3_VPU_VREG_WIDTH_BYTES);
@@ -366,8 +382,21 @@ void VLSAT(xs3_vpu *vpu, const void *addr) {
   _VLSAT_IMPL(vpu, addr, false);
 }
 
-void VLSAT_FIXED(xs3_vpu *vpu, const void *addr) {
+void VLSAT_ASYMMETRIC(xs3_vpu *vpu, const void *addr) {
   _VLSAT_IMPL(vpu, addr, true);
+}
+
+/**
+ * One element of VLASHR: an arithmetic shift right that does not round (a shift of bits or
+ * more leaves only sign bits), or for negative shr a saturating shift left.
+ */
+static int64_t vlashr_element(const int64_t val, const int32_t shr, const unsigned bits) {
+  // The result is always saturated, so on XS3 an unshifted MIN becomes -MAX
+  if (shr >= (int32_t)bits) return vpu_saturate(val >> (bits - 1), bits);
+  if (shr >= 0) return vpu_saturate(val >> shr, bits);
+  // Shifting left by bits - 1 already saturates every non-zero value
+  const unsigned shl = (shr <= -(int32_t)bits) ? bits - 1 : (unsigned)-shr;
+  return vpu_saturate(val * ((int64_t)1 << shl), bits);
 }
 
 void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
@@ -376,45 +405,16 @@ void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
   #endif
   if (vpu->mode == MODE_S8) {
     const int8_t *addr8 = (const int8_t *)addr;
-
-    for (int i = 0; i < VPU_INT8_EPV; i++) {
-      int32_t val = addr8[i];
-
-      if (shr >= 7)
-        val = (val < 0) ? -1 : 0;
-      else if (shr > 0)
-        val = (val + (1<<(shr-1))) >> shr;
-      else
-        val = (unsigned)val << (-shr);
-
-      vpu->vR.s8[i] = vpu_saturate(val, 8);
-    }
+    for (int i = 0; i < VPU_INT8_EPV; i++)
+      vpu->vR.s8[i] = (int8_t)vlashr_element(addr8[i], shr, 8);
   } else if (vpu->mode == MODE_S16) {
     const int16_t *addr16 = (const int16_t *)addr;
-
-    for (int i = 0; i < VPU_INT16_EPV; i++) {
-      int32_t val = addr16[i];
-      if (shr >= 15)
-        val = (val < 0) ? -1 : 0;
-      else if (shr > 0)
-        val = (val + (1<<(shr-1))) >> shr;
-      else
-        val = (int32_t)((uint64_t)(uint32_t)val << (-shr));
-      vpu->vR.s16[i] = vpu_saturate(val, 16);
-    }
+    for (int i = 0; i < VPU_INT16_EPV; i++)
+      vpu->vR.s16[i] = (int16_t)vlashr_element(addr16[i], shr, 16);
   } else if (vpu->mode == MODE_S32) {
     const int32_t *addr32 = (const int32_t *)addr;
-
-    for (int i = 0; i < VPU_INT32_EPV; i++) {
-      int64_t val = addr32[i];
-      if (shr >= 31)
-        val = (val < 0) ? -1 : 0;
-      else if (shr > 0)
-        val = (val + (1<<(shr-1))) >> shr;
-      else
-        val = (unsigned)val << (-shr);
-      vpu->vR.s32[i] = vpu_saturate(val, 32);
-    }
+    for (int i = 0; i < VPU_INT32_EPV; i++)
+      vpu->vR.s32[i] = (int32_t)vlashr_element(addr32[i], shr, 32);
   } else {
     assert(0);  // How'd this happen?
   }
@@ -480,7 +480,8 @@ void VLSUB(xs3_vpu *vpu, const void *addr) {
 
 static inline
 unsigned vlmul_get_shift(const nn_target_arch_t arch, const vector_mode mode) {
-  // VLMUL shift = bpe - 2 for XS3A, bpe - 1 for VX4A
+  // VLMUL shift = bpe - 2 for XS3A; bpe - 1 for VX4A in 8- and 16-bit modes, but 30 in
+  // 32-bit mode
   assert(arch == TARGET_ARCH_XS3A || arch == TARGET_ARCH_VX4A);
   unsigned shift = 0;
   unsigned adj = (arch == TARGET_ARCH_XS3A) ? 0 : 1;
@@ -492,7 +493,7 @@ unsigned vlmul_get_shift(const nn_target_arch_t arch, const vector_mode mode) {
       shift = 16 - 2 + adj;
       break;
     case MODE_S32:
-      shift = 32 - 2 + adj;
+      shift = 32 - 2;
       break;
     default:
       assert(0);  // How'd this happen?
@@ -564,12 +565,12 @@ void VDEPTH8(xs3_vpu *vpu) {
   if (vpu->mode == MODE_S16) {
     for (int i = 0; i < VPU_INT16_EPV; i++) {
       int32_t elm = ((int32_t)vec_tmp.s16[i]) + (1 << 7);
-      vpu->vR.s8[i] = vpu_saturate_fixed(elm >> 8, 8);
+      vpu->vR.s8[i] = vpu_saturate(elm >> 8, 8);
     }
   } else if (vpu->mode == MODE_S32) {
     for (int i = 0; i < VPU_INT32_EPV; i++) {
       int64_t elm = ((int64_t)vec_tmp.s32[i]) + (1 << 23);
-      vpu->vR.s8[i] = vpu_saturate_fixed(elm >> 24, 8);
+      vpu->vR.s8[i] = vpu_saturate(elm >> 24, 8);
     }
   } else {
     assert(0);
@@ -580,7 +581,7 @@ void VDEPTH16(xs3_vpu *vpu) {
   if (vpu->mode == MODE_S32) {
     for (int i = 0; i < VPU_INT32_EPV; i++) {
       int64_t elm = ((int64_t)vpu->vR.s32[i]) + (1 << 15);
-      vpu->vR.s16[i] = vpu_saturate_fixed(elm >> 16, 16);
+      vpu->vR.s16[i] = vpu_saturate(elm >> 16, 16);
     }
 
     for (int i = VPU_INT32_EPV; i < VPU_INT16_EPV; i++) {

@@ -193,7 +193,7 @@ TEST(group_output_transforms_channel_wise, Test_ot_chwise_sats)
     const int16_t final_shr = 0;
     const int16_t boundary_bias =
         (NN_ARCH == TARGET_ARCH_XS3A) ? 0 : -1;
-    const int8_t int8_max = (int8_t)vpu_saturate_fixed(INT8_MAX, 8);
+    const int8_t int8_max = (int8_t)vpu_saturate(INT8_MAX, 8);
     const int8_t int8_min = INT8_MIN; //Note: vdepth8 is corrected in xs3
     const int32_t accs[output_count] = {
         INT16_MAX, -32640, INT16_MIN, -32641,

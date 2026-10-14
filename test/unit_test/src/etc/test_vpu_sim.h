@@ -24,7 +24,7 @@ static inline void vlmul0(const void *ptr) { asm volatile("xm.vlmul0 %0" :: "x"(
 static inline void vlmul1(const void *ptr) { asm volatile("xm.vlmul1 %0" :: "x"(ptr)); }
 static inline void vlsat(const void *shifts) { asm volatile("xm.vlsat %0" :: "x"(shifts)); }
 static inline void vlsat_fixed(const void *shifts) { asm volatile("xm.vlsat %0" :: "x"(shifts)); }
-static inline void vlashr(const void *ptr, int8_t shift) { asm volatile("xm.vlashr %0, %1" :: "x"(ptr), "x"(shift)); }
+static inline void vlashr(const void *ptr, int32_t shift) { asm volatile("xm.vlashr %0, %1" :: "x"(ptr), "x"(shift)); }
 static inline void vpos(void) { asm volatile("xm.vpos"); }
 static inline void vstrpv(void *ptr, unsigned mask) { asm volatile("xm.vstrpv %0, %1" :: "x"(ptr), "x"(mask)); }
 static inline void vstr(void *ptr) { asm volatile("xm.vstr %0" :: "x"(ptr)); }
@@ -54,7 +54,7 @@ static inline void vldc(const void *ptr) { asm volatile("vldc %0[0]" :: "r"(ptr)
 static inline void vladd(const void *ptr) { asm volatile("vladd %0[0]" :: "r"(ptr)); }
 static inline void vlsub(const void *ptr) { asm volatile("vlsub %0[0]" :: "r"(ptr)); }
 static inline void vlmul(const void *ptr) { asm volatile("vlmul %0[0]" :: "r"(ptr)); }
-static inline void vlashr(const void *ptr, int8_t shift) { asm volatile("vlashr %0[0], %1" :: "r"(ptr), "r"(shift)); }
+static inline void vlashr(const void *ptr, int32_t shift) { asm volatile("vlashr %0[0], %1" :: "r"(ptr), "r"(shift)); }
 static inline void vstrpv(void *ptr, unsigned mask) { asm volatile("vstrpv %0[0], %1" :: "r"(ptr), "r"(mask)); }
 static inline void vstr(void *ptr) { asm volatile("vstr %0[0]" :: "r"(ptr)); }
 static inline void vstd(void *ptr) { asm volatile("vstd %0[0]" :: "r"(ptr)); }
