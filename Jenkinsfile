@@ -31,9 +31,14 @@ pipeline {
             description: 'XS XTC tools version'
         )
         string(
-            name: 'TOOLS_VERSION_VX',
+            name: 'TOOLS_VERSION_NEW',
             defaultValue: 'bob@develop',
-            description: 'VX Bob tools version'
+            description: 'VX New tools version'
+        )
+        string(
+            name: 'TOOLS_VERSION_TRANSITIONAL',
+            defaultValue: '-j --repo arch_vx_slipgate -b master -a XTC 131',
+            description: 'VX Transitional tools version'
         )
         string(
             name: 'XMOSDOC_VERSION',
@@ -156,7 +161,7 @@ pipeline {
                     post {cleanup {xcoreCleanSandbox()}}
                 } // XS3 test
 
-                stage("VX4 test") {
+                stage("VX4 Transitional test") {
                     when {expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }}
                     agent {label "linux && x86_64"}
 
@@ -167,8 +172,8 @@ pipeline {
                                     checkoutScmShallow()
                                     dir("test/unit_test") {
                                         xcoreBuild(
-                                            buildDir: 'build_vx4',
-                                            toolsVersion: params.TOOLS_VERSION_VX,
+                                            buildDir: 'build_vx4_transitional',
+                                            toolsVersion: params.TOOLS_VERSION_TRANSITIONAL,
                                             cmakeOpts: '-DAPP_HW_TARGET=XK-EVK-XU416',
                                         )
                                     }
@@ -179,12 +184,8 @@ pipeline {
                         stage("Unit test") {
                             steps {
                                 dir("${REPO}/test/unit_test") {
-                                    withTools(params.TOOLS_VERSION_VX) {
-                                        // Incompleteness in the current VX toolchain can produce empty test results.
-                                        // Do not fail the job even if the test results are empty.
-                                        // ToDo: remove the allowEmpty flag once the VX toolchain accepts command line
-                                        // arguments when starting a program.
-                                        UnityJunit("xsim --args bin/unit_test.xe -v", "VX4.log", "VX4", true)
+                                    withTools(params.TOOLS_VERSION_TRANSITIONAL) {
+                                        UnityJunit("xsim --args bin/unit_test.xe -v", "VX4Transitional.log", "VX4Transitional")
                                     }
                                 }
                             }
@@ -194,7 +195,58 @@ pipeline {
                             steps {
                                 dir("${REPO}/test/custom_cmake_build") {
                                     sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch develop"
-                                    withTools(params.TOOLS_VERSION_VX) {
+                                    withTools(params.TOOLS_VERSION_TRANSITIONAL) {
+                                        sh 'cmake -B build --toolchain=xmos_cmake_toolchain/vx4_xcc.cmake'
+                                        sh 'xmake -C build -j$(nproc)'
+                                        sh 'xsim bin/add_tensor.xe'
+                                    }
+                                }
+                            }
+                        } // Custom CMake test
+
+                    } // stages
+                    post {cleanup {xcoreCleanSandbox()}}
+                } // VX4 Transitional test
+
+                stage("VX4 New test") {
+                    when {expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }}
+                    agent {label "linux && x86_64"}
+
+                    stages {
+                        stage("Setup") {
+                            steps {
+                                dir(REPO) {
+                                    checkoutScmShallow()
+                                    dir("test/unit_test") {
+                                        xcoreBuild(
+                                            buildDir: 'build_vx4_new',
+                                            toolsVersion: params.TOOLS_VERSION_NEW,
+                                            cmakeOpts: '-DAPP_HW_TARGET=XK-EVK-XU416',
+                                        )
+                                    }
+                                }
+                            }
+                        } // Setup
+
+                        stage("Unit test") {
+                            steps {
+                                dir("${REPO}/test/unit_test") {
+                                    withTools(params.TOOLS_VERSION_NEW) {
+                                        // Incompleteness in the current VX toolchain can produce empty test results.
+                                        // Do not fail the job even if the test results are empty.
+                                        // ToDo: remove the allowEmpty flag once the VX toolchain accepts command line
+                                        // arguments when starting a program.
+                                        UnityJunit("xsim --args bin/unit_test.xe -v", "VX4New.log", "VX4New", true)
+                                    }
+                                }
+                            }
+                        } // Unit test
+
+                        stage("Custom CMake test") {
+                            steps {
+                                dir("${REPO}/test/custom_cmake_build") {
+                                    sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch develop"
+                                    withTools(params.TOOLS_VERSION_NEW) {
                                         sh 'cmake -B build --toolchain=xmos_cmake_toolchain/vx4_clang.cmake'
                                         sh 'xmake -C build -j$(nproc)'
                                         sh 'xsim bin/add_tensor --config-file ../config_elf.xml'
@@ -205,7 +257,7 @@ pipeline {
 
                     } // stages
                     post {cleanup {xcoreCleanSandbox()}}
-                } // VX4 test
+                } // VX4 New test
 
                 stage("Docs and lib checks") {
                     agent {
