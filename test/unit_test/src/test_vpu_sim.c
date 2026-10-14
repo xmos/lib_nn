@@ -39,7 +39,7 @@ TEST_GROUP_RUNNER(group_vpu_sim) {
   RUN_TEST_CASE(group_vpu_sim, test_vlashr);
   RUN_TEST_CASE(group_vpu_sim, test_vlashr_limits);
   RUN_TEST_CASE(group_vpu_sim, test_vpos);
-  RUN_TEST_CASE(group_vpu_sim, test_vlsat_fixed);
+  RUN_TEST_CASE(group_vpu_sim, test_vlsat_asymmetric);
   RUN_TEST_CASE(group_vpu_sim, test_sats);
 }
 
@@ -476,7 +476,7 @@ TEST(group_vpu_sim, test_vpos) {
   TEST_ASSERT_EQUAL_INT32_ARRAY(expected, out_sim, VPU_INT32_EPV);
 }
 
-TEST(group_vpu_sim, test_vlsat_fixed) {
+TEST(group_vpu_sim, test_vlsat_asymmetric) {
   int16_t WORD_ALIGNED acc_low[VPU_INT16_EPV] = {-128};
   int16_t WORD_ALIGNED acc_high[VPU_INT16_EPV] = {-1};
   uint16_t WORD_ALIGNED shifts[VPU_INT8_ACC_PERIOD] = {0};
@@ -487,23 +487,18 @@ TEST(group_vpu_sim, test_vlsat_fixed) {
   VLDD(&sim, acc_high);
   VLSAT_ASYMMETRIC(&sim, shifts);
   VSTR(&sim, output);
-#if VPU_SYMMETRIC_SATURATION
-  TEST_ASSERT_EQUAL_INT8(-127, output[0]);
-#else
   TEST_ASSERT_EQUAL_INT8(-128, output[0]);
-#endif
 }
 
 TEST(group_vpu_sim, test_sats) {
   TEST_ASSERT_EQUAL_INT(127, vpu_saturate(200, 8));
-  TEST_ASSERT_EQUAL_INT(-127, vpu_saturate(-200, 8));
-
-  TEST_ASSERT_EQUAL_INT(127, vpu_saturate_fixed(200, 8));
 #if VPU_SYMMETRIC_SATURATION
-  TEST_ASSERT_EQUAL_INT(-127, vpu_saturate_fixed(-200, 8));
+  TEST_ASSERT_EQUAL_INT(-127, vpu_saturate(-200, 8));
 #else
-  TEST_ASSERT_EQUAL_INT(-128, vpu_saturate_fixed(-200, 8));
+  TEST_ASSERT_EQUAL_INT(-128, vpu_saturate(-200, 8));
 #endif
+  TEST_ASSERT_EQUAL_INT(127, vpu_saturate_asymmetric(200, 8));
+  TEST_ASSERT_EQUAL_INT(-128, vpu_saturate_asymmetric(-200, 8));
 
   TEST_ASSERT_EQUAL_INT8(127, sat_s8(200, -127, 127));
   TEST_ASSERT_EQUAL_INT8(-127, sat_s8(-200, -127, 127));

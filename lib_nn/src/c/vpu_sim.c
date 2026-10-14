@@ -18,26 +18,24 @@
 
 
 /**
- * Saturate as the VPU of the active target does: XS3 saturates symmetrically, VX4 uses the
- * full two's complement range. The target is chosen at runtime (NN_ARCH) so a host build can
- * model either.
+ * Saturate as the configured VPU does: XS3 saturates symmetrically, while
+ * VX4 uses the full two's complement range.
  */
 int64_t vpu_saturate(const int64_t input, const unsigned bits) {
-  const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
-  const int64_t min_val = (NN_ARCH == TARGET_ARCH_VX4A) ? -max_val - 1 : -max_val;
-  return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
-}
-
-/**
- * vpu_saturate with asymmetric bounds using the active target's minimum.
- * This is the native VPU behaviour on VX4, but XS3 requires additional
- * steps
- */
-int64_t vpu_saturate_asymmetric(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
   const int64_t min_val = NN_VPU_CONFIG.symmetric_saturation
                               ? -max_val
                               : -(1LL << (bits - 1));
+  return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
+}
+
+/**
+ * Saturate with asymmetric bounds. This is native VPU behavior on VX4, but
+ * XS3 requires additional steps.
+ */
+int64_t vpu_saturate_asymmetric(const int64_t input, const unsigned bits) {
+  const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
+  const int64_t min_val = -(1LL << (bits - 1));
   return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
 }
 
@@ -316,7 +314,7 @@ void VLMACCRB(xs3_vpu *vpu, const void *addr) {
 }
 
 static
-void _VLSAT_IMPL(xs3_vpu *vpu, const void *addr, bool fixed_saturation) {
+void _VLSAT_IMPL(xs3_vpu *vpu, const void *addr, bool asymmetric) {
   #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
