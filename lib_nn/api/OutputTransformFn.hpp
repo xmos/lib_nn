@@ -355,7 +355,7 @@ class OutputTransformFnInt8 : public OutputTransformFn {
     return sat((int64_t)a + (int64_t)b, bits);
   }
 
-  static int32_t mul(int32_t a, int32_t b, int bits = 16, nn_vlmul_shr_t vlmul_shr = VLMUL_SHR_XS3A) {
+  static int32_t mul(int32_t a, int32_t b, int bits = 16, nn_vlmul_shr_s16_t vlmul_shr = VLMUL_SHR_S16_XS3A) {
     int64_t prod = (int64_t)a * (int64_t)b;
     prod = prod + (1LL << (vlmul_shr - 1));
     return sat(prod >> vlmul_shr, bits);
@@ -370,7 +370,7 @@ class OutputTransformFnInt8 : public OutputTransformFn {
    */
   template <class QParams>
   static double get_quant_error(MulsAndBias &mul_and_bias, QParams &qp,
-                                nn_vlmul_shr_t vlmul_shr,
+                                nn_vlmul_shr_s16_t vlmul_shr,
                                 bool use_high_precision = false) {
     if (use_high_precision) {
       double max_avg_abs_error = 0.0;
@@ -437,7 +437,7 @@ class OutputTransformFnInt8_Group : public OutputTransformFnInt8 {
      * @return QuantisationParams
      */
     QuantisationParams quantise_activation(MulsAndBias &activationParams,
-                                           nn_vlmul_shr_t vlmul_shr,
+                                           nn_vlmul_shr_s16_t vlmul_shr,
                                            bool verbose);
 
    private:
@@ -488,7 +488,7 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
    */
   template <class QParams>
   static double get_quant_error(MulsAndBias &mul_and_bias, QParams &qp,
-                                nn_vlmul_shr_t vlmul_shr,
+                                nn_vlmul_shr_s16_t vlmul_shr,
                                 bool use_high_precision = false) {
     if (use_high_precision) {
       double max_avg_abs_error = 0.0;
@@ -558,7 +558,7 @@ class OutputTransformFnInt8_Channelwise : public OutputTransformFnInt8 {
      * @return QuantisationParams
      */
     QuantisationParams quantise_activation(MulsAndBias &activationParams,
-                                           nn_vlmul_shr_t vlmul_shr,
+                                           nn_vlmul_shr_s16_t vlmul_shr,
                                            bool verbose);
 
    private:

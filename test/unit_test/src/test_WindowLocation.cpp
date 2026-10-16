@@ -449,4 +449,4 @@ TEST(group_WindowLocation, Fold) {
 
 }  // extern "C"
 
-#endif  // !__riscv_xxcore
+#endif  // !defined(__riscv_xxcore)

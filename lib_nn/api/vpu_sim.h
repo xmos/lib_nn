@@ -38,7 +38,7 @@ typedef struct {
 
 typedef xs3_vpu vpu_t;
 
-#if defined(__xcore__) || defined(__riscv_xxcore)
+#if HAS_FPTRGROUP
 #define MACC_FPTR __attribute__((fptrgroup("macc_functions")))
 #else
 #define MACC_FPTR

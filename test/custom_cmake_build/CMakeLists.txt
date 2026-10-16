@@ -14,7 +14,22 @@ set(COMMON_OPTIONS -Os -g -Wall)
 add_executable(${TARGET_NAME})
 target_sources(${TARGET_NAME} PRIVATE src/main.c)
 target_include_directories(${TARGET_NAME} PRIVATE src)
-target_link_libraries(${TARGET_NAME} PRIVATE lib_nn)
+
+# xs3
+if(CMAKE_SYSTEM_PROCESSOR STREQUAL "XCORE_XS3A")
+  target_link_libraries(${TARGET_NAME} PRIVATE lib_nn)
+# vx4
+elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "XCORE_VX4")
+  target_link_libraries(${TARGET_NAME} PRIVATE lib_nn)
+elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "riscv32")
+  target_link_libraries(${TARGET_NAME} PRIVATE m lib_nn)
+elseif(NOT CMAKE_CROSSCOMPILING)
+  target_link_libraries(${TARGET_NAME} PRIVATE lib_nn)
+else()
+  message(FATAL_ERROR
+    "Unsupported CMAKE_SYSTEM_PROCESSOR: '${CMAKE_SYSTEM_PROCESSOR}'"
+  )
+endif()
 
 # xs3
 if(CMAKE_SYSTEM_PROCESSOR STREQUAL "XCORE_XS3A")
@@ -24,6 +39,8 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL "XCORE_XS3A")
 elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "XCORE_VX4")
   target_compile_options(${TARGET_NAME} PRIVATE -target=XK-EVK-XU416 ${COMMON_OPTIONS})
   target_link_options(${TARGET_NAME} PRIVATE -target=XK-EVK-XU416)
+elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "riscv32")
+  target_compile_options(${TARGET_NAME} PRIVATE ${COMMON_OPTIONS})
 else()
   target_compile_options(${TARGET_NAME} PRIVATE ${COMMON_OPTIONS})
 endif()

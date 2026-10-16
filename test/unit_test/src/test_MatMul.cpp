@@ -3,6 +3,8 @@
 #include <algorithm>
 
 #include "AggregateFn.hpp"
+#include "nn_arch.h"
+#include "nn_api.h"
 
 extern "C" {
 #include "tst_common.h"
@@ -190,12 +192,8 @@ TEST(group_mat_mul, Test_DepthwiseInt16) {
   MatMulDirectFn_DW dir(img_i16, win);
   mat_mul_dw_direct_params_t prm = dir.getParams();
 
-#if defined(__riscv_xxcore)
-  // VX4B VLMACC drops the product's least-significant bit.
-  constexpr int16_t weight_value = 2;
-#else
-  constexpr int16_t weight_value = 1;
-#endif
+  const int16_t weight_value =
+      1 << GetNNArchProfile()->vlmacc_product_lsb_drops;
 
   std::fill_n(inp_i16, chn_n, 1);
   std::fill_n(wgt_i16, dw_wgt_n, weight_value);

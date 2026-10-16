@@ -16,6 +16,31 @@
  */
 #pragma once
 
+/* Compiler-provided instruction-set macros must be mutually exclusive. */
+#if defined(__xcore__) && defined(__riscv_xxcore)
+#error "lib_nn target cannot use both legacy XCORE and RISC-V instruction sets"
+#endif
+
+/* Remove when the New toolchain derives this symbol from APP_HW_TARGET_VX. */
+#if defined(__riscv_xxcore) && !defined(__VX4B__)
+#define __VX4B__ 1
+#endif
+
+/**
+ * @def HAS_FPTRGROUP
+ * @brief Indicates whether the compiler supports the `fptrgroup` attribute.
+ *
+ * Code that groups indirect-call targets may use this capability to omit the
+ * attribute on unsupported compilers.
+ */
+#ifndef HAS_FPTRGROUP
+#if defined(__xcore__) || defined(__riscv_xxcore)
+#define HAS_FPTRGROUP 1
+#else
+#define HAS_FPTRGROUP 0
+#endif
+#endif
+
 /**
  * @def C_API
  * @brief Gives a function C language linkage when compiled as C++ or XC.
