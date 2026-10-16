@@ -3,9 +3,7 @@
 
 // VX4's reduced libc++ runtime lacks typeinfo for shared_ptr's internal
 // control block, which the polymorphic IFilterFrame hierarchy below needs.
-#include "nn_api.h"
-
-#if HAS_FULL_CXX_RTTI
+#if !defined(__riscv_xxcore)
 
 #include "FilterGeometryIter.hpp"
 
@@ -413,4 +411,4 @@ nn::Filter2dGeometry nn::ff::MakePaddedDepthwise(nn::Filter2dGeometry filter) {
 //   filter.input.depth : filter.window.shape.depth; return filter;
 // }
 
-#endif  // HAS_FULL_CXX_RTTI
+#endif  // !defined(__riscv_xxcore)

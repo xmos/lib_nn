@@ -6,7 +6,6 @@
 #include "FilterGeometryIterHelper.hpp"
 #include "Rand.hpp"
 #include "geom/WindowLocation.hpp"
-#include "nn_api.h"
 
 extern "C" {
 #include "unity.h"
@@ -17,7 +16,7 @@ using namespace nn;
 
 // VX4's reduced libc++ runtime lacks typeinfo for shared_ptr's internal
 // control block used by FilterGeometryIterator's polymorphic frame stack.
-#if HAS_FULL_CXX_RTTI
+#if !defined(__riscv_xxcore)
 
 extern "C" {
 
@@ -450,4 +449,4 @@ TEST(group_WindowLocation, Fold) {
 
 }  // extern "C"
 
-#endif  // HAS_FULL_CXX_RTTI
+#endif  // !defined(__riscv_xxcore)

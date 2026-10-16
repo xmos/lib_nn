@@ -107,21 +107,6 @@
 #endif
 
 /**
- * @def HAS_FULL_CXX_RTTI
- * @brief Indicates whether the C++ runtime provides full RTTI support.
- *
- * A value of 0 identifies reduced runtimes that cannot provide all typeinfo
- * objects required by some polymorphic standard-library facilities.
- */
-#ifndef HAS_FULL_CXX_RTTI
-#if defined(__riscv_xxcore)
-#define HAS_FULL_CXX_RTTI 0
-#else
-#define HAS_FULL_CXX_RTTI 1
-#endif
-#endif
-
-/**
  * @def C_API
  * @brief Gives a function C language linkage when compiled as C++ or XC.
  *
