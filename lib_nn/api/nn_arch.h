@@ -40,6 +40,9 @@ typedef enum {
   VLMUL_SHR_S16_VX4A = 15, ///< VX4A signed 16-bit VLMUL shift.
 } nn_vlmul_shr_s16_t;
 
+/** @brief Temporary compatibility alias for nn_vlmul_shr_s16_t. */
+typedef nn_vlmul_shr_s16_t nn_vlmul_shr_t;
+
 /** @brief Right shifts applied to signed 32-bit VLMUL products. */
 typedef enum {
   VLMUL_SHR_S32 = 30, ///< Signed 32-bit VLMUL shift for all profiles.
