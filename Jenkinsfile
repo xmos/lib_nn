@@ -221,7 +221,7 @@ pipeline {
                                         xcoreBuild(
                                             buildDir: 'build_vx4_new',
                                             toolsVersion: params.TOOLS_VERSION_NEW,
-                                            cmakeOpts: '-DAPP_HW_TARGET=XK-EVK-XU416',
+                                            cmakeOpts: '-DAPP_HW_TARGET_VX=XK-EVK-XU416',
                                         )
                                     }
                                 }
