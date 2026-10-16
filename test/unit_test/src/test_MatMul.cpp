@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "AggregateFn.hpp"
+#include "nn_arch.h"
 #include "nn_api.h"
 
 extern "C" {
@@ -154,12 +155,8 @@ TEST(group_mat_mul, Test_DepthwiseInt16) {
   MatMulDirectFn_DW dir(img_i16, win);
   mat_mul_dw_direct_params_t prm = dir.getParams();
 
-#if VPU_VLMACC_PRODUCT_LSB_DROPS > 0
-  // Keep the expected product representable after VLMACC discards product LSBs.
-  constexpr int16_t weight_value = 2;
-#else
-  constexpr int16_t weight_value = 1;
-#endif
+  const int16_t weight_value =
+      1 << NN_ARCH_PROFILES[NN_ARCH].vlmacc_product_lsb_drops;
 
   std::fill_n(inp_i16, chn_n, 1);
   std::fill_n(wgt_i16, dw_wgt_n, weight_value);

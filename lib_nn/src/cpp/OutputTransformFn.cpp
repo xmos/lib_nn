@@ -544,7 +544,7 @@ void nn::OutputTransformFn::ActivationParams::
 
 OutputTransformFnInt8_Group::QuantisationParams
 OutputTransformFnInt8_Group::Quantizer::quantise_activation(
-    MulsAndBias &activationParams, nn_vlmul_shr_t vlmul_shr , bool verbose) {
+    MulsAndBias &activationParams, nn_vlmul_shr_s16_t vlmul_shr , bool verbose) {
   (void)verbose;
   if (activationParams.size() == 0) {
     QuantisationParams q;
@@ -580,7 +580,7 @@ OutputTransformFnInt8_Group::Quantizer::quantise_activation(
 
 OutputTransformFnInt8_Channelwise::QuantisationParams
 OutputTransformFnInt8_Channelwise::Quantizer::quantise_activation(
-    MulsAndBias &activationParams, nn_vlmul_shr_t vlmul_shr, bool verbose) {
+    MulsAndBias &activationParams, nn_vlmul_shr_s16_t vlmul_shr, bool verbose) {
   (void)verbose;
   if (activationParams.size() == 0) {
     QuantisationParams q;

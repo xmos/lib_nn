@@ -18,20 +18,21 @@
 
 
 /**
- * Saturate as the configured VPU does: XS3 saturates symmetrically, while
- * VX4 uses the full two's complement range.
+ * Saturate as the VPU of the active target does: XS3 saturates symmetrically, VX4 uses the
+ * full two's complement range. The target is chosen at runtime (NN_ARCH) so a host build can
+ * model either.
  */
 int64_t vpu_saturate(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
-  const int64_t min_val = NN_VPU_CONFIG.symmetric_saturation
-                              ? -max_val
-                              : -(1LL << (bits - 1));
+  const int64_t min_val =
+      -max_val + NN_ARCH_PROFILES[NN_ARCH].saturation_min_offset;
   return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
 }
 
 /**
- * Saturate with asymmetric bounds. This is native VPU behavior on VX4, but
- * XS3 requires additional steps.
+ * vpu_saturate with asymmetric bounds using the active target's minimum.
+ * This is the native VPU behaviour on VX4, but XS3 requires additional
+ * steps
  */
 int64_t vpu_saturate_asymmetric(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
@@ -167,13 +168,6 @@ void VSTRPV(const xs3_vpu *vpu, void *addr, unsigned mask) {
   }
 }
 
-static int64_t vlmacc_product(int64_t product) {
-  const unsigned drops = NN_VPU_CONFIG.vlmacc_product_lsb_drops;
-  assert(drops < 64);
-  const uint64_t keep_mask = ~((UINT64_C(1) << drops) - 1);
-  return (int64_t)((uint64_t)product & keep_mask);
-}
-
 void VLMACC(xs3_vpu *vpu, const void *addr) {
   #if defined(__XS3A__)
   assert_word_aligned(addr);
@@ -183,7 +177,7 @@ void VLMACC(xs3_vpu *vpu, const void *addr) {
 
     for (int i = 0; i < VPU_INT8_VLMACC_ELMS; i++) {
       int64_t acc = GetAccumulator(vpu, i);
-      acc += vlmacc_product(((int32_t)vpu->vC.s8[i]) * addr8[i]);
+      acc = acc + (((int32_t)vpu->vC.s8[i]) * addr8[i]);
 
       SetAccumulator(vpu, i, vpu_saturate(acc, 32));
     }
@@ -192,7 +186,7 @@ void VLMACC(xs3_vpu *vpu, const void *addr) {
 
     for (int i = 0; i < VPU_INT16_VLMACC_ELMS; i++) {
       int64_t acc = GetAccumulator(vpu, i);
-      acc += vlmacc_product(((int32_t)vpu->vC.s16[i]) * addr16[i]);
+      acc = acc + (((int32_t)vpu->vC.s16[i]) * addr16[i]);
 
       SetAccumulator(vpu, i, vpu_saturate(acc, 32));
     }
@@ -201,7 +195,7 @@ void VLMACC(xs3_vpu *vpu, const void *addr) {
 
     for (int i = 0; i < VPU_INT16_VLMACC_ELMS; i++) {
       int64_t acc = GetAccumulator(vpu, i);
-      acc += vlmacc_product(((int32_t)vpu->vC.s16[i]) * (int16_t)(addr8[2*i]));
+      acc = acc + (((int32_t)vpu->vC.s16[i]) * (int16_t)(addr8[2*i]));
 
       SetAccumulator(vpu, i, vpu_saturate(acc, 32));
     }
@@ -210,7 +204,7 @@ void VLMACC(xs3_vpu *vpu, const void *addr) {
 
     for (int i = 0; i < VPU_INT32_VLMACC_ELMS; i++) {
       int64_t acc = GetAccumulator(vpu, i);
-      acc += vlmacc_product(((int64_t)vpu->vC.s32[i]) * addr32[i]);
+      acc = acc + (((int64_t)vpu->vC.s32[i]) * addr32[i]);
 
       SetAccumulator(vpu, i, vpu_saturate(acc, 40));
     }
@@ -228,7 +222,7 @@ void VLMACCR(xs3_vpu *vpu, const void *addr) {
     int64_t acc = GetAccumulator(vpu, VPU_INT8_ACC_PERIOD - 1);
 
     for (int i = 0; i < VPU_INT8_EPV; i++)
-      acc += vlmacc_product(((int32_t)vpu->vC.s8[i]) * addr8[i]);
+      acc = acc + (((int32_t)vpu->vC.s8[i]) * addr8[i]);
 
     acc = vpu_saturate(acc, 32);
     rotate_accumulators(vpu);
@@ -238,7 +232,7 @@ void VLMACCR(xs3_vpu *vpu, const void *addr) {
     int64_t acc = GetAccumulator(vpu, VPU_INT16_ACC_PERIOD - 1);
 
     for (int i = 0; i < VPU_INT16_EPV; i++)
-      acc += vlmacc_product(((int32_t)vpu->vC.s16[i]) * addr16[i]);
+      acc = acc + (((int32_t)vpu->vC.s16[i]) * addr16[i]);
 
     acc = vpu_saturate(acc, 32);
     rotate_accumulators(vpu);
@@ -248,17 +242,17 @@ void VLMACCR(xs3_vpu *vpu, const void *addr) {
     int64_t acc = GetAccumulator(vpu, VPU_INT16_ACC_PERIOD - 1);
 
     for (int i = 0; i < VPU_INT16_EPV; i++)
-      acc += vlmacc_product(((int32_t)vpu->vC.s16[i]) * (int16_t)(addr8[2*i]));
+      acc = acc + (((int32_t)vpu->vC.s16[i]) * (int16_t)(addr8[2*i]));
 
     acc = vpu_saturate(acc, 32);
     rotate_accumulators(vpu);
     SetAccumulator(vpu, 0, acc);
   } else if (vpu->mode == MODE_S32) {
     const int32_t *addr32 = (const int32_t *)addr;
-    int64_t acc = GetAccumulator(vpu, VPU_INT32_ACC_PERIOD - 1);
+    int32_t acc = GetAccumulator(vpu, VPU_INT32_ACC_PERIOD - 1);
 
     for (int i = 0; i < VPU_INT32_EPV; i++)
-      acc += vlmacc_product(((int32_t)vpu->vC.s32[i]) * addr32[i]);
+      acc = acc + (((int32_t)vpu->vC.s32[i]) * addr32[i]);
 
     acc = vpu_saturate(acc, 40);
     rotate_accumulators(vpu);
@@ -485,18 +479,18 @@ void VLSUB(xs3_vpu *vpu, const void *addr) {
   }
 }
 
-static inline
-unsigned vlmul_get_shift(const nn_vpu_config_t *config, const vector_mode mode) {
+static inline unsigned vlmul_get_shift(const vector_mode mode) {
+  const nn_arch_profile_t *profile = &NN_ARCH_PROFILES[NN_ARCH];
   unsigned shift = 0;
   switch (mode) {
     case MODE_S8:
-      shift = 8 - config->vlmul_shift_offset;
+      shift = profile->vlmul_shr_s8;
       break;
     case MODE_S16:
-      shift = 16 - config->vlmul_shift_offset;
+      shift = profile->vlmul_shr_s16;
       break;
     case MODE_S32:
-      shift = 32 - config->vlmul_shift_offset;
+      shift = profile->vlmul_shr_s32;
       break;
     default:
       assert(0);  // How'd this happen?
@@ -510,7 +504,7 @@ void VLMUL(xs3_vpu *vpu, const void *addr) {
   assert_word_aligned(addr);
   #endif
 
-  const unsigned shift = vlmul_get_shift(&NN_VPU_CONFIG, vpu->mode);
+  const unsigned shift = vlmul_get_shift(vpu->mode);
   if (vpu->mode == MODE_S8) {
     const int8_t *addr8 = (const int8_t *)addr;
     for (int i = 0; i < VPU_INT8_EPV; i++) {

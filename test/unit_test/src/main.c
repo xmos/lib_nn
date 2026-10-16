@@ -15,13 +15,6 @@ void set_target(void) {
 #else
   SetNNTargetArch(TARGET_ARCH_XS3A);
 #endif
-#if defined(TEST_BUILD_NATIVE)
-  SetNNVPUConfig((nn_vpu_config_t){0, 0, 2});
-#elif VPU_CONFIGURED
-  SetNNVPUConfig((nn_vpu_config_t){VPU_SYMMETRIC_SATURATION,
-                                   VPU_VLMACC_PRODUCT_LSB_DROPS,
-                                   VPU_VLMUL_SHIFT_OFFSET});
-#endif
 }
 
 int main(int argc, const char* argv[]) {
@@ -44,6 +37,7 @@ int main(int argc, const char* argv[]) {
   RUN_TEST_GROUP(group_maxpool);
   RUN_TEST_GROUP(group_mul_elementwise);
   RUN_TEST_GROUP(group_multiply_int16);
+  RUN_TEST_GROUP(group_nn_arch);
   RUN_TEST_GROUP(group_output_transform_fn_int16);
   RUN_TEST_GROUP(group_output_transforms_binary);
   RUN_TEST_GROUP(group_output_transforms_clamped);

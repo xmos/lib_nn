@@ -38,17 +38,15 @@ extern "C"
 
 static int16_t get_multiplier(void)
 {
-    return (NN_ARCH == TARGET_ARCH_XS3A)
-               ? (1 << VLMUL_SHR_XS3A)
-               : ((1 << VLMUL_SHR_VX4A) - 1);
+    const unsigned shift = NN_ARCH_PROFILES[NN_ARCH].vlmul_shr_s16;
+    return shift == 15 ? INT16_MAX : (1 << shift);
 }
 
 static int8_t clamped_reference(int32_t accumulator, int16_t offset,
                                 int16_t initial_shift, int16_t multiplier,
                                 int16_t bias, int16_t final_shr)
 {
-    const int sh = (NN_ARCH == TARGET_ARCH_XS3A) ? VLMUL_SHR_XS3A
-                                                  : VLMUL_SHR_VX4A;
+    const unsigned sh = NN_ARCH_PROFILES[NN_ARCH].vlmul_shr_s16;
     int value = (int)vpu_saturate(accumulator + offset, 16);
     value = value > 0 ? value : 0;
     if (initial_shift > 0) {
@@ -130,7 +128,7 @@ TEST(group_output_transforms_clamped, Test_otfn_int8clm_simple)
     const int16_t ish = 1;
     const int16_t bia = 0;
     const int16_t fshr = 0;
-    const int sh = (NN_ARCH == TARGET_ARCH_XS3A) ? VLMUL_SHR_XS3A : VLMUL_SHR_VX4A;
+    const unsigned sh = NN_ARCH_PROFILES[NN_ARCH].vlmul_shr_s16;
     // VX4 unity is Q15; 1 << 15 does not fit in int16_t.
     const int16_t mul = sh == 15 ? INT16_MAX : (1 << sh);
     
@@ -176,7 +174,7 @@ TEST(group_output_transforms_clamped, Test_otfn_int8clm_simple2)
     const int16_t ish = 1;
     const int16_t bia = 0;
     const int16_t fshr = 0;
-    const int sh = (NN_ARCH == TARGET_ARCH_XS3A) ? VLMUL_SHR_XS3A : VLMUL_SHR_VX4A;
+    const unsigned sh = NN_ARCH_PROFILES[NN_ARCH].vlmul_shr_s16;
     const int16_t mul = 1 << (sh - 1);
     const int8_t expected = 16;
 
@@ -210,7 +208,7 @@ TEST(group_output_transforms_clamped, Test_otfn_int8clm_simple3)
     const int16_t ish = 1;
     const int16_t bia = 76;
     const int16_t fshr = 0;
-    const int sh = (NN_ARCH == TARGET_ARCH_XS3A) ? VLMUL_SHR_XS3A : VLMUL_SHR_VX4A;
+    const unsigned sh = NN_ARCH_PROFILES[NN_ARCH].vlmul_shr_s16;
     const int16_t mul = sh == 15 ? INT16_MAX : (1 << sh);
     const int8_t expected = 1;
 
@@ -241,7 +239,7 @@ TEST(group_output_transforms_clamped, Test_otfn_int8clm_random)
     const int oc = VPU_INT16_EPV;
     const int16_t ish = 1;
     const int16_t fshr = 0;
-    const int sh = (NN_ARCH == TARGET_ARCH_XS3A) ? VLMUL_SHR_XS3A : VLMUL_SHR_VX4A;
+    const unsigned sh = NN_ARCH_PROFILES[NN_ARCH].vlmul_shr_s16;
     const int16_t mul = sh == 15 ? INT16_MAX : (1 << sh);
     int seed = 0x6D2B79F5;
 
@@ -286,7 +284,7 @@ TEST(group_output_transforms_clamped, Test_otfn_int8clm_random_large)
     const int16_t off = 0;
     const int16_t bia = 0;
     const int16_t fshr = 0;
-    const int sh = (NN_ARCH == TARGET_ARCH_XS3A) ? VLMUL_SHR_XS3A : VLMUL_SHR_VX4A;
+    const unsigned sh = NN_ARCH_PROFILES[NN_ARCH].vlmul_shr_s16;
     const int16_t mul = sh == 15 ? INT16_MAX : (1 << sh);
     int seed = 0x4F1BBCDC;
 

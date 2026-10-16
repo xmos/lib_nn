@@ -56,7 +56,7 @@ static inline int16_t vlsat_single_s16(int32_t acc, uint16_t shr) {
   return sat_s16(acc >> shr);
 }
 
-static inline int16_t vlmul_single_s16(int16_t vR, int16_t mem, nn_vlmul_shr_t vlmul_shr) {
+static inline int16_t vlmul_single_s16(int16_t vR, int16_t mem, nn_vlmul_shr_s16_t vlmul_shr) {
   int32_t p = ((int32_t)vR) * mem;
   p = vlsat_single_s16(p, vlmul_shr);
   return (int16_t)p;
@@ -101,12 +101,14 @@ static inline unsigned smin(const unsigned a, const unsigned b) {
 
 static inline int ceil_log2(uint32_t a) {
   if (a == 0) return -1;
-#if defined(__XS3A__) || defined(__riscv_xxcore)
+#if defined(__xcore__) || defined(__riscv_xxcore)
   unsigned x;
   #if defined(__XS3A__)
     asm("clz %0, %1" : "=r"(x) : "r"(a));
   #elif defined(__riscv_xxcore)
     asm("xm.clz %0, %1" : "=r"(x) : "r"(a));
+  #else
+  #error "Unsupported architecture"
   #endif
 
   unsigned y = 31 - x;
