@@ -25,7 +25,7 @@
 int64_t vpu_saturate(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
   const int64_t min_val =
-      -max_val + NN_ARCH_PROFILES[NN_ARCH].saturation_min_offset;
+      -max_val + GetNNArchProfile()->saturation_min_offset;
   return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
 }
 
@@ -480,7 +480,7 @@ void VLSUB(xs3_vpu *vpu, const void *addr) {
 }
 
 static inline unsigned vlmul_get_shift(const vector_mode mode) {
-  const nn_arch_profile_t *profile = &NN_ARCH_PROFILES[NN_ARCH];
+  const nn_arch_profile_t *profile = GetNNArchProfile();
   unsigned shift = 0;
   switch (mode) {
     case MODE_S8:

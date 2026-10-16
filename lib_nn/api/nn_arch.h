@@ -54,14 +54,28 @@ typedef struct {
   nn_vlmul_shr_s32_t vlmul_shr_s32; ///< Signed 32-bit VLMUL right shift.
 } nn_arch_profile_t;
 
-/** @brief Currently selected runtime architecture. */
+/**
+ * @brief Currently selected runtime architecture.
+ *
+ * This process-wide value is read by VPU simulation functions. Concurrent
+ * reads are safe, but changing it while an operation is using it causes a data
+ * race and may mix architecture behavior within that operation.
+ */
 extern nn_target_arch_t NN_ARCH;
 
-/** @brief VPU behavior profiles indexed by nn_target_arch_t. */
-extern const nn_arch_profile_t NN_ARCH_PROFILES[TARGET_ARCH_COUNT];
+/**
+ * @brief Return the VPU behavior profile for the selected architecture.
+ *
+ * @return Read-only profile selected by NN_ARCH.
+ */
+C_API const nn_arch_profile_t *GetNNArchProfile(void);
 
 /**
  * @brief Select the runtime architecture used by VPU simulation.
+ *
+ * This function changes process-wide state and is not reentrant with
+ * architecture-dependent operations. Call it only when no other thread or
+ * operation can read NN_ARCH or its selected profile.
  *
  * @param arch Architecture profile to select.
  */

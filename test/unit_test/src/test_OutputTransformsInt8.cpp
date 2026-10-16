@@ -14,7 +14,7 @@ extern "C" {
 
 static int16_t get_multiplier(void)
 {
-    const unsigned shift = NN_ARCH_PROFILES[NN_ARCH].vlmul_shr_s16;
+    const unsigned shift = GetNNArchProfile()->vlmul_shr_s16;
     return shift == 15 ? INT16_MAX : (1 << shift);
 }
 
@@ -22,7 +22,7 @@ static int8_t groupwise_reference(int32_t accumulator, int16_t initial_shift,
                                   int16_t multiplier, int16_t bias,
                                   int16_t final_shr)
 {
-    const unsigned sh = NN_ARCH_PROFILES[NN_ARCH].vlmul_shr_s16;
+    const unsigned sh = GetNNArchProfile()->vlmul_shr_s16;
     int value = accumulator;
 
     if (initial_shift > 0) {

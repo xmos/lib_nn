@@ -29,7 +29,7 @@ for each channel c in parallel:
 
 static int16_t get_multiplier()
 {
-    const unsigned shift = NN_ARCH_PROFILES[NN_ARCH].vlmul_shr_s16;
+    const unsigned shift = GetNNArchProfile()->vlmul_shr_s16;
     return shift == 15 ? INT16_MAX : (1 << shift);
 }
 
@@ -47,7 +47,7 @@ static int8_t channelwise_reference(int32_t accumulator, int16_t initial_shift,
                                     int16_t multiplier, int16_t bias,
                                     int16_t final_shr)
 {
-    const unsigned sh = NN_ARCH_PROFILES[NN_ARCH].vlmul_shr_s16;
+    const unsigned sh = GetNNArchProfile()->vlmul_shr_s16;
     int value = accumulator;
     if (initial_shift > 0)
     {
@@ -190,7 +190,7 @@ TEST(group_output_transforms_channel_wise, Test_ot_chwise_sats)
     const int16_t multiplier = get_multiplier();
     const int16_t final_shr = 0;
     const int16_t boundary_bias =
-        multiplier - (1 << NN_ARCH_PROFILES[NN_ARCH].vlmul_shr_s16);
+        multiplier - (1 << GetNNArchProfile()->vlmul_shr_s16);
     const int8_t int8_max = (int8_t)vpu_saturate(INT8_MAX, 8);
     const int8_t int8_min = INT8_MIN; //Note: vdepth8 is corrected in xs3
     const int32_t accs[output_count] = {

@@ -272,7 +272,7 @@ TEST(group_vpu_sim, test_vl_add_sub_mul) {
   VLMUL(&sim, d);
   VSTR(&sim, out_sim);
 
-  const int8_t *expected = NN_ARCH_PROFILES[NN_ARCH].vlmul_shr_s8 == 6
+  const int8_t *expected = GetNNArchProfile()->vlmul_shr_s8 == 6
                                ? expected_xs3
                                : expected_vx4;
   TEST_ASSERT_EQUAL_INT8_ARRAY(expected, out_asm, VPU_INT8_EPV);
@@ -460,7 +460,7 @@ TEST(group_vpu_sim, test_vlsat_asymmetric) {
 
 TEST(group_vpu_sim, test_sats) {
   TEST_ASSERT_EQUAL_INT(127, vpu_saturate(200, 8));
-  TEST_ASSERT_EQUAL_INT(-127 + NN_ARCH_PROFILES[NN_ARCH].saturation_min_offset,
+  TEST_ASSERT_EQUAL_INT(-127 + GetNNArchProfile()->saturation_min_offset,
                         vpu_saturate(-200, 8));
   TEST_ASSERT_EQUAL_INT(127, vpu_saturate_asymmetric(200, 8));
   TEST_ASSERT_EQUAL_INT(-128, vpu_saturate_asymmetric(-200, 8));

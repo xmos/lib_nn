@@ -8,7 +8,7 @@ nn_target_arch_t NN_ARCH = TARGET_ARCH_VX4A;
 nn_target_arch_t NN_ARCH = TARGET_ARCH_XS3A;
 #endif
 
-const nn_arch_profile_t NN_ARCH_PROFILES[TARGET_ARCH_COUNT] = {
+static nn_arch_profile_t NN_ARCH_PROFILES[TARGET_ARCH_COUNT] = {
     [TARGET_ARCH_XS3A] = {SATURATION_MIN_OFFSET_SYMMETRIC,
                           VLMACC_PRODUCT_LSB_DROPS_NONE,
                           VLMUL_SHR_S8_XS3A,
@@ -20,6 +20,10 @@ const nn_arch_profile_t NN_ARCH_PROFILES[TARGET_ARCH_COUNT] = {
                           VLMUL_SHR_S16_VX4A,
                           VLMUL_SHR_S32},
 };
+
+const nn_arch_profile_t *GetNNArchProfile(void) {
+    return &NN_ARCH_PROFILES[NN_ARCH];
+}
 
 void SetNNTargetArch(nn_target_arch_t arch) {
     NN_ARCH = arch;
