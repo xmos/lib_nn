@@ -46,7 +46,9 @@ The ``examples/add_tensor`` directory contains a minimal application that demons
 
 The program prints the two input tensors and the result of adding them together element-wise.
 
-This example is built for ``XK-EVK-XU316`` target and runs it in the xcore simulator.
+The example supports the ``XK-EVK-XU316`` and ``XK-EVK-XU416`` targets and runs
+in the xcore simulator. The VX4 target definition is provided by the top-level
+``XK-EVK-XU416.xml`` file.
 
 First, make sure the XMOS XTC tools are installed and activated.
 
@@ -405,26 +407,13 @@ Notes
 Target configuration
 ====================
 
-``lib_nn`` separates instruction-set selection from VPU behavior. Instruction-set
-selection uses the compiler-provided ``__XS3A__`` macro for the legacy XCORE ISA and
-``__riscv_xxcore`` for RISC-V with the XCORE extension. The XTC ``__XS3A__`` and
-Slipgate ``__VX4B__`` macros also provide backward-compatible defaults for these VPU
-capabilities:
+Reference implementations model VPU behavior using a runtime architecture profile.
+This profile initially selects VX4 when the compiler defines
+``__riscv_xxcore`` and XS3A otherwise, including for native builds.
+Tests may change the selected profile at runtime.
 
-* ``VPU_SYMMETRIC_SATURATION``
-* ``VPU_VLMACC_PRODUCT_LSB_DROPS``
-* ``VPU_VLMUL_SHIFT_OFFSET``
-
-A RISC-V XCORE toolchain that does not provide a legacy processor macro must define all
-three capabilities. With the standalone CMake target, use the corresponding cache
-variables, for example for VX4B-compatible VPU behavior::
-
-    -DLIB_NN_VPU_SYMMETRIC_SATURATION=0
-    -DLIB_NN_VPU_VLMACC_PRODUCT_LSB_DROPS=1
-    -DLIB_NN_VPU_VLMUL_SHIFT_OFFSET=1
-
-Compiler/runtime features can be overridden independently with ``HAS_FPTRGROUP`` and
-``HAS_FULL_CXX_RTTI``.
+Compiler/runtime function-pointer grouping support can be overridden independently
+with ``HAS_FPTRGROUP``.
 
 *************
 API Reference
