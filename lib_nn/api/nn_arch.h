@@ -41,10 +41,9 @@ typedef enum {
 } nn_vlmul_shr_s16_t;
 
 /** @brief Temporary compatibility alias for nn_vlmul_shr_s16_t. */
-typedef enum {
-  VLMUL_SHR_XS3A = VLMUL_SHR_S16_XS3A,
-  VLMUL_SHR_VX4A = VLMUL_SHR_S16_VX4A,
-} nn_vlmul_shr_t;
+#define VLMUL_SHR_XS3A VLMUL_SHR_S16_XS3A
+#define VLMUL_SHR_VX4A VLMUL_SHR_S16_VX4A
+typedef nn_vlmul_shr_s16_t nn_vlmul_shr_t;
 
 /** @brief Right shifts applied to signed 32-bit VLMUL products. */
 typedef enum {
