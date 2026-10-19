@@ -86,8 +86,9 @@ FUNCTION_NAME:
     xm.stdsp x22, x23, 2*8
     xm.stdsp x24, x25, 3*8
     
-    {xm.vclrdr; xm.ldcu t, 32}
+    {xm.vclrdr; xm.ldcu t, 48}
 
+    // 48 << 4 = 0x300 selects 16x8 mode
     {xm.ldwi kw, PARAMS_bytes_per_kernel_channel*4(params_p); xm.shli t, t, 4}
     {xm.vsetc x28; nop}
 

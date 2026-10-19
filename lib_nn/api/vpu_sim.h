@@ -26,7 +26,7 @@ typedef enum {
   MODE_S32 = 0x00,
   MODE_S16 = 0x100,
   MODE_S8 = 0x200,
-  MODE_S16x8 = 0x400,
+  MODE_S16x8 = 0x300,  // VX4 only
 } vector_mode;
 
 typedef struct {
