@@ -4,6 +4,7 @@
 #include "Rand.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <ctime>
 #include <iostream>

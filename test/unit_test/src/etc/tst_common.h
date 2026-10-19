@@ -5,7 +5,6 @@
 #define TST_COMMON_H_
 
 #include <stdint.h>
-#include <nn_api.h>
 
 #ifdef __XC__
 extern "C" {

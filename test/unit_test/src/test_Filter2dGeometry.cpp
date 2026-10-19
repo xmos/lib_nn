@@ -136,4 +136,4 @@ TEST(group_Filter2dGeometry, Padding) {
 
 }  // extern "C"
 
-#endif  // !__riscv_xxcore
+#endif  // !defined(__riscv_xxcore)

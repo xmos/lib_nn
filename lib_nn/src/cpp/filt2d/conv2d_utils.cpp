@@ -23,7 +23,7 @@ struct Conv2dChannelParams {
 };
 
 static void compute_rshift_scale(int16_t &rshift, int16_t &scale,
-                                 const float &multiplier, nn_vlmul_shr_t vlmul_shr) {
+                                 const float &multiplier, nn_vlmul_shr_s16_t vlmul_shr) {
   rshift = 16;
   float fscale = 0x7FFF;
 
@@ -46,7 +46,7 @@ static void compute_rshift_scale(int16_t &rshift, int16_t &scale,
 }
 
 static Conv2dChannelParams computeConv2dChannelParams(
-    const float multiplier, const int32_t output_zero_point, nn_vlmul_shr_t vlmul_shr) {
+    const float multiplier, const int32_t output_zero_point, nn_vlmul_shr_s16_t vlmul_shr) {
   // Conv2dChannelParams params;
 
   int16_t rshift, scale;
@@ -191,7 +191,7 @@ std::vector<vpu_split_acc32_t> conv2d::util::TfLiteConverter::ConvertBiases(
 std::vector<nn_acc32_to_int8_params_t>
 conv2d::util::TfLiteConverter::ConvertOutputParams(
     const Filter2dGeometry &filter, const float effective_output_multiplier[],
-    const int32_t output_zero_point, nn_vlmul_shr_t vlmul_shr) {
+    const int32_t output_zero_point, nn_vlmul_shr_s16_t vlmul_shr) {
   // kernel weights do not change.
 
   const unsigned cog_count = (filter.output.depth + VPU_INT8_ACC_PERIOD - 1) >>

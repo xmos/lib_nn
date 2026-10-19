@@ -588,7 +588,9 @@ TEST(group_Conv2dRegressionBinary, ValidIndirectInt8Regression) {
                                     OutputTransformFnInt8_Group::Quantizer();
                                 OutputTransformFnInt8_Group::QuantisationParams
                                     qp = quantizer.quantise_activation(
-                                        mul_and_biases, nn_vlmul_shr_t::VLMUL_SHR_XS3A, false);
+                                        mul_and_biases,
+                                        nn_vlmul_shr_s16_t::VLMUL_SHR_S16_XS3A,
+                                        false);
 
                                 auto serialised_offsets_multipliers_and_biases =
                                     OutputTransformFn::serialise_memory(
@@ -783,7 +785,9 @@ TEST(group_Conv2dRegressionBinary, ValidDirectInt8Regression) {
                                     OutputTransformFnInt8_Group::Quantizer();
                                 OutputTransformFnInt8_Group::QuantisationParams
                                     qp = quantizer.quantise_activation(
-                                        mul_and_biases, nn_vlmul_shr_t::VLMUL_SHR_XS3A, false);
+                                        mul_and_biases,
+                                        nn_vlmul_shr_s16_t::VLMUL_SHR_S16_XS3A,
+                                        false);
 
                                 auto serialised_offsets_multipliers_and_biases =
                                     OutputTransformFn::serialise_memory(

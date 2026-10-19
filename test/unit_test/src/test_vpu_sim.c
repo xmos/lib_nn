@@ -39,7 +39,7 @@ TEST_GROUP_RUNNER(group_vpu_sim) {
   RUN_TEST_CASE(group_vpu_sim, test_vlashr);
   RUN_TEST_CASE(group_vpu_sim, test_vlashr_limits);
   RUN_TEST_CASE(group_vpu_sim, test_vpos);
-  RUN_TEST_CASE(group_vpu_sim, test_vlsat_fixed);
+  RUN_TEST_CASE(group_vpu_sim, test_vlsat_asymmetric);
   RUN_TEST_CASE(group_vpu_sim, test_sats);
 }
 
@@ -310,13 +310,11 @@ TEST(group_vpu_sim, test_vl_add_sub_mul) {
   VLMUL(&sim, d);
   VSTR(&sim, out_sim);
 
-#if defined(__XS3A__)
-  TEST_ASSERT_EQUAL_INT8_ARRAY(expected_xs3, out_asm, VPU_INT8_EPV);
-  TEST_ASSERT_EQUAL_INT8_ARRAY(expected_xs3, out_sim, VPU_INT8_EPV);
-#elif defined(__riscv_xxcore)
-  TEST_ASSERT_EQUAL_INT8_ARRAY(expected_vx4, out_asm, VPU_INT8_EPV);
-  TEST_ASSERT_EQUAL_INT8_ARRAY(expected_vx4, out_sim, VPU_INT8_EPV);
-#endif
+  const int8_t *expected = GetNNArchProfile()->vlmul_shr_s8 == 6
+                               ? expected_xs3
+                               : expected_vx4;
+  TEST_ASSERT_EQUAL_INT8_ARRAY(expected, out_asm, VPU_INT8_EPV);
+  TEST_ASSERT_EQUAL_INT8_ARRAY(expected, out_sim, VPU_INT8_EPV);
   TEST_ASSERT_EQUAL_INT8_ARRAY(out_sim, out_asm, VPU_INT8_EPV);
 }
 
@@ -484,7 +482,7 @@ TEST(group_vpu_sim, test_vpos) {
   TEST_ASSERT_EQUAL_INT32_ARRAY(expected, out_sim, VPU_INT32_EPV);
 }
 
-TEST(group_vpu_sim, test_vlsat_fixed) {
+TEST(group_vpu_sim, test_vlsat_asymmetric) {
   int16_t WORD_ALIGNED acc_low[VPU_INT16_EPV] = {-128};
   int16_t WORD_ALIGNED acc_high[VPU_INT16_EPV] = {-1};
   uint16_t WORD_ALIGNED shifts[VPU_INT8_ACC_PERIOD] = {0};
@@ -500,11 +498,10 @@ TEST(group_vpu_sim, test_vlsat_fixed) {
 
 TEST(group_vpu_sim, test_sats) {
   TEST_ASSERT_EQUAL_INT(127, vpu_saturate(200, 8));
-#if defined(__riscv_xxcore)
-  TEST_ASSERT_EQUAL_INT(-128, vpu_saturate(-200, 8));
-#elif defined(__XS3A__)
-  TEST_ASSERT_EQUAL_INT(-127, vpu_saturate(-200, 8));
-#endif
+  TEST_ASSERT_EQUAL_INT(-127 + GetNNArchProfile()->saturation_min_offset,
+                        vpu_saturate(-200, 8));
+  TEST_ASSERT_EQUAL_INT(127, vpu_saturate_asymmetric(200, 8));
+  TEST_ASSERT_EQUAL_INT(-128, vpu_saturate_asymmetric(-200, 8));
 
   TEST_ASSERT_EQUAL_INT8(127, sat_s8(200, -127, 127));
   TEST_ASSERT_EQUAL_INT8(-127, sat_s8(-200, -127, 127));
