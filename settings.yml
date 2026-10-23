@@ -3,7 +3,7 @@
 lib_name: lib_nn
 project: '{{lib_name}}'
 title: '{{lib_name}}: Neural network library'
-version: 0.6.0
+version: 0.7.0
 
 documentation:
   exclude_patterns_path: doc/exclude_patterns.inc
