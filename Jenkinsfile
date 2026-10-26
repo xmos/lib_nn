@@ -197,7 +197,7 @@ pipeline {
                                     withTools(params.TOOLS_VERSION_VX) {
                                         sh 'cmake -B build --toolchain=xmos_cmake_toolchain/vx4_clang.cmake'
                                         sh 'xmake -C build -j$(nproc)'
-                                        sh 'xsim bin/add_tensor'
+                                        sh 'xsim bin/add_tensor --config-file config.xml'
                                     }
                                 }
                             }
