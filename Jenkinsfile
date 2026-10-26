@@ -1,7 +1,8 @@
-@Library('xmos_jenkins_shared_library@v0.54.0') _
+@Library('xmos_jenkins_shared_library@v0.55.0') _
 
 // Runs a Unity test, publishes its JUnit report, and prints its log on failure.
-def UnityJunit(String command, String logFile, String suiteName, Boolean allowEmpty=false) {
+def UnityJunit(String command, String suiteName, Boolean allowEmpty=false) {
+    def logFile = "${suiteName}.log"
     def status = sh(
         returnStatus: true,
         script: "${command} > ${logFile} 2>&1"
@@ -17,6 +18,7 @@ def UnityJunit(String command, String logFile, String suiteName, Boolean allowEm
     }
 }
 
+
 getApproval()
 pipeline {
     agent none
@@ -31,14 +33,14 @@ pipeline {
             description: 'XS XTC tools version'
         )
         string(
-            name: 'TOOLS_VERSION_NEW',
+            name: 'TOOLS_VERSION_VX',
             defaultValue: 'bob@develop',
-            description: 'VX New tools version'
+            description: 'VX Clang tools version'
         )
-        string(
-            name: 'TOOLS_VERSION_TRANSITIONAL',
-            defaultValue: '-j --repo arch_vx_slipgate -b master -a XTC 131',
-            description: 'VX Transitional tools version'
+        string( // temporary support
+            name: 'TOOLS_VERSION_VX_XCC',
+            defaultValue: 'slipgate@develop',
+            description: 'VX XCC tools version'
         )
         string(
             name: 'XMOSDOC_VERSION',
@@ -87,7 +89,7 @@ pipeline {
                         stage("Unit test") {
                             steps {
                                 dir("${REPO}/test/unit_test") {
-                                    UnityJunit("./bin/unit_test -v", "NativeUnit.log", "NativeUnit")
+                                    UnityJunit("./bin/unit_test -v", "NativeUnit")
                                 }
                             }
                         } // Unit test
@@ -95,8 +97,7 @@ pipeline {
                         stage("Custom CMake test") {
                             steps {
                                 dir("${REPO}/test/custom_cmake_build") {
-                                    sh "cmake -B build"
-                                    sh "cmake --build build"
+                                    sh "cmake -B build && cmake --build build"
                                     sh "./bin/add_tensor"
                                 }
                             }
@@ -105,7 +106,7 @@ pipeline {
                         stage("Integration test") {
                             steps {
                                 dir("${REPO}/test/integration") {
-                                    UnityJunit("./bin/integration_test -v", "NativeIntegration.log", "NativeIntegration")
+                                    UnityJunit("./bin/integration_test -v", "NativeIntegration")
                                 }
                             }
                         } // Integration test
@@ -126,8 +127,7 @@ pipeline {
                                     dir("test/unit_test") {
                                         xcoreBuild(
                                             buildDir: 'build_xs3',
-                                            toolsVersion: params.TOOLS_VERSION_XS,
-                                            cmakeOpts: '-DAPP_HW_TARGET=XK-EVK-XU316',
+                                            toolsVersion: params.TOOLS_VERSION_XS
                                         )
                                     }
                                 }
@@ -138,7 +138,7 @@ pipeline {
                             steps {
                                 dir("${REPO}/test/unit_test") {
                                     withTools(params.TOOLS_VERSION_XS) {
-                                        UnityJunit("xsim --args bin/unit_test.xe -v", "XS3.log", "XS3")
+                                        UnityJunit("xsim --args bin/unit_test.xe -v", "XS3")
                                     }
                                 }
                             }
@@ -161,53 +161,6 @@ pipeline {
                     post {cleanup {xcoreCleanSandbox()}}
                 } // XS3 test
 
-                stage("VX4 transitional test") {
-                    when {expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }}
-                    agent {label "linux && x86_64"}
-
-                    stages {
-                        stage("Setup") {
-                            steps {
-                                dir(REPO) {
-                                    checkoutScmShallow()
-                                    dir("test/unit_test") {
-                                        xcoreBuild(
-                                            buildDir: 'build_vx4_transitional',
-                                            toolsVersion: params.TOOLS_VERSION_TRANSITIONAL,
-                                            cmakeOpts: '-DAPP_HW_TARGET=XK-EVK-XU416',
-                                        )
-                                    }
-                                }
-                            }
-                        } // Setup
-
-                        stage("Unit test") {
-                            steps {
-                                dir("${REPO}/test/unit_test") {
-                                    withTools(params.TOOLS_VERSION_TRANSITIONAL) {
-                                        UnityJunit("xsim --args bin/unit_test.xe -v", "VX4Transitional.log", "VX4Transitional")
-                                    }
-                                }
-                            }
-                        } // Unit test
-
-                        stage("Custom CMake test") {
-                            steps {
-                                dir("${REPO}/test/custom_cmake_build") {
-                                    sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch develop"
-                                    withTools(params.TOOLS_VERSION_TRANSITIONAL) {
-                                        sh 'cmake -B build --toolchain=xmos_cmake_toolchain/vx4_xcc.cmake'
-                                        sh 'xmake -C build -j$(nproc)'
-                                        sh 'xsim bin/add_tensor.xe'
-                                    }
-                                }
-                            }
-                        } // Custom CMake test
-
-                    } // stages
-                    post {cleanup {xcoreCleanSandbox()}}
-                } // VX4 Transitional test
-
                 stage("VX4 test") {
                     when {expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }}
                     agent {label "linux && x86_64"}
@@ -219,9 +172,8 @@ pipeline {
                                     checkoutScmShallow()
                                     dir("test/unit_test") {
                                         xcoreBuild(
-                                            buildDir: 'build_vx4_new',
-                                            toolsVersion: params.TOOLS_VERSION_NEW,
-                                            cmakeOpts: "-DAPP_HW_TARGET_VX=${WORKSPACE}/${REPO}/XK-EVK-XU416.xml",
+                                            buildDir: 'build_vx4',
+                                            toolsVersion: params.TOOLS_VERSION_VX
                                         )
                                     }
                                 }
@@ -231,12 +183,8 @@ pipeline {
                         stage("Unit test") {
                             steps {
                                 dir("${REPO}/test/unit_test") {
-                                    withTools(params.TOOLS_VERSION_NEW) {
-                                        // Incompleteness in the current VX toolchain can produce empty test results.
-                                        // Do not fail the job even if the test results are empty.
-                                        // ToDo: remove the allowEmpty flag once the VX toolchain accepts command line
-                                        // arguments when starting a program.
-                                        UnityJunit("xsim --args bin/unit_test.xe -v", "VX4New.log", "VX4New", true)
+                                    withTools(params.TOOLS_VERSION_VX) {
+                                        UnityJunit("xsim --args bin/unit_test.xe -v", "VX4", true)
                                     }
                                 }
                             }
@@ -246,10 +194,10 @@ pipeline {
                             steps {
                                 dir("${REPO}/test/custom_cmake_build") {
                                     sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch develop"
-                                    withTools(params.TOOLS_VERSION_NEW) {
+                                    withTools(params.TOOLS_VERSION_VX) {
                                         sh 'cmake -B build --toolchain=xmos_cmake_toolchain/vx4_clang.cmake'
                                         sh 'xmake -C build -j$(nproc)'
-                                        sh 'xsim bin/add_tensor --config-file ../config_elf.xml'
+                                        sh 'xsim bin/add_tensor'
                                     }
                                 }
                             }
@@ -257,7 +205,54 @@ pipeline {
 
                     } // stages
                     post {cleanup {xcoreCleanSandbox()}}
-                } // VX4 New test
+                } // VX4 test
+
+                stage("VX4 XCC test") {
+                    when {expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }}
+                    agent {label "linux && x86_64"}
+
+                    stages {
+                        stage("Setup") {
+                            steps {
+                                dir(REPO) {
+                                    checkoutScmShallow()
+                                    dir("test/unit_test") {
+                                        xcoreBuild(
+                                            buildDir: 'build_vx4_xcc',
+                                            toolsVersion: params.TOOLS_VERSION_VX_XCC,
+                                            cmakeOpts: '-DAPP_HW_TARGET=XK-EVK-XU416',
+                                        )
+                                    }
+                                }
+                            }
+                        } // Setup
+
+                        stage("Unit test") {
+                            steps {
+                                dir("${REPO}/test/unit_test") {
+                                    withTools(params.TOOLS_VERSION_VX_XCC) {
+                                        UnityJunit("xsim --args bin/unit_test.xe -v", "VX4XCC")
+                                    }
+                                }
+                            }
+                        } // Unit test
+
+                        stage("Custom CMake test") {
+                            steps {
+                                dir("${REPO}/test/custom_cmake_build") {
+                                    sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch develop"
+                                    withTools(params.TOOLS_VERSION_VX_XCC) {
+                                        sh 'cmake -B build --toolchain=xmos_cmake_toolchain/vx4_xcc.cmake'
+                                        sh 'xmake -C build -j$(nproc)'
+                                        sh 'xsim bin/add_tensor.xe'
+                                    }
+                                }
+                            }
+                        } // Custom CMake test
+
+                    } // stages
+                    post {cleanup {xcoreCleanSandbox()}}
+                } // VX4 XCC test
 
                 stage("Docs and lib checks") {
                     agent {
