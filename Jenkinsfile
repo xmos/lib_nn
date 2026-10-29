@@ -20,6 +20,16 @@ def UnityJunit(String command, String suiteName, Boolean allowEmpty=false) {
     }
 }
 
+def CustomCmakeTest(String toolchain, String runCommand) {
+    def toolchainOption = ''
+    if (toolchain != 'native') {
+        sh 'git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch develop'
+        toolchainOption = " --toolchain=xmos_cmake_toolchain/${toolchain}.cmake"
+    }
+    sh "cmake -B build${toolchainOption}"
+    sh 'cmake --build build'
+    sh runCommand
+}
 
 getApproval()
 pipeline {
@@ -99,8 +109,7 @@ pipeline {
                         stage("Custom CMake test") {
                             steps {
                                 dir("${REPO}/test/custom_cmake_build") {
-                                    sh "cmake -B build && cmake --build build"
-                                    sh "./bin/add_tensor"
+                                    CustomCmakeTest('native', './bin/add_tensor')
                                 }
                             }
                         } // Custom CMake test
@@ -121,42 +130,32 @@ pipeline {
                     when {expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }}
                     agent {label "linux && x86_64"}
 
-                    stages {
-                        stage("Setup") {
-                            steps {
-                                dir(REPO) {
-                                    checkoutScmShallow()
-                                    dir("test/unit_test") {
-                                        xcoreBuild(arch: 'xs3')
+                    steps {
+                        script {
+                            withTools(params.TOOLS_VERSION_XS) {
+                                stage("Setup") {
+                                    dir(REPO) {
+                                        checkoutScmShallow()
+                                        dir("test/unit_test") {
+                                            xcoreBuild()
+                                        }
                                     }
                                 }
-                            }
-                        } // Setup
 
-                        stage("Unit test") {
-                            steps {
-                                dir("${REPO}/test/unit_test") {
-                                    withTools(params.TOOLS_VERSION_XS) {
+                                stage("Unit test") {
+                                    dir("${REPO}/test/unit_test") {
                                         UnityJunit("xsim --args bin/unit_test.xe -v", "XS3")
                                     }
                                 }
-                            }
-                        } // Unit test
 
-                        stage("Custom CMake test") {
-                            steps {
-                                dir("${REPO}/test/custom_cmake_build") {
-                                    sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch develop"
-                                    withTools(params.TOOLS_VERSION_XS) {
-                                        sh 'cmake -B build --toolchain=xmos_cmake_toolchain/xs3a.cmake'
-                                        sh 'xmake -C build -j$(nproc)'
-                                        sh 'xsim bin/add_tensor.xe'
+                                stage("Custom CMake test") {
+                                    dir("${REPO}/test/custom_cmake_build") {
+                                        CustomCmakeTest('xs3a', 'xsim bin/add_tensor.xe')
                                     }
                                 }
                             }
-                        } // Custom CMake test
-
-                    } // stages
+                        }
+                    }
                     post {cleanup {xcoreCleanSandbox()}}
                 } // XS3 test
 
@@ -164,42 +163,32 @@ pipeline {
                     when {expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }}
                     agent {label "linux && x86_64"}
 
-                    stages {
-                        stage("Setup") {
-                            steps {
-                                dir(REPO) {
-                                    checkoutScmShallow()
-                                    dir("test/unit_test") {
-                                        xcoreBuild(arch: 'vx4')
+                    steps {
+                        script {
+                            withTools(params.TOOLS_VERSION_VX) {
+                                stage("Setup") {
+                                    dir(REPO) {
+                                        checkoutScmShallow()
+                                        dir("test/unit_test") {
+                                            xcoreBuild()
+                                        }
                                     }
                                 }
-                            }
-                        } // Setup
 
-                        stage("Unit test") {
-                            steps {
-                                dir("${REPO}/test/unit_test") {
-                                    withTools(params.TOOLS_VERSION_VX) {
+                                stage("Unit test") {
+                                    dir("${REPO}/test/unit_test") {
                                         UnityJunit("xsim --args bin/unit_test.xe -v", "VX4", true)
                                     }
                                 }
-                            }
-                        } // Unit test
 
-                        stage("Custom CMake test") {
-                            steps {
-                                dir("${REPO}/test/custom_cmake_build") {
-                                    sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch develop"
-                                    withTools(params.TOOLS_VERSION_VX) {
-                                        sh 'cmake -B build --toolchain=xmos_cmake_toolchain/vx4_clang.cmake'
-                                        sh 'xmake -C build -j$(nproc)'
-                                        sh 'xsim bin/add_tensor --config-file config.xml'
+                                stage("Custom CMake test") {
+                                    dir("${REPO}/test/custom_cmake_build") {
+                                        CustomCmakeTest('vx4', 'xsim bin/add_tensor --config-file config.xml')
                                     }
                                 }
                             }
-                        } // Custom CMake test
-
-                    } // stages
+                        }
+                    }
                     post {cleanup {xcoreCleanSandbox()}}
                 } // VX4 test
 
@@ -207,42 +196,32 @@ pipeline {
                     when {expression { !env.GH_LABEL_DOC_ONLY.toBoolean() }}
                     agent {label "linux && x86_64"}
 
-                    stages {
-                        stage("Setup") {
-                            steps {
-                                dir(REPO) {
-                                    checkoutScmShallow()
-                                    dir("test/unit_test") {
-                                        xcoreBuild(arch: 'vx4_xcc')
+                    steps {
+                        script {
+                            withTools(params.TOOLS_VERSION_VX_XCC) {
+                                stage("Setup") {
+                                    dir(REPO) {
+                                        checkoutScmShallow()
+                                        dir("test/unit_test") {
+                                            xcoreBuild()
+                                        }
                                     }
                                 }
-                            }
-                        } // Setup
 
-                        stage("Unit test") {
-                            steps {
-                                dir("${REPO}/test/unit_test") {
-                                    withTools(params.TOOLS_VERSION_VX_XCC) {
+                                stage("Unit test") {
+                                    dir("${REPO}/test/unit_test") {
                                         UnityJunit("xsim --args bin/unit_test.xe -v", "VX4XCC")
                                     }
                                 }
-                            }
-                        } // Unit test
 
-                        stage("Custom CMake test") {
-                            steps {
-                                dir("${REPO}/test/custom_cmake_build") {
-                                    sh "git clone git@github.com:xmos/xmos_cmake_toolchain.git --depth 1 --branch develop"
-                                    withTools(params.TOOLS_VERSION_VX_XCC) {
-                                        sh 'cmake -B build --toolchain=xmos_cmake_toolchain/vx4_xcc.cmake'
-                                        sh 'xmake -C build -j$(nproc)'
-                                        sh 'xsim bin/add_tensor.xe'
+                                stage("Custom CMake test") {
+                                    dir("${REPO}/test/custom_cmake_build") {
+                                        CustomCmakeTest('vx4_xcc', 'xsim bin/add_tensor.xe')
                                     }
                                 }
                             }
-                        } // Custom CMake test
-
-                    } // stages
+                        }
+                    }
                     post {cleanup {xcoreCleanSandbox()}}
                 } // VX4 XCC test
 
@@ -257,7 +236,7 @@ pipeline {
                                 dir(REPO) {
                                     checkoutScmShallow()
                                     dir("examples") {
-                                        xcoreBuild(arch:"xs3", archiveBins: false)
+                                        xcoreBuildAll()
                                     }
                                 }
                             }
