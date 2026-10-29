@@ -183,7 +183,7 @@ pipeline {
 
                                 stage("Custom CMake test") {
                                     dir("${REPO}/test/custom_cmake_build") {
-                                        CustomCmakeTest('vx4', 'xsim bin/add_tensor --config-file config.xml')
+                                        CustomCmakeTest('vx4_clang', 'xsim bin/add_tensor --config-file config.xml')
                                     }
                                 }
                             }
