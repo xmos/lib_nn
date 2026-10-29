@@ -21,7 +21,7 @@
 #error "lib_nn target cannot use both legacy XCORE and RISC-V instruction sets"
 #endif
 
-/* Remove when the New toolchain derives this symbol from APP_HW_TARGET_VX. */
+/* Remove when the VX Clang toolchain defines __VX4B__ itself. */
 #if defined(__riscv_xxcore) && !defined(__VX4B__)
 #define __VX4B__ 1
 #endif

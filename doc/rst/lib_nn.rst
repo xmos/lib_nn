@@ -47,8 +47,7 @@ The ``examples/add_tensor`` directory contains a minimal application that demons
 The program prints the two input tensors and the result of adding them together element-wise.
 
 The example supports the ``XK-EVK-XU316`` and ``XK-EVK-XU416`` targets and runs
-in the xcore simulator. The VX4 target definition is provided by the top-level
-``XK-EVK-XU416.xml`` file.
+in the xcore simulator. 
 
 First, make sure the XMOS XTC tools are installed and activated.
 
