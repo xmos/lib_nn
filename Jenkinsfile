@@ -1,4 +1,6 @@
-@Library('xmos_jenkins_shared_library@v0.55.0') _
+// This file relates to internal XMOS infrastructure and should be ignored by external users
+
+@Library('xmos_jenkins_shared_library@feature/xcore-build-arch') _
 
 // Runs a Unity test, publishes its JUnit report, and prints its log on failure.
 def UnityJunit(String command, String suiteName, Boolean allowEmpty=false) {
@@ -125,10 +127,7 @@ pipeline {
                                 dir(REPO) {
                                     checkoutScmShallow()
                                     dir("test/unit_test") {
-                                        xcoreBuild(
-                                            buildDir: 'build_xs3',
-                                            toolsVersion: params.TOOLS_VERSION_XS
-                                        )
+                                        xcoreBuild(arch: 'xs3')
                                     }
                                 }
                             }
@@ -171,10 +170,7 @@ pipeline {
                                 dir(REPO) {
                                     checkoutScmShallow()
                                     dir("test/unit_test") {
-                                        xcoreBuild(
-                                            buildDir: 'build_vx4',
-                                            toolsVersion: params.TOOLS_VERSION_VX
-                                        )
+                                        xcoreBuild(arch: 'vx4')
                                     }
                                 }
                             }
@@ -217,11 +213,7 @@ pipeline {
                                 dir(REPO) {
                                     checkoutScmShallow()
                                     dir("test/unit_test") {
-                                        xcoreBuild(
-                                            buildDir: 'build_vx4_xcc',
-                                            toolsVersion: params.TOOLS_VERSION_VX_XCC,
-                                            cmakeOpts: '-DAPP_HW_TARGET=XK-EVK-XU416',
-                                        )
+                                        xcoreBuild(arch: 'vx4_xcc')
                                     }
                                 }
                             }
@@ -265,7 +257,7 @@ pipeline {
                                 dir(REPO) {
                                     checkoutScmShallow()
                                     dir("examples") {
-                                        xcoreBuild(archiveBins: false)
+                                        xcoreBuild(arch:"xs3", archiveBins: false)
                                     }
                                 }
                             }
