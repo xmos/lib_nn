@@ -411,4 +411,4 @@ nn::Filter2dGeometry nn::ff::MakePaddedDepthwise(nn::Filter2dGeometry filter) {
 //   filter.input.depth : filter.window.shape.depth; return filter;
 // }
 
-#endif  // !__riscv_xxcore
+#endif  // !defined(__riscv_xxcore)

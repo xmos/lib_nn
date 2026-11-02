@@ -26,7 +26,7 @@ typedef enum {
   MODE_S32 = 0x00,
   MODE_S16 = 0x100,
   MODE_S8 = 0x200,
-  MODE_S16x8 = 0x400,
+  MODE_S16x8 = 0x300,  // VX4 only
 } vector_mode;
 
 typedef struct {
@@ -38,7 +38,7 @@ typedef struct {
 
 typedef xs3_vpu vpu_t;
 
-#if defined(__xcore__) || defined(__riscv_xxcore)
+#if HAS_FPTRGROUP
 #define MACC_FPTR __attribute__((fptrgroup("macc_functions")))
 #else
 #define MACC_FPTR

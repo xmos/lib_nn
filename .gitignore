@@ -19,6 +19,11 @@ lib_nn/lib
 .cache
 compile_commands.json
 
+# Track the simulator fixture inside the custom CMake build test.
+!test/custom_cmake_build/
+test/custom_cmake_build/*
+!test/custom_cmake_build/config.xml
+
 # macOS cruft
 .DS_Store
 

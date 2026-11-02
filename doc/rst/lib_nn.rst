@@ -46,7 +46,9 @@ The ``examples/add_tensor`` directory contains a minimal application that demons
 
 The program prints the two input tensors and the result of adding them together element-wise.
 
-This example is built for ``XK-EVK-XU316`` target and runs it in the xcore simulator.
+The example supports the ``XK-EVK-XU316`` and ``XK-EVK-XU416`` targets and runs
+in the xcore simulator. The VX4 target definition is provided by the top-level
+``XK-EVK-XU416.xml`` file.
 
 First, make sure the XMOS XTC tools are installed and activated.
 
@@ -401,6 +403,17 @@ Notes
     saturation. Some output conversions select full-range saturation when
     ``NN_USE_REF`` is enabled, so a host reference build does not by itself
     establish bit-identical behaviour at the XS3 negative limit.
+
+Target configuration
+====================
+
+Reference implementations model VPU behavior using a runtime architecture profile.
+This profile initially selects VX4 when the compiler defines
+``__riscv_xxcore`` and XS3A otherwise, including for native builds.
+Tests may change the selected profile at runtime.
+
+Compiler/runtime function-pointer grouping support can be overridden independently
+with ``HAS_FPTRGROUP``.
 
 *************
 API Reference

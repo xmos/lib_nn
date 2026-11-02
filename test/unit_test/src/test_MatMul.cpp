@@ -3,8 +3,11 @@
 #include <algorithm>
 
 #include "AggregateFn.hpp"
+#include "nn_arch.h"
+#include "nn_api.h"
 
 extern "C" {
+#include "tst_common.h"
 #include "unity.h"
 #include "unity_fixture.h"
 }
@@ -27,6 +30,7 @@ TEST_GROUP_RUNNER(group_mat_mul) {
   RUN_TEST_CASE(group_mat_mul, Test_DirectBinary);
   RUN_TEST_CASE(group_mat_mul, Test_DirectInt16);
   RUN_TEST_CASE(group_mat_mul, Test_DirectInt16x8);
+  RUN_TEST_CASE(group_mat_mul, Test_DirectInt16x8MatchesRef);
   RUN_TEST_CASE(group_mat_mul, Test_DepthwiseInt8);
   RUN_TEST_CASE(group_mat_mul, Test_DepthwiseInt16);
 }
@@ -139,6 +143,41 @@ TEST(group_mat_mul, Test_DirectInt16x8) {
   assert_accumulator_value(A, elm_n);
 }
 
+void mat_mul_direct_int16x8_ref(const mat_mul_direct_params_t *params, VPURingBuffer *A,
+                                int16_t *X, int32_t output_channel_group, int8_t *weights);
+void mat_mul_direct_int16x8_impl_asm(const mat_mul_direct_params_t *params, VPURingBuffer *A,
+                                     int16_t *X, int32_t output_channel_group,
+                                     int8_t *weights);
+
+TEST(group_mat_mul, Test_DirectInt16x8MatchesRef) {
+  // The reference runs on vpu_sim's MODE_S16x8, so random data checks that model against
+  // the kernel on hardware.
+#if !defined(__riscv_xxcore)
+  TEST_IGNORE_MESSAGE("mat_mul_direct_int16x8 assembly is only implemented on VX4");
+#else
+  MatMulDirectFn dir(img_i16, win, elm_n);
+  mat_mul_direct_params_t prm = dir.getParams();
+  VPURingBuffer A_ref WORD_ALIGNED, A_asm WORD_ALIGNED;
+
+  for (int run = 0; run < 20; ++run) {
+    // Inputs in the int8 range first, then the full int16 range
+    const int full_range = run >= 10;
+    pseudo_rand_bytes(reinterpret_cast<char *>(inp_i16), sizeof(inp_i16));
+    if (!full_range)
+      for (int i = 0; i < elm_n; ++i) inp_i16[i] = static_cast<int16_t>(inp_i16[i] >> 8);
+    pseudo_rand_bytes(reinterpret_cast<char *>(wgt_i8), dir_wgt_n);
+
+    mat_mul_direct_int16x8_ref(&prm, &A_ref, inp_i16, ocg, wgt_i8);
+    mat_mul_direct_int16x8_impl_asm(&prm, &A_asm, inp_i16, ocg, wgt_i8);
+    for (int channel = 0; channel < VPU_INT16_EPV; ++channel) {
+      TEST_ASSERT_EQUAL_INT32_MESSAGE(accumulator_value(A_asm, channel),
+                                      accumulator_value(A_ref, channel),
+                                      full_range ? "int16 inputs" : "int8-range inputs");
+    }
+  }
+#endif
+}
+
 TEST(group_mat_mul, Test_DepthwiseInt8) {
   MatMulDirectFn_DW dir(img_i8, win);
   mat_mul_dw_direct_params_t prm = dir.getParams();
@@ -153,12 +192,8 @@ TEST(group_mat_mul, Test_DepthwiseInt16) {
   MatMulDirectFn_DW dir(img_i16, win);
   mat_mul_dw_direct_params_t prm = dir.getParams();
 
-#if defined(__riscv_xxcore)
-  // VX4B VLMACC drops the product's least-significant bit.
-  constexpr int16_t weight_value = 2;
-#else
-  constexpr int16_t weight_value = 1;
-#endif
+  const int16_t weight_value =
+      1 << GetNNArchProfile()->vlmacc_product_lsb_drops;
 
   std::fill_n(inp_i16, chn_n, 1);
   std::fill_n(wgt_i16, dw_wgt_n, weight_value);

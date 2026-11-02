@@ -294,26 +294,6 @@ typedef struct {
     .word 0x01010101
     .word 0x01010101
 
-.vec_0x007F:
-    .word 0x007F007F
-    .word 0x007F007F
-    .word 0x007F007F
-    .word 0x007F007F
-    .word 0x007F007F
-    .word 0x007F007F
-    .word 0x007F007F
-    .word 0x007F007F
-
-.vec_0x80:
-    .word 0x80808080
-    .word 0x80808080
-    .word 0x80808080
-    .word 0x80808080
-    .word 0x80808080
-    .word 0x80808080
-    .word 0x80808080
-    .word 0x80808080
-
 FUNCTION_NAME:
 
     xm.entsp ROUND_UP(NSTACKBYTES, 16)
@@ -364,58 +344,30 @@ FUNCTION_NAME:
     xm.vldc m1
     xm.vlmacc0 tmp1
     xm.vldc m2
-    { xm.vlmacc0 tmp2                   ; xm.shli t3, t3, 3             }
+    { xm.vlmacc0 tmp2                   ; xm.shli t3, t3, 4             }
 
-    // Saturation fix
-    // Save original 32-bit outputs
-    // We saturate the number to 16-bits.
-    // We then use the upper 16-bits to find out which numbers are
-    // going to be -128.
-    // -128's are written to output with a mask.
-    // The lower 16-bits are later saturated using vlsat and
-    // written with a mask to fill in remaining spaces.
-    xm.vsetc t3
-    xm.vstd tmp2
-    { xm.vstr tmp1                      ; xm.ldcu tmp1, 32              }
-    xm.vlsat shift                    
-    { xm.vldd tmp2                      ; xm.shl tmp1, tmp1, 4          }
-    
-    lla t3, .vec_0x007F
-    { xm.vladd t3                       ; mv t3, tmp1                   }
-    xm.vdepth1
+    // Unlike XS3, VX4 VPU saturation is asymmetric, so no fix-up is
+    // needed to produce -128. In 8-bit mode vlsat leaves 16-bit results;
+    // shifting left by 8 (saturating) and vdepth8 gives the int8 output.
+#define mask              tmp2
     // Switch to 8-bit mode
-    xm.vsetc t3
-#define saturated_mask    tmp2
-#define mask              tmp1
-    // Store saturated_mask and set default mask to 16 elements
-    { xm.vstr saturated_mask            ; xm.mkmski mask, 16            }
+    { xm.vsetc t3                       ; xm.mkmski mask, 16            }
+    xm.vlsat shift
 
     bnez counter, label_store_with_mask
     // In last loop - make mask for remaining elements
-    addi tmp2, arg_out_cnt, 0
-    xm.zexti tmp2, 4
-    xm.mkmsk mask, tmp2
+    addi mask, arg_out_cnt, 0
+    xm.zexti mask, 4
+    xm.mkmsk mask, mask
 
   label_store_with_mask:
-    lw saturated_mask, STACK_VEC2_TMP(sp)
-    lla t3, .vec_0x80
-    and saturated_mask, saturated_mask, mask
-    { xm.vldr t3                        ; addi t3, sp, STACK_VEC1_TMP   }
-    // Store -128's
-    xm.vstrpv arg_y_p, saturated_mask
-
-    { xm.vldr t3                        ; xm.nop                        }
-    { xm.andnot mask, saturated_mask    ; xm.nop                        }
-    xm.vlsat shift
-    // Store the result
-    { xm.vstr t3                        ; xm.addi tmp2, t3, 0           }
+    xm.vstr tmp1
     // Set to 16bit mode
     li t3, 256
     xm.vsetc t3
     li t3, -8
-    xm.vlashr tmp2, t3
+    xm.vlashr tmp1, t3
     xm.vdepth8
-    // Store other elements
     xm.vstrpv arg_y_p, mask
     // Set to 8bit mode
     li t3, 512

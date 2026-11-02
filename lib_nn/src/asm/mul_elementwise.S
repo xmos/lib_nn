@@ -252,20 +252,6 @@ VECT16_ZEROS:
 	.word    0x00000000
 	.word    0x00000000
 	.word    0x00000000
-VECT_INT16_MAX:
-	.word    0x7f807f80
-	.word    0x7f807f80
-	.word    0x7f807f80
-	.word    0x7f807f80
-	.word    0x7f807f80
-	.word    0x7f807f80
-	.word    0x7f807f80
-	.word    0x7f807f80
-VECT_INT8_MIN:
-	.word    0x80808080
-	.word    0x80808080
-	.word    0x80808080
-	.word    0x80808080	
 
 #define S_S2 				0
 #define S_S3 				(S_S2 + 4)
@@ -274,8 +260,7 @@ VECT_INT8_MIN:
 #define S_S6 				(S_S5 + 4)
 #define S_S7 				(S_S6 + 4)
 #define S_S8 				(S_S7 + 4)
-#define S_MASK 				(S_S8 + 4)
-#define S_TEMP 				(S_MASK + 4)
+#define S_TEMP 				(S_S8 + 8)	// keep vectors 8-byte aligned
 #define S_BIAS 				(S_TEMP + 32)
 #define S_IN1_ZERO_POINT 	(S_BIAS + 32)
 #define S_IN2_ZERO_POINT 	(S_IN1_ZERO_POINT + 16)
@@ -330,15 +315,12 @@ FUNCTION_NAME:
 	xm.stdi temp3, temp3, 24(bias)
 
 	xm.ld16s temp3, t3(a3)
-	{ xm.nop						; xm.ldcu temp, 0		}
 	mul temp3, temp3, temp2 	//broadcast the short to a word
 	addi scalar, sp, S_SCALAR
 	xm.stdi temp3, temp3, 0(scalar)
 	xm.stdi temp3, temp3, 8(scalar)
 	xm.stdi temp3, temp3, 16(scalar)
 	xm.stdi temp3, temp3, 24(scalar)
-
-	sw temp, S_MASK(sp)
 
 	//load out_data with a4
 	mv out_data, a4
@@ -375,23 +357,10 @@ FUNCTION_NAME:
 		
 		xm.vlashr temp2, temp
 
-		{ xm.vstr temp2 				; xm.ldap temp, VECT_INT16_MAX 		}  
-			
-		{ xm.vladd temp					; xm.mkmsk temp2, 2					}
-		{ xm.vdepth1					; addi temp3, sp, S_MASK			}
-
-		xm.vstrpv temp3, temp2
-
-		xm.ldap temp, VECT_INT8_MIN
-		{ xm.vldr temp 					; addi temp, sp, S_TEMP 			} 
-
-		{ xm.mkmsk temp2, element_count	; lw temp3, S_MASK(sp) 				}
+		// VX4 vdepth8 saturates asymmetrically, so -128 needs no fix-up
+		{ xm.mkmsk temp2, element_count	; xm.vdepth8						}
 		{ xm.zext temp2, 16 			; xm.nop							}
-		xm.vstrpv out_data, temp2         //store the int8_mins to output Y
-
-		{ xm.vldr temp 					; xm.ldcu temp, 16					}
-		{ xm.vdepth8					; xm.nop 							}
-		{ xm.andnot temp2, temp3		; xm.nop							}
+		xm.ldcu temp, 16
 		xm.vstrpv out_data, temp2
 
 		{ xm.ldcu temp2, 1					; xm.sub element_count, element_count, temp	}

@@ -1,0 +1,20 @@
+<XSystem xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="XSystem.xsd">
+  <System>
+    <Nodes>
+      <Node number="0" jtagId="0x7633" userId="0x00000000" processorMhz="400" interconnectMhz="400">
+        <Processor number="0" numThreads="8" numTimers="10" numLocks="4" numSyncs="7" numChanEnds="32" numClkBlks="6" codeReference="tile[0]">
+          <MemoryController>
+            <Ram base="0x80000000" size="0x80000"/>
+          </MemoryController>
+        </Processor>
+      </Node>
+    </Nodes>
+    <Connections>
+    </Connections>
+    <JtagChain>
+      <Node id="0"/>
+    </JtagChain>
+    <Pins>
+    </Pins>
+  </System>
+</XSystem>

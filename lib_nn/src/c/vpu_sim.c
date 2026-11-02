@@ -24,7 +24,8 @@
  */
 int64_t vpu_saturate(const int64_t input, const unsigned bits) {
   const int64_t max_val = (((int64_t)1) << (bits - 1)) - 1;
-  const int64_t min_val = (NN_ARCH == TARGET_ARCH_VX4A) ? -max_val - 1 : -max_val;
+  const int64_t min_val =
+      -max_val + GetNNArchProfile()->saturation_min_offset;
   return (input > max_val) ? max_val : (input < min_val) ? min_val : input;
 }
 
@@ -113,49 +114,49 @@ void VCLRDR(xs3_vpu *vpu) {
 }
 
 void VLDR(xs3_vpu *vpu, const void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   memcpy(&vpu->vR.u8[0], addr, XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VLDD(xs3_vpu *vpu, const void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   memcpy(&vpu->vD.u8[0], addr, XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VLDC(xs3_vpu *vpu, const void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   memcpy(&vpu->vC.u8[0], addr, XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VSTR(const xs3_vpu *vpu, void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   memcpy(addr, &vpu->vR.u8[0], XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VSTD(const xs3_vpu *vpu, void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   memcpy(addr, &vpu->vD.u8[0], XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VSTC(const xs3_vpu *vpu, void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   memcpy(addr, &vpu->vC.u8[0], XS3_VPU_VREG_WIDTH_BYTES);
 }
 
 void VSTRPV(const xs3_vpu *vpu, void *addr, unsigned mask) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   int8_t *addr8 = (int8_t *)addr;
@@ -168,7 +169,7 @@ void VSTRPV(const xs3_vpu *vpu, void *addr, unsigned mask) {
 }
 
 void VLMACC(xs3_vpu *vpu, const void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   if (vpu->mode == MODE_S8) {
@@ -213,7 +214,7 @@ void VLMACC(xs3_vpu *vpu, const void *addr) {
 }
 
 void VLMACCR(xs3_vpu *vpu, const void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   if (vpu->mode == MODE_S8) {
@@ -286,7 +287,7 @@ void VPOS(xs3_vpu *vpu) {
 }
 
 void VLMACCR1(xs3_vpu *vpu, const void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   const int32_t *addr32 = (const int32_t *)addr;
@@ -308,7 +309,7 @@ void VLMACCRB(xs3_vpu *vpu, const void *addr) {
 
 static
 void _VLSAT_IMPL(xs3_vpu *vpu, const void *addr, bool asymmetric) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   if (vpu->mode == MODE_S8) {
@@ -400,7 +401,7 @@ static int64_t vlashr_element(const int64_t val, const int32_t shr, const unsign
 }
 
 void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   if (vpu->mode == MODE_S8) {
@@ -421,7 +422,7 @@ void VLASHR(xs3_vpu *vpu, const void *addr, const int32_t shr) {
 }
 
 void VLADD(xs3_vpu *vpu, const void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   if (vpu->mode == MODE_S8) {
@@ -450,7 +451,7 @@ void VLADD(xs3_vpu *vpu, const void *addr) {
 }
 
 void VLSUB(xs3_vpu *vpu, const void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
   if (vpu->mode == MODE_S8) {
@@ -478,22 +479,18 @@ void VLSUB(xs3_vpu *vpu, const void *addr) {
   }
 }
 
-static inline
-unsigned vlmul_get_shift(const nn_target_arch_t arch, const vector_mode mode) {
-  // VLMUL shift = bpe - 2 for XS3A; bpe - 1 for VX4A in 8- and 16-bit modes, but 30 in
-  // 32-bit mode
-  assert(arch == TARGET_ARCH_XS3A || arch == TARGET_ARCH_VX4A);
+static inline unsigned vlmul_get_shift(const vector_mode mode) {
+  const nn_arch_profile_t *profile = GetNNArchProfile();
   unsigned shift = 0;
-  unsigned adj = (arch == TARGET_ARCH_XS3A) ? 0 : 1;
   switch (mode) {
     case MODE_S8:
-      shift = 8 - 2 + adj;
+      shift = profile->vlmul_shr_s8;
       break;
     case MODE_S16:
-      shift = 16 - 2 + adj;
+      shift = profile->vlmul_shr_s16;
       break;
     case MODE_S32:
-      shift = 32 - 2;
+      shift = profile->vlmul_shr_s32;
       break;
     default:
       assert(0);  // How'd this happen?
@@ -503,11 +500,11 @@ unsigned vlmul_get_shift(const nn_target_arch_t arch, const vector_mode mode) {
 }
 
 void VLMUL(xs3_vpu *vpu, const void *addr) {
-  #ifdef __XS3A__
+  #if defined(__XS3A__)
   assert_word_aligned(addr);
   #endif
 
-  const unsigned shift = vlmul_get_shift(NN_ARCH, vpu->mode);
+  const unsigned shift = vlmul_get_shift(vpu->mode);
   if (vpu->mode == MODE_S8) {
     const int8_t *addr8 = (const int8_t *)addr;
     for (int i = 0; i < VPU_INT8_EPV; i++) {

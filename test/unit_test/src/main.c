@@ -37,6 +37,7 @@ int main(int argc, const char* argv[]) {
   RUN_TEST_GROUP(group_maxpool);
   RUN_TEST_GROUP(group_mul_elementwise);
   RUN_TEST_GROUP(group_multiply_int16);
+  RUN_TEST_GROUP(group_nn_arch);
   RUN_TEST_GROUP(group_output_transform_fn_int16);
   RUN_TEST_GROUP(group_output_transforms_binary);
   RUN_TEST_GROUP(group_output_transforms_clamped);

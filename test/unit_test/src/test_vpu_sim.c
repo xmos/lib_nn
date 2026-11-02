@@ -28,6 +28,7 @@ TEST_GROUP_RUNNER(group_vpu_sim) {
   RUN_TEST_CASE(group_vpu_sim, test_vlmacc);
   RUN_TEST_CASE(group_vpu_sim, test_vlmaccr);
   RUN_TEST_CASE(group_vpu_sim, test_vlmaccr1);
+  RUN_TEST_CASE(group_vpu_sim, test_vlmacc_16x8);
 
   RUN_TEST_CASE(group_vpu_sim, test_vl_add_sub_mul);
   
@@ -38,7 +39,7 @@ TEST_GROUP_RUNNER(group_vpu_sim) {
   RUN_TEST_CASE(group_vpu_sim, test_vlashr);
   RUN_TEST_CASE(group_vpu_sim, test_vlashr_limits);
   RUN_TEST_CASE(group_vpu_sim, test_vpos);
-  RUN_TEST_CASE(group_vpu_sim, test_vlsat_fixed);
+  RUN_TEST_CASE(group_vpu_sim, test_vlsat_asymmetric);
   RUN_TEST_CASE(group_vpu_sim, test_sats);
 }
 
@@ -206,6 +207,43 @@ TEST(group_vpu_sim, test_vlmaccr) {
   TEST_ASSERT_EQUAL_INT16_ARRAY(out_sim, out_asm, VPU_INT16_EPV);
 }
 
+TEST(group_vpu_sim, test_vlmacc_16x8) {
+  // 16x8 mode multiplies the int16 elements of vC by the even int8 bytes of memory. It
+  // exists only on VX4, where vsetc(MODE_S16x8) must select it on the hardware too.
+#if !defined(__riscv_xxcore)
+  TEST_IGNORE_MESSAGE("16x8 mode is only implemented on VX4");
+#else
+  int16_t WORD_ALIGNED init[2][VPU_INT16_EPV];
+  int16_t WORD_ALIGNED coefficients[VPU_INT16_EPV];
+  int8_t WORD_ALIGNED input[XS3_VPU_VREG_WIDTH_BYTES + 1];
+  int16_t WORD_ALIGNED out_asm[2][VPU_INT16_EPV];
+  int16_t WORD_ALIGNED out_sim[2][VPU_INT16_EPV];
+  vpu_t sim = {0};
+
+  for (unsigned run = 0; run < 200; ++run) {
+    pseudo_rand_bytes((char *)init, sizeof(init));
+    pseudo_rand_bytes((char *)coefficients, sizeof(coefficients));
+    pseudo_rand_bytes((char *)input, sizeof(input));
+    // The odd offset reads the odd bytes, as mat_mul_direct_int16x8 does
+    const int8_t *mem = input + (run & 1);
+    const char *op = (run & 2) ? "VLMACCR 16x8" : "VLMACC 16x8";
+
+    vsetc(MODE_S16x8);
+    vldr(init[0]); vldd(init[1]); vldc(coefficients);
+    if (run & 2) vlmaccr0(mem); else vlmacc0(mem);
+    vstr(out_asm[0]); vstd(out_asm[1]);
+
+    VSETC(&sim, MODE_S16x8);
+    VLDR(&sim, init[0]); VLDD(&sim, init[1]); VLDC(&sim, coefficients);
+    if (run & 2) VLMACCR(&sim, mem); else VLMACC(&sim, mem);
+    VSTR(&sim, out_sim[0]); VSTD(&sim, out_sim[1]);
+
+    TEST_ASSERT_EQUAL_INT16_ARRAY_MESSAGE(out_asm[0], out_sim[0], VPU_INT16_EPV, op);
+    TEST_ASSERT_EQUAL_INT16_ARRAY_MESSAGE(out_asm[1], out_sim[1], VPU_INT16_EPV, op);
+  }
+#endif
+}
+
 TEST(group_vpu_sim, test_vlmaccr1) {
   // simple vlmaccr1 verif test
   // op = 10 zeros + 6 minus ones = 10 * 16 - 6 * 16 = 64
@@ -272,13 +310,11 @@ TEST(group_vpu_sim, test_vl_add_sub_mul) {
   VLMUL(&sim, d);
   VSTR(&sim, out_sim);
 
-#if defined(__XS3A__)
-  TEST_ASSERT_EQUAL_INT8_ARRAY(expected_xs3, out_asm, VPU_INT8_EPV);
-  TEST_ASSERT_EQUAL_INT8_ARRAY(expected_xs3, out_sim, VPU_INT8_EPV);
-#elif defined(__riscv_xxcore)
-  TEST_ASSERT_EQUAL_INT8_ARRAY(expected_vx4, out_asm, VPU_INT8_EPV);
-  TEST_ASSERT_EQUAL_INT8_ARRAY(expected_vx4, out_sim, VPU_INT8_EPV);
-#endif
+  const int8_t *expected = GetNNArchProfile()->vlmul_shr_s8 == 6
+                               ? expected_xs3
+                               : expected_vx4;
+  TEST_ASSERT_EQUAL_INT8_ARRAY(expected, out_asm, VPU_INT8_EPV);
+  TEST_ASSERT_EQUAL_INT8_ARRAY(expected, out_sim, VPU_INT8_EPV);
   TEST_ASSERT_EQUAL_INT8_ARRAY(out_sim, out_asm, VPU_INT8_EPV);
 }
 
@@ -446,7 +482,7 @@ TEST(group_vpu_sim, test_vpos) {
   TEST_ASSERT_EQUAL_INT32_ARRAY(expected, out_sim, VPU_INT32_EPV);
 }
 
-TEST(group_vpu_sim, test_vlsat_fixed) {
+TEST(group_vpu_sim, test_vlsat_asymmetric) {
   int16_t WORD_ALIGNED acc_low[VPU_INT16_EPV] = {-128};
   int16_t WORD_ALIGNED acc_high[VPU_INT16_EPV] = {-1};
   uint16_t WORD_ALIGNED shifts[VPU_INT8_ACC_PERIOD] = {0};
@@ -462,11 +498,10 @@ TEST(group_vpu_sim, test_vlsat_fixed) {
 
 TEST(group_vpu_sim, test_sats) {
   TEST_ASSERT_EQUAL_INT(127, vpu_saturate(200, 8));
-#if defined(__riscv_xxcore)
-  TEST_ASSERT_EQUAL_INT(-128, vpu_saturate(-200, 8));
-#elif defined(__XS3A__)
-  TEST_ASSERT_EQUAL_INT(-127, vpu_saturate(-200, 8));
-#endif
+  TEST_ASSERT_EQUAL_INT(-127 + GetNNArchProfile()->saturation_min_offset,
+                        vpu_saturate(-200, 8));
+  TEST_ASSERT_EQUAL_INT(127, vpu_saturate_asymmetric(200, 8));
+  TEST_ASSERT_EQUAL_INT(-128, vpu_saturate_asymmetric(-200, 8));
 
   TEST_ASSERT_EQUAL_INT8(127, sat_s8(200, -127, 127));
   TEST_ASSERT_EQUAL_INT8(-127, sat_s8(-200, -127, 127));

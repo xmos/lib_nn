@@ -36,7 +36,7 @@ class TfLiteConverter {
 
   static std::vector<nn_acc32_to_int8_params_t> ConvertOutputParams(
       const Filter2dGeometry& filter, const float effective_output_multiplier[],
-      const int32_t output_zero_point, nn_vlmul_shr_t vlmul_shr);
+      const int32_t output_zero_point, nn_vlmul_shr_s16_t vlmul_shr);
 
   static void QuantizeEffectiveOutputMultiplier(int32_t& quantized_multiplier,
                                                 int32_t& shift,
