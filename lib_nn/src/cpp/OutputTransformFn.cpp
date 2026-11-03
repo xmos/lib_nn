@@ -95,7 +95,10 @@ void recitfy_min_max(T &v_min, T &v_max) {
 /** @brief Convert a floating-point value to a rounded scaled integer. */
 template <class T>
 static int64_t float_to_int(T f, int e) {
-  return (int64_t)std::rint(ldexp(f, e));
+  const auto v = std::rint(std::ldexp(f, e));
+  if (v >= INT64_MAX) return INT64_MAX;
+  if (v <= INT64_MIN) return INT64_MIN;
+  return static_cast<int64_t>(v);
 }
 
 /** @brief Convert a floating-point value to a saturated 16-bit integer. */
