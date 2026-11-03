@@ -13,7 +13,10 @@ extern "C" {
 // Copied unchanged from OutputTransformFn.cpp to test the current conversion.
 template <class T>
 static int64_t float_to_int(T f, int e) {
-  return (int64_t)std::rint(ldexp(f, e));
+  const auto v = std::rint(std::ldexp(f, e));
+  if (v >= static_cast<double>(INT64_MAX)) return INT64_MAX;
+  if (v <= INT64_MIN) return INT64_MIN;
+  return static_cast<int64_t>(v);
 }
 
 template <class T>
@@ -37,6 +40,8 @@ TEST_GROUP_RUNNER(group_float_to_int16) {
   RUN_TEST_CASE(group_float_to_int16, negative_overflow);
   RUN_TEST_CASE(group_float_to_int16, positive_infinity);
   RUN_TEST_CASE(group_float_to_int16, negative_infinity);
+  RUN_TEST_CASE(group_float_to_int16, int64_boundaries);
+  RUN_TEST_CASE(group_float_to_int16, int64_overflow);
 }
 
 TEST(group_float_to_int16, scaling) {
@@ -82,6 +87,31 @@ TEST(group_float_to_int16, positive_infinity) {
 TEST(group_float_to_int16, negative_infinity) {
   TEST_ASSERT_EQUAL_INT16(
       INT16_MIN, float_to_int16(-std::numeric_limits<double>::infinity(), 0));
+}
+
+TEST(group_float_to_int16, int64_boundaries) {
+  const double limit = static_cast<double>(INT64_MAX);
+  TEST_ASSERT_TRUE(float_to_int(limit, 0) == INT64_MAX);
+  TEST_ASSERT_TRUE(float_to_int(-limit, 0) == INT64_MIN);
+  TEST_ASSERT_TRUE(
+      float_to_int(std::nextafter(limit, 0.0), 0) == INT64_MAX - 1023);
+  TEST_ASSERT_TRUE(
+      float_to_int(std::nextafter(-limit, 0.0), 0) == INT64_MIN + 1024);
+  TEST_ASSERT_TRUE(float_to_int(1.0f, 63) == INT64_MAX);
+  TEST_ASSERT_TRUE(float_to_int(-1.0f, 63) == INT64_MIN);
+}
+
+TEST(group_float_to_int16, int64_overflow) {
+  TEST_ASSERT_TRUE(float_to_int(1.0, 64) == INT64_MAX);
+  TEST_ASSERT_TRUE(float_to_int(-1.0, 64) == INT64_MIN);
+  TEST_ASSERT_TRUE(
+      float_to_int(std::numeric_limits<double>::max(), 1) == INT64_MAX);
+  TEST_ASSERT_TRUE(
+      float_to_int(-std::numeric_limits<double>::max(), 1) == INT64_MIN);
+  TEST_ASSERT_TRUE(
+      float_to_int(std::numeric_limits<double>::infinity(), 0) == INT64_MAX);
+  TEST_ASSERT_TRUE(
+      float_to_int(-std::numeric_limits<double>::infinity(), 0) == INT64_MIN);
 }
 
 }  // extern "C"

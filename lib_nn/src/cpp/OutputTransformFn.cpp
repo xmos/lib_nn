@@ -96,7 +96,7 @@ void recitfy_min_max(T &v_min, T &v_max) {
 template <class T>
 static int64_t float_to_int(T f, int e) {
   const auto v = std::rint(std::ldexp(f, e));
-  if (v >= INT64_MAX) return INT64_MAX;
+  if (v >= static_cast<double>(INT64_MAX)) return INT64_MAX;
   if (v <= INT64_MIN) return INT64_MIN;
   return static_cast<int64_t>(v);
 }
