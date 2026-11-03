@@ -101,10 +101,10 @@ static int64_t float_to_int(T f, int e) {
 /** @brief Convert a floating-point value to a saturated 16-bit integer. */
 template <class T>
 static int16_t float_to_int16(T f, int e) {
-  int64_t v = float_to_int(f, e);
-  v = std::min((int64_t)INT16_MAX, v);
-  v = std::max((int64_t)INT16_MIN, v);
-  return (int16_t)v;
+  const auto v = std::rint(std::ldexp(f, e));
+  if (v >= INT16_MAX) return INT16_MAX;
+  if (v <= INT16_MIN) return INT16_MIN;
+  return static_cast<int16_t>(v);
 }
 
 /**
