@@ -123,10 +123,24 @@ static int16_t float_to_int16(T f, int e) {
  * half-way point would land exactly on the half-way integer and round up when they should round
  * down. Lowering the sum by half a bias LSB lines the two half-way points up.
  *
- * The earlier roundings drift upwards too. vlsat's drift is much less than a bias LSB, so it is
- * not corrected for; vlmul's usually is too, but not always (see vlmul_drift()).
+ * The earlier roundings drift upwards too (see vlsat_drift() and vlmul_drift()).
  */
 static double final_shift_drift(int B) { return B > 0 ? 0.5 : 0.0; }
+
+/**
+ * @brief Mean drift, in bias LSBs, added by vlsat's rounding of the accumulator.
+ *
+ * vlsat shifts the accumulator right by initial_shift, rounding half up. Over evenly spread
+ * accumulators the rounding errors cancel except for exact ties, 1 in 2^initial_shift of them,
+ * which go up by half an LSB, so the shifted accumulator drifts up by 2^-(initial_shift + 1).
+ * vlmul then scales that by multiplier * 2^-vlmul_shr bias LSBs per LSB (so a negative multiplier
+ * drifts down). For a large shift this is negligible, but a shift of 1 with a multiplier near
+ * 2^vlmul_shr drifts by about a quarter of a bias LSB.
+ */
+static double vlsat_drift(int initial_shift, int16_t multiplier, nn_vlmul_shr_t vlmul_shr) {
+  if (initial_shift <= 0) return 0.0;
+  return std::ldexp((double)multiplier, -(initial_shift + 1) - (int)vlmul_shr);
+}
 
 /**
  * @brief Mean upward drift, in bias LSBs, added by vlmul's rounding. multiplier must be nonzero.
@@ -166,7 +180,8 @@ static double vlmul_drift(int initial_shift, int16_t multiplier, nn_vlmul_shr_t 
  *     output. The bias can be adjusted such that it cancels the slope error at the middle of the
  *     accumulator range, which leaves the smallest error at both ends.
  *  2. The round-half-up steps drift upwards on average, so subtract that drift: half a bias LSB
- *     for the final divide by 2^B (see final_shift_drift()), plus vlmul's (see vlmul_drift()).
+ *     for the final divide by 2^B (see final_shift_drift()), plus vlsat's and vlmul's (see
+ *     vlsat_drift() and vlmul_drift()).
  * A fixed correction of one bias LSB is half a bias LSB too much whenever B >= 1, and at B == 0
  * it is a whole output LSB too much.
  *
@@ -208,6 +223,7 @@ static int16_t choose_bias(const OutputTransformFn::ActivationParams &p,
 
   // Usual case: scale the corrected bias into bias LSBs, then remove error 2, the drift
   double scaled_bias = std::ldexp(corrected_bias, B) - final_shift_drift(B) -
+                       vlsat_drift(initial_shift, multiplier, vlmul_shr) -
                        vlmul_drift(initial_shift, multiplier, vlmul_shr);
   return float_to_int16(scaled_bias, 0);
 }
