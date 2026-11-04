@@ -5,7 +5,7 @@ lib_nn: Neural network library
 ##############################
 
 :vendor: XMOS
-:version: 0.6.0
+:version: 0.7.0
 :scope: General Use
 :description: Efficient neural network kernels for XMOS devices
 :category: General Purpose
