@@ -49,9 +49,9 @@ pipeline {
             defaultValue: 'bob@develop',
             description: 'VX Clang tools version'
         )
-        string( // temporary support
+        string(
             name: 'TOOLS_VERSION_VX_XCC',
-            defaultValue: 'slipgate@develop',
+            defaultValue: 'slipgate@master:143',
             description: 'VX XCC tools version'
         )
         string(
