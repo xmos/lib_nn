@@ -203,7 +203,7 @@ pipeline {
                                     dir(REPO) {
                                         checkoutScmShallow()
                                         dir("test/unit_test") {
-                                            xcoreBuild()
+                                            xcoreBuild(cmakeOpts: '-DAPP_HW_TARGET=XK-EVK-XU416')
                                         }
                                     }
                                 }
@@ -236,7 +236,7 @@ pipeline {
                                 dir(REPO) {
                                     checkoutScmShallow()
                                     dir("examples") {
-                                        xcoreBuildAll()
+                                        xcoreBuildAllArch()
                                     }
                                 }
                             }
