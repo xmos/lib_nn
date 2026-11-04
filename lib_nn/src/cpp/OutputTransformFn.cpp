@@ -618,9 +618,12 @@ void nn::OutputTransformFn::ActivationParams::
   int64_t union_min = std::max(accu_out_clamp_min, (int64_t)accu_min_val);
 
   if( union_max <= union_min){
-      int32_t singular_output_value =
-          std::max(std::min((int32_t)output_max_val, (int32_t)original_bias),
-                   (int32_t)output_min_val);
+      // Every accumulator in range gives the same clamped output, so use the reference's rounded
+      // output at one of them
+      double accu = union_max == union_min ? (double)union_min : (double)accu_min_val;
+      double output = std::round(accu * original_multiplier + original_bias);
+      int32_t singular_output_value = (int32_t)std::max(
+          std::min((double)output_max_val, output), (double)output_min_val);
 
       multiplier = 0.0;
       bias = singular_output_value;

@@ -46,6 +46,7 @@ TEST_GROUP_RUNNER(group_output_transforms) {
   RUN_TEST_CASE(group_output_transforms, Test_OT_int8_bias_left_shifted_accu);
   RUN_TEST_CASE(group_output_transforms, Test_OT_int8_zero_multiplier);
   RUN_TEST_CASE(group_output_transforms, Test_OT_int8_bias_narrow_range);
+  RUN_TEST_CASE(group_output_transforms, Test_OT_int8_single_accumulator_channels);
 }
 
 }  // extern "C"
@@ -814,6 +815,46 @@ TEST(group_output_transforms, Test_OT_int8_bias_narrow_range) {
     double error = abs_error_sum / (mb[0].accu_max_val - mb[0].accu_min_val + 1);
     // With B == -2 the outputs step by 4, so the best reachable error here is about 1 LSB
     TEST_ASSERT_TRUE_MESSAGE(error < 1.5, "narrow-range channel quantisation error too high");
+  }
+}
+
+// Channels that leave a single interesting accumulator: one whose weights are all 0 (from the
+// MobileNet v1 integration test model, where a huge int32 bias times a tiny multiplier gives
+// -116.95), one with a range of one non-zero accumulator, and two whose whole range clamps.
+// Each output must be the reference's rounded and clamped output at that accumulator.
+TEST(group_output_transforms, Test_OT_int8_single_accumulator_channels) {
+  struct {
+    double bias, multiplier;
+    int32_t accu_min, accu_max;
+    int expected;
+  } cases[] = {{-116.94916, 1.0291913099536032e-08, 0, 0, -117},
+               {116.5, 1.0e-8, 0, 0, 117},
+               {10.4, 0.5, 7, 7, 14},
+               {100.0, 1.0, 1000, 2000, 127},
+               {-50.0, -1.0, 500, 600, -128}};
+  for (nn_vlmul_shr_t shr : {VLMUL_SHR_XS3A, VLMUL_SHR_VX4A}) {
+    MulsAndBias mb;
+    for (auto &c : cases)
+      mb.push_back(OutputTransformFn::ActivationParams(c.bias, c.multiplier, c.accu_min, c.accu_max));
+    // A normal channel too, so that B is set by a real product
+    mb.push_back(OutputTransformFn::ActivationParams(3.0, 0.01, -5000, 5000));
+    auto qg = OutputTransformFnInt8_Group::Quantizer().quantise_activation(mb, shr, false);
+    auto qc = OutputTransformFnInt8_Channelwise::Quantizer().quantise_activation(mb, shr, false);
+    for (unsigned ch = 0; ch < sizeof(cases) / sizeof(cases[0]); ++ch) {
+      for (int32_t accu = cases[ch].accu_min; accu <= cases[ch].accu_max; ++accu) {
+        TEST_ASSERT_EQUAL_INT32_MESSAGE(
+            cases[ch].expected,
+            OutputTransformFnInt8::quantised_output(accu, qg.initial_shr, qg.multipliers[ch],
+                                                    qg.biases[ch], qg.final_shr, shr),
+            "group single-accumulator output");
+        TEST_ASSERT_EQUAL_INT32_MESSAGE(
+            cases[ch].expected,
+            OutputTransformFnInt8::quantised_output(accu, qc.initial_shifts[ch],
+                                                    qc.multipliers[ch], qc.biases[ch],
+                                                    qc.final_shr, shr),
+            "channelwise single-accumulator output");
+      }
+    }
   }
 }
 
